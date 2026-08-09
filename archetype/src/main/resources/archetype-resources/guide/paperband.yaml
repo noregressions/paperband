@@ -1,0 +1,5 @@
+title: "${artifactId}"
+theme: editorial
+
+vars:
+  subtitle: "Built with Paperband"

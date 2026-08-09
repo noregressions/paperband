@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>dev.noregressions.paperband</groupId>
+        <artifactId>parent</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>paperband-archetype</artifactId>
+    <packaging>maven-archetype</packaging>
+    <name>Paperband :: Archetype</name>
+    <description>
+        Maven archetype that scaffolds a new Paperband guide project: a pom.xml with
+        paperband-maven-plugin already wired up, plus the guide/ folder Paperband
+        conventions expect (a book-root paperband.yaml and a starter card).
+    </description>
+    <url>https://github.com/noregressions/paperband</url>
+
+    <properties>
+        <!--
+            archetype-packaging (the <extensions> entry below) supplies the
+            LifecycleMapping component that teaches Maven what packaging=maven-archetype
+            means; maven-archetype-plugin supplies the goals (jar, integration-test,
+            update-local-catalog) that lifecycle binds to phases. Both ship from the
+            same Apache Maven Archetype release train and must stay in lockstep.
+        -->
+        <maven-archetype-plugin.version>3.4.1</maven-archetype-plugin.version>
+    </properties>
+
+    <build>
+        <extensions>
+            <extension>
+                <groupId>org.apache.maven.archetype</groupId>
+                <artifactId>archetype-packaging</artifactId>
+                <version>${maven-archetype-plugin.version}</version>
+            </extension>
+        </extensions>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-archetype-plugin</artifactId>
+                    <version>${maven-archetype-plugin.version}</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+</project>

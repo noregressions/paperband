@@ -22,11 +22,12 @@
         <module>render-playwright</module>
         <module>cli</module>
         <module>maven-plugin</module>
+        <module>archetype</module>
     </modules>
 
     <properties>
         <!-- ANCHOR: version-declaration -->
-        <revision>0.0.1</revision>
+        <revision>0.0.2</revision>
         <!-- ANCHOR_END: version-declaration -->
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

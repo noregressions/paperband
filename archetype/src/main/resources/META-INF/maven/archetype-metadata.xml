@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype-descriptor
+    xmlns="http://maven.apache.org/plugins/maven-archetype-plugin/archetype-descriptor/1.1.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/plugins/maven-archetype-plugin/archetype-descriptor/1.1.0 http://maven.apache.org/xsd/archetype-descriptor-1.1.0.xsd"
+    name="paperband-archetype">
+
+    <!--
+        groupId / artifactId / version / package are supplied by
+        maven-archetype-plugin itself (the standard four). paperbandVersion
+        is the one Paperband-specific extra: which released version of
+        dev.noregressions.paperband:paperband-maven-plugin the generated
+        project's pom.xml should depend on. Defaulted to the version this
+        archetype itself ships alongside, but always overridable with
+        -DpaperbandVersion=... at generate time (e.g. to pick up a newer
+        plugin release without regenerating the archetype).
+    -->
+    <requiredProperties>
+        <requiredProperty key="paperbandVersion">
+            <defaultValue>0.0.2</defaultValue>
+        </requiredProperty>
+    </requiredProperties>
+
+    <fileSets>
+        <!-- Project pom.xml: Velocity-filtered so groupId/artifactId/version/paperbandVersion
+             get substituted. Maven's own ${...} properties inside it (project.basedir,
+             project.build.directory, project.artifactId, ...) are left as plain
+             ${...} in the source template: "project" isn't a bound archetype
+             property, so Velocity leaves any reference to it untouched for Maven
+             to resolve later, at generated-project build time. -->
+        <fileSet filtered="true" packaged="false" encoding="UTF-8">
+            <directory></directory>
+            <includes>
+                <include>pom.xml</include>
+            </includes>
+        </fileSet>
+
+        <!-- README.md and .gitignore: no placeholders to substitute, so left
+             unfiltered. Markdown in particular must not be filtered unless it is
+             free of "##" (Velocity's line-comment marker), or every Markdown H2
+             heading gets silently stripped. -->
+        <fileSet filtered="false" packaged="false" encoding="UTF-8">
+            <directory></directory>
+            <includes>
+                <include>README.md</include>
+                <include>.gitignore</include>
+            </includes>
+        </fileSet>
+
+        <!-- Book root config: no "##" anywhere in YAML, so safe to filter for
+             ${artifactId} (used as the book title). -->
+        <fileSet filtered="true" packaged="false" encoding="UTF-8">
+            <directory>guide</directory>
+            <includes>
+                <include>paperband.yaml</include>
+            </includes>
+        </fileSet>
+
+        <!-- The starter card: deliberately not filtered, per the Markdown/"##"
+             warning above. Kept generic (no per-project text) instead. -->
+        <fileSet filtered="false" packaged="false" encoding="UTF-8">
+            <directory>guide</directory>
+            <includes>
+                <include>*.md</include>
+            </includes>
+        </fileSet>
+    </fileSets>
+</archetype-descriptor>
