@@ -5,7 +5,7 @@ import java.util.Map;
 /**
  * Resolves a {@code page:} yaml block (declared under {@code vars.page},
  * cascading exactly like any other {@code vars} entry — book root sets the
- * default, a folder-level {@code pagewright.yaml} can override it wholesale
+ * default, a folder-level {@code paperband.yaml} can override it wholesale
  * for one edition) into a real {@link PageSpec} plus a font-scale multiplier.
  *
  * <pre>

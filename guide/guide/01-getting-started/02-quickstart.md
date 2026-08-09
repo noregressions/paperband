@@ -16,8 +16,8 @@ oneliner: "Build and run Paperband from source in five minutes."
 ## Clone and build
 
 ```bash
-git clone https://github.com/gruff-dev/pagewright.git
-cd pagewright
+git clone https://github.com/gruff-dev/paperband.git
+cd paperband
 mvn -DskipTests package
 ```
 
@@ -28,13 +28,13 @@ The build produces a shaded all-in-one jar. The parent POM version:
 The jar lands at:
 
 ```
-pagewright-cli/target/pagewright-cli-0.1.0-SNAPSHOT-all.jar
+cli/target/cli-0.1.0-SNAPSHOT-all.jar
 ```
 
 ## Create a shell alias
 
 ```bash
-alias pagewright='java -jar /path/to/pagewright-cli-0.1.0-SNAPSHOT-all.jar'
+alias paperband='java -jar /path/to/cli-0.1.0-SNAPSHOT-all.jar'
 ```
 
 Add it to your shell profile to persist across sessions.
@@ -43,23 +43,23 @@ Add it to your shell profile to persist across sessions.
 
 ```bash
 # PDF
-pagewright build path/to/your-book out.pdf
+paperband build path/to/your-book out.pdf
 
 # Static site
-pagewright site path/to/your-book out-site/
+paperband site path/to/your-book out-site/
 ```
 
-A "book" is any directory containing a `pagewright.yaml` at its root. Cards are any
+A "book" is any directory containing a `paperband.yaml` at its root. Cards are any
 `.md` files found recursively under it.
 
 ## Explore what's available
 
 ```bash
 # List discovered renderers and whether each is available in your environment
-pagewright renderers
+paperband renderers
 
 # List all themes (built-in and any under --theme-dir)
-pagewright themes
+paperband themes
 ```
 
 ## Watch Out

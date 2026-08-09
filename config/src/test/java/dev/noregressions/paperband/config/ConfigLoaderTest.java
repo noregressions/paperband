@@ -58,7 +58,7 @@ class ConfigLoaderTest {
 
         @Test
         void should_parse_minimal_book_config(@TempDir Path tempDir) throws IOException {
-            createYamlFile(tempDir.resolve("pagewright.yaml"), """
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
                 title: "Test Book"
                 """);
             Path mdFile = tempDir.resolve("test.md");
@@ -74,7 +74,7 @@ class ConfigLoaderTest {
 
         @Test
         void should_parse_complete_book_config(@TempDir Path tempDir) throws IOException {
-            createYamlFile(tempDir.resolve("pagewright.yaml"), """
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
                 title: "Complete Book"
                 theme: "herodevs"
                 css:
@@ -113,7 +113,7 @@ class ConfigLoaderTest {
 
         @Test
         void should_parse_section_landing_template_default(@TempDir Path tempDir) throws IOException {
-            createYamlFile(tempDir.resolve("pagewright.yaml"), """
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
                 title: "Test Book"
                 sections:
                   landing:
@@ -132,7 +132,7 @@ class ConfigLoaderTest {
 
         @Test
         void should_resolve_named_preset_for_section_landing_template(@TempDir Path tempDir) throws IOException {
-            createYamlFile(tempDir.resolve("pagewright.yaml"), """
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
                 title: "Test Book"
                 sections:
                   landing:
@@ -151,7 +151,7 @@ class ConfigLoaderTest {
 
         @Test
         void should_leave_section_landing_template_null_when_not_declared(@TempDir Path tempDir) throws IOException {
-            createYamlFile(tempDir.resolve("pagewright.yaml"), """
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
                 title: "Test Book"
                 """);
             Path mdFile = tempDir.resolve("test.md");
@@ -165,7 +165,7 @@ class ConfigLoaderTest {
 
         @Test
         void should_handle_single_css_file_as_string(@TempDir Path tempDir) throws IOException {
-            createYamlFile(tempDir.resolve("pagewright.yaml"), """
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
                 title: "Test Book"
                 css: "single.css"
                 """);
@@ -187,7 +187,7 @@ class ConfigLoaderTest {
         @Test
         void should_cascade_css_files_in_correct_order(@TempDir Path tempDir) throws IOException {
             // Book root config
-            createYamlFile(tempDir.resolve("pagewright.yaml"), """
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
                 title: "Test Book"
                 css:
                   - "global.css"
@@ -196,7 +196,7 @@ class ConfigLoaderTest {
             // Subfolder config
             Path subfolder = tempDir.resolve("subfolder");
             Files.createDirectories(subfolder);
-            createYamlFile(subfolder.resolve("pagewright.yaml"), """
+            createYamlFile(subfolder.resolve("paperband.yaml"), """
                 css:
                   - "local.css"
                 """);
@@ -214,7 +214,7 @@ class ConfigLoaderTest {
 
         @Test
         void should_override_vars_with_later_values(@TempDir Path tempDir) throws IOException {
-            createYamlFile(tempDir.resolve("pagewright.yaml"), """
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
                 title: "Test Book"
                 vars:
                   author: "Original Author"
@@ -223,7 +223,7 @@ class ConfigLoaderTest {
 
             Path subfolder = tempDir.resolve("subfolder");
             Files.createDirectories(subfolder);
-            createYamlFile(subfolder.resolve("pagewright.yaml"), """
+            createYamlFile(subfolder.resolve("paperband.yaml"), """
                 vars:
                   author: "Updated Author"
                   edition: "Special"
@@ -242,7 +242,7 @@ class ConfigLoaderTest {
 
         @Test
         void should_merge_axis_bindings_into_vars(@TempDir Path tempDir) throws IOException {
-            createYamlFile(tempDir.resolve("pagewright.yaml"), """
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
                 title: "Test Book"
                 axes:
                   - name: "tier"
@@ -256,7 +256,7 @@ class ConfigLoaderTest {
 
             Path subfolder = tempDir.resolve("tier1");
             Files.createDirectories(subfolder);
-            createYamlFile(subfolder.resolve("pagewright.yaml"), """
+            createYamlFile(subfolder.resolve("paperband.yaml"), """
                 axis:
                   tier: 1
                 """);
@@ -273,7 +273,7 @@ class ConfigLoaderTest {
         @Test
         void should_cascade_through_multiple_levels(@TempDir Path tempDir) throws IOException {
             // Root
-            createYamlFile(tempDir.resolve("pagewright.yaml"), """
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
                 title: "Multi-Level Book"
                 css: ["root.css"]
                 vars:
@@ -284,7 +284,7 @@ class ConfigLoaderTest {
             // Level 1
             Path level1 = tempDir.resolve("level1");
             Files.createDirectories(level1);
-            createYamlFile(level1.resolve("pagewright.yaml"), """
+            createYamlFile(level1.resolve("paperband.yaml"), """
                 css: ["level1.css"]
                 vars:
                   level: "level1"
@@ -294,7 +294,7 @@ class ConfigLoaderTest {
             // Level 2
             Path level2 = level1.resolve("level2");
             Files.createDirectories(level2);
-            createYamlFile(level2.resolve("pagewright.yaml"), """
+            createYamlFile(level2.resolve("paperband.yaml"), """
                 css: ["level2.css"]
                 vars:
                   level: "level2"
@@ -324,14 +324,14 @@ class ConfigLoaderTest {
         @Test
         void should_resolve_layout_path_relative_to_yaml_directory(@TempDir Path tempDir) throws IOException {
             // Create book root first
-            createYamlFile(tempDir.resolve("pagewright.yaml"), """
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
                 title: "Test Book"
                 """);
 
             // Create subfolder with layout config
             Path subfolder = tempDir.resolve("templates");
             Files.createDirectories(subfolder);
-            createYamlFile(subfolder.resolve("pagewright.yaml"), """
+            createYamlFile(subfolder.resolve("paperband.yaml"), """
                 layout: "custom.peb"
                 """);
 
@@ -347,14 +347,14 @@ class ConfigLoaderTest {
 
         @Test
         void should_use_last_non_empty_targets_list(@TempDir Path tempDir) throws IOException {
-            createYamlFile(tempDir.resolve("pagewright.yaml"), """
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
                 title: "Test Book"
                 targets: ["pdf-a4", "web"]
                 """);
 
             Path subfolder = tempDir.resolve("subfolder");
             Files.createDirectories(subfolder);
-            createYamlFile(subfolder.resolve("pagewright.yaml"), """
+            createYamlFile(subfolder.resolve("paperband.yaml"), """
                 targets: ["pdf-letter"]
                 """);
 
@@ -375,7 +375,7 @@ class ConfigLoaderTest {
 
         @Test
         void should_throw_exception_for_malformed_yaml(@TempDir Path tempDir) throws IOException {
-            createYamlFile(tempDir.resolve("pagewright.yaml"), """
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
                 title: "Test Book"
                 malformed: [
                   - incomplete
@@ -391,7 +391,7 @@ class ConfigLoaderTest {
 
         @Test
         void should_throw_exception_for_non_map_yaml(@TempDir Path tempDir) throws IOException {
-            createYamlFile(tempDir.resolve("pagewright.yaml"), """
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
                 - just
                 - a
                 - list
@@ -409,7 +409,7 @@ class ConfigLoaderTest {
 
         @Test
         void should_throw_exception_for_axis_without_name(@TempDir Path tempDir) throws IOException {
-            createYamlFile(tempDir.resolve("pagewright.yaml"), """
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
                 title: "Test Book"
                 axes:
                   - title: "Missing Name Axis"
@@ -433,7 +433,7 @@ class ConfigLoaderTest {
 
         @Test
         void should_include_built_in_vars(@TempDir Path tempDir) throws IOException {
-            createYamlFile(tempDir.resolve("pagewright.yaml"), """
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
                 title: "Test Book"
                 """);
             Path mdFile = tempDir.resolve("test.md");
@@ -450,7 +450,7 @@ class ConfigLoaderTest {
 
         @Test
         void should_allow_user_vars_to_override_built_in_vars(@TempDir Path tempDir) throws IOException {
-            createYamlFile(tempDir.resolve("pagewright.yaml"), """
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
                 title: "Test Book"
                 vars:
                   build_date: "2025-01-01"
@@ -471,7 +471,7 @@ class ConfigLoaderTest {
 
         @Test
         void should_handle_empty_yaml_file(@TempDir Path tempDir) throws IOException {
-            createYamlFile(tempDir.resolve("pagewright.yaml"), "");
+            createYamlFile(tempDir.resolve("paperband.yaml"), "");
             Path mdFile = tempDir.resolve("test.md");
             Files.createFile(mdFile);
 
@@ -485,7 +485,7 @@ class ConfigLoaderTest {
 
         @Test
         void should_handle_yaml_with_only_comments(@TempDir Path tempDir) throws IOException {
-            createYamlFile(tempDir.resolve("pagewright.yaml"), """
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
                 # This is a comment
                 # Another comment
                 """);

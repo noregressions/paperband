@@ -31,7 +31,7 @@ Register it in `META-INF/services/dev.noregressions.paperband.render.HtmlToPdfRe
 com.example.render.PrinceRenderer
 ```
 
-With the jar on the classpath, `pagewright renderers` lists it and `--renderer prince`
+With the jar on the classpath, `paperband renderers` lists it and `--renderer prince`
 selects it — `name()` is the selector, matched case-sensitively. `canRender` and
 `isAvailable` have sensible defaults (`true`); override `isAvailable` when the backend
 needs an external binary, so the `renderers` table can say so.

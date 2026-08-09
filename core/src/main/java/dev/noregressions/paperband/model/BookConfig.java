@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Top-level book configuration parsed from the {@code pagewright.yaml} at the
+ * Top-level book configuration parsed from the {@code paperband.yaml} at the
  * book root. Folder-level configs are merged into per-card {@link RenderContext}
  * objects and don't appear here.
  *
@@ -23,7 +23,7 @@ import java.util.Map;
  *        is used. Already resolved by {@link NamedTemplates#resolveSectionTemplate} —
  *        either a built-in preset name (e.g. {@code "minimal"} → {@code site-section-minimal})
  *        or the bare filename (extension stripped) of a custom template path. A section's
- *        own folder {@code pagewright.yaml} can override this per-folder with its own
+ *        own folder {@code paperband.yaml} can override this per-folder with its own
  *        {@code landing: { template: <name-or-path> } } key (highest priority); see
  *        {@code LayoutEngine.buildSectionMetas}.
  * @param cardSchema  mapping that lets pure-YAML card files ({@code *.yaml}) be

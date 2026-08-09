@@ -24,7 +24,7 @@ class BookWalkerTest {
 
     @Test
     void yamlFilesAreNotCardsWithoutCardSchema(@TempDir Path root) throws IOException {
-        Files.writeString(root.resolve("pagewright.yaml"), "title: Plain Book\n");
+        Files.writeString(root.resolve("paperband.yaml"), "title: Plain Book\n");
         Files.writeString(root.resolve("a.md"), "# A\n");
         Files.writeString(root.resolve("b.yaml"), "id: b\n");
 
@@ -34,7 +34,7 @@ class BookWalkerTest {
 
     @Test
     void yamlFilesAreCardsWhenBookRootDeclaresCardSchema() throws IOException {
-        Files.writeString(bookRoot.resolve("pagewright.yaml"), """
+        Files.writeString(bookRoot.resolve("paperband.yaml"), """
                 title: Yaml Book
                 cardSchema:
                   frontmatter: [id, title]
@@ -51,21 +51,21 @@ class BookWalkerTest {
 
     @Test
     void configFilesAreNeverCards() throws IOException {
-        Files.writeString(bookRoot.resolve("pagewright.yaml"), """
+        Files.writeString(bookRoot.resolve("paperband.yaml"), """
                 cardSchema:
                   frontmatter: [id]
                 """);
         Path sub = Files.createDirectory(bookRoot.resolve("sub"));
-        Files.writeString(sub.resolve("pagewright.yaml"), "title: Sub\n");
+        Files.writeString(sub.resolve("paperband.yaml"), "title: Sub\n");
         Files.writeString(sub.resolve("card.yaml"), "id: card\n");
 
         assertEquals(List.of("card.yaml"), walkNames(bookRoot),
-                "pagewright.yaml config files must never be emitted as cards");
+                "paperband.yaml config files must never be emitted as cards");
     }
 
     @Test
     void schemaIsDiscoveredFromAncestorBookRootWhenWalkingASubfolder() throws IOException {
-        Files.writeString(bookRoot.resolve("pagewright.yaml"), """
+        Files.writeString(bookRoot.resolve("paperband.yaml"), """
                 cardSchema:
                   frontmatter: [id]
                 """);
@@ -78,7 +78,7 @@ class BookWalkerTest {
 
     @Test
     void orderEntriesResolveYamlCards() throws IOException {
-        Files.writeString(bookRoot.resolve("pagewright.yaml"), """
+        Files.writeString(bookRoot.resolve("paperband.yaml"), """
                 cardSchema:
                   frontmatter: [id]
                 order:
@@ -94,7 +94,7 @@ class BookWalkerTest {
 
     @Test
     void sortOrdersCardsByFrontmatterFields(@TempDir Path root) throws IOException {
-        Files.writeString(root.resolve("pagewright.yaml"), """
+        Files.writeString(root.resolve("paperband.yaml"), """
                 cardSchema:
                   frontmatter: [id]
                 sort: [tier, id]
@@ -113,7 +113,7 @@ class BookWalkerTest {
     @Test
     void sortReadsMarkdownFrontmatterAndFallsBackToBasenameForId(@TempDir Path root)
             throws IOException {
-        Files.writeString(root.resolve("pagewright.yaml"), "sort: [tier, id]\n");
+        Files.writeString(root.resolve("paperband.yaml"), "sort: [tier, id]\n");
         Files.writeString(root.resolve("zz.md"), "---\ntier: 1\n---\n# ZZ\n");
         Files.writeString(root.resolve("aa.md"), "---\ntier: 2\n---\n# AA\n");
         // No id in frontmatter → id falls back to basename ("aa" < "zz").
@@ -124,7 +124,7 @@ class BookWalkerTest {
 
     @Test
     void sortPutsCardsMissingTheFieldLast(@TempDir Path root) throws IOException {
-        Files.writeString(root.resolve("pagewright.yaml"), "sort: [tier]\n");
+        Files.writeString(root.resolve("paperband.yaml"), "sort: [tier]\n");
         Files.writeString(root.resolve("aaa-no-tier.md"), "# No tier\n");
         Files.writeString(root.resolve("zzz-tier1.md"), "---\ntier: 1\n---\n# Z\n");
 
@@ -134,7 +134,7 @@ class BookWalkerTest {
 
     @Test
     void sortSupportsDescendingPrefix(@TempDir Path root) throws IOException {
-        Files.writeString(root.resolve("pagewright.yaml"), "sort: [-tier, id]\n");
+        Files.writeString(root.resolve("paperband.yaml"), "sort: [-tier, id]\n");
         Files.writeString(root.resolve("a.md"), "---\ntier: 1\n---\n# A\n");
         Files.writeString(root.resolve("b.md"), "---\ntier: 3\n---\n# B\n");
         Files.writeString(root.resolve("c.md"), "---\ntier: 2\n---\n# C\n");
@@ -144,7 +144,7 @@ class BookWalkerTest {
 
     @Test
     void orderEntriesComeFirstThenSortAppliesToTheRest(@TempDir Path root) throws IOException {
-        Files.writeString(root.resolve("pagewright.yaml"), """
+        Files.writeString(root.resolve("paperband.yaml"), """
                 order: [intro]
                 sort: [tier]
                 """);
@@ -158,7 +158,7 @@ class BookWalkerTest {
 
     @Test
     void singleYamlFileWalkHonoursAncestorSchema() throws IOException {
-        Files.writeString(bookRoot.resolve("pagewright.yaml"), """
+        Files.writeString(bookRoot.resolve("paperband.yaml"), """
                 cardSchema:
                   frontmatter: [id]
                 """);
@@ -166,7 +166,7 @@ class BookWalkerTest {
         Files.writeString(card, "id: only\n");
 
         assertTrue(walkNames(card).contains("only.yaml"));
-        Files.writeString(bookRoot.resolve("pagewright.yaml"), "title: no schema\n");
+        Files.writeString(bookRoot.resolve("paperband.yaml"), "title: no schema\n");
         assertEquals(List.of(), walkNames(card),
                 "single yaml file is not a card once the schema is gone");
     }

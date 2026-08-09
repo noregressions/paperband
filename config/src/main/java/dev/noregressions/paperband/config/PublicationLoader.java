@@ -16,7 +16,7 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Parses the {@code publication:} block of a book root {@code pagewright.yaml}
+ * Parses the {@code publication:} block of a book root {@code paperband.yaml}
  * into a {@link Publication} (see DESIGN-publications.md). Deliberately a
  * separate loader from {@link ConfigLoader}: the per-card config cascade and
  * the publication block answer different questions ({@code ConfigLoader}
@@ -48,7 +48,13 @@ public final class PublicationLoader {
 
     private PublicationLoader() {}
 
-    /** Load without overrides. */
+    /**
+     * Load without overrides.
+     *
+     * @param bookRootYaml the path to the book root yaml file
+     * @return the publication config, if declared
+     * @throws IOException if the file cannot be read
+     */
     public static Optional<Publication> load(Path bookRootYaml) throws IOException {
         return load(bookRootYaml, List.of());
     }
@@ -57,6 +63,10 @@ public final class PublicationLoader {
      * Load the publication block from {@code bookRootYaml}, if declared,
      * applying {@code overrides} ({@code path=value} strings) first.
      *
+     * @param bookRootYaml the path to the book root yaml file
+     * @param overrides list of override strings
+     * @return the publication config, if declared
+     * @throws IOException if the file cannot be read
      * @throws IllegalArgumentException on a structurally invalid block or an
      *         unrecognised override path
      */

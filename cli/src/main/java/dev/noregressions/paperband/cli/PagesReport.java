@@ -33,7 +33,7 @@ import java.util.TreeMap;
  *   <li>{@link #analyseHtml} — a Playwright DOM measurement pass ({@code
  *       page.emulateMedia(PRINT)} + {@code getBoundingClientRect()}) over the
  *       composed HTML, <em>before</em> any PDF exists. This is what {@code
- *       pagewright build}'s {@code --report-pages}/{@code --max-pages-per-card}
+ *       paperband build}'s {@code --report-pages}/{@code --max-pages-per-card}
  *       use, since a build already has the rendered HTML and resolved
  *       {@code PageSpec} in memory — no dependency on the renderer emitting
  *       PDF named destinations (a Chromium-specific behaviour openhtmltopdf's
@@ -46,7 +46,7 @@ import java.util.TreeMap;
  *       cross-page balancing) — true of every bundled theme and template
  *       today.</li>
  *   <li>{@link #analyse(Path)} — the original PDFBox/named-destinations
- *       approach, kept for the standalone {@code pagewright pages <pdf>}
+ *       approach, kept for the standalone {@code paperband pages <pdf>}
  *       command, which only ever has a PDF file on disk to work from (no
  *       source HTML, no PageSpec) — there's no DOM to measure after the
  *       fact, so this path remains the only option there.</li>

@@ -7,12 +7,13 @@
     <parent>
         <groupId>dev.noregressions.paperband</groupId>
         <artifactId>parent</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>${revision}</version>
     </parent>
 
     <artifactId>cli</artifactId>
     <name>Paperband :: CLI</name>
-    <description>pagewright command-line tool. Bundles the renderer modules it ships with.</description>
+    <description>paperband command-line tool. Bundles the renderer modules it ships with.</description>
+    <url>https://github.com/noregressions/paperband</url>
 
     <dependencies>
         <dependency>
@@ -70,7 +71,7 @@
     </dependencies>
 
     <build>
-        <finalName>pagewright-${project.version}</finalName>
+        <finalName>paperband-${project.version}</finalName>
         <plugins>
             <plugin>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -91,6 +92,21 @@
                                 <!-- merge META-INF/services/* so ServiceLoader finds every renderer -->
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                             </transformers>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>module-info.class</exclude>
+                                        <exclude>META-INF/versions/9/module-info.class</exclude>
+                                        <exclude>META-INF/MANIFEST.MF</exclude>
+                                        <exclude>META-INF/LICENSE</exclude>
+                                        <exclude>META-INF/NOTICE</exclude>
+                                        <exclude>META-INF/DEPENDENCIES</exclude>
+                                        <exclude>META-INF/LICENSE.txt</exclude>
+                                        <exclude>META-INF/NOTICE.txt</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
                         </configuration>
                     </execution>
                 </executions>

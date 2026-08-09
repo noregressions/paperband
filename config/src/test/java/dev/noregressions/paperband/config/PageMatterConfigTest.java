@@ -21,7 +21,7 @@ class PageMatterConfigTest {
     Path bookRoot;
 
     private RenderContext load(String bookYaml) throws IOException {
-        Files.writeString(bookRoot.resolve("pagewright.yaml"), bookYaml);
+        Files.writeString(bookRoot.resolve("paperband.yaml"), bookYaml);
         Path card = bookRoot.resolve("card.md");
         Files.writeString(card, "# Card\n");
         return new ConfigLoader().load(card, "pdf-a4", "A4");

@@ -18,7 +18,7 @@ import java.util.concurrent.Callable;
 
 /**
  * Config-driven multi-edition build: reads the {@code publication:} block of
- * the book root {@code pagewright.yaml} and runs one book build per edition
+ * the book root {@code paperband.yaml} and runs one book build per edition
  * (see DESIGN-publications.md). {@code build} stays the low-level primitive;
  * this command is the loop on top — it populates a {@link BuildCommand}'s
  * fields per edition and calls its book path directly.
@@ -56,7 +56,7 @@ public final class PublishCommand implements Callable<Integer> {
                     + "error. For experiments and CI one-offs — anything typed twice belongs in the yaml.")
     List<String> setOverrides;
 
-    @Parameters(index = "0", description = "Book root directory (contains pagewright.yaml with a publication: block).")
+    @Parameters(index = "0", description = "Book root directory (contains paperband.yaml with a publication: block).")
     Path bookDir;
 
     @Parameters(index = "1..*", description = "Edition ids to build. Omit for every declared edition.")
@@ -64,7 +64,7 @@ public final class PublishCommand implements Callable<Integer> {
 
     @Override
     public Integer call() throws Exception {
-        Path yaml = bookDir.resolve("pagewright.yaml");
+        Path yaml = bookDir.resolve("paperband.yaml");
         Publication pub;
         try {
             pub = PublicationLoader.load(yaml,

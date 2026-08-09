@@ -22,7 +22,7 @@ class CardSchemaConfigTest {
 
     @Test
     void cardSchemaParsesFromBookRoot() throws IOException {
-        Files.writeString(bookRoot.resolve("pagewright.yaml"), """
+        Files.writeString(bookRoot.resolve("paperband.yaml"), """
                 title: Yaml Book
                 cardSchema:
                   frontmatter: [id, tier, title]
@@ -43,7 +43,7 @@ class CardSchemaConfigTest {
 
     @Test
     void absentCardSchemaIsNull() throws IOException {
-        Files.writeString(bookRoot.resolve("pagewright.yaml"), "title: Plain\n");
+        Files.writeString(bookRoot.resolve("paperband.yaml"), "title: Plain\n");
         Path card = bookRoot.resolve("card.md");
         Files.writeString(card, "# Card\n");
 
@@ -53,7 +53,7 @@ class CardSchemaConfigTest {
 
     @Test
     void malformedCardSchemaFailsWithFileInMessage() throws IOException {
-        Files.writeString(bookRoot.resolve("pagewright.yaml"), """
+        Files.writeString(bookRoot.resolve("paperband.yaml"), """
                 cardSchema: not-a-mapping
                 """);
         Path card = bookRoot.resolve("card.md");
@@ -61,6 +61,6 @@ class CardSchemaConfigTest {
 
         ConfigParseException e = assertThrows(ConfigParseException.class,
                 () -> new ConfigLoader().load(card, "pdf-a4", "A4"));
-        assertEquals(true, e.getMessage().contains("pagewright.yaml"));
+        assertEquals(true, e.getMessage().contains("paperband.yaml"));
     }
 }

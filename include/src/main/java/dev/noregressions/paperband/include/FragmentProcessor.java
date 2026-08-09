@@ -26,6 +26,7 @@ public interface FragmentProcessor {
     /**
      * Identifier matching the {@code as <name>} keyword in directives:
      * {@code code}, {@code markdown}, {@code html}, {@code text}, etc.
+     * @return the processor name
      */
     String name();
 
@@ -38,6 +39,7 @@ public interface FragmentProcessor {
      * @param ctx       directive context (attributes, source location);
      *                  processors typically consult {@code lang}, {@code title},
      *                  and similar keys
+     * @return the rendered markdown fragment
      */
     String process(Fragment fragment, IncludeContext ctx);
 }

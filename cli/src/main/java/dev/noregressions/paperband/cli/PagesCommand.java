@@ -18,10 +18,10 @@ import java.util.concurrent.Callable;
  * {@code --by-pages} to sort by span descending.
  *
  * <pre>
- * pagewright pages /tmp/guide-book.pdf
- * pagewright pages /tmp/guide-book.pdf --by-pages
- * pagewright pages /tmp/guide-book.pdf --tier 2
- * pagewright pages /tmp/guide-book.pdf --cards-only
+ * paperband pages /tmp/guide-book.pdf
+ * paperband pages /tmp/guide-book.pdf --by-pages
+ * paperband pages /tmp/guide-book.pdf --tier 2
+ * paperband pages /tmp/guide-book.pdf --cards-only
  * </pre>
  */
 @Command(

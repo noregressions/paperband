@@ -18,15 +18,15 @@ import java.util.stream.Stream;
 
 /**
  * Lists the theme bundles available to {@code --theme}. Built-ins ship inside
- * {@code pagewright-layout}; user themes are discovered under {@code --theme-dir}.
+ * {@code layout}; user themes are discovered under {@code --theme-dir}.
  *
  * <p>When a user theme has the same name as a built-in the user theme wins
  * (mirroring {@link ThemeResolver#resolve(String, Path)}), and the row notes
  * it overrides the built-in.
  *
  * <pre>
- * pagewright themes
- * pagewright themes --theme-dir ~/pagewright-themes
+ * paperband themes
+ * paperband themes --theme-dir ~/paperband-themes
  * </pre>
  */
 @Command(

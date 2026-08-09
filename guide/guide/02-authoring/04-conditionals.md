@@ -12,7 +12,7 @@ This means real Pebble syntax works directly in card prose: variable interpolati
 
 ## Where vars come from
 
-`vars:` in any `pagewright.yaml` along the book's config cascade, plus a handful of
+`vars:` in any `paperband.yaml` along the book's config cascade, plus a handful of
 built-ins (`build_date`, `build_year`, and similar — see `BuiltInVars`). Inner-most
 config wins, same as the rest of the cascade.
 
@@ -67,7 +67,7 @@ there's only one pass, with both extensions and the `vars` context registered to
 
 Masking works the same way it does for `{% fragment %}`: frontmatter, fenced code blocks,
 and inline code spans are protected from evaluation, so this page can show
-`{{ vars.product_name }}` and `{% if vars.x %}` as literal examples without pagewright
+`{{ vars.product_name }}` and `{% if vars.x %}` as literal examples without paperband
 trying to evaluate them. Anywhere else, a stray `{{ }}` or `{% %}`-looking span has to be
 valid Pebble syntax, or wrapped in a fenced code block, an inline code span, or Pebble's
 own `{% verbatim %}` tag.

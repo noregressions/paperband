@@ -7,14 +7,14 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Direct tests of {@link MaskedRegions#mask}, the logic that protects
  * frontmatter, fenced code blocks, and inline code spans from any Pebble
- * evaluation pass run over card markdown — {@code pagewright-include}'s
- * {@code {% fragment %}} tag and {@code pagewright-cards}' whole-body vars/
+ * evaluation pass run over card markdown — {@code include}'s
+ * {@code {% fragment %}} tag and {@code cards}' whole-body vars/
  * conditionals pass both depend on this exact behaviour.
  *
  * <p>This is the mechanism that fixed the real bug recorded in
  * {@code SECURITY_TODO.md} ("Include preprocessor ignored code fences, broke
  * the guide build") — moved here, unchanged, when the logic was promoted out
- * of {@code pagewright-include} to be shared by both modules.
+ * of {@code include} to be shared by both modules.
  */
 class MaskedRegionsTest {
 
@@ -207,7 +207,7 @@ class MaskedRegionsTest {
 
     @Test
     void realisticDocument_onlyLiteralExamplesMasked() {
-        // Mirrors pagewright-guide/guide/02-authoring/03-includes.md's own structure:
+        // Mirrors guide/guide/02-authoring/03-includes.md's own structure:
         // frontmatter, a real fragment call, and several literal examples of the
         // same syntax shown in different masked contexts.
         String md = """

@@ -164,7 +164,7 @@ public final class PlaywrightPageMeasurer {
                     if ("file".equals(baseUri.getScheme())) {
                         Path baseDir = Path.of(baseUri);
                         if (Files.isDirectory(baseDir)) {
-                            tempHtml = Files.createTempFile(baseDir, ".pagewright-measure-", ".html");
+                            tempHtml = Files.createTempFile(baseDir, ".paperband-measure-", ".html");
                             Files.writeString(tempHtml, html);
                             page.navigate(tempHtml.toUri().toString(),
                                     new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));

@@ -11,6 +11,8 @@ package dev.noregressions.paperband.include;
  * </ol>
  */
 public final class CodeProcessor implements FragmentProcessor {
+    /** Creates a new code processor. */
+    public CodeProcessor() {}
 
     public static final String NAME = "code";
 

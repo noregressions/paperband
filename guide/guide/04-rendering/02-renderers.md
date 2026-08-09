@@ -1,15 +1,15 @@
 ---
 id: renderers
-oneliner: "Playwright is the only HTML-to-PDF renderer pagewright ships with."
+oneliner: "Playwright is the only HTML-to-PDF renderer paperband ships with."
 ---
 
 # Renderers
 
 Paperband renders HTML to PDF through a pluggable `HtmlToPdfRenderer`, discovered via
 `ServiceLoader`. `playwright` — real Chromium, driven headless — is the only renderer
-pagewright ships with. Select it with `--renderer` (`-r`, default `playwright`) and check
-availability with `pagewright renderers`. Renderer choice is CLI-only — there is no
-`renderer:` key in `pagewright.yaml`.
+paperband ships with. Select it with `--renderer` (`-r`, default `playwright`) and check
+availability with `paperband renderers`. Renderer choice is CLI-only — there is no
+`renderer:` key in `paperband.yaml`.
 
 ## Why only one
 
@@ -25,7 +25,7 @@ download and losing the zero-dependency pure-Java fallback.
 
 - Highest CSS fidelity: modern layout (flexbox, grid, `color-mix`) renders as it would in
   a real browser.
-- Named destinations in the output PDF — every anchor pagewright plants (cover, back,
+- Named destinations in the output PDF — every anchor paperband plants (cover, back,
   dividers, cards) becomes a real PDF destination, which is what powers page-count
   reporting and enforcement (see Page Enforcement in the Advanced section).
 - `PageSpec.size`/`PageSpec.margins` as the sole geometry authority, so a book's page
@@ -40,14 +40,14 @@ cache under `~/.cache/ms-playwright/`.
 
 ## Watch Out
 
-`pagewright renderers` shows an `AVAILABLE yes/no` column, but `build` does **not** fall
+`paperband renderers` shows an `AVAILABLE yes/no` column, but `build` does **not** fall
 back automatically: a missing Chromium install fails the build rather than silently
 degrading fidelity. Pre-cache the browser download for offline/CI builds.
 
 ## Check
 
 ```bash
-pagewright renderers
+paperband renderers
 ```
 
 ```

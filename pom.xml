@@ -6,11 +6,12 @@
 
     <groupId>dev.noregressions.paperband</groupId>
     <artifactId>parent</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>${revision}</version>
     <packaging>pom</packaging>
 
     <name>Paperband</name>
     <description>Pluggable static-site and PDF builder for structured content guides.</description>
+    <url>https://github.com/noregressions/paperband</url>
 
     <modules>
         <module>core</module>
@@ -20,9 +21,13 @@
         <module>layout</module>
         <module>render-playwright</module>
         <module>cli</module>
+        <module>maven-plugin</module>
     </modules>
 
     <properties>
+        <!-- ANCHOR: version-declaration -->
+        <revision>0.0.1</revision>
+        <!-- ANCHOR_END: version-declaration -->
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -36,21 +41,45 @@
         <snakeyaml.version>2.2</snakeyaml.version>
         <slf4j.version>2.0.13</slf4j.version>
         <junit.version>5.10.2</junit.version>
-        <!-- Direct (no longer transitive via openhtmltopdf-pdfbox, removed
-             along with the openhtmltopdf renderer) dependency for PagesReport's
-             named-destination extraction. Pinned to the version that
-             transitive resolution previously supplied, so behaviour doesn't
-             change. Slated for removal once PagesReport moves to Playwright-
-             native DOM measurement instead of reading the finished PDF. -->
-        <pdfbox.version>2.0.24</pdfbox.version>
+         <pdfbox.version>2.0.24</pdfbox.version>
+
+        <!-- Maven Plugin API: latest Maven-3 line release (3.9.16) rather than
+             the in-progress Maven 4 line (4.0.0-*), since the plugin needs to
+             work with the Maven 3 installs most users still build with.
+             maven-plugin-annotations tracks the sibling maven-plugin-plugin
+             build-time version below (3.15.2 - same maven-plugin-tools
+             release, kept in lockstep). -->
+        <maven-plugin-api.version>3.9.16</maven-plugin-api.version>
+        <maven-plugin-annotations.version>3.15.2</maven-plugin-annotations.version>
 
         <!-- plugin versions -->
         <maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
         <maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>
         <maven.jar.plugin.version>3.4.1</maven.jar.plugin.version>
         <maven.shade.plugin.version>3.5.3</maven.shade.plugin.version>
+        <maven.plugin.plugin.version>3.15.2</maven.plugin.plugin.version>
     </properties>
 
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Steve Poole</name>
+            <email>spoole167@googlemail.com</email>
+        </developer>
+    </developers>
+    <scm>
+        <connection>scm:git:https://github.com/noregressions/paperband.git</connection>
+        <developerConnection>scm:git:https://github.com/noregressions/paperband.git</developerConnection>
+        <url>https://github.com/noregressions/paperband</url>
+        <tag>HEAD</tag>
+    </scm>
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -82,6 +111,33 @@
                 <groupId>dev.noregressions.paperband</groupId>
                 <artifactId>include</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+
+            <!-- Maven Plugin API - provided scope everywhere it's used: the
+                 Maven distribution running the build supplies these at
+                 runtime, so they must never leak onto a runtime/shaded
+                 classpath (see maven-plugin/pom.xml). maven-core is pinned
+                 to the same 3.9.16 release as maven-plugin-api since
+                 MavenProject (maven-core) and the Mojo base classes
+                 (maven-plugin-api) need to agree on the same Maven-3
+                 API shape. -->
+            <dependency>
+                <groupId>org.apache.maven</groupId>
+                <artifactId>maven-core</artifactId>
+                <version>${maven-plugin-api.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.maven</groupId>
+                <artifactId>maven-plugin-api</artifactId>
+                <version>${maven-plugin-api.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.maven.plugin-tools</groupId>
+                <artifactId>maven-plugin-annotations</artifactId>
+                <version>${maven-plugin-annotations.version}</version>
+                <scope>provided</scope>
             </dependency>
 
             <dependency>
@@ -172,6 +228,15 @@
                     <artifactId>maven-shade-plugin</artifactId>
                     <version>${maven.shade.plugin.version}</version>
                 </plugin>
+                <plugin>
+                    <!-- Generates plugin.xml (goal descriptors) for the
+                         maven-plugin-packaged module below; Maven's default
+                         lifecycle mapping for packaging=maven-plugin binds
+                         its `descriptor` goal automatically once the
+                         version is pinned here. -->
+                    <artifactId>maven-plugin-plugin</artifactId>
+                    <version>${maven.plugin.plugin.version}</version>
+                </plugin>
             </plugins>
         </pluginManagement>
     </build>
@@ -181,14 +246,146 @@
             Guide generation is opt-in so the default build stays fast and free of
             the CLI/Playwright dependency. Activate with -Pguide (e.g.
             `mvn install -Pguide`): the guide module is added to the reactor and,
-            because it depends on pagewright-cli, is ordered last, so it renders
+            because it depends on cli, is ordered last, so it renders
             using the jar built earlier in the same run.
         -->
         <profile>
             <id>guide</id>
             <modules>
-                <module>pagewright-guide</module>
+                <module>guide</module>
             </modules>
         </profile>
+
+
+
+        <!-- Everything a Maven Central release needs beyond a normal build - sources
+       jar, javadoc jar, staging locally instead of deploying remotely, and
+       (via JReleaser, run as a second, separate command - see jreleaser.yml)
+       GPG signing and the actual Central upload - lives in this profile
+       rather than the main <build>. Not activated by default: day-to-day
+       `mvn test`/`mvn verify` (including the real, forked src/it integration
+       builds above) would otherwise pay the javadoc-generation cost on every
+       single build. Activate explicitly for an actual release:
+
+         mvn clean deploy -Prelease          (builds + stages locally, unsigned)
+         mvn jreleaser:full-release -Prelease (signs + uploads to Central,
+                                              then tags and creates the
+                                              GitHub release with changelog)
+
+       If you only want the Central upload without touching GitHub, use
+       `mvn jreleaser:deploy -Prelease` instead of full-release.
+       See jreleaser.yml (same directory as this pom) for the full release
+       config and the environment variables it needs, and RELEASING.md for
+       the one-time Central Portal / GPG setup. -->
+
+
+        <profile>
+        <id>release</id>
+        <properties>
+            <!-- Redirects the standard `deploy` phase to write here instead of
+                 a real remote repository (this pom has no <distributionManagement>
+                 configured at all - JReleaser's own Deploy step is what actually
+                 talks to Central, not maven-deploy-plugin). -->
+            <altDeploymentRepository>local::file:${maven.multiModuleProjectDirectory}/target/staging-deploy</altDeploymentRepository>
+        </properties>
+        <build>
+        <plugins>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>1.6.0</version>
+                <configuration>
+                    <updatePomFile>true</updatePomFile>
+                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>flatten.clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>3.4.0</version>
+            <executions>
+                <execution>
+                    <id>attach-sources</id>
+                    <goals>
+                        <goal>jar-no-fork</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>3.12.0</version>
+            <executions>
+                <execution>
+                    <id>attach-javadocs</id>
+                    <goals>
+                        <goal>jar</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-deploy-plugin</artifactId>
+            <version>3.1.4</version>
+        </plugin>
+        <plugin>
+        <!-- Not bound to any lifecycle phase - always invoked
+             explicitly (`mvn jreleaser:full-release -Prelease`), and
+             only after `mvn clean deploy -Prelease` has already staged
+             the jar/sources/javadoc into target/staging-deploy/ above.
+             full-release signs every staged artifact with the GPG key
+             configured in jreleaser.yml (env vars only, never this
+             file or settings.xml), uploads the bundle to the Central
+             Publishing Portal, then tags HEAD and creates the GitHub
+             release. <inherited>false</inherited> is the documented
+             safeguard for multi-module reactors (this module doesn't
+             have a parent right now, but costs nothing to include).
+             1.25.0 is the latest JReleaser as of Aug 2026. -->
+        <groupId>org.jreleaser</groupId>
+        <artifactId>jreleaser-maven-plugin</artifactId>
+        <version>1.25.0</version>
+        <inherited>false</inherited>
+            <configuration>
+                <!-- This pom.xml lives in maven-plugin/, a subdirectory of
+                     the vendor-support-scanner repo - the actual .git folder
+                     is one level up, at the repo root, not here. Without this,
+                     JReleaser fails immediately with "Could not determine git
+                     HEAD: repository not found" since it only looks for .git
+                     in its basedir by default. -->
+                <gitRootSearch>true</gitRootSearch>
+                <!-- The maven plugin does NOT auto-discover jreleaser.yml in
+                     basedir the way the standalone jreleaser CLI does -
+                     confirmed empirically: without this, every section of
+                     jreleaser.yml (release/signing/deploy) is silently
+                     ignored and `jreleaser:deploy` just logs "Deploying is
+                     not enabled. Skipping" instead of doing anything. -->
+                <configFile>jreleaser.yml</configFile>
+            </configuration>
+        </plugin>
+        </plugins>
+        </build>
+        </profile>
+
     </profiles>
+
+
 </project>

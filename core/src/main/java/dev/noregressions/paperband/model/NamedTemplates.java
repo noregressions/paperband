@@ -9,9 +9,9 @@ import java.util.Map;
  * config — e.g. {@code template: minimal} instead of
  * {@code template: layouts/my-section.html}.
  *
- * <p>Keeping this in {@code pagewright-core} lets both {@code pagewright-config}
+ * <p>Keeping this in {@code core} lets both {@code config}
  * (which parses the book-wide {@code sections.landing.template} default) and
- * {@code pagewright-layout} (which reads a section folder's own per-folder
+ * {@code layout} (which reads a section folder's own per-folder
  * override directly, since section grouping happens after every card in the
  * book is already loaded) resolve the same names the same way, without either
  * module needing to depend on the other.

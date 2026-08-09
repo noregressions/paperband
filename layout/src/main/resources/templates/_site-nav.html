@@ -15,7 +15,7 @@
 (function () {
   // Whole-sidebar persisted preference (desktop only).
   try {
-    var v = localStorage.getItem('pagewright.sidebarCollapsed');
+    var v = localStorage.getItem('paperband.sidebarCollapsed');
     if (v === '1') document.body.classList.add('sidebar-collapsed');
     else if (v === '0') document.body.classList.remove('sidebar-collapsed');
   } catch (e) { /* private mode, ignore */ }
@@ -39,7 +39,7 @@
     // and any prior user collapse for that section.
     var state = {};
     try {
-      var raw = localStorage.getItem('pagewright.sidebarSections');
+      var raw = localStorage.getItem('paperband.sidebarSections');
       if (raw) state = JSON.parse(raw) || {};
     } catch (e) {}
 
@@ -64,7 +64,7 @@
     });
   });
 })();
-function pagewrightToggleSidebar(btn) {
+function paperbandToggleSidebar(btn) {
   var collapsed;
   if (window.matchMedia('(max-width: 900px)').matches) {
     // Mobile: drawer open/close, not persisted.
@@ -75,9 +75,9 @@ function pagewrightToggleSidebar(btn) {
   // Desktop: persist the collapse preference.
   collapsed = document.body.classList.toggle('sidebar-collapsed');
   if (btn) btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-  try { localStorage.setItem('pagewright.sidebarCollapsed', collapsed ? '1' : '0'); } catch (e) {}
+  try { localStorage.setItem('paperband.sidebarCollapsed', collapsed ? '1' : '0'); } catch (e) {}
 }
-function pagewrightToggleSection(btn) {
+function paperbandToggleSection(btn) {
   var sec = btn.closest('.sidebar-section');
   if (!sec) return;
   var collapsed = sec.classList.toggle('collapsed');
@@ -87,22 +87,22 @@ function pagewrightToggleSection(btn) {
   // Persist an explicit state (not a deletion) so the user's choice
   // overrides the server-rendered default on the next page load.
   try {
-    var raw = localStorage.getItem('pagewright.sidebarSections');
+    var raw = localStorage.getItem('paperband.sidebarSections');
     var state = raw ? (JSON.parse(raw) || {}) : {};
     state[id] = collapsed ? '1' : '0';
-    localStorage.setItem('pagewright.sidebarSections', JSON.stringify(state));
+    localStorage.setItem('paperband.sidebarSections', JSON.stringify(state));
   } catch (e) {}
 }
 </script>
 {% endif %}
 <nav class="site-nav">
-  <a class="nav-brand" href="{{ urlPrefix }}index.html">{{ book.title | default('pagewright') }}</a>
+  <a class="nav-brand" href="{{ urlPrefix }}index.html">{{ book.title | default('paperband') }}</a>
   {% if sidebar %}
   <span class="nav-spacer"></span>
   <button class="nav-sidebar-toggle" type="button"
-          aria-label="Toggle navigation" aria-controls="pagewright-sidebar"
+          aria-label="Toggle navigation" aria-controls="paperband-sidebar"
           aria-expanded="{% if sidebar_collapsed %}false{% else %}true{% endif %}"
-          onclick="pagewrightToggleSidebar(this)">☰</button>
+          onclick="paperbandToggleSidebar(this)">☰</button>
   {% else %}
   {% for e in navEntries %}
   {% if e.kind == 'axis' %}

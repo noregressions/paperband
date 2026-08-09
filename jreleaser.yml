@@ -1,0 +1,107 @@
+# JReleaser config for Paperband's Maven Central release.
+# (JReleaser 1.25.0 - latest as of Aug 2026. See RELEASING.md for the
+# one-time Central Portal namespace / GPG setup.)
+#
+# Two-command flow (both need the "release" profile active), run from the
+# project root directory:
+#
+#   mvn clean deploy -Prelease           (builds jar + sources + javadoc
+#                                          jars, stages them, UNSIGNED, to
+#                                          target/staging-deploy/ - does not
+#                                          push anywhere)
+#   mvn jreleaser:full-release -Prelease (signs every staged artifact,
+#                                          uploads the bundle to the Central
+#                                          Publishing Portal, then tags HEAD
+#                                          as v<version> and creates the
+#                                          GitHub release with a generated
+#                                          changelog)
+#
+# To publish to Central WITHOUT touching GitHub, run
+# `mvn jreleaser:deploy -Prelease` instead of full-release.
+#
+# IMPORTANT - where you run this from: the GitHub release step tags the
+# current git HEAD and asks the GitHub API to create a release for that
+# commit in noregressions/paperband. That commit must therefore
+# already be pushed to that repo. If this directory still lives inside the
+# vendor-support-scanner monorepo clone (whose commits don't exist in the
+# standalone repo), full-release's release step will fail - either run the
+# release from a clone of paperband itself, or fall back to
+# `jreleaser:deploy` and tag/release on GitHub manually.
+#
+# Required environment variables - set these on Steve's own machine only,
+# never in this file or in git:
+#
+#   JRELEASER_GITHUB_TOKEN                    a real GitHub token now that
+#                                              the repo exists and we tag +
+#                                              create releases: fine-grained
+#                                              PAT with "Contents:
+#                                              Read and write" on
+#                                              noregressions/paperband
+#                                              (or a classic PAT with `repo`
+#                                              scope).
+#   JRELEASER_GPG_PASSPHRASE                  your GPG key's passphrase
+#   JRELEASER_GPG_PUBLIC_KEY                  `gpg --export --armor <keyid>`
+#   JRELEASER_GPG_SECRET_KEY                  `gpg --export-secret-keys --armor <keyid>`
+#   JRELEASER_MAVENCENTRAL_SONATYPE_USERNAME  the Central Portal user token username
+#   JRELEASER_MAVENCENTRAL_SONATYPE_PASSWORD  the Central Portal user token password
+#
+# (The MAVENCENTRAL_SONATYPE_* names come from the deployer being named
+# "sonatype" below - JReleaser interpolates the deployer's name into the
+# env var: JRELEASER_MAVENCENTRAL_${name}_USERNAME/PASSWORD.)
+#
+# Also required: git remote named "origin" pointing at
+# https://github.com/noregressions/paperband.git - JReleaser
+# reads owner/repo from it.
+
+project:
+  name: paperband
+  description: Pluggable static-site and PDF builder for structured content guides.
+  links:
+    homepage: https://github.com/noregressions/paperband
+  license: Apache-2.0
+  authors:
+    - Steve Poole
+
+release:
+  github:
+    owner: noregressions
+    name: paperband
+    # Tag HEAD as v<version> and create a real GitHub release (the repo
+    # exists now - this replaces the old skipRelease/skipTag "neutered"
+    # setup from when the code only lived inside the monorepo).
+    tagName: 'v{{projectVersion}}'
+    releaseName: 'v{{projectVersion}}'
+    # Never clobber an existing release/tag by accident; bump the version
+    # instead. (JReleaser fails fast if the tag already exists.)
+    overwrite: false
+    changelog:
+      # Generate the release notes from commit history since the last tag,
+      # with commit links. No conventional-commits preset assumed.
+      formatted: ALWAYS
+      links: true
+
+signing:
+  active: ALWAYS
+  pgp:
+    active: ALWAYS
+    armored: true
+    mode: MEMORY
+    # passphrase / publicKey / secretKey deliberately not set here - read
+    # from JRELEASER_GPG_PASSPHRASE / JRELEASER_GPG_PUBLIC_KEY /
+    # JRELEASER_GPG_SECRET_KEY.
+
+deploy:
+  maven:
+    mavenCentral:
+      sonatype:
+        active: ALWAYS
+        url: https://central.sonatype.com/api/v1/publisher
+        stagingRepositories:
+          - target/staging-deploy
+        # Turns on sign + checksums + sourceJar/javadocJar/verifyPom
+        # verification together - exactly what Central requires, in one
+        # flag instead of five.
+        applyMavenCentralRules: true
+        # username / password deliberately not set here - read from
+        # JRELEASER_MAVENCENTRAL_SONATYPE_USERNAME /
+        # JRELEASER_MAVENCENTRAL_SONATYPE_PASSWORD.

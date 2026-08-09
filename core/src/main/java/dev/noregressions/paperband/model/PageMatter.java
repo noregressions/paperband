@@ -2,7 +2,7 @@ package dev.noregressions.paperband.model;
 
 /**
  * Declares a book's front-cover or back-page content, from a {@code cover:}
- * or {@code back:} key in the book root {@code pagewright.yaml}:
+ * or {@code back:} key in the book root {@code paperband.yaml}:
  *
  * <pre>
  * cover:
@@ -14,7 +14,7 @@ package dev.noregressions.paperband.model;
  * <p>A bare string value is shorthand for {@code image:}
  * ({@code cover: images/front.png}).
  *
- * <p>Semantics (implemented by {@code book.html} in {@code pagewright-layout}):
+ * <p>Semantics (implemented by {@code book.html} in {@code layout}):
  * {@code template:} wins when both are set — it replaces the built-in
  * {@code _book-cover} / {@code _book-back} include entirely (the {@code book}
  * model, including {@code book.cover.image} / {@code book.back.image}, is

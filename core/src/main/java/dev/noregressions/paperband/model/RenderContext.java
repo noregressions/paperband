@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Per-card render context, produced by walking the {@code pagewright.yaml}
+ * Per-card render context, produced by walking the {@code paperband.yaml}
  * cascade from book root down to the card's directory.
  *
  * @param book          the book this card belongs to

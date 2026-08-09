@@ -6,12 +6,12 @@ oneliner: "Targets name output profiles and gate target-scoped content via where
 # Targets
 
 A build target names a concrete output profile — for example `pdf-a4`, `pdf-6x9`, or `web`.
-Targets are declared in the book's `pagewright.yaml` and selected with `--target` (`-t`);
+Targets are declared in the book's `paperband.yaml` and selected with `--target` (`-t`);
 they also drive conditional inclusion, so a subtree can be marked web-only or print-only.
 
 ## Declaring targets
 
-`targets:` in the root `pagewright.yaml` is a flat list of names:
+`targets:` in the root `paperband.yaml` is a flat list of names:
 
 ```yaml
 title: "Complete Book"
@@ -29,7 +29,7 @@ branch on.
 ## Selecting a target
 
 ```bash
-pagewright build mybook out.pdf --target pdf-6x9 --page-size BOOKLET_6X9
+paperband build mybook out.pdf --target pdf-6x9 --page-size BOOKLET_6X9
 ```
 
 The default is `pdf-a4`. The value is not validated against the declared list — a typo'd
@@ -42,7 +42,7 @@ A folder's `order:` list accepts map entries with a `where:` predicate evaluated
 the current target. When the predicate is false, that card or subtree is skipped entirely:
 
 ```yaml
-# content/pagewright.yaml
+# content/paperband.yaml
 order:
   - intro
   - { id: interactive-demos, where: "target == 'web'" }

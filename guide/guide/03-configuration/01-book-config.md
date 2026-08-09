@@ -1,11 +1,11 @@
 ---
 id: book-config
-oneliner: "The root pagewright.yaml declares the book: title, axes, CSS, vars, and targets."
+oneliner: "The root paperband.yaml declares the book: title, axes, CSS, vars, and targets."
 ---
 
 # Book Configuration
 
-The `pagewright.yaml` at the book root holds global configuration that applies to every
+The `paperband.yaml` at the book root holds global configuration that applies to every
 card: the book `title`, categorical `axes`, the base `css` chain, free-form `vars`, the
 default `theme`, and the declared build `targets`.
 
@@ -36,7 +36,7 @@ axes:
 
 Each value's `id`/`label` are required-ish (an id with no label falls back to
 `"{axis title} {id}"`); everything else under a value (e.g. `color`) is free-form metadata.
-`color` is the one key pagewright's own templates read; anything else is available to
+`color` is the one key paperband's own templates read; anything else is available to
 custom theme templates but otherwise ignored.
 
 A card joins an axis's value either through its own frontmatter field of the same name:
@@ -52,7 +52,7 @@ subsystem: core
 or through a folder-level binding that cascades to every card under that folder:
 
 ```yaml
-# some-folder/pagewright.yaml
+# some-folder/paperband.yaml
 axis:
   tier: 1
 ```
@@ -78,11 +78,11 @@ instead ("sections") and get their own landing pages alongside the axis-value pa
 A section's landing page normally renders with the built-in `site-section` template, but
 this is overridable in two places, checked in this order:
 
-1. The section folder's own `pagewright.yaml`, with the same `landing.template` shape an
+1. The section folder's own `paperband.yaml`, with the same `landing.template` shape an
    axis value uses:
 
    ```yaml
-   # content/scanners/pagewright.yaml
+   # content/scanners/paperband.yaml
    title: "Scanners & Blindspots"
    landing:
      template: "layouts/scanners-section.html"
@@ -99,7 +99,7 @@ this is overridable in two places, checked in this order:
 
 Template paths are resolved relative to the book root, and — like any custom layout —
 need to actually be reachable through the book's `layouts/` directory (or a theme's
-template overrides) for pagewright to find them by name. If neither is set, the built-in
+template overrides) for paperband to find them by name. If neither is set, the built-in
 template is used, same as before this override existed.
 
 Instead of a path, `template:` also accepts a **named preset** — no file needed:
@@ -110,7 +110,7 @@ Instead of a path, `template:` also accepts a **named preset** — no file neede
 | `minimal` | Just the section title — no count, no card list        |
 
 ```yaml
-# content/quickref/pagewright.yaml
+# content/quickref/paperband.yaml
 title: "Quick Reference"
 landing:
   template: minimal
@@ -121,6 +121,6 @@ above. Named presets and file-path overrides can be mixed freely across a book's
 sections — some folders can use `minimal`, others their own custom template, others
 nothing at all (falling through to the book default, then the built-in template).
 
-The same folder `pagewright.yaml` `title:` key (independent of `landing.template`) sets
+The same folder `paperband.yaml` `title:` key (independent of `landing.template`) sets
 the section's display label; without it, the label is auto-formatted from the folder name
 (hyphens/underscores become spaces, each word capitalized).

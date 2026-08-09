@@ -17,7 +17,7 @@ import java.util.concurrent.Callable;
 /**
  * One-shot HTML&rarr;PDF render. Useful for smoke-testing a renderer.
  *
- * <pre>pagewright render --renderer playwright input.html output.pdf</pre>
+ * <pre>paperband render --renderer playwright input.html output.pdf</pre>
  */
 @Command(
         name = "render",
@@ -27,7 +27,7 @@ public final class RenderCommand implements Callable<Integer> {
 
     @Option(
             names = {"-r", "--renderer"},
-            description = "Renderer name. Use `pagewright renderers` to list. Default: ${DEFAULT-VALUE}",
+            description = "Renderer name. Use `paperband renderers` to list. Default: ${DEFAULT-VALUE}",
             defaultValue = "playwright")
     String rendererName;
 

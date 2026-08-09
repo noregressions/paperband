@@ -32,6 +32,7 @@ public interface ContentProvider {
      * <p>For {@code {{#include git://samples:path}}} the name is {@code git}.
      * For the short-form {@code {{#include path}}} the default name is
      * {@code file}.
+     * @return the provider name
      */
     String name();
 
@@ -40,6 +41,9 @@ public interface ContentProvider {
      * any environmental information needed (source file location, attributes,
      * config).
      *
+     * @param reference the content reference
+     * @param ctx the include context
+     * @return the fetched fragment
      * @throws ContentResolutionException if the reference can't be resolved
      *                                    (file missing, anchor missing,
      *                                    network failure, etc.)
@@ -54,6 +58,10 @@ public interface ContentProvider {
      * <p>Default implementation calls {@link #fetch} and discards the result;
      * providers can override with cheaper checks (e.g. {@code Files.exists})
      * where possible.
+     *
+     * @param reference the content reference
+     * @param ctx the include context
+     * @throws ContentResolutionException if the reference cannot be validated
      */
     default void validate(String reference, IncludeContext ctx) throws ContentResolutionException {
         fetch(reference, ctx);

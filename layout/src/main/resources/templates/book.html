@@ -2,9 +2,9 @@
 <html lang="en" class="{% if target %}target-{{ target | lower }} {% endif %}{% if size %}size-{{ size | lower }}{% endif %}{% if orientation %} orientation-{{ orientation }}{% endif %}{% if edition is not null %} edition-{{ edition.id }}{% for c in edition.classes %} {{ c }}{% endfor %}{% endif %}" style="--pw-content-height: {{ contentHeightMm }}mm;{% if fontScale %} --pw-font-scale: {{ fontScale }};{% endif %}">
 <head>
   <meta charset="UTF-8">
-  <title>{{ ctx.book.title | default('pagewright book') }}</title>
-  <meta name="generator" content="pagewright">
-  {% if target %}<meta name="pagewright-target" content="{{ target }}">{% endif %}
+  <title>{{ ctx.book.title | default('paperband book') }}</title>
+  <meta name="generator" content="paperband">
+  {% if target %}<meta name="paperband-target" content="{{ target }}">{% endif %}
 
   {# Prism syntax highlighting — Prism tokenises <pre><code class="language-X">
      blocks (flexmark emits these from fenced ``` blocks with a language tag).

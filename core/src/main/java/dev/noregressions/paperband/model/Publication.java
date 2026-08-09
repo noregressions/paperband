@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The {@code publication:} block of a book root {@code pagewright.yaml}:
+ * The {@code publication:} block of a book root {@code paperband.yaml}:
  * named editions cut from one card source, each resolving its build settings
  * against a shared {@link Defaults} block (see DESIGN-publications.md).
  *

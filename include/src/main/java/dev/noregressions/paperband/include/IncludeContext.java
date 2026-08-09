@@ -15,7 +15,7 @@ import java.util.Map;
  * @param attributes  raw attribute map parsed from the directive
  *                    (e.g. {@code marker_start=BEGIN}, {@code lang=python});
  *                    both providers and processors read from this same map
- * @param providerConfig  optional per-provider config block from {@code pagewright.yaml},
+ * @param providerConfig  optional per-provider config block from {@code paperband.yaml},
  *                    or empty if no config is declared for that provider
  */
 public record IncludeContext(

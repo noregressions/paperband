@@ -38,7 +38,7 @@ import java.util.concurrent.Callable;
  *
  * <p><b>Single card mode</b> (input is a {@code .md} file):
  * <ol>
- *   <li>{@link ConfigLoader} resolves the {@code pagewright.yaml} cascade.</li>
+ *   <li>{@link ConfigLoader} resolves the {@code paperband.yaml} cascade.</li>
  *   <li>{@link CardLoader} parses the markdown.</li>
  *   <li>{@link LayoutEngine#render(Card, RenderContext)} produces a styled HTML page.</li>
  *   <li>The selected renderer converts that HTML to PDF.</li>
@@ -47,7 +47,7 @@ import java.util.concurrent.Callable;
  * <p><b>Multi-card / book mode</b> (input is a directory):
  * <ol>
  *   <li>{@link BookWalker} flattens the directory tree into an ordered list of cards,
- *       honouring {@code order:} declarations in each {@code pagewright.yaml}.</li>
+ *       honouring {@code order:} declarations in each {@code paperband.yaml}.</li>
  *   <li>Each card is parsed individually so its frontmatter and folder-level
  *       axis bindings flow into a per-card render context.</li>
  *   <li>{@link LayoutEngine#renderBook(List, RenderContext)} aggregates everything into
@@ -56,9 +56,9 @@ import java.util.concurrent.Callable;
  * </ol>
  *
  * <pre>
- * pagewright build path/to/card.md out.pdf
- * pagewright build guide/content/tier1/framework topic.pdf
- * pagewright build guide whole-book.pdf
+ * paperband build path/to/card.md out.pdf
+ * paperband build guide/content/tier1/framework topic.pdf
+ * paperband build guide whole-book.pdf
  * </pre>
  */
 @Command(
@@ -69,7 +69,7 @@ public final class BuildCommand implements Callable<Integer> {
 
     @Option(
             names = {"-r", "--renderer"},
-            description = "Renderer name. Use `pagewright renderers` to list. Default: ${DEFAULT-VALUE}",
+            description = "Renderer name. Use `paperband renderers` to list. Default: ${DEFAULT-VALUE}",
             defaultValue = "playwright")
     String rendererName;
 
@@ -103,14 +103,14 @@ public final class BuildCommand implements Callable<Integer> {
     @Option(
             names = {"--max-pages-per-card"},
             description = "After rendering, fail if any card spans more than N pages. "
-                    + "Overrides vars.maxPagesPerCard in pagewright.yaml if both are set.")
+                    + "Overrides vars.maxPagesPerCard in paperband.yaml if both are set.")
     Integer maxPagesPerCard;
 
     @Option(
             names = {"--theme"},
-            description = "Apply a named theme. Use `pagewright themes` to list what's available. "
+            description = "Apply a named theme. Use `paperband themes` to list what's available. "
                     + "User themes resolved via --theme-dir take priority over built-ins of the same name. "
-                    + "Overrides any `theme:` declared in the book's pagewright.yaml.")
+                    + "Overrides any `theme:` declared in the book's paperband.yaml.")
     String themeName;
 
     @Option(
@@ -463,7 +463,7 @@ public final class BuildCommand implements Callable<Integer> {
      * Resolve the CLI flag against the yaml default: {@code --max-pages-per-card}
      * wins when explicitly passed (same "CLI overrides yaml" convention as
      * {@code --theme}/{@code --watermark}); otherwise falls back to {@code
-     * vars.maxPagesPerCard} from {@code pagewright.yaml} (any level of the
+     * vars.maxPagesPerCard} from {@code paperband.yaml} (any level of the
      * cascade — book root or a folder/edition override, same as any other
      * {@code vars} entry). Returns the resolved limit plus a label for
      * reporting/error messages, or null if neither is set.
@@ -473,7 +473,7 @@ public final class BuildCommand implements Callable<Integer> {
     private static GlobalLimit resolveGlobalLimit(Integer cliValue, RenderContext bookCtx) {
         if (cliValue != null) return new GlobalLimit(cliValue, "--max-pages-per-card");
         Integer yamlValue = parseInt(bookCtx.vars().get("maxPagesPerCard"));
-        if (yamlValue != null && yamlValue > 0) return new GlobalLimit(yamlValue, "pagewright.yaml");
+        if (yamlValue != null && yamlValue > 0) return new GlobalLimit(yamlValue, "paperband.yaml");
         return null;
     }
 
@@ -487,7 +487,7 @@ public final class BuildCommand implements Callable<Integer> {
      *   <li>Honours per-card {@code max_pages} declared in frontmatter</li>
      *   <li>Falls back to a global ceiling — {@code --max-pages-per-card} or,
      *       if that's not passed, {@code vars.maxPagesPerCard} in
-     *       {@code pagewright.yaml} — for cards that don't declare their own
+     *       {@code paperband.yaml} — for cards that don't declare their own
      *       limit</li>
      * </ul>
      *
@@ -495,7 +495,7 @@ public final class BuildCommand implements Callable<Integer> {
      * <ol>
      *   <li>{@code max_pages} from card frontmatter, if present</li>
      *   <li>{@code --max-pages-per-card} from the CLI, if set</li>
-     *   <li>{@code vars.maxPagesPerCard} from {@code pagewright.yaml}, if set</li>
+     *   <li>{@code vars.maxPagesPerCard} from {@code paperband.yaml}, if set</li>
      *   <li>otherwise no enforcement for this card</li>
      * </ol>
      *
@@ -631,7 +631,7 @@ public final class BuildCommand implements Callable<Integer> {
      * Include-provider config derived solely from operator-controlled CLI flags.
      * The trust decision to let includes escape the book root belongs to the
      * person running the build, not to the book being built — so this is never
-     * populated from the book's own {@code pagewright.yaml}, and it names the
+     * populated from the book's own {@code paperband.yaml}, and it names the
      * specific directories/files trusted rather than flipping a blanket switch.
      */
     static Map<String, Map<String, Object>> includeProviderConfig(
@@ -659,7 +659,7 @@ public final class BuildCommand implements Callable<Integer> {
     /**
      * Read {@code cardFile} and run the pre-flexmark preprocessing pass
      * (fragment resolution + vars/conditionals — see
-     * {@code PebbleIncludePreprocessor} in {@code pagewright-include}), then
+     * {@code PebbleIncludePreprocessor} in {@code include}), then
      * parse the result into a {@link Card} via {@link CardLoader#parse(Path, String)}.
      *
      * <p>A {@code .yaml}/{@code .yml} card file is first transpiled to
@@ -701,7 +701,7 @@ public final class BuildCommand implements Callable<Integer> {
      *   <li>If {@code --watermark} is set, the base spec comes from CLI text
      *       with default knobs.</li>
      *   <li>Otherwise the base spec comes from {@code vars.watermark} in
-     *       {@code pagewright.yaml} (bare string or full map; see
+     *       {@code paperband.yaml} (bare string or full map; see
      *       {@link Watermark#fromYaml}).</li>
      *   <li>CLI tuning flags ({@code --watermark-color}, etc.) override
      *       whichever fields they target on the resolved spec.</li>
@@ -730,7 +730,7 @@ public final class BuildCommand implements Callable<Integer> {
 
     /**
      * Resolve the active theme name: {@code --theme} CLI flag wins, otherwise
-     * fall back to the {@code theme:} declared in the book's {@code pagewright.yaml}.
+     * fall back to the {@code theme:} declared in the book's {@code paperband.yaml}.
      * Returns null when neither is set, which {@link ThemeResolver} treats as
      * "no theme" ({@link ThemeBundle#NONE}).
      */

@@ -12,7 +12,7 @@ ceiling with `--max-pages-per-card` (or a per-card `max_pages` in frontmatter).
 ## Setting limits
 
 ```bash
-pagewright build mybook out.pdf --max-pages-per-card 2 --report-pages
+paperband build mybook out.pdf --max-pages-per-card 2 --report-pages
 ```
 
 `--max-pages-per-card` is the global ceiling. A card can carry its own budget in
@@ -49,8 +49,8 @@ of their own kind, so the table doubles as a map of the book's physical structur
 rebuilding:
 
 ```bash
-pagewright pages out.pdf --by-pages      # sort longest-first
-pagewright pages out.pdf --cards-only    # hide cover/divider/back rows
+paperband pages out.pdf --by-pages      # sort longest-first
+paperband pages out.pdf --cards-only    # hide cover/divider/back rows
 ```
 
 ## How counting works — and what it requires
@@ -61,14 +61,14 @@ when the renderer turns those anchors into PDF destinations, each element's span
 distance to the next anchor's page.
 
 This is the catch: **the renderer must emit named destinations.** Chromium does, so the
-only renderer pagewright ships with (`playwright`) supports the whole feature. If a PDF
+only renderer paperband ships with (`playwright`) supports the whole feature. If a PDF
 somehow has no destinations, `build` prints a warning and **skips the checks without
 failing** — so a passing build means "not checked", not "within budget", in that case.
 
 ## Check
 
 ```bash
-pagewright pages out.pdf
+paperband pages out.pdf
 ```
 
 If it reports no recognised anchors, the renderer didn't emit destinations and any

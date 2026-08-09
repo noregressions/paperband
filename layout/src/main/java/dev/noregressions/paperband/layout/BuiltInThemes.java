@@ -3,10 +3,10 @@ package dev.noregressions.paperband.layout;
 import java.util.List;
 
 /**
- * Names of the theme bundles that ship inside {@code pagewright-layout} on the
+ * Names of the theme bundles that ship inside {@code layout} on the
  * classpath. The list is the single source of truth used by both
  * {@code --theme} help text and any UI that wants to enumerate the built-ins
- * (e.g. {@code pagewright themes}). Add a theme directory under
+ * (e.g. {@code paperband themes}). Add a theme directory under
  * {@code src/main/resources/themes/} and append its name here.
  *
  * <p>User themes from {@code --theme-dir} are <em>not</em> included; they're

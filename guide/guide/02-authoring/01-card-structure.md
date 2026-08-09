@@ -83,7 +83,7 @@ exactly like a top-level `## Check`.
 ## Check
 
 ```bash
-pagewright scan path/to/card.md
+paperband scan path/to/card.md
 ```
 
 The scan output lists every block's heading, resolved CSS classes, and a snippet of its

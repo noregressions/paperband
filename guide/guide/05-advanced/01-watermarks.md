@@ -12,7 +12,7 @@ named destinations that page-count enforcement relies on.
 
 ## Declaring in yaml
 
-The watermark lives under `vars:` in the root `pagewright.yaml`. A bare string takes all
+The watermark lives under `vars:` in the root `paperband.yaml`. A bare string takes all
 the defaults:
 
 ```yaml
@@ -55,7 +55,7 @@ watermark.
 
 ```bash
 # yaml says DRAFT; this build says otherwise
-pagewright build mybook out.pdf --watermark "REVIEW COPY" --watermark-opacity 0.2
+paperband build mybook out.pdf --watermark "REVIEW COPY" --watermark-opacity 0.2
 ```
 
 A successful application prints `Applied watermark: "REVIEW COPY"` after rendering.

@@ -28,7 +28,7 @@ import java.util.concurrent.Callable;
  * assemble, in order: cover, axis divider pages (one line per axis a card is
  * first-of-value for), folder-based sections (the axis-less fallback), each
  * card with its resolved axis values and source file, that card's H2+ block
- * tree, and the back page. Because pagewright's model is a flat ordered walk
+ * tree, and the back page. Because paperband's model is a flat ordered walk
  * with dividers <em>derived</em> from it (not a nested tree), interleaved
  * axis values produce repeated DIVIDER lines here — matching the repeated
  * divider pages the PDF would get.
@@ -37,9 +37,9 @@ import java.util.concurrent.Callable;
  * block tree.
  *
  * <pre>
- * pagewright structure path/to/book                 # print to stdout
- * pagewright structure path/to/book structure.txt   # write to a file
- * pagewright structure path/to/card.md
+ * paperband structure path/to/book                 # print to stdout
+ * paperband structure path/to/book structure.txt   # write to a file
+ * paperband structure path/to/card.md
  * </pre>
  */
 @Command(

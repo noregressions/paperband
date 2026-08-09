@@ -33,7 +33,7 @@
  * target class is informational and may be left at the default `pdf-a4`).
  * Everything below is in rem and scales from this single number.
  * ───────────────────────────────────────────────────────────────────────── */
-html                    { font-size: calc(11pt * var(--pw-font-scale, 1)); }  /* default print baseline; --pw-font-scale set by pagewright for custom page: sizes / explicit fontScale overrides, unset otherwise */
+html                    { font-size: calc(11pt * var(--pw-font-scale, 1)); }  /* default print baseline; --pw-font-scale set by paperband for custom page: sizes / explicit fontScale overrides, unset otherwise */
 html.target-web         { font-size: 16px; }     /* screen-comfortable */
 html.size-a4            { font-size: 11pt; }     /* explicit; matches default */
 html.size-letter        { font-size: 11pt; }

@@ -7,11 +7,10 @@
 
     <parent>
         <groupId>dev.noregressions.paperband</groupId>
-        <artifactId>pagewright-parent</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <artifactId>parent</artifactId>
+        <version>${revision}</version>
     </parent>
-
-    <artifactId>pagewright-guide</artifactId>
+    <artifactId>guide</artifactId>
     <!--
         pom packaging: this module builds documentation (PDF + static site) by
         running the CLI during the package phase. It has no Java sources and
@@ -26,16 +25,17 @@
         Self-documenting guide. The guide source lives in guide/; the PDF and
         static site produced at package time ARE the documentation.
     </description>
+    <url>https://github.com/noregressions/paperband</url>
 
     <dependencies>
         <!--
             The shaded all-in-one jar. Contains every renderer and all transitive
-            deps. Declaring it here ensures Maven builds pagewright-cli before this
+            deps. Declaring it here ensures Maven builds cli before this
             module and makes the artifact available to dependency:copy below.
         -->
         <dependency>
             <groupId>dev.noregressions.paperband</groupId>
-            <artifactId>pagewright-cli</artifactId>
+            <artifactId>cli</artifactId>
             <version>${project.version}</version>
             <classifier>all</classifier>
             <scope>runtime</scope>
@@ -62,11 +62,11 @@
                             <artifactItems>
                                 <artifactItem>
                                     <groupId>dev.noregressions.paperband</groupId>
-                                    <artifactId>pagewright-cli</artifactId>
+                                    <artifactId>cli</artifactId>
                                     <version>${project.version}</version>
                                     <classifier>all</classifier>
                                     <type>jar</type>
-                                    <destFileName>pagewright.jar</destFileName>
+                                    <destFileName>paperband.jar</destFileName>
                                     <outputDirectory>${project.build.directory}</outputDirectory>
                                 </artifactItem>
                             </artifactItems>
@@ -94,13 +94,13 @@
                             <executable>${java.home}/bin/java</executable>
                             <arguments>
                                 <argument>-jar</argument>
-                                <argument>${project.build.directory}/pagewright.jar</argument>
+                                <argument>${project.build.directory}/paperband.jar</argument>
                                 <argument>build</argument>
                                 <argument>${project.basedir}/guide</argument>
                                 <argument>${project.build.directory}/guide.pdf</argument>
                                 <!--
                                     The guide deliberately includes real project source
-                                    from above its book root (pom.xml, pagewright-include
+                                    from above its book root (pom.xml, include
                                     sources) to stay in sync with the code. This is a
                                     trusted first-party build, so allow-list the repo
                                     root explicitly rather than disabling containment.
@@ -118,7 +118,7 @@
                             <executable>${java.home}/bin/java</executable>
                             <arguments>
                                 <argument>-jar</argument>
-                                <argument>${project.build.directory}/pagewright.jar</argument>
+                                <argument>${project.build.directory}/paperband.jar</argument>
                                 <argument>site</argument>
                                 <argument>${project.basedir}/guide</argument>
                                 <argument>${project.build.directory}/guide-site</argument>

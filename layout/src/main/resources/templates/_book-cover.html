@@ -8,7 +8,7 @@
   {% else %}
   <div class="book-cover-inner">
     {% if book.series %}<div class="series">{{ book.series }}</div>{% endif %}
-    <h1>{{ book.title | default('pagewright book') }}</h1>
+    <h1>{{ book.title | default('paperband book') }}</h1>
     {% if book.subtitle %}<div class="subtitle">{{ book.subtitle }}</div>{% endif %}
     {% if book.author %}<div class="author">{{ book.author }}</div>{% endif %}
   </div>

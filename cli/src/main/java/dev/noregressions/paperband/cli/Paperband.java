@@ -14,9 +14,9 @@ import picocli.CommandLine.Command;
  * listing the theme bundles available to {@code --theme}.
  */
 @Command(
-        name = "pagewright",
+        name = "paperband",
         mixinStandardHelpOptions = true,
-        version = "pagewright 0.1.0-SNAPSHOT",
+        version = "paperband 0.1.0-SNAPSHOT",
         description = "Build static sites and PDFs from structured Markdown content.",
         subcommands = {
                 BuildCommand.class,

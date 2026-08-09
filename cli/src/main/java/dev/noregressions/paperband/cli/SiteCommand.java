@@ -39,7 +39,7 @@ import java.util.concurrent.Callable;
  * site-specific styling (sticky nav, card grid, hero panels).
  *
  * <pre>
- * pagewright site guide /tmp/site
+ * paperband site guide /tmp/site
  * </pre>
  */
 @Command(
@@ -61,9 +61,9 @@ public final class SiteCommand implements Callable<Integer> {
 
     @Option(
             names = {"--theme"},
-            description = "Apply a named theme. Use `pagewright themes` to list what's available. "
+            description = "Apply a named theme. Use `paperband themes` to list what's available. "
                     + "User themes resolved via --theme-dir take priority over built-ins of the same name. "
-                    + "Overrides any `theme:` declared in the book's pagewright.yaml.")
+                    + "Overrides any `theme:` declared in the book's paperband.yaml.")
     String themeName;
 
     @Option(

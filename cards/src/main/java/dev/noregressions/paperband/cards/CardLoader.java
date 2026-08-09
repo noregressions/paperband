@@ -69,7 +69,7 @@ import java.util.regex.Pattern;
  * <p>Conditional sections don't need block-level support here at all: wrap
  * the section in real {@code {% if vars.x %} ... {% endif %}} and the
  * whole-body Pebble pass ({@code PebbleIncludePreprocessor} in
- * {@code pagewright-include}) removes it from the source before this class
+ * {@code include}) removes it from the source before this class
  * ever sees it.
  */
 public final class CardLoader {

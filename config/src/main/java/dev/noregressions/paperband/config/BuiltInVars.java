@@ -12,19 +12,20 @@ import java.util.Map;
  * Computes the set of "built-in" variables auto-injected into the
  * {@code vars} map of every {@link dev.noregressions.paperband.model.RenderContext}.
  *
- * <p>Built-ins are seeded <em>before</em> the {@code pagewright.yaml} cascade,
+ * <p>Built-ins are seeded <em>before</em> the {@code paperband.yaml} cascade,
  * so any user-supplied entry with the same key wins. That makes the dates
  * pinnable for reproducible builds — set {@code build_date: "2026-01-15"}
  * in the book root yaml and that value flows through instead of "now".
  *
  * <p>Built-ins are accessible from both markdown body (via the whole-body
  * Pebble pass — {@code {{ vars.X }}}, {@code {% if vars.X %}}, etc. — see
- * {@code PebbleIncludePreprocessor} in {@code pagewright-include}) and from
+ * {@code PebbleIncludePreprocessor} in {@code include}) and from
  * final-render Pebble templates ({@code {{ vars.X }}} via the layout engine
  * model). Same map, two consumers.
  *
  * <h2>Available keys</h2>
  * <table>
+ *   <caption>List of built-in variables and their formats.</caption>
  *   <tr><th>Key</th>              <th>Example</th>                  <th>Format</th></tr>
  *   <tr><td>{@code build_date}</td>      <td>{@code 2026-05-12}</td>        <td>ISO local date</td></tr>
  *   <tr><td>{@code build_date_long}</td> <td>{@code May 12, 2026}</td>      <td>Long form, US-style</td></tr>
@@ -46,7 +47,11 @@ public final class BuiltInVars {
 
     private BuiltInVars() {}
 
-    /** Compute built-ins using the system UTC clock. */
+    /**
+     * Compute built-ins using the system UTC clock.
+     *
+     * @return map of built-in variables
+     */
     public static Map<String, Object> compute() {
         return compute(Clock.systemUTC());
     }

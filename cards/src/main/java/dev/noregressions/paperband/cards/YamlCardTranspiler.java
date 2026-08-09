@@ -78,14 +78,14 @@ public final class YamlCardTranspiler {
 
     /**
      * Is {@code file} a YAML card candidate? True for {@code *.yaml} /
-     * {@code *.yml} files that aren't a {@code pagewright.yaml}/{@code .yml}
+     * {@code *.yml} files that aren't a {@code paperband.yaml}/{@code .yml}
      * config file.
      */
     public static boolean isYamlCard(Path file) {
         String name = file.getFileName().toString();
         String lower = name.toLowerCase(java.util.Locale.ROOT);
         if (!lower.endsWith(".yaml") && !lower.endsWith(".yml")) return false;
-        return !lower.equals("pagewright.yaml") && !lower.equals("pagewright.yml");
+        return !lower.equals("paperband.yaml") && !lower.equals("paperband.yml");
     }
 
     /**
@@ -96,7 +96,7 @@ public final class YamlCardTranspiler {
     public String transpile(Path source, String yamlText, CardSchema schema) {
         if (schema == null) {
             throw new CardParseException(source + ": YAML card found but the book root "
-                    + "pagewright.yaml declares no cardSchema — declare one to describe "
+                    + "paperband.yaml declares no cardSchema — declare one to describe "
                     + "how YAML fields map onto frontmatter and sections");
         }
         Object loaded;

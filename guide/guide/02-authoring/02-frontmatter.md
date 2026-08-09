@@ -47,7 +47,7 @@ If `id` is not set, the card's filename stem is used (e.g. `02-frontmatter.md` â
 ## Check
 
 ```bash
-pagewright scan path/to/card.md
+paperband scan path/to/card.md
 ```
 
 The first line of scan output shows the resolved `id` â€” useful for confirming the id

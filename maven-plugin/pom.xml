@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>dev.noregressions.paperband</groupId>
+        <artifactId>parent</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>paperband-maven-plugin</artifactId>
+    <packaging>maven-plugin</packaging>
+    <name>Paperband :: Maven Plugin</name>
+    <description>Maven plugin front end for building Paperband PDFs as part of a Maven build.</description>
+    <url>https://github.com/noregressions/paperband</url>
+
+    <!--
+        Named paperband-maven-plugin, not maven-plugin like the other short
+        module artifactIds (core, cards, config...): Maven's default
+        goal-prefix derivation strips a trailing "-maven-plugin" from the
+        artifactId, so this resolves to the "paperband" prefix - i.e.
+        `mvn paperband:build` - instead of deriving an empty/unusable
+        prefix from a bare "maven-plugin" artifactId.
+    -->
+
+    <dependencies>
+        <dependency>
+            <groupId>dev.noregressions.paperband</groupId>
+            <artifactId>core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.noregressions.paperband</groupId>
+            <artifactId>render-playwright</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.noregressions.paperband</groupId>
+            <artifactId>cards</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.noregressions.paperband</groupId>
+            <artifactId>config</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.noregressions.paperband</groupId>
+            <artifactId>include</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.noregressions.paperband</groupId>
+            <artifactId>layout</artifactId>
+        </dependency>
+
+        <!--
+            Deliberately NOT depending on the cli module: its shaded/uber jar
+            bundles picocli and Playwright as a 180MB console entry point,
+            none of which a Mojo classpath needs. Watermarking (Watermark /
+            WatermarkApplier) currently lives only in cli, which is why
+            BuildMojo doesn't support it yet - promote those two classes to
+            a library module first if this goal should pick it up.
+        -->
+
+        <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-plugin-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven.plugin-tools</groupId>
+            <artifactId>maven-plugin-annotations</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

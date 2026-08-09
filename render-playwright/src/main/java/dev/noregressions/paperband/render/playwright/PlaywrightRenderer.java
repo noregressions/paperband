@@ -100,7 +100,7 @@ public final class PlaywrightRenderer implements HtmlToPdfRenderer {
                         if ("file".equals(input.baseUri().getScheme())) {
                             Path baseDir = Path.of(input.baseUri());
                             if (Files.isDirectory(baseDir)) {
-                                tempHtml = Files.createTempFile(baseDir, ".pagewright-render-", ".html");
+                                tempHtml = Files.createTempFile(baseDir, ".paperband-render-", ".html");
                                 Files.writeString(tempHtml, input.html());
                                 page.navigate(tempHtml.toUri().toString(),
                                         new Page.NavigateOptions()
@@ -143,7 +143,7 @@ public final class PlaywrightRenderer implements HtmlToPdfRenderer {
                                     .setFooterTemplate(input.footerHtml());
                         }
 
-                        // TODO(pagewright): wire PdfMetadata (title/author/subject) once
+                        // TODO(paperband): wire PdfMetadata (title/author/subject) once
                         //                   metadata is a real requirement. Chromium's
                         //                   Page.pdf() doesn't expose author/subject; would
                         //                   need a PDFBox post-process step.
@@ -159,7 +159,7 @@ public final class PlaywrightRenderer implements HtmlToPdfRenderer {
         } catch (Exception e) {
             String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getName();
             String hint = msg != null && msg.contains("Executable doesn't exist")
-                    ? " (run: `mvn -pl pagewright-render-playwright exec:java "
+                    ? " (run: `mvn -pl render-playwright exec:java "
                     + "-Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args='install chromium'` "
                     + "or set PLAYWRIGHT_BROWSERS_PATH)"
                     : "";

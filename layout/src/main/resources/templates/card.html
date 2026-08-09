@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <title>{{ card.title | default(card.id) }}</title>
-  <meta name="generator" content="pagewright">
+  <meta name="generator" content="paperband">
   {% if ctx.book.title %}<meta name="book" content="{{ ctx.book.title }}">{% endif %}
-  {% if target %}<meta name="pagewright-target" content="{{ target }}">{% endif %}
+  {% if target %}<meta name="paperband-target" content="{{ target }}">{% endif %}
 
   {# Prism syntax highlighting — see book.html for the rationale. #}
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">

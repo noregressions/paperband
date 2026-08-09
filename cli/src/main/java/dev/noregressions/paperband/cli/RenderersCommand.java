@@ -9,7 +9,7 @@ import java.util.concurrent.Callable;
 /**
  * Lists the renderer implementations discovered on the classpath.
  *
- * <pre>pagewright renderers</pre>
+ * <pre>paperband renderers</pre>
  */
 @Command(
         name = "renderers",

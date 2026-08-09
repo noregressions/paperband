@@ -30,7 +30,12 @@ public record Fragment(
         if (origin == null) origin = Optional.empty();
     }
 
-    /** Convenience: build a Fragment with no inferred language or origin. */
+    /**
+     * Convenience: build a Fragment with no inferred language or origin.
+     * @param content the fragment text
+     * @param mediaType the media type
+     * @return a new fragment
+     */
     public static Fragment of(String content, String mediaType) {
         return new Fragment(content, mediaType, Optional.empty(), Optional.empty());
     }

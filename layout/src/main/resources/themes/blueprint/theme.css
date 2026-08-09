@@ -12,7 +12,7 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;700&display=swap');
 
 /* ── Type scale root ────────────────────────────────────────────────────── */
-html                    { font-size: calc(11pt * var(--pw-font-scale, 1)); }  /* default print baseline; --pw-font-scale set by pagewright for custom page: sizes / explicit fontScale overrides, unset otherwise */
+html                    { font-size: calc(11pt * var(--pw-font-scale, 1)); }  /* default print baseline; --pw-font-scale set by paperband for custom page: sizes / explicit fontScale overrides, unset otherwise */
 html.target-web         { font-size: 16px; }     /* screen-comfortable */
 html.size-a4            { font-size: 11pt; }
 html.size-letter        { font-size: 11pt; }

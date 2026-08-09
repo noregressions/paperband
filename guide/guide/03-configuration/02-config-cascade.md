@@ -5,11 +5,11 @@ oneliner: "Root, folder, and card config layers merge — innermost wins, CSS ch
 
 # Configuration Cascade
 
-Configuration is layered. The root `pagewright.yaml` sets book-wide defaults; each folder's
-`pagewright.yaml` can bind an axis value, set card `order`, or extend the CSS chain; and a
+Configuration is layered. The root `paperband.yaml` sets book-wide defaults; each folder's
+`paperband.yaml` can bind an axis value, set card `order`, or extend the CSS chain; and a
 card's frontmatter carries per-card metadata. The book root is discovered by walking up
-from the card's directory: the **topmost** directory containing a `pagewright.yaml` is the
-book root, and every `pagewright.yaml` between it and the card forms the cascade chain.
+from the card's directory: the **topmost** directory containing a `paperband.yaml` is the
+book root, and every `paperband.yaml` between it and the card forms the cascade chain.
 
 ## What cascades — and how
 
@@ -28,7 +28,7 @@ from each other: `css` accumulates outward-in, `targets` replaces wholesale.
 
 ## Book-root-only keys
 
-Some keys are read only from the root `pagewright.yaml` and deliberately do not cascade:
+Some keys are read only from the root `paperband.yaml` and deliberately do not cascade:
 `title`, `axes`, `theme`, `cardSchema`, `cover`, `back`, and the book-wide
 `sections.landing.template` default. They describe the book as a whole, not a subtree.
 
@@ -39,7 +39,7 @@ its own independently.
 ## A three-level cascade, worked
 
 ```yaml
-# book root pagewright.yaml
+# book root paperband.yaml
 vars:
   audience: "everyone"
   product: "Paperband"
@@ -48,7 +48,7 @@ css:
 ```
 
 ```yaml
-# internals/pagewright.yaml
+# internals/paperband.yaml
 axis:
   tier: 2
 vars:
@@ -79,13 +79,13 @@ Resolving for `gc-tuning.md`:
 
 Before any yaml is read, the vars map is seeded with build-time values: `build_date`,
 `build_date_long`, `build_year`, `build_month_year`, and `build_iso`. Because they are
-seeded first, any `pagewright.yaml` can override them — pinning `build_date` in the root
+seeded first, any `paperband.yaml` can override them — pinning `build_date` in the root
 yaml gives reproducible builds.
 
 ## Check
 
 ```bash
-pagewright scan path/to/card.md
+paperband scan path/to/card.md
 ```
 
 The scan output includes the fully resolved context for that card — book root, CSS chain

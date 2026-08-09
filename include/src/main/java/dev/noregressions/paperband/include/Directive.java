@@ -15,8 +15,8 @@ import java.util.Optional;
  * @param returnType  the value of {@code as <type>} if present, else empty
  *                    (in which case the processor is inferred from the
  *                    fragment's media type).
- * @param sourceStart byte offset of the opening {@code {{} in the source markdown
- * @param sourceEnd   byte offset just past the closing {@code }}}
+ * @param sourceStart byte offset of the opening {{ in the source markdown
+ * @param sourceEnd   byte offset just past the closing }}
  */
 public record Directive(
         String reference,

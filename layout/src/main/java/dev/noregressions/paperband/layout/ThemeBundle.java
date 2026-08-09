@@ -10,7 +10,7 @@ import java.util.List;
  * specific partials.
  *
  * <p>Themes live under {@code themes/&lt;name&gt;/} on the classpath (bundled
- * with pagewright-layout) or under any directory passed via
+ * with layout) or under any directory passed via
  * {@code --theme-dir}. Each theme directory contains:
  * <ul>
  *   <li>{@code manifest.txt} — one stylesheet path per line (relative to the
@@ -21,7 +21,7 @@ import java.util.List;
  *       Pebble before the bundled defaults.</li>
  * </ul>
  *
- * <p>Themes layer over user CSS via cascade order: pagewright inlines the
+ * <p>Themes layer over user CSS via cascade order: paperband inlines the
  * user's css chain first, then theme stylesheets, so theme rules win on
  * specificity ties without the theme needing to bump selector weight.
  *

@@ -21,7 +21,7 @@ import java.util.List;
  * <ol>
  *   <li>If {@code themeDir} is non-null and contains
  *       {@code &lt;name&gt;/manifest.txt}, load from filesystem (lets users
- *       ship custom themes without rebuilding pagewright).</li>
+ *       ship custom themes without rebuilding paperband).</li>
  *   <li>Otherwise look for a classpath bundle at {@code themes/&lt;name&gt;/}.</li>
  * </ol>
  *

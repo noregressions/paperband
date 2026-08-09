@@ -7,12 +7,13 @@
     <parent>
         <groupId>dev.noregressions.paperband</groupId>
         <artifactId>parent</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>${revision}</version>
     </parent>
 
     <artifactId>include</artifactId>
     <name>Paperband :: Include</name>
     <description>Content-include directive: pluggable ContentProviders + FragmentProcessors. Pulls fragments from working sources into markdown before flexmark parses it.</description>
+    <url>https://github.com/noregressions/paperband</url>
 
     <dependencies>
         <dependency>
@@ -27,7 +28,7 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>
-        <!-- Direct dependency, not just transitive via pagewright-core: FragmentNode/
+        <!-- Direct dependency, not just transitive via core: FragmentNode/
              FragmentTokenParser/FragmentExtension/PebbleIncludePreprocessor use Pebble's
              lexer/parser/extension API directly to implement the {% fragment %} tag. -->
         <dependency>

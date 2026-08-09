@@ -23,16 +23,16 @@ import java.util.Map;
  *       {@link FragmentProcessor}, exactly as before (only the outer syntax
  *       and parsing layer moved from a hand-rolled regex scanner to Pebble's
  *       own lexer/parser via {@link FragmentExtension}); and</li>
- *   <li>{@code vars} — the book/folder-level {@code pagewright.yaml} cascade
- *       (including {@link dev.noregressions.paperband.config.BuiltInVars built-in
- *       vars}) is exposed as a template variable, so {@code {{ vars.x }}}
+ *   <li>{@code vars} — the book/folder-level {@code paperband.yaml} cascade
+ *       (including {@code BuiltInVars} built-in
+ *       vars) is exposed as a template variable, so {@code {{ vars.x }}}
  *       and real {@code {% if vars.x %}}/{@code {% for %}} conditionals work
  *       directly in card markdown.</li>
  * </ul>
  *
  * <h2>Why these can't be two separate passes</h2>
  * <p>They used to be: a fragment-only pass followed by a separate vars-only
- * pass (in {@code pagewright-cards}). That's broken, and not in a subtle way
+ * pass (in {@code cards}). That's broken, and not in a subtle way
  * — a real Pebble parse evaluates <em>every</em> construct it finds, not just
  * the ones the caller cares about. The fragment-only pass, running with no
  * {@code vars} in its context, would parse {@code {{ vars.product_name }}}
@@ -51,7 +51,7 @@ import java.util.Map;
  * spans on purpose), handing a card's raw body to Pebble unmodified would try
  * to evaluate any {@code {{ }}}/{@code {% %}}-looking text anywhere in it,
  * including inside a fenced example of the very syntax this class implements
- * (see {@code pagewright-guide/guide/02-authoring/03-includes.md}, which
+ * (see {@code guide/guide/02-authoring/03-includes.md}, which
  * shows {@code {% fragment %}} as a literal example nine times). {@link
  * MaskedRegions} protects frontmatter, fenced code, and inline code spans by
  * swapping them for inert placeholder tokens before Pebble ever sees the
@@ -83,7 +83,7 @@ public final class PebbleIncludePreprocessor implements MarkdownPreprocessor {
      * @param providers       map of provider-name → provider; {@code file} is expected
      * @param processors      map of return-type → processor; {@code code, markdown, html, text} are expected
      * @param bookRoot        absolute path to the book root, or null for single-card builds
-     * @param providerConfigs per-provider config blocks from {@code pagewright.yaml};
+     * @param providerConfigs per-provider config blocks from {@code paperband.yaml};
      *                        empty map if none configured
      * @param vars            resolved {@code vars} map for the card being processed (varies per
      *                        card via the folder-yaml axis cascade — construct a fresh instance

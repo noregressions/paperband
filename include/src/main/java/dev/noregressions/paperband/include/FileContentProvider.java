@@ -184,7 +184,7 @@ public final class FileContentProvider implements ContentProvider {
      * Roots an include is allowed to resolve inside: the book root, the
      * including card's directory, and every base declared in the provider's
      * {@code paths} config (those are explicit, user-auditable declarations
-     * in {@code pagewright.yaml}).
+     * in {@code paperband.yaml}).
      */
     private static List<Path> allowedRoots(IncludeContext ctx) {
         List<Path> roots = new ArrayList<>();

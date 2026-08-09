@@ -7,12 +7,13 @@
     <parent>
         <groupId>dev.noregressions.paperband</groupId>
         <artifactId>parent</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>${revision}</version>
     </parent>
 
     <artifactId>layout</artifactId>
     <name>Paperband :: Layout</name>
     <description>Pebble-driven layout engine: turns a Card + RenderContext into a styled HTML page.</description>
+    <url>https://github.com/noregressions/paperband</url>
 
     <dependencies>
         <dependency>
@@ -24,9 +25,9 @@
             <artifactId>pebble</artifactId>
         </dependency>
         <dependency>
-            <!-- Used only to read a section folder's own pagewright.yaml
+            <!-- Used only to read a section folder's own paperband.yaml
                  (title + landing.template override) when building site
-                 section landing pages; not a dependency on pagewright-config,
+                 section landing pages; not a dependency on config,
                  just the same underlying YAML library. -->
             <groupId>org.yaml</groupId>
             <artifactId>snakeyaml</artifactId>

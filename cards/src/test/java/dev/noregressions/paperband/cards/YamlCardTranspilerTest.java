@@ -228,7 +228,7 @@ class YamlCardTranspilerTest {
     void isYamlCardExcludesConfigFiles() {
         assertTrue(YamlCardTranspiler.isYamlCard(Path.of("cards/some-card.yaml")));
         assertTrue(YamlCardTranspiler.isYamlCard(Path.of("some-card.yml")));
-        assertFalse(YamlCardTranspiler.isYamlCard(Path.of("cards/pagewright.yaml")));
+        assertFalse(YamlCardTranspiler.isYamlCard(Path.of("cards/paperband.yaml")));
         assertFalse(YamlCardTranspiler.isYamlCard(Path.of("card.md")));
     }
 

@@ -8,13 +8,13 @@ oneliner: "Themes are directories of CSS (and optional templates) that cascade o
 A theme is a directory with a `manifest.txt` listing its CSS files, plus an optional
 `templates/` directory of Pebble overrides. Built-in themes ship on the classpath; custom
 themes are discovered via `--theme-dir`. Theme CSS loads after user CSS, so the theme wins
-on conflicts. List available themes with `pagewright themes`.
+on conflicts. List available themes with `paperband themes`.
 
 ## Built-in themes
 
-Seven themes ship with pagewright: `editorial` (serif, drop caps, magazine feel — this
+Seven themes ship with paperband: `editorial` (serif, drop caps, magazine feel — this
 guide uses it), `classical`, `fieldguide`, `dark`, `blueprint`, `carded`, and `herodevs`.
-Pick one with the `theme:` key in the root `pagewright.yaml`, or override at build time
+Pick one with the `theme:` key in the root `paperband.yaml`, or override at build time
 with `--theme`; the CLI flag wins when both are given.
 
 ## How CSS composes
@@ -100,7 +100,7 @@ Theme templates receive the same Pebble model the bundled ones use. The core obj
 Three vars get promoted to first-class book fields: `vars.subtitle`, `vars.series`, and
 `vars.author` become `book.subtitle`, `book.series`, `book.author` — that's how the cover
 and site index show them. Everything else in `vars` is still reachable: this guide's
-`pagewright.yaml` sets `version:`, which no bundled template reads, but a theme template
+`paperband.yaml` sets `version:`, which no bundled template reads, but a theme template
 can with `{{ book.vars.version }}`.
 
 `vars` and `frontmatter` are deliberately lenient — reading a key that was never set
@@ -163,17 +163,17 @@ Split larger themes into several files (tokens first, components after) — they
 listed order. Then build with it:
 
 ```bash
-pagewright build mybook out.pdf --theme-dir mythemes --theme inkwell
+paperband build mybook out.pdf --theme-dir mythemes --theme inkwell
 ```
 
 A `--theme-dir` theme with the same name as a built-in **overrides** the built-in — handy
 for forking `editorial` into a house variant: copy its directory out of
-`pagewright-layout`'s resources, keep the name, and iterate.
+`layout`'s resources, keep the name, and iterate.
 
 ## Check
 
 ```bash
-pagewright themes --theme-dir mythemes
+paperband themes --theme-dir mythemes
 ```
 
 Lists every discovered theme with its source (`built-in`, your directory, or

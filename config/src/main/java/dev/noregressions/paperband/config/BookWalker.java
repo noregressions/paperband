@@ -18,24 +18,24 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 /**
- * Walks a directory tree honouring {@code pagewright.yaml} {@code order:} lists,
+ * Walks a directory tree honouring {@code paperband.yaml} {@code order:} lists,
  * producing an ordered, flat list of markdown card files.
  *
  * <h2>Ordering rules</h2>
  * <p>For each directory:
  * <ol>
- *   <li>If a {@code pagewright.yaml} declares an {@code order:} list, those
+ *   <li>If a {@code paperband.yaml} declares an {@code order:} list, those
  *       entries are emitted first in the given sequence.</li>
  *   <li>Any remaining children on disk are appended in alphabetical order.
  *       A warning is printed to {@code System.err} so authors can spot drift
  *       between the disk and the declared order.</li>
- *   <li>If no {@code pagewright.yaml} exists, or it has no {@code order:},
+ *   <li>If no {@code paperband.yaml} exists, or it has no {@code order:},
  *       all children are emitted alphabetically.</li>
  * </ol>
  *
  * <h2>{@code sort:} — frontmatter-driven ordering</h2>
  * <p>Instead of (or in addition to) a hand-kept {@code order:} list, a
- * directory's {@code pagewright.yaml} can declare
+ * directory's {@code paperband.yaml} can declare
  * <pre>
  * sort: [tier, id]
  * </pre>
@@ -77,19 +77,19 @@ import java.util.stream.Stream;
  * <h2>Filters</h2>
  * <p>{@code .md} files are always emitted as cards. {@code .yaml}/{@code .yml}
  * files are emitted as cards too — but only when the book root
- * {@code pagewright.yaml} declares a {@code cardSchema:} (see
+ * {@code paperband.yaml} declares a {@code cardSchema:} (see
  * {@code dev.noregressions.paperband.model.CardSchema}); books that don't opt in see
  * no behaviour change, so stray data yamls in existing books stay invisible.
  * The book root is discovered the same way {@code ConfigLoader} does it: the
- * topmost {@code pagewright.yaml} walking parent-by-parent up from the walk's
+ * topmost {@code paperband.yaml} walking parent-by-parent up from the walk's
  * starting point. Hidden files (starting with {@code .}) and
- * {@code pagewright.yaml}/{@code .yml} config files themselves are always
+ * {@code paperband.yaml}/{@code .yml} config files themselves are always
  * skipped. {@code README.md} is also skipped — it's conventionally a repo
  * readme, not a card.
  */
 public final class BookWalker {
 
-    private static final String CONFIG_FILENAME = "pagewright.yaml";
+    private static final String CONFIG_FILENAME = "paperband.yaml";
 
     private final Yaml yaml = new Yaml();
     private final PredicateEvaluator predicates = new PredicateEvaluator();
@@ -144,7 +144,7 @@ public final class BookWalker {
 
     /**
      * Find the book root the same way {@code ConfigLoader} does — the topmost
-     * {@code pagewright.yaml} walking parents up from {@code start} — and
+     * {@code paperband.yaml} walking parents up from {@code start} — and
      * report whether it declares a {@code cardSchema:}. That's the opt-in for
      * treating {@code .yaml} files as cards.
      */
@@ -221,7 +221,7 @@ public final class BookWalker {
             Pattern.compile("\\A---\\s*\\R(.*?)\\R---\\s*(?:\\R|\\z)", Pattern.DOTALL);
 
     /**
-     * Parse the {@code sort:} list from {@code dir/pagewright.yaml}: field
+     * Parse the {@code sort:} list from {@code dir/paperband.yaml}: field
      * names, optionally {@code -}-prefixed for descending. A bare string is
      * tolerated as a single-field list. Returns null when absent.
      */
@@ -349,7 +349,7 @@ public final class BookWalker {
     }
 
     /**
-     * Parse the {@code order:} list from {@code dir/pagewright.yaml}.
+     * Parse the {@code order:} list from {@code dir/paperband.yaml}.
      *
      * <p>Each list item is either a plain string (the entry name) or a map
      * with {@code id} and an optional {@code where} Pebble predicate. The
@@ -417,7 +417,7 @@ public final class BookWalker {
         }
         if (acceptYamlCards && (name.endsWith(".yaml") || name.endsWith(".yml"))) {
             String lower = name.toLowerCase(java.util.Locale.ROOT);
-            return !lower.equals("pagewright.yaml") && !lower.equals("pagewright.yml");
+            return !lower.equals("paperband.yaml") && !lower.equals("paperband.yml");
         }
         return false;
     }

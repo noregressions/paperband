@@ -1,7 +1,7 @@
 /*
  * guide.css — Paperband Guide custom styles
  *
- * Declared in guide/pagewright.yaml under `css:` and inlined into every
+ * Declared in guide/paperband.yaml under `css:` and inlined into every
  * page (PDF and site) via LayoutEngine. Sits between the template scaffold
  * and the active theme (which is appended last and wins on cascade order).
  *

@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * {@link CardSchema#fromYaml} takes the already-YAML-parsed node (SnakeYAML
- * lives in pagewright-config/-cards, not core), so these tests hand it plain
+ * lives in config/-cards, not core), so these tests hand it plain
  * maps and lists — exactly what SnakeYAML would produce.
  */
 class CardSchemaTest {

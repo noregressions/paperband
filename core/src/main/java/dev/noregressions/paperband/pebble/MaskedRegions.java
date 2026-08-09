@@ -12,8 +12,8 @@ import java.util.List;
  * a Pebble pass.
  *
  * <p>Shared by every pre-flexmark Pebble evaluation pass —
- * {@code pagewright-include}'s {@code {% fragment %}} tag resolution and
- * {@code pagewright-cards}' whole-body vars/conditionals pass both run their
+ * {@code include}'s {@code {% fragment %}} tag resolution and
+ * {@code cards}' whole-body vars/conditionals pass both run their
  * masked source through a real Pebble parser and need the exact same
  * protection, so the logic lives here once rather than being duplicated (and
  * risking the two copies drifting apart) in each module.

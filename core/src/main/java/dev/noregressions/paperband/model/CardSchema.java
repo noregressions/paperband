@@ -10,7 +10,7 @@ import java.util.Map;
  * books whose cards live as structured YAML (one flat document per card, no
  * markdown body) can be built without pre-converting them.
  *
- * <p>Declared once in the book root {@code pagewright.yaml}:
+ * <p>Declared once in the book root {@code paperband.yaml}:
  * <pre>
  * cardSchema:
  *   frontmatter: [id, tier, title, effort, series]
@@ -28,7 +28,7 @@ import java.util.Map;
  * </pre>
  *
  * <p>Semantics (implemented by {@code YamlCardTranspiler} in
- * {@code pagewright-cards}, which turns a YAML card into markdown text and
+ * {@code cards}, which turns a YAML card into markdown text and
  * hands it to the ordinary {@code CardLoader}):
  * <ul>
  *   <li>{@code frontmatter:} — fields copied verbatim into the transpiled
@@ -50,9 +50,9 @@ import java.util.Map;
  *       {@code added} and {@code lang} keys.</li>
  * </ul>
  *
- * <p>This class lives in {@code pagewright-core} (alongside
- * {@link NamedTemplates}) so that {@code pagewright-config} (which parses it
- * from the book yaml) and {@code pagewright-cards} (which consumes it during
+ * <p>This class lives in {@code core} (alongside
+ * {@link NamedTemplates}) so that {@code config} (which parses it
+ * from the book yaml) and {@code cards} (which consumes it during
  * transpilation) agree on one type without depending on each other.
  *
  * @param frontmatterFields YAML fields copied into the transpiled frontmatter, in order
@@ -95,7 +95,7 @@ public record CardSchema(
     }
 
     /**
-     * Parse the {@code cardSchema:} node of a book root {@code pagewright.yaml}.
+     * Parse the {@code cardSchema:} node of a book root {@code paperband.yaml}.
      *
      * @param node the already-YAML-parsed value of the {@code cardSchema} key
      * @return parsed schema

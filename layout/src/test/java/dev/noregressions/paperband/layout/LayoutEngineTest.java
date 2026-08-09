@@ -296,7 +296,7 @@ class LayoutEngineTest {
             assertEquals(1, countOccurrences(result, "id=\"section-divider-front\""));
             assertEquals(1, countOccurrences(result, "id=\"section-divider-back\""));
 
-            // Auto-formatted section labels (no folder pagewright.yaml title override).
+            // Auto-formatted section labels (no folder paperband.yaml title override).
             assertTrue(result.contains("Front"));
             assertTrue(result.contains("Back"));
 
@@ -528,12 +528,12 @@ class LayoutEngineTest {
             Path folderTemplate = layouts.resolve("custom-folder-override.html");
             Files.writeString(folderTemplate, "<html>FOLDER-OVERRIDE-TEMPLATE: {{ section.label }}</html>");
 
-            // The section folder's own pagewright.yaml overrides the book default,
+            // The section folder's own paperband.yaml overrides the book default,
             // using the same `landing: { template: <path> }` shape as an axis's
             // own per-value override.
             Path sectionDir = tempDir.resolve("overriddenSection");
             Files.createDirectories(sectionDir);
-            Files.writeString(sectionDir.resolve("pagewright.yaml"), """
+            Files.writeString(sectionDir.resolve("paperband.yaml"), """
                     landing:
                       template: "layouts/custom-folder-override.html"
                     """);
@@ -589,7 +589,7 @@ class LayoutEngineTest {
 
             Path sectionDir = tempDir.resolve("scanners");
             Files.createDirectories(sectionDir);
-            Files.writeString(sectionDir.resolve("pagewright.yaml"), """
+            Files.writeString(sectionDir.resolve("paperband.yaml"), """
                     title: "Scanners & Blindspots"
                     landing:
                       template: "minimal"

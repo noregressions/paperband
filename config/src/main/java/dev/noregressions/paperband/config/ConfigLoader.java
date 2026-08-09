@@ -24,11 +24,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Walks the {@code pagewright.yaml} cascade for a target markdown file and
+ * Walks the {@code paperband.yaml} cascade for a target markdown file and
  * resolves it into a {@link BookConfig} plus a per-file {@link RenderContext}.
  *
  * <p>Discovery: starting at the file's directory, we walk parent-by-parent
- * collecting any {@code pagewright.yaml} we find. The highest one in the
+ * collecting any {@code paperband.yaml} we find. The highest one in the
  * chain is treated as the book root.
  *
  * <p>Cascade rules:
@@ -48,12 +48,14 @@ import java.util.Map;
  * theme name; the {@code --theme} CLI flag overrides it when supplied. The
  * {@code sections.landing.template} value is the book-wide default landing
  * page for folder-based "sections" (see {@link BookConfig#sectionLandingTemplate()});
- * an individual section folder's own {@code pagewright.yaml} can override it
+ * an individual section folder's own {@code paperband.yaml} can override it
  * per-folder with a {@code landing.template} key of the same shape.
  */
 public final class ConfigLoader {
+    /** Creates a new config loader. */
+    public ConfigLoader() {}
 
-    private static final String CONFIG_FILENAME = "pagewright.yaml";
+    private static final String CONFIG_FILENAME = "paperband.yaml";
 
     /**
      * Load and resolve config for {@code mdFile}.
@@ -61,7 +63,7 @@ public final class ConfigLoader {
      * @param mdFile  the markdown card file
      * @param target  current build target (e.g. {@code "pdf-a4"}); may be null
      * @param size    current page size (e.g. {@code "A4"}); may be null
-     * @return resolved {@link RenderContext}; if no pagewright.yaml is found
+     * @return resolved {@link RenderContext}; if no paperband.yaml is found
      *         anywhere up the tree, returns an empty context with {@code mdFile}'s
      *         parent treated as the book root
      */
@@ -177,7 +179,7 @@ public final class ConfigLoader {
 
         // Book-wide default landing template for "sections" (folders of cards
         // with no value on any declared axis). A section's own folder
-        // pagewright.yaml can override this per-folder with the same
+        // paperband.yaml can override this per-folder with the same
         // `landing: { template: <name-or-path> }` shape (see LayoutEngine,
         // which reads that file directly since section grouping happens after
         // the whole book's cards are loaded, not during this per-card cascade

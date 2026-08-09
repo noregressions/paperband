@@ -8,10 +8,19 @@ package dev.noregressions.paperband.include;
  */
 public class ContentResolutionException extends Exception {
 
+    /**
+     * Creates a new content resolution exception.
+     * @param message the error message
+     */
     public ContentResolutionException(String message) {
         super(message);
     }
 
+    /**
+     * Creates a new content resolution exception with a cause.
+     * @param message the error message
+     * @param cause the cause
+     */
     public ContentResolutionException(String message, Throwable cause) {
         super(message, cause);
     }

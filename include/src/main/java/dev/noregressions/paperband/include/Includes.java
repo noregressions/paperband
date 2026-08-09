@@ -29,12 +29,18 @@ public final class Includes {
 
     private Includes() {}
 
-    /** Construct the bundled set of providers. Stable order; {@code file} first. */
+    /**
+     * Construct the bundled set of providers. Stable order; {@code file} first.
+     * @return list of default content providers
+     */
     public static List<ContentProvider> defaultProviders() {
         return List.of(new FileContentProvider());
     }
 
-    /** Construct the bundled set of processors. */
+    /**
+     * Construct the bundled set of processors.
+     * @return list of default fragment processors
+     */
     public static List<FragmentProcessor> defaultProcessors() {
         return List.of(
                 new CodeProcessor(),
@@ -47,8 +53,9 @@ public final class Includes {
      * Build a preprocessor with the bundled providers and processors.
      *
      * @param bookRoot         book root for path resolution; null for single-card builds
-     * @param providerConfigs  per-provider config blocks from {@code pagewright.yaml}; may be empty
+     * @param providerConfigs  per-provider config blocks from {@code paperband.yaml}; may be empty
      * @param vars             resolved {@code vars} map for the card being processed
+     * @return a new markdown preprocessor
      */
     public static MarkdownPreprocessor defaultPreprocessor(
             Path bookRoot,
@@ -57,7 +64,15 @@ public final class Includes {
         return buildPreprocessor(defaultProviders(), defaultProcessors(), bookRoot, providerConfigs, vars);
     }
 
-    /** Build a preprocessor with custom provider and processor lists. */
+    /**
+     * Build a preprocessor with custom provider and processor lists.
+     * @param providers list of content providers
+     * @param processors list of fragment processors
+     * @param bookRoot book root path
+     * @param providerConfigs per-provider config blocks
+     * @param vars resolved variables map
+     * @return a new markdown preprocessor
+     */
     public static MarkdownPreprocessor buildPreprocessor(
             List<ContentProvider> providers,
             List<FragmentProcessor> processors,

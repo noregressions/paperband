@@ -22,7 +22,7 @@ destination anchor in the PDF.
 
 ## The book model
 
-A **book** is a directory tree with a `pagewright.yaml` at the root. Subdirectories add
+A **book** is a directory tree with a `paperband.yaml` at the root. Subdirectories add
 configuration layers: each folder can bind an axis value (grouping cards into sections),
 extend the CSS chain, or override variables. The walker collects all `.md` files in
 declared order.
@@ -31,14 +31,14 @@ declared order.
 
 This guide documents Paperband **by using Paperband to build it**. Every card is both
 the documentation and a live demonstration: the rendered PDF and static site you are
-reading were produced by running `pagewright build` and `pagewright site` on the source
-in `pagewright-guide/guide/`.
+reading were produced by running `paperband build` and `paperband site` on the source
+in `guide/guide/`.
 
 Excerpts pulled from the actual project source via `{% fragment %}` tags are current
 at build time — if the source drifts, the next build catches it.
 
 ## Check
 
-Run `pagewright scan path/to/card.md` to inspect any card's parsed structure: frontmatter
+Run `paperband scan path/to/card.md` to inspect any card's parsed structure: frontmatter
 fields, resolved id, block list, and a snippet of each block's rendered HTML. A good first
 step before committing to a full book build.

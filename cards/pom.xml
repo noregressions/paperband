@@ -7,12 +7,13 @@
     <parent>
         <groupId>dev.noregressions.paperband</groupId>
         <artifactId>parent</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>${revision}</version>
     </parent>
 
     <artifactId>cards</artifactId>
     <name>Paperband :: Cards</name>
     <description>Markdown card loader. Parses frontmatter + body into Card / Block model.</description>
+    <url>https://github.com/noregressions/paperband</url>
 
     <dependencies>
         <dependency>

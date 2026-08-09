@@ -62,7 +62,7 @@ import java.util.Set;
  * stylesheets are still being authored.
  *
  * <h2>Axes</h2>
- * <p>Every axis declared in the book's {@code pagewright.yaml} with at least
+ * <p>Every axis declared in the book's {@code paperband.yaml} with at least
  * one declared value gets full structural treatment automatically — grouping,
  * site landing pages, PDF dividers, nav/sidebar entries, and a
  * {@code {axisName}-{valueId}} CSS class on each card — independently of every
@@ -90,7 +90,10 @@ public final class LayoutEngine {
      */
     private Map<String, Object> edition;
 
-    /** Set the edition identity for subsequent renders (publish builds only). */
+    /**
+     * Set the edition identity for subsequent renders (publish builds only).
+     * @param edition the edition map
+     */
     public void setEdition(Map<String, Object> edition) {
         this.edition = edition;
     }
@@ -103,6 +106,7 @@ public final class LayoutEngine {
     /**
      * Construct an engine that first looks in {@code <bookRoot>/layouts/} and
      * falls back to the classpath. {@code bookRoot} may be null. No theme.
+     * @param bookRoot the book root path
      */
     public LayoutEngine(Path bookRoot) {
         this(bookRoot, ThemeBundle.NONE);
@@ -113,6 +117,8 @@ public final class LayoutEngine {
      * template loader (if any) takes priority over both the book layouts dir
      * and the bundled defaults; the theme's stylesheets are appended after
      * the user's CSS chain.
+     * @param bookRoot the book root path
+     * @param theme the theme bundle
      */
     public LayoutEngine(Path bookRoot, ThemeBundle theme) {
         this.theme = (theme == null) ? ThemeBundle.NONE : theme;
@@ -170,12 +176,23 @@ public final class LayoutEngine {
                 .build();
     }
 
-    /** Render {@code card} using the layout referenced by {@code ctx} (or the default). */
+    /**
+     * Render {@code card} using the layout referenced by {@code ctx} (or the default).
+     * @param card the card to render
+     * @param ctx the render context
+     * @return the rendered HTML
+     */
     public String render(Card card, RenderContext ctx) {
         return render(card, ctx, layoutName(ctx));
     }
 
-    /** Render {@code card} using the named layout. */
+    /**
+     * Render {@code card} using the named layout.
+     * @param card the card to render
+     * @param ctx the render context
+     * @param layoutName the name of the layout template to use
+     * @return the rendered HTML
+     */
     @SuppressWarnings("unchecked")
     public String render(Card card, RenderContext ctx, String layoutName) {
         Map<String, Object> model;
@@ -207,6 +224,10 @@ public final class LayoutEngine {
      * relies on each card's frontmatter alone. Use the three-arg overload to
      * pass the real per-card {@link RenderContext} list and surface
      * folder-yaml axis bindings (preferred for full-book renders).
+     *
+     * @param cards the cards to render
+     * @param ctx the book-level render context
+     * @return the rendered HTML book
      */
     public String renderBook(List<Card> cards, RenderContext ctx) {
         return renderBook(cards, repeatedContexts(ctx, cards.size()), ctx, "book");
@@ -221,12 +242,20 @@ public final class LayoutEngine {
      * @param cards     ordered card list
      * @param contexts  parallel list of per-card render contexts (must match {@code cards.size()})
      * @param bookCtx   book-level context (title, axes, css chain)
+     * @return the rendered HTML book
      */
     public String renderBook(List<Card> cards, List<RenderContext> contexts, RenderContext bookCtx) {
         return renderBook(cards, contexts, bookCtx, "book");
     }
 
-    /** Render {@code cards} using the named book-level layout, with per-card contexts. */
+    /**
+     * Render {@code cards} using the named book-level layout, with per-card contexts.
+     * @param cards ordered card list
+     * @param contexts parallel list of per-card render contexts
+     * @param bookCtx book-level context
+     * @param layoutName name of the book layout template
+     * @return the rendered HTML book
+     */
     public String renderBook(
             List<Card> cards,
             List<RenderContext> contexts,
@@ -265,7 +294,7 @@ public final class LayoutEngine {
     }
 
     // ---------------------------------------------------------------------
-    // Structure description (the `pagewright structure` command).
+    // Structure description (the `paperband structure` command).
     // ---------------------------------------------------------------------
 
     /**
@@ -273,7 +302,7 @@ public final class LayoutEngine {
      * cover, axis dividers, sections, cards, and each card's block tree —
      * in the exact order the PDF assembles them.
      *
-     * <p>The model here is deliberately honest about what pagewright actually
+     * <p>The model here is deliberately honest about what paperband actually
      * builds: cards are a <em>flat, ordered walk</em> (BookWalker order), and
      * "structure" is derived from it — an axis DIVIDER line appears whenever a
      * card is first-of-value for that axis (stacked per axis, declaration
@@ -286,6 +315,11 @@ public final class LayoutEngine {
      * first-of-section bookkeeping below mirrors the {@code axesFirstOf} /
      * {@code sectionFirst} loop there, which is what {@code book.html}
      * dispatches divider pages on.
+     *
+     * @param cards ordered card list
+     * @param contexts parallel list of per-card render contexts
+     * @param bookCtx book-level context
+     * @return the text outline
      */
     public static String describeBook(
             List<Card> cards, List<RenderContext> contexts, RenderContext bookCtx) {
@@ -513,7 +547,7 @@ public final class LayoutEngine {
 
         // Unified, walk-ordered nav list. The index/sidebar/top-nav iterate
         // this single list so every axis value and section entry appears in
-        // the order cards were walked (driven by the book's pagewright.yaml
+        // the order cards were walked (driven by the book's paperband.yaml
         // `order:` chain) rather than always "axes first, sections last".
         List<Map<String, Object>> navEntries = buildNavEntries(cards, groupings, bookRoot, sectionMetas);
 
@@ -707,7 +741,7 @@ public final class LayoutEngine {
      * every axis value (across every declared axis, independently) and every
      * section. The output preserves the order in which each (axis, value) or
      * section first appears in the card walk — which itself follows the
-     * book's {@code pagewright.yaml order:} chain.
+     * book's {@code paperband.yaml order:} chain.
      *
      * <p>A card can contribute more than one entry (once per axis it has a
      * value for) at its first-occurrence position; a card with no axis value
@@ -792,7 +826,7 @@ public final class LayoutEngine {
      *
      * <p>Each entry also gets a resolved {@code landingTemplate} (a bare
      * Pebble template name, ready to pass to {@link #renderSiteTemplate}):
-     * the section folder's own {@code pagewright.yaml} {@code landing.template}
+     * the section folder's own {@code paperband.yaml} {@code landing.template}
      * wins, falling back to the book root's {@code sections.landing.template}
      * default, falling back to the built-in {@code "site-section"} template.
      * Either config value may be a built-in preset name (see
@@ -829,7 +863,7 @@ public final class LayoutEngine {
     }
 
     /**
-     * A section folder's own {@code pagewright.yaml}, as much of it as this
+     * A section folder's own {@code paperband.yaml}, as much of it as this
      * class cares about: the {@code title} scalar (section label override)
      * and the resolved {@code landing.template} name (section landing-page
      * template override, already run through {@link NamedTemplates} — same
@@ -845,22 +879,22 @@ public final class LayoutEngine {
 
     /**
      * Look up {@code sectionId}'s folder yaml. Tries
-     * {@code <bookRoot>/<id>/pagewright.yaml} first, then
-     * {@code <bookRoot>/content/<id>/pagewright.yaml}. Results are cached
+     * {@code <bookRoot>/<id>/paperband.yaml} first, then
+     * {@code <bookRoot>/content/<id>/paperband.yaml}. Results are cached
      * per call to {@link #renderSite}.
      */
     private static FolderYamlInfo lookupSectionFolderYaml(
             Path bookRoot, String sectionId, Map<String, FolderYamlInfo> cache) {
         return cache.computeIfAbsent(sectionId, id -> {
             if (bookRoot == null) return FolderYamlInfo.EMPTY;
-            FolderYamlInfo info = readFolderYaml(bookRoot, bookRoot.resolve(id).resolve("pagewright.yaml"));
+            FolderYamlInfo info = readFolderYaml(bookRoot, bookRoot.resolve(id).resolve("paperband.yaml"));
             if (info != null) return info;
-            info = readFolderYaml(bookRoot, bookRoot.resolve("content").resolve(id).resolve("pagewright.yaml"));
+            info = readFolderYaml(bookRoot, bookRoot.resolve("content").resolve(id).resolve("paperband.yaml"));
             return info != null ? info : FolderYamlInfo.EMPTY;
         });
     }
 
-    /** Parse one folder's {@code pagewright.yaml} for {@code title} and {@code landing.template}, or null if absent/unreadable. */
+    /** Parse one folder's {@code paperband.yaml} for {@code title} and {@code landing.template}, or null if absent/unreadable. */
     private static FolderYamlInfo readFolderYaml(Path bookRoot, Path yamlFile) {
         if (yamlFile == null || !Files.isRegularFile(yamlFile)) return null;
         try (Reader r = Files.newBufferedReader(yamlFile, StandardCharsets.UTF_8)) {
@@ -1008,7 +1042,7 @@ public final class LayoutEngine {
     }
 
     // ---------------------------------------------------------------------
-    // Axis grouping. Every axis declared in the book's pagewright.yaml with
+    // Axis grouping. Every axis declared in the book's paperband.yaml with
     // at least one declared value gets full structural treatment (grouping,
     // landing pages, dividers, nav, sidebar, CSS class) automatically and
     // independently of every other axis — there is no hardcoded "primary"
@@ -1022,7 +1056,7 @@ public final class LayoutEngine {
     /**
      * Resolve one card's value along one axis: the card's own frontmatter
      * field of the same name wins; the folder-cascaded {@code ctx.vars()}
-     * entry (from a {@code pagewright.yaml axis: {name: value}} binding) is
+     * entry (from a {@code paperband.yaml axis: {name: value}} binding) is
      * the fallback.
      *
      * <p>Both paths existed before this method unified them, but only the

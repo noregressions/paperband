@@ -21,7 +21,7 @@ import java.util.concurrent.Callable;
  * Loads a markdown card and prints its parsed structure plus the resolved
  * config cascade. End-to-end demonstration of the cards + config modules.
  *
- * <pre>pagewright scan path/to/card.md</pre>
+ * <pre>paperband scan path/to/card.md</pre>
  */
 @Command(
         name = "scan",

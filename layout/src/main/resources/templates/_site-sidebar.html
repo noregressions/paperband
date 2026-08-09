@@ -15,7 +15,7 @@
                                   overrides win; the section containing the
                                   active page is always expanded.
 #}
-<aside id="pagewright-sidebar" class="site-sidebar"{% if sidebar_collapsed %} data-collapsed="true"{% endif %}>
+<aside id="paperband-sidebar" class="site-sidebar"{% if sidebar_collapsed %} data-collapsed="true"{% endif %}>
   <nav class="sidebar-nav" aria-label="Book contents">
     {% for e in navEntries %}
     {# A section starts collapsed when sidebar_sections_collapsed is true,
@@ -43,7 +43,7 @@
         <button class="sidebar-section-toggle" type="button"
                 aria-label="Toggle {{ e.label }}"
                 aria-expanded="{% if sidebar_sections_collapsed and not (page.kind == 'axis' and page.axis == e.axis and page.id == e.id) %}false{% else %}true{% endif %}"
-                onclick="pagewrightToggleSection(this)">▾</button>
+                onclick="paperbandToggleSection(this)">▾</button>
         {% endif %}
       </h3>
       {% else %}
@@ -56,7 +56,7 @@
         <button class="sidebar-section-toggle" type="button"
                 aria-label="Toggle {{ e.label }}"
                 aria-expanded="{% if sidebar_sections_collapsed and not (page.kind == 'section' and page.id == e.id) %}false{% else %}true{% endif %}"
-                onclick="pagewrightToggleSection(this)">▾</button>
+                onclick="paperbandToggleSection(this)">▾</button>
         {% endif %}
       </h3>
       {% endif %}

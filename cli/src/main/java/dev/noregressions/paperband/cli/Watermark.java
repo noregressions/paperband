@@ -13,7 +13,7 @@ import java.util.Map;
  *       shape used by {@code --watermark "DRAFT"}.</li>
  *   <li>{@link #fromYaml(Object)} — accepts either a bare string or a yaml
  *       map; the shape used when {@code vars.watermark} is read from
- *       {@code pagewright.yaml}.</li>
+ *       {@code paperband.yaml}.</li>
  * </ul>
  *
  * <p>All knobs have sensible defaults so the CLI / yaml only need to provide
@@ -65,7 +65,7 @@ public record Watermark(
     }
 
     /**
-     * Parse a watermark from a yaml node read out of {@code pagewright.yaml}.
+     * Parse a watermark from a yaml node read out of {@code paperband.yaml}.
      * Accepts either a bare string ({@code watermark: "DRAFT"}, all defaults
      * applied), or a map with at least a {@code text} key plus any of the
      * optional knobs:

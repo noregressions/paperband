@@ -9,6 +9,8 @@ package dev.noregressions.paperband.include;
  * or a recognised programming-language extension.
  */
 public final class TextProcessor implements FragmentProcessor {
+    /** Creates a new text processor. */
+    public TextProcessor() {}
 
     public static final String NAME = "text";
 

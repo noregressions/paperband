@@ -1,7 +1,7 @@
 {# Minimal section landing page: just the section title, no card count and
    no card grid. Selectable via `landing: { template: minimal }` (see
    dev.noregressions.paperband.model.NamedTemplates) in a section folder's own
-   pagewright.yaml, or as the book-wide sections.landing.template default.
+   paperband.yaml, or as the book-wide sections.landing.template default.
    Same page shell (nav/sidebar/css) as the default site-section.html --
    only the body content differs. #}
 <!DOCTYPE html>
@@ -9,8 +9,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ section.label }} — {{ book.title | default('pagewright') }}</title>
-  <meta name="generator" content="pagewright">
+  <title>{{ section.label }} — {{ book.title | default('paperband') }}</title>
+  <meta name="generator" content="paperband">
   <style>
     {{ css | raw }}
   </style>
