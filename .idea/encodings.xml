@@ -13,6 +13,8 @@
     <file url="file://$PROJECT_DIR$/include/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/layout/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/layout/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/maven-plugin/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/maven-plugin/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/render-playwright/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/render-playwright/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/src/main/java" charset="UTF-8" />

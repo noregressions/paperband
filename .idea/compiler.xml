@@ -12,6 +12,7 @@
         <module name="include" />
         <module name="cards" />
         <module name="render-playwright" />
+        <module name="paperband-maven-plugin" />
         <module name="config" />
       </profile>
     </annotationProcessing>

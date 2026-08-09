@@ -7,3 +7,4 @@ order:
   - 01-watermarks
   - 02-page-enforcement
   - 03-extending
+  - 04-maven-plugin
