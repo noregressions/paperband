@@ -17,7 +17,7 @@
     -->
     <requiredProperties>
         <requiredProperty key="paperbandVersion">
-            <defaultValue>0.0.2</defaultValue>
+            <defaultValue>0.0.3</defaultValue>
         </requiredProperty>
     </requiredProperties>
 
@@ -48,9 +48,12 @@
         </fileSet>
 
         <!-- Book root config: no "##" anywhere in YAML, so safe to filter for
-             ${artifactId} (used as the book title). -->
+             ${artifactId} (used as the book title). Lives under src/main/paperband,
+             mirroring the src/main/<language>-per-source-processing-plugin convention
+             (src/main/asciidoc, src/main/antlr4, src/main/sass, ...) rather than a
+             bare top-level folder. -->
         <fileSet filtered="true" packaged="false" encoding="UTF-8">
-            <directory>guide</directory>
+            <directory>src/main/paperband</directory>
             <includes>
                 <include>paperband.yaml</include>
             </includes>
@@ -59,7 +62,7 @@
         <!-- The starter card: deliberately not filtered, per the Markdown/"##"
              warning above. Kept generic (no per-project text) instead. -->
         <fileSet filtered="false" packaged="false" encoding="UTF-8">
-            <directory>guide</directory>
+            <directory>src/main/paperband</directory>
             <includes>
                 <include>*.md</include>
             </includes>

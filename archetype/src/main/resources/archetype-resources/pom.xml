@@ -10,7 +10,7 @@
     <!--
         pom packaging: this project has no Java sources of its own. Its only
         output is the PDF (and, optionally, the static site) that
-        paperband-maven-plugin renders from guide/ at package time.
+        paperband-maven-plugin renders from src/main/paperband/ at package time.
     -->
     <packaging>pom</packaging>
 
@@ -42,7 +42,7 @@
                             <goal>build</goal>
                         </goals>
                         <configuration>
-                            <input>${project.basedir}/guide</input>
+                            <input>${project.basedir}/src/main/paperband</input>
                             <output>${project.build.directory}/${project.artifactId}.pdf</output>
                         </configuration>
                     </execution>

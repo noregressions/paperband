@@ -48,5 +48,38 @@
                 </plugin>
             </plugins>
         </pluginManagement>
+        <plugins>
+            <!--
+                maven-javadoc-plugin (bound in the parent's "release" profile) skips
+                itself here with "Not executing Javadoc as the project is not a Java
+                classpath-capable package" - there's no src/main/java to document.
+                But Maven Central requires a -javadoc.jar for every non-pom-packaged
+                artifact, maven-archetype included (see
+                https://central.sonatype.org/publish/requirements/), and won't accept
+                this module without one. Standard workaround: attach an empty jar
+                (classifier=javadoc) built from a placeholder directory instead of
+                relying on the javadoc plugin. Left unconditional (not release-profile-
+                gated) since Maven doesn't reliably merge a child profile's <build> into
+                a parent profile of the same id - simpler to always attach the (tiny,
+                harmless) placeholder than to depend on that.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>empty-javadoc-jar</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                        <configuration>
+                            <classifier>javadoc</classifier>
+                            <classesDirectory>${project.basedir}/src/main/javadoc</classesDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
     </build>
 </project>
