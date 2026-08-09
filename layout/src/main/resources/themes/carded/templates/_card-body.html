@@ -1,0 +1,56 @@
+{# Carded theme override: wraps each card in a trading-card frame with
+   header bar, flavour text, body, and footer. Preserves card-{{id}} anchor
+   for PDF named destinations and honours verify:false frontmatter.
+
+   Extends the shared base (_card-body-base.html) instead of duplicating it:
+   header/meta/appliesIf/footer are fully replaced with the trading-card
+   markup, but cardBlocks calls {{ parent() }} to reuse the base's
+   block-iteration loop (including the verify:false suppression) unchanged,
+   just wrapped in the extra .card-body div this theme wants. Any future fix
+   to that loop in the base now applies here automatically. #}
+{% extends "_card-body-base" %}
+
+{% block header %}
+<header class="card-frame-header">
+  {% set _tier = card.axes.tier.id %}
+  {% if _tier %}<span class="card-rarity">T{{ _tier }}</span>{% endif %}
+  <h1 class="card-title">{{ card.title | default(card.id) }}</h1>
+  {% if card.frontmatter.effort %}<span class="card-cost cost-{{ card.frontmatter.effort }}">{{ card.frontmatter.effort }}</span>{% endif %}
+</header>
+{% endblock %}
+
+{% block meta %}
+{% if card.frontmatter.oneliner %}
+<div class="card-flavour">
+  {{ card.frontmatter.oneliner | raw }}
+</div>
+{% endif %}
+
+{% if card.frontmatter.openrewrite %}
+<div class="card-keywords">
+  <span class="kw-tag">⚙ OpenRewrite</span>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block appliesIf %}
+{% if card.frontmatter.applies_if %}
+<div class="card-applies-if">
+  <strong>Applies if:</strong> {{ card.frontmatter.applies_if | raw }}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block cardBlocks %}
+<div class="card-body">
+  {{ parent() }}
+</div>
+{% endblock %}
+
+{% block footer %}
+{% set _tier = card.axes.tier.id %}
+<footer class="card-footer">
+  <span class="card-set-id">SB4 · {{ card.id }}</span>
+  {% if _tier %}<span class="card-set-tier">Tier {{ _tier }}</span>{% endif %}
+</footer>
+{% endblock %}

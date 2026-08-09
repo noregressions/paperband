@@ -1,0 +1,60 @@
+{# Base card article body, structured as named Pebble blocks so a theme can
+   restyle one region while inheriting the rest — instead of copy-pasting the
+   whole partial. Expects: card (model, with card.axes: a map of
+   axisName -> {id, label, color}, one entry per axis the card has a value
+   for — resolved from the card's own frontmatter field of the same name,
+   falling back to the folder-cascaded vars entry).
+
+   Every axis the card belongs to gets its own CSS class on the wrapping
+   <article> ({axisName}-{valueId}) and its own badge in the meta row. The
+   badge keeps the historical "tier-badge" class name literally (not
+   parametrized by axis name) so every existing theme's colour styling for
+   the "tier" axis keeps working unchanged; new axes additionally get a
+   namespaced "axis-badge-{axisName}" hook for themes to style from scratch.
+
+   Themes override by shipping their own templates/_card-body.html containing
+   {% extends "_card-body-base" %} plus whichever {% block %}s they change;
+   call {{ parent() }} inside an override to keep the base markup and wrap
+   or append to it rather than replacing it outright. The un-themed default
+   at templates/_card-body.html is just {% extends "_card-body-base" %} with
+   no overrides.
+
+   Named "-base" (not "_card-body") deliberately: theme template loaders are
+   tried before the classpath default, so if this file were named
+   "_card-body" a theme's own same-named override would resolve {% extends %}
+   back to itself and recurse. Keep any future shared base template under a
+   distinct "-base" name for the same reason. #}
+<article class="card{% for entry in card.axes %} {{ entry.key }}-{{ entry.value.id }}{% endfor %}" id="card-{{ card.id }}">
+  {% block header %}
+  {% if card.title %}<h1 class="card-title">{{ card.title }}</h1>{% endif %}
+  {% endblock %}
+
+  {% block meta %}
+  {% if card.frontmatter.oneliner or card.frontmatter.effort or card.frontmatter.openrewrite or card.axes is not empty %}
+  <div class="card-meta">
+    {% for entry in card.axes %}
+    <span class="tier-badge axis-badge axis-badge-{{ entry.key }}">{{ entry.value.label }}</span>
+    {% endfor %}
+    {% if card.frontmatter.effort %}<span class="effort-badge {{ card.frontmatter.effort }}">Impact: {{ card.frontmatter.effort }}</span>{% endif %}
+    {% if card.frontmatter.openrewrite %}<span class="openrewrite-badge">⚙ OpenRewrite</span>{% endif %}
+    {% if card.frontmatter.oneliner %}<div class="oneliner">{{ card.frontmatter.oneliner | raw }}</div>{% endif %}
+  </div>
+  {% endif %}
+  {% endblock %}
+
+  {% block appliesIf %}
+  {% if card.frontmatter.applies_if %}
+  <div class="applies-if">
+    <span class="applies-if-label">Applies if:</span> {{ card.frontmatter.applies_if | raw }}
+  </div>
+  {% endif %}
+  {% endblock %}
+
+  {% block cardBlocks %}
+  {% for block in card.blocks %}
+  {% include "_block-section" with {"block": block} %}
+  {% endfor %}
+  {% endblock %}
+
+  {% block footer %}{% endblock %}
+</article>

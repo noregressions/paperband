@@ -1,0 +1,297 @@
+/* =============================================================================
+ * Theme: carded
+ *
+ * Trading-card frames. Each card gets a rarity-coloured border (tier as
+ * rarity), a dark title bar with rarity glyph and effort cost, italic
+ * flavour-text from the oneliner, body in the centre, and a small set/id
+ * footer. Pairs with the carded/_card-body.html template override which
+ * supplies the new structural elements.
+ *
+ * Type scale: font-size in `rem`, scaled from the single :root rule below.
+ * Baseline 1rem ≡ 11pt — same convention as herodevs / book.css.
+ * ===========================================================================*/
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&family=EB+Garamond:ital,wght@1,400;1,600&display=swap');
+
+/* ── Type scale root ────────────────────────────────────────────────────── */
+html                    { font-size: calc(11pt * var(--pw-font-scale, 1)); }  /* default print baseline; --pw-font-scale set by pagewright for custom page: sizes / explicit fontScale overrides, unset otherwise */
+html.target-web         { font-size: 16px; }     /* screen-comfortable */
+html.size-a4            { font-size: 11pt; }
+html.size-letter        { font-size: 11pt; }
+html.size-6x9           { font-size: 12pt; }     /* +9%, narrower page */
+
+/* Card width: trading-card measure for print, slightly wider for screen. */
+:root                   { --card-max-width: 56rem; }
+@media print            { :root { --card-max-width: 44rem; } }
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: #1c1c2a;
+  color: #1a1a1a;
+}
+body.site, body { background: #1c1c2a; }
+
+/* Tier-as-rarity colours — bumped saturation for the framed look */
+article.card.carded.tier-1 { --rarity: #c0392b; --rarity-glow: #ff8a7a; }
+article.card.carded.tier-2 { --rarity: #e67e22; --rarity-glow: #ffb56b; }
+article.card.carded.tier-3 { --rarity: #8e44ad; --rarity-glow: #d4a4ff; }
+article.card.carded { --rarity: #555; --rarity-glow: #888; }
+
+/* ── Card frame ─────────────────────────────────────────────────────────── */
+article.card.carded {
+  background: #f6f4ee;
+  border: 8px solid var(--rarity);
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 2px rgba(0,0,0,0.4),
+    0 0 0 4px var(--rarity-glow),
+    0 8px 24px rgba(0,0,0,0.5);
+  padding: 0;
+  max-width: var(--card-max-width, 44rem);
+  margin-left: auto;
+  margin-right: auto;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── Title bar ──────────────────────────────────────────────────────────── */
+article.card.carded > .card-frame-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--rarity) 80%, black),
+    color-mix(in srgb, var(--rarity) 60%, black)
+  );
+  color: #ffffff;
+  padding: 0.7rem 1rem;
+  border-bottom: 2px solid rgba(0,0,0,0.4);
+}
+article.card.carded > .card-frame-header > .card-rarity {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  background: rgba(0,0,0,0.3);
+  padding: 3pt 8pt;
+  border-radius: 3px;
+  font-size: 0.82rem;            /* was 9pt */
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+article.card.carded > .card-frame-header > h1.card-title {
+  font-family: 'Inter', sans-serif;
+  font-weight: 800;
+  font-size: 1.27rem;            /* was 14pt */
+  line-height: 1.2;
+  margin: 0;
+  flex: 1;
+  border: none;
+  padding: 0;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+article.card.carded > .card-frame-header > .card-cost {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 1rem;               /* was 11pt */
+  width: 1.6rem; height: 1.6rem;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #1a1a1a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(0,0,0,0.4);
+  flex-shrink: 0;
+}
+article.card.carded .card-cost.cost-S { background: #6ee07f; }
+article.card.carded .card-cost.cost-M { background: #ffd966; }
+article.card.carded .card-cost.cost-L { background: #ff7d6e; color: #ffffff; }
+
+/* ── Flavour text ───────────────────────────────────────────────────────── */
+article.card.carded > .card-flavour {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 1rem;               /* was 11pt */
+  line-height: 1.45;
+  color: #4a4030;
+  background: linear-gradient(
+    180deg,
+    rgba(0,0,0,0.04),
+    rgba(0,0,0,0.0)
+  );
+  padding: 0.7rem 1.25rem 0.6rem;
+  margin: 0;
+  border-bottom: 1px dashed rgba(0,0,0,0.2);
+  text-align: center;
+}
+
+article.card.carded > .card-keywords {
+  padding: 0.4rem 1.25rem 0;
+  margin: 0;
+}
+article.card.carded > .card-keywords .kw-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.73rem;            /* was 8pt */
+  font-weight: 700;
+  background: var(--rarity);
+  color: #ffffff;
+  padding: 2pt 8pt;
+  border-radius: 3px;
+  letter-spacing: 0.4px;
+}
+
+article.card.carded > .card-applies-if {
+  font-size: 0.91rem;            /* was 10pt */
+  background: rgba(0,0,0,0.04);
+  border-left: 3px solid var(--rarity);
+  padding: 0.5rem 0.8rem;
+  margin: 0.6rem 1rem 0;
+  border-radius: 0 3px 3px 0;
+}
+article.card.carded > .card-applies-if strong { color: var(--rarity); }
+
+/* ── Body ───────────────────────────────────────────────────────────────── */
+article.card.carded > .card-body {
+  padding: 0.8rem 1.25rem 1rem;
+}
+article.card.carded > .card-body section.block { margin: 0.9rem 0; }
+article.card.carded > .card-body section.block > h2 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;            /* was 9pt */
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--rarity);
+  margin: 0 0 0.4rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--rarity) 40%, transparent);
+  padding-bottom: 2pt;
+}
+article.card.carded > .card-body section.block.intro > h2 { display: none; }
+
+article.card.carded section.block.watch-out {
+  border-left: 3px solid var(--rarity);
+  background: rgba(0,0,0,0.03);
+  padding: 0.5rem 0.7rem;
+  margin: 0.8rem 0;
+}
+article.card.carded section.block.check {
+  background: #f0f9f0;
+  border: 1px solid #c3e6c3;
+  border-radius: 4px;
+}
+article.card.carded section.block.further-info {
+  background: rgba(0,0,0,0.04);
+  border: none;
+  border-top: 1px dashed rgba(0,0,0,0.2);
+  border-radius: 0;
+  margin: 1rem -1.25rem -1rem;
+  padding: 0.6rem 1.25rem 0.7rem;
+}
+
+/* ── Footer set/id strip ────────────────────────────────────────────────── */
+article.card.carded > .card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(
+    0deg,
+    color-mix(in srgb, var(--rarity) 80%, black),
+    color-mix(in srgb, var(--rarity) 60%, black)
+  );
+  color: #ffffff;
+  padding: 4pt 1rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.73rem;            /* was 8pt */
+  letter-spacing: 0.4px;
+  border-top: 2px solid rgba(0,0,0,0.4);
+}
+article.card.carded > .card-footer .card-set-id { opacity: 0.85; }
+article.card.carded > .card-footer .card-set-tier {
+  background: rgba(0,0,0,0.3);
+  padding: 1pt 6pt;
+  border-radius: 2px;
+}
+
+/* Hide the legacy meta strip the bundled book.css would otherwise inject — */
+/* the carded template doesn't emit it, but belt-and-braces in case any caller */
+/* renders the default partial alongside the override. */
+article.card.carded > .card-meta { display: none; }
+article.card.carded > .applies-if { display: none; }
+
+/* ── Prism token colours — carded, cream card bg, rarity-driven accents ── */
+pre[class*="language-"],
+code[class*="language-"]            { background: #fafafa; color: #1a1a1a; text-shadow: none; }
+.token.comment,
+.token.prolog, .token.doctype, .token.cdata { color: #777777; font-style: italic; }
+.token.punctuation                  { color: #555555; }
+.token.property, .token.tag, .token.boolean, .token.number,
+.token.constant, .token.symbol, .token.deleted    { color: #8e44ad; }
+.token.selector, .token.attr-name, .token.string,
+.token.char, .token.builtin, .token.inserted      { color: #1f5430; }
+.token.operator, .token.entity, .token.url, .token.variable { color: #1a1a1a; }
+.token.atrule, .token.attr-value, .token.keyword  { color: #c0392b; font-weight: 600; }
+.token.function, .token.class-name                 { color: #c0392b; font-weight: 600; }
+.token.regex, .token.important                     { color: #e67e22; }
+
+/* ── Inline code categories — carded palette ──────────────────────────── */
+code.cls-annotation  { color: #8e44ad; }
+code.cls-keyword     { color: #777777; font-style: italic; }
+code.cls-constant    { color: #c0392b; font-weight: 600; }
+code.cls-method      { color: #c0392b; }
+code.cls-type        { color: #c0392b; font-weight: 500; }
+code.cls-path        { color: #1f5430; }
+code.cls-property    { color: #1a1a1a; }
+
+/* ── Cover ──────────────────────────────────────────────────────────────── */
+.book-cover { background: #1c1c2a; color: #ffffff; }
+.book-cover .book-cover-inner {
+  background: #f6f4ee;
+  color: #1a1a1a;
+  border: 8px solid #c0392b;
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 2px rgba(0,0,0,0.4),
+    0 0 0 4px #ff8a7a,
+    0 12px 32px rgba(0,0,0,0.6);
+  padding: 3rem 2.5rem;
+}
+.book-cover h1 { color: #1a1a1a; }
+.book-cover .subtitle { color: #4a4030; font-style: italic; font-family: 'EB Garamond', Georgia, serif; }
+.book-cover .author { color: #4a4030; }
+.book-cover .series {
+  background: #c0392b;
+  color: #ffffff;
+  padding: 4pt 14pt;
+  border-radius: 3px;
+}
+
+/* ── Tier divider — full-bleed rarity colour with shine ─────────────────── */
+.tier-divider {
+  background:
+    radial-gradient(
+      circle at 30% 20%,
+      rgba(255,255,255,0.25),
+      transparent 60%
+    ),
+    var(--tier-color, #888) !important;
+}
+
+/* ── Site chrome ────────────────────────────────────────────────────────── */
+.site-nav { background: #0a0a14; }
+.hero { background: #0a0a14; }
+.site-content { background: #1c1c2a; }
+.site-content .page {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+.tier-box, .stat-box, .effort-box, .card-item {
+  background: #f6f4ee;
+  border: 4px solid var(--tier-color, #555);
+  border-radius: 8px;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.4);
+}
+.card-item { border-top: 4px solid var(--tier-color, #555); }
+.card-nav a, .card-nav-bottom a { color: #ff8a7a; }
+.card-nav-bottom { border-top-color: rgba(255,255,255,0.2); }

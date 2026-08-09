@@ -1,0 +1,65 @@
+/*
+ * guide.css — Paperband Guide custom styles
+ *
+ * Declared in guide/pagewright.yaml under `css:` and inlined into every
+ * page (PDF and site) via LayoutEngine. Sits between the template scaffold
+ * and the active theme (which is appended last and wins on cascade order).
+ *
+ * Keeps overrides minimal so any theme reads cleanly on top of this file.
+ */
+
+/* ── Custom properties ──────────────────────────────────────────────────── */
+:root {
+  --guide-accent:  #2563eb;
+  --guide-bg-note: #eff6ff;
+  --guide-amber:   #f59e0b;
+  --guide-green:   #16a34a;
+}
+
+/* ── Intro block: slightly larger lead paragraph ────────────────────────── */
+section.block.intro > p:first-child {
+  font-size: 1.05em;
+  line-height: 1.7;
+}
+
+/* ── Watch Out block: amber left-border callout ─────────────────────────── */
+section.block.watch-out {
+  border-left: 4px solid var(--guide-amber);
+  padding-left: 1rem;
+  background: #fffbeb;
+  border-radius: 0 4px 4px 0;
+}
+
+section.block.watch-out > h2 {
+  color: #b45309;
+}
+
+/* ── Check block: green-tinted box ─────────────────────────────────────── */
+section.block.check {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 4px;
+  padding: 0.75rem 1rem;
+}
+
+section.block.check > h2 {
+  color: #166534;
+}
+
+/* ── Inline code: slightly warmer background ────────────────────────────── */
+code {
+  background: #f1f5f9;
+  border-radius: 3px;
+  padding: 0.1em 0.35em;
+}
+
+/* ── PDF page margins ───────────────────────────────────────────────────── */
+@page {
+  margin: 20mm 18mm 20mm 18mm;
+}
+
+@media print {
+  .book-cover {
+    page-break-after: always;
+  }
+}

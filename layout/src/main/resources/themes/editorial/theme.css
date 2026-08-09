@@ -1,0 +1,197 @@
+/* =============================================================================
+ * Theme: editorial
+ *
+ * Magazine-style: serif body and titles, drop-cap on intro paragraphs,
+ * eyebrow-style block headings in italic small caps. Code and badges stay
+ * monospace so technical content reads cleanly. Layered on top of book.css
+ * and site.css via cascade order, so this file overrides only what changes.
+ *
+ * Type scale: font-size in `rem`, scaled from the single :root rule below.
+ * Baseline 1rem ≡ 11pt — same convention as herodevs / book.css.
+ * ===========================================================================*/
+
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400;1,600&family=JetBrains+Mono:wght@400;700&display=swap');
+
+/* ── Type scale root ────────────────────────────────────────────────────── */
+html                    { font-size: calc(11pt * var(--pw-font-scale, 1)); }  /* default print baseline; --pw-font-scale set by pagewright for custom page: sizes / explicit fontScale overrides, unset otherwise */
+html.target-web         { font-size: 16px; }     /* screen-comfortable */
+html.size-a4            { font-size: 11pt; }
+html.size-letter        { font-size: 11pt; }
+html.size-6x9           { font-size: 12pt; }     /* +9%, narrower page */
+
+/* Card width: magazine measure for print, wider for screen. */
+:root                   { --card-max-width: 56rem; }
+@media print            { :root { --card-max-width: 42rem; } }
+
+body {
+  font-family: 'Source Serif 4', 'Source Serif Pro', Georgia, serif;
+  background: #fbf9f4;
+  color: #1a1a1a;
+}
+
+/* ── Card frame: lighter, no top accent bar — let the title carry tier ──── */
+article.card {
+  border: none;
+  border-top: none;
+  background: transparent;
+  padding: 2.5rem 1rem 1.5rem;
+  max-width: var(--card-max-width, 42rem);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Eyebrow above title: small uppercase tier name */
+article.card > h1.card-title {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 2rem;               /* was 22pt */
+  font-weight: 700;
+  line-height: 1.2;
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0.6rem;
+  letter-spacing: -0.005em;
+}
+
+article.card > .card-meta { margin-bottom: 1.5rem; }
+article.card > .card-meta .oneliner {
+  font-style: italic;
+  font-size: 1.05rem;            /* was 11.5pt */
+  color: #4a4a4a;
+  border-left: 2px solid var(--tier-color);
+  padding-left: 0.9rem;
+}
+
+.tier-badge, .effort-badge, .openrewrite-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+/* ── Block headings: italic small caps, hairline rule above ─────────────── */
+section.block > h2 {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 0.91rem;            /* was 10pt */
+  font-style: italic;
+  font-weight: 600;
+  text-transform: none;
+  font-variant: small-caps;
+  letter-spacing: 1.5px;
+  color: var(--tier-color);
+  border-top: 1px solid #d8d2c4;
+  padding-top: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+/* ── Drop cap on the intro block's first paragraph ──────────────────────── */
+section.block.intro p:first-of-type::first-letter {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 3.2em;              /* em — scales with parent paragraph */
+  font-weight: 700;
+  float: left;
+  line-height: 0.9;
+  margin: 0.05em 0.08em -0.05em 0;
+  color: var(--tier-color);
+}
+section.block.intro > h2 { display: none; }
+section.block.intro p { font-size: 1rem; line-height: 1.65; }      /* was 11pt */
+
+section.block p, section.block li {
+  font-size: 0.95rem;            /* was 10.5pt */
+  line-height: 1.6;
+}
+
+/* Watch out / check / scope-check / further-info: lighter borders */
+section.block.watch-out { border-left-width: 2px; }
+section.block.check {
+  background: #f4f7f0;
+  border: 1px solid #d8e0c8;
+}
+section.block.further-info {
+  background: #f5f0e6;
+  border: none;
+  border-top: 1px solid #d8d2c4;
+  border-radius: 0;
+}
+
+/* ── Prism token colours — magazine palette, low-saturation ───────────────
+ * Restrained colour so highlighted listings sit politely inside the
+ * serif-magazine page. Block-level styling stays from prism.min.css.
+ * ───────────────────────────────────────────────────────────────────────── */
+pre[class*="language-"],
+code[class*="language-"]            { background: #f5f0e6; color: #1a1a1a; text-shadow: none; }
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata                        { color: #8a7a55; font-style: italic; }
+.token.punctuation                  { color: #6a6056; }
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted                      { color: #8e44ad; }
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted                     { color: #2f6f48; }
+.token.operator,
+.token.entity,
+.token.url,
+.token.variable                     { color: #1a1a1a; }
+.token.atrule,
+.token.attr-value,
+.token.keyword                      { color: #a8341c; font-weight: 600; }
+.token.function,
+.token.class-name                   { color: #c0392b; font-weight: 600; }
+.token.regex,
+.token.important                    { color: #b9740b; }
+
+/* ── Inline code categories — editorial palette ───────────────────────── */
+code.cls-annotation  { color: #8e44ad; }
+code.cls-keyword     { color: #8a7a55; font-style: italic; }
+code.cls-constant    { color: #a8341c; font-weight: 600; }
+code.cls-method      { color: #2f6f48; }
+code.cls-type        { color: #c0392b; font-weight: 500; }
+code.cls-path        { color: #2f6f48; }
+code.cls-property    { color: #1a1a1a; }
+
+/* ── Cover ──────────────────────────────────────────────────────────────── */
+.book-cover { background: #fbf9f4; }
+.book-cover h1 {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 3.45rem;            /* was 38pt */
+  font-style: italic;
+}
+.book-cover .subtitle {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-style: normal;
+  font-size: 1.27rem;            /* was 14pt */
+  color: #4a4a4a;
+}
+.book-cover .series {
+  font-variant: small-caps;
+  text-transform: none;
+  letter-spacing: 3px;
+}
+
+/* ── Tier divider ───────────────────────────────────────────────────────── */
+.tier-divider h1 {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 3.09rem;            /* was 34pt */
+  font-style: italic;
+}
+.tier-divider .tier-toc { font-family: 'Source Serif 4', Georgia, serif; }
+.tier-divider .tier-toc li::marker {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── Site mode chrome ───────────────────────────────────────────────────── */
+.site-nav .nav-brand,
+.site-nav a.nav-link { font-family: 'Source Serif 4', Georgia, serif; }
+.hero h1 { font-family: 'Source Serif 4', Georgia, serif; font-style: italic; }
+.tier-hero h1 { font-family: 'Source Serif 4', Georgia, serif; font-style: italic; }
+.ci-title { font-family: 'Source Serif 4', Georgia, serif; }

@@ -1,0 +1,141 @@
+/*
+ * Base site scaffold — theme-neutral structural CSS for the static-site
+ * templates (nav, sidebar, content column, prev/next). Inlined by
+ * LayoutEngine.renderSite() BEFORE any user or theme CSS, so themes only need
+ * to supply colours and typography; the layout works with every theme.
+ *
+ * Deliberately avoids strong colours: neutral borders and translucent
+ * hover/active tints (rgba on black) that read acceptably on light themes and
+ * are overridden by themes that set their own sidebar/nav colours.
+ */
+
+body.has-sidebar { margin: 0; }
+
+/* ---- top nav ---- */
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.7rem 1.25rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+.site-nav .nav-brand { font-weight: 700; text-decoration: none; color: inherit; }
+.site-nav .nav-link { text-decoration: none; color: inherit; opacity: 0.85; }
+.site-nav .nav-link:hover { opacity: 1; }
+.nav-spacer { flex: 1 1 auto; }
+.nav-sidebar-toggle {
+  cursor: pointer;
+  background: none;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  border-radius: 5px;
+  padding: 0.3rem 0.6rem;
+  font-size: 1rem;
+  line-height: 1;
+  color: inherit;
+}
+
+/* ---- overall two-column layout ---- */
+.site-layout { display: flex; align-items: flex-start; }
+
+.site-sidebar {
+  flex: 0 0 16rem;
+  width: 16rem;
+  box-sizing: border-box;
+  position: sticky;
+  top: 0;
+  max-height: 100vh;
+  overflow-y: auto;
+  padding: 1.25rem 1rem;
+  border-right: 1px solid rgba(0, 0, 0, 0.12);
+  font-size: 0.9rem;
+}
+
+.site-main { flex: 1 1 auto; min-width: 0; }  /* min-width:0 keeps wide code from blowing out the flex row */
+
+.site-content {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 1.5rem 2rem 4rem;
+  box-sizing: border-box;
+}
+
+/* ---- sidebar contents ---- */
+.sidebar-nav { line-height: 1.4; }
+.sidebar-section { margin-bottom: 1rem; }
+.sidebar-tier-heading,
+.sidebar-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+}
+.sidebar-tier-heading a,
+.sidebar-section-heading a { text-decoration: none; color: inherit; }
+.sidebar-section-toggle {
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-size: 0.8rem;
+  line-height: 1;
+  padding: 0.1rem 0.3rem;
+  color: inherit;
+  opacity: 0.6;
+  transition: transform 0.15s ease;
+}
+.sidebar-section-toggle:hover { opacity: 1; }
+.sidebar-section.collapsed .sidebar-section-toggle { transform: rotate(-90deg); }
+.sidebar-section.collapsed .sidebar-cards { display: none; }
+
+.sidebar-cards { list-style: none; margin: 0.2rem 0 0; padding: 0 0 0 0.6rem; }
+.sidebar-cards li { margin: 0.1rem 0; }
+.sidebar-cards li a {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  opacity: 0.85;
+}
+.sidebar-cards li a:hover { opacity: 1; background: rgba(0, 0, 0, 0.05); }
+.sidebar-cards li.active a { font-weight: 600; opacity: 1; background: rgba(0, 0, 0, 0.07); }
+
+/* ---- prev/next + breadcrumb strips ---- */
+.card-nav,
+.card-nav-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.card-nav { margin-bottom: 1.5rem; font-size: 0.9rem; }
+.card-nav a, .card-nav-bottom a { text-decoration: none; }
+.card-nav-bottom {
+  margin-top: 3rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  font-size: 0.9rem;
+}
+
+/* ---- desktop: collapsed sidebar ---- */
+body.sidebar-collapsed .site-sidebar { display: none; }
+
+/* ---- mobile: sidebar becomes an off-canvas drawer ---- */
+@media (max-width: 900px) {
+  .site-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 30;
+    width: 18rem;
+    max-height: 100vh;
+    background: var(--pw-sidebar-bg, #ffffff);
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+  }
+  body.menu-open .site-sidebar { transform: translateX(0); }
+  .site-content { padding: 1.25rem; }
+}

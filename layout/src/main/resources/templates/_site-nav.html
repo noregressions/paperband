@@ -1,0 +1,119 @@
+{# Site nav header. Expects: book, navEntries, urlPrefix, sidebar.
+   When sidebar is on, the entry links live in the sidebar so we render a
+   single toggle button that:
+     - on mobile, slides the off-canvas drawer in/out via body.menu-open
+     - on desktop, collapses/expands the sidebar via body.sidebar-collapsed
+       (persisted in localStorage so the choice survives navigation).
+   When sidebar is off, the top nav iterates navEntries directly — axis-value
+   and section links (across every declared axis, independently) appear in
+   walk order (front matter first, back matter last). #}
+{% if sidebar %}
+{# Bootstrap before the sidebar paints to avoid a flash of the wrong state.
+   Server-side `sidebar_collapsed` sets the initial body class on each page;
+   localStorage (set by user clicks) takes precedence when present. #}
+<script>
+(function () {
+  // Whole-sidebar persisted preference (desktop only).
+  try {
+    var v = localStorage.getItem('pagewright.sidebarCollapsed');
+    if (v === '1') document.body.classList.add('sidebar-collapsed');
+    else if (v === '0') document.body.classList.remove('sidebar-collapsed');
+  } catch (e) { /* private mode, ignore */ }
+
+  // Per-section collapsed state runs after the sidebar is in the DOM.
+  document.addEventListener('DOMContentLoaded', function () {
+    // Sync the top toggle button's aria-expanded with the body class.
+    var hbtn = document.querySelector('.nav-sidebar-toggle');
+    if (hbtn) {
+      var sideCollapsed = document.body.classList.contains('sidebar-collapsed');
+      hbtn.setAttribute('aria-expanded', sideCollapsed ? 'false' : 'true');
+    }
+
+    // localStorage stores explicit per-section overrides on top of the
+    // server-rendered default (book var `sidebar_sections_collapsed`):
+    //   state[id] === '1'  → user collapsed this section
+    //   state[id] === '0'  → user expanded this section
+    //   absent             → defer to whatever the server rendered
+    // The section containing the active page is always force-expanded so
+    // the user can see where they are — overrides both the server default
+    // and any prior user collapse for that section.
+    var state = {};
+    try {
+      var raw = localStorage.getItem('pagewright.sidebarSections');
+      if (raw) state = JSON.parse(raw) || {};
+    } catch (e) {}
+
+    document.querySelectorAll('.sidebar-section[data-section-id]').forEach(function (sec) {
+      var id = sec.getAttribute('data-section-id');
+      var btn = sec.querySelector('.sidebar-section-toggle');
+      if (!btn) return;  // no cards → no toggle, nothing to do
+      var hasActive = !!sec.querySelector('a.active, li.active');
+      var override = state[id];
+      var collapsed;
+      if (hasActive) {
+        collapsed = false;
+      } else if (override === '1' || override === 1) {
+        collapsed = true;
+      } else if (override === '0' || override === 0) {
+        collapsed = false;
+      } else {
+        collapsed = sec.classList.contains('collapsed');  // server default
+      }
+      sec.classList.toggle('collapsed', collapsed);
+      btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    });
+  });
+})();
+function pagewrightToggleSidebar(btn) {
+  var collapsed;
+  if (window.matchMedia('(max-width: 900px)').matches) {
+    // Mobile: drawer open/close, not persisted.
+    var open = document.body.classList.toggle('menu-open');
+    if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    return;
+  }
+  // Desktop: persist the collapse preference.
+  collapsed = document.body.classList.toggle('sidebar-collapsed');
+  if (btn) btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  try { localStorage.setItem('pagewright.sidebarCollapsed', collapsed ? '1' : '0'); } catch (e) {}
+}
+function pagewrightToggleSection(btn) {
+  var sec = btn.closest('.sidebar-section');
+  if (!sec) return;
+  var collapsed = sec.classList.toggle('collapsed');
+  btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  var id = sec.getAttribute('data-section-id');
+  if (!id) return;
+  // Persist an explicit state (not a deletion) so the user's choice
+  // overrides the server-rendered default on the next page load.
+  try {
+    var raw = localStorage.getItem('pagewright.sidebarSections');
+    var state = raw ? (JSON.parse(raw) || {}) : {};
+    state[id] = collapsed ? '1' : '0';
+    localStorage.setItem('pagewright.sidebarSections', JSON.stringify(state));
+  } catch (e) {}
+}
+</script>
+{% endif %}
+<nav class="site-nav">
+  <a class="nav-brand" href="{{ urlPrefix }}index.html">{{ book.title | default('pagewright') }}</a>
+  {% if sidebar %}
+  <span class="nav-spacer"></span>
+  <button class="nav-sidebar-toggle" type="button"
+          aria-label="Toggle navigation" aria-controls="pagewright-sidebar"
+          aria-expanded="{% if sidebar_collapsed %}false{% else %}true{% endif %}"
+          onclick="pagewrightToggleSidebar(this)">☰</button>
+  {% else %}
+  {% for e in navEntries %}
+  {% if e.kind == 'axis' %}
+  {# nav-link {axisName}{valueId} reproduces "tier1"/"tier2"/"tier3" unchanged
+     for the tier axis (existing theme CSS keeps working); other axes get an
+     equivalently-namespaced, initially-unstyled hook. #}
+  <a class="nav-link {{ e.axis }}{{ e.id }}" href="{{ urlPrefix }}{{ e.url }}">{{ e.label }}</a>
+  {% else %}
+  <a class="nav-link section-link" href="{{ urlPrefix }}{{ e.url }}">{{ e.label }}</a>
+  {% endif %}
+  {% endfor %}
+  <span class="nav-spacer"></span>
+  {% endif %}
+</nav>

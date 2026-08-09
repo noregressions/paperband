@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>dev.noregressions.paperband</groupId>
+        <artifactId>pagewright-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>pagewright-guide</artifactId>
+    <!--
+        pom packaging: this module builds documentation (PDF + static site) by
+        running the CLI during the package phase. It has no Java sources and
+        produces no jar, so pom packaging skips the compile/test/jar steps (and
+        the "JAR will be empty" warning) while still running the plugin
+        executions bound to prepare-package and package below.
+    -->
+    <packaging>pom</packaging>
+
+    <name>Paperband :: Guide</name>
+    <description>
+        Self-documenting guide. The guide source lives in guide/; the PDF and
+        static site produced at package time ARE the documentation.
+    </description>
+
+    <dependencies>
+        <!--
+            The shaded all-in-one jar. Contains every renderer and all transitive
+            deps. Declaring it here ensures Maven builds pagewright-cli before this
+            module and makes the artifact available to dependency:copy below.
+        -->
+        <dependency>
+            <groupId>dev.noregressions.paperband</groupId>
+            <artifactId>pagewright-cli</artifactId>
+            <version>${project.version}</version>
+            <classifier>all</classifier>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!--
+                Copy the fat jar into target/ under a stable name so the exec
+                plugin can reference it without embedding the version string in
+                the argument list.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.6.1</version>
+                <executions>
+                    <execution>
+                        <id>copy-cli-jar</id>
+                        <phase>prepare-package</phase>
+                        <goals><goal>copy</goal></goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>dev.noregressions.paperband</groupId>
+                                    <artifactId>pagewright-cli</artifactId>
+                                    <version>${project.version}</version>
+                                    <classifier>all</classifier>
+                                    <type>jar</type>
+                                    <destFileName>pagewright.jar</destFileName>
+                                    <outputDirectory>${project.build.directory}</outputDirectory>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!--
+                Build the guide. Two executions: PDF then static site.
+                exec:exec forks a separate JVM so System.exit() inside the CLI
+                does not terminate the Maven process.
+                Uses ${java.home}/bin/java to match the exact JVM Maven is running on.
+            -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.3.0</version>
+                <executions>
+                    <execution>
+                        <id>build-guide-pdf</id>
+                        <phase>package</phase>
+                        <goals><goal>exec</goal></goals>
+                        <configuration>
+                            <executable>${java.home}/bin/java</executable>
+                            <arguments>
+                                <argument>-jar</argument>
+                                <argument>${project.build.directory}/pagewright.jar</argument>
+                                <argument>build</argument>
+                                <argument>${project.basedir}/guide</argument>
+                                <argument>${project.build.directory}/guide.pdf</argument>
+                                <!--
+                                    The guide deliberately includes real project source
+                                    from above its book root (pom.xml, pagewright-include
+                                    sources) to stay in sync with the code. This is a
+                                    trusted first-party build, so allow-list the repo
+                                    root explicitly rather than disabling containment.
+                                -->
+                                <argument>--external-include-dir</argument>
+                                <argument>${project.basedir}/..</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>build-guide-site</id>
+                        <phase>package</phase>
+                        <goals><goal>exec</goal></goals>
+                        <configuration>
+                            <executable>${java.home}/bin/java</executable>
+                            <arguments>
+                                <argument>-jar</argument>
+                                <argument>${project.build.directory}/pagewright.jar</argument>
+                                <argument>site</argument>
+                                <argument>${project.basedir}/guide</argument>
+                                <argument>${project.build.directory}/guide-site</argument>
+                                <argument>--clean</argument>
+                                <argument>--external-include-dir</argument>
+                                <argument>${project.basedir}/..</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

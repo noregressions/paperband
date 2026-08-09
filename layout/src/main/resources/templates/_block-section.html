@@ -1,0 +1,28 @@
+{# Renders one card block and recurses into its nested children (a deeper
+   heading found while this block's section was open -- see Block's javadoc
+   in pagewright-core for the nesting rule). Expects: block (model: id,
+   classes, classAttr, heading, level, html, children), card (in scope via
+   inheritance from the caller -- needed for the verify:false "check" guard
+   below).
+
+   Unlike _card-body-base.html, this partial is NOT named "-base": a theme
+   overriding it is exactly what should happen at every recursion depth (the
+   self-include a few lines down resolves to the theme's own override just
+   as consistently as the top-level call does), so there's no self-extends
+   hazard the way there is with {% extends %} + {{ parent() }}. #}
+{% if not (card.frontmatter.verify == false and block.classes contains "check") %}
+<section class="block{% if block.classAttr %} {{ block.classAttr }}{% endif %}"{% if block.id %} id="{{ block.id }}"{% endif %}>
+  {% if block.heading %}
+    {% if block.level == 2 %}<h2>{{ block.heading }}</h2>
+    {% elseif block.level == 3 %}<h3>{{ block.heading }}</h3>
+    {% elseif block.level == 4 %}<h4>{{ block.heading }}</h4>
+    {% elseif block.level == 5 %}<h5>{{ block.heading }}</h5>
+    {% else %}<h6>{{ block.heading }}</h6>
+    {% endif %}
+  {% endif %}
+  {{ block.html | raw }}
+  {% for child in block.children %}
+  {% include "_block-section" with {"block": child} %}
+  {% endfor %}
+</section>
+{% endif %}

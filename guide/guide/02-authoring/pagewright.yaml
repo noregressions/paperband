@@ -1,0 +1,10 @@
+title: "Authoring"
+
+axis:
+  section: authoring
+
+order:
+  - 01-card-structure
+  - 02-frontmatter
+  - 03-includes
+  - 04-conditionals

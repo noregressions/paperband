@@ -1,0 +1,478 @@
+/* =============================================================================
+ * Theme: herodevs
+ *
+ * On-brand HeroDevs theme. Built from the 2026 Brand Guidelines.
+ *   - Manrope as the primary typeface (JetBrains Mono retained for code so
+ *     diffs and listings still align).
+ *   - White paper, brand black (#0D0D0D) text, neutrals for surfaces.
+ *   - Pink-to-blue gradient (#F926E1 → #2AB5FB) used as a signature accent on
+ *     the cover, the site hero, and the nav under-bar. Tier dividers use
+ *     gradient slices that match the tier's position on the spectrum.
+ *
+ * Tier mapping (each tier carries two values: a brighter accent for visible
+ * borders, and a darker 600-level for body text where AA contrast on white
+ * matters):
+ *   tier-1 → pink end (#F926E1 / #A50896)
+ *   tier-2 → gradient midpoint violet (#916DEE / #5540A3)
+ *   tier-3 → blue end (#2AB5FB / #0678B0)
+ *
+ * Type scale: every font-size is in `rem`, scaled from a single :root rule
+ * keyed off page size. One dial — `html.size-X { font-size: ... }` — moves
+ * the whole document, cover and tier dividers included. Baseline 1rem ≡ 11pt.
+ *   pt → rem reference (all sizes used in this theme):
+ *     9pt  → 0.82rem    9.5pt → 0.86rem  10pt → 0.91rem  10.5pt → 0.95rem
+ *    11pt → 1.00rem    14pt → 1.27rem   19pt → 1.73rem
+ *    32pt → 2.91rem    38pt → 3.45rem
+ * ===========================================================================*/
+
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+/* ── Type scale root ────────────────────────────────────────────────────────
+ * One rule per page size. Templates add `class="target-... size-..."` on
+ * <html>; the size class is set deterministically from `--page-size` (the
+ * target class is informational and may be left at the default `pdf-a4`).
+ * Everything below is in rem and scales from this single number.
+ * ───────────────────────────────────────────────────────────────────────── */
+html                    { font-size: 11pt; }     /* default print baseline */
+html.target-web         { font-size: 16px; }     /* screen-comfortable */
+html.size-a4            { font-size: 11pt; }     /* explicit; matches default */
+html.size-letter        { font-size: 11pt; }
+html.size-6x9           { font-size: 16pt; }     /* +9%, compensates for narrower page */
+
+/* Card width: screen-comfortable by default; @media print narrows for PDF.
+ * Using media queries instead of html.target-X classes because `pt site`
+ * doesn't currently set a target attribute, so class-based switches don't
+ * match for the static-site output. openhtmltopdf renders in print mode,
+ * so the @media print override correctly fires for `pt build`. */
+:root                   { --card-max-width: 64rem; }
+@media print            { :root { --card-max-width: 48rem; } }
+
+/* ── Base ───────────────────────────────────────────────────────────────── */
+body {
+  font-family: 'Manrope', system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: #ffffff;
+  color: #0D0D0D;
+}
+body.site, body { background: #ffffff; }
+
+/* HeroDevs design tokens. Available to every selector below. */
+:root {
+  --hd-gradient: linear-gradient(90deg, #F926E1, #2AB5FB);
+  --hd-pink: #F926E1;
+  --hd-pink-500: #D10DBF;
+  --hd-pink-600: #A50896;
+  --hd-violet: #916DEE;
+  --hd-violet-600: #5540A3;
+  --hd-blue: #2AB5FB;
+  --hd-blue-600: #0678B0;
+  --hd-ink: #0D0D0D;
+}
+
+/* Tier accent (visible borders) and tier text (headings, links) split so the
+ * top-of-card stripe stays vivid while body type still hits AA on white. */
+article.card.tier-1 { --tier-color: #A50896; --tier-accent: #F926E1; }
+article.card.tier-2 { --tier-color: #5540A3; --tier-accent: #916DEE; }
+article.card.tier-3 { --tier-color: #0678B0; --tier-accent: #2AB5FB; }
+
+/* ── Card frame ─────────────────────────────────────────────────────────── */
+article.card {
+  max-width: var(--card-max-width, 48rem);
+  margin-left: auto;
+  margin-right: auto;
+  background: #ffffff;
+  border: 1px solid #EFEFEF;
+  border-top: 3px solid var(--tier-accent, #DCDCDC);
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(13,13,13,0.04);
+}
+
+article.card > h1.card-title {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 800;
+  font-size: 1.73rem;            /* was 19pt */
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: #0D0D0D;
+  border-bottom: 1px solid #EFEFEF;
+  padding-bottom: 0.6rem;
+  margin-bottom: 0.8rem;
+}
+
+/* ── Frontmatter strip ──────────────────────────────────────────────────── */
+article.card > .card-meta {
+  margin: 0.4rem 0 1.5rem;
+  gap: 0.5rem;
+}
+article.card > .card-meta .oneliner {
+  color: #525252;
+  font-weight: 400;
+  font-size: 0.91rem;            /* was 10pt */
+  line-height: 1.5;
+}
+
+.tier-badge {
+  background: var(--tier-color);
+  color: #ffffff;
+  font-family: 'Manrope', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  border-radius: 3px;
+}
+
+.effort-badge {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 700;
+  border-radius: 3px;
+  letter-spacing: 0.4px;
+}
+.effort-badge.S { background: #E8F7FF; color: #045A84; }
+.effort-badge.M { background: #FDC8F8; color: #7A0670; }
+.effort-badge.L { background: #F926E1; color: #ffffff; }
+
+.openrewrite-badge {
+  background: #111111;
+  color: transparent;
+  background-clip: text;
+  -webkit-background-clip: text;
+  background: var(--hd-gradient);
+  color: #ffffff;
+  font-family: 'Manrope', sans-serif;
+  font-weight: 700;
+  border-radius: 3px;
+  letter-spacing: 0.4px;
+}
+
+/* ── Block headings ─────────────────────────────────────────────────────── */
+section.block > h2 {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 700;
+  font-size: 0.86rem;            /* was 9.5pt */
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--tier-color);
+}
+section.block.intro > h2 { display: none; }
+section.block.intro p {
+  color: #1F1F1F;
+  font-weight: 400;
+  font-size: 0.95rem;            /* was 10.5pt */
+  line-height: 1.6;
+}
+
+section.block p, section.block li {
+  color: #1F1F1F;
+  font-family: 'Manrope', sans-serif;
+}
+section.block strong { color: #0D0D0D; font-weight: 700; }
+section.block a {
+  color: #0678B0;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+section.block a:hover { color: #045A84; }
+
+/* Watch out — left bar in tier accent, soft gradient wash */
+section.block.watch-out {
+  border-left: 3px solid var(--tier-accent);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--tier-accent) 8%, transparent),
+    transparent 40%
+  );
+  padding: 0.6rem 0.9rem;
+  margin: 0.8rem 0;
+}
+
+/* Check — soft blue tint, blue heading */
+section.block.check {
+  background: #E8F7FF;
+  border: 1px solid #C5EBFE;
+  border-radius: 4px;
+}
+section.block.check > h2 { color: #045A84; }
+section.block.check code { background: #C5EBFE; border-color: #8DD8FD; }
+
+/* Scope check — neutral box */
+section.block.scope-check {
+  background: #F7F7F7;
+  border: 1px solid #DCDCDC;
+  border-radius: 4px;
+}
+section.block.scope-check > h2 { color: #525252; }
+
+/* Further info — quiet bottom note in tier accent */
+section.block.further-info {
+  background: #FAFAFA;
+  border: 1px solid #EFEFEF;
+  border-radius: 4px;
+  margin-top: 1.5rem;
+}
+section.block.further-info > h2 { color: var(--tier-color); }
+section.block.further-info p, section.block.further-info li {
+  color: #525252;
+}
+
+/* ── Code ───────────────────────────────────────────────────────────────── */
+/* pre/code don't set font-size here — they inherit 0.9em from the scaffold
+ * in book.html / card.html, which is already relative. So bumping root font
+ * size at 6x9 widens code too. If you want code to scale differently from
+ * prose, set an explicit em here. */
+code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  background: #F7F7F7;
+  color: #0D0D0D;
+  border: 1px solid #EFEFEF;
+  border-radius: 3px;
+}
+pre {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  background: #FAFAFA;
+  border: 1px solid #EFEFEF;
+  border-radius: 4px;
+  color: #0D0D0D;
+}
+pre code { background: transparent; border: none; }
+/* Diff markers — prefixed `diff-` to stay clear of Prism's .token.comment. */
+pre .diff-removed { color: #A50896; text-decoration: line-through; opacity: 0.85; }
+pre .diff-added   { color: #0678B0; font-weight: 500; }
+pre .diff-comment { color: #737373; }
+
+/* ── Inline code categories — brand colours over book.css baseline ────── */
+/* InlineCodeClassifier tags inline <code> with cls-* by shape. These rules
+ * map each category to the HeroDevs palette. Background tint stays from
+ * the default code rule. */
+code.cls-annotation  { color: var(--hd-violet-600, #5540A3); }
+code.cls-keyword     { color: #737373; font-style: italic; }
+code.cls-constant    { color: var(--hd-pink-600,   #A50896); font-weight: 600; }
+code.cls-method      { color: var(--hd-blue-600,   #0678B0); }
+code.cls-type        { color: var(--hd-blue-600,   #0678B0); font-weight: 500; }
+code.cls-path        { color: var(--hd-blue-600,   #0678B0); }
+code.cls-property    { color: #0D0D0D; }
+
+/* ── Diff card — brand colours over book.css's neutral baseline ───────── */
+figure.diff-card {
+  border-color: #EFEFEF;
+}
+figure.diff-card figcaption {
+  background: #FAFAFA;
+  border-bottom-color: #EFEFEF;
+  color: #525252;
+  font-family: 'Manrope', sans-serif;
+}
+.diff-side + .diff-side             { border-left-color: #EFEFEF; }
+.diff-side > header                 { font-family: 'Manrope', sans-serif; }
+.diff-side-removed > header         { background: var(--hd-pink-600, #A50896); }
+.diff-side-added   > header         { background: var(--hd-blue-600, #0678B0); }
+.diff-side > pre                    { background: #FAFAFA; }
+
+/* Error output — keep the dark terminal look but tone with brand accents */
+pre.error-output                    { background: #0D0D0D; border-color: #0D0D0D; color: #C4C4C4; }
+pre.error-output .err-error         { color: #FB96F3; }   /* hd-pink, brighter for dark bg */
+pre.error-output .err-prompt        { color: #8DD8FD; }   /* hd-blue, brighter for dark bg */
+
+/* ── Prism token colours ──────────────────────────────────────────────────
+ * Mapped to HeroDevs brand palette. Loaded on top of prism.min.css, which
+ * supplies block-level (background, padding) styling.
+ * ───────────────────────────────────────────────────────────────────────── */
+pre[class*="language-"],
+code[class*="language-"]            { background: #FAFAFA; color: #0D0D0D; text-shadow: none; }
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata                        { color: #737373; font-style: italic; }
+.token.punctuation                  { color: #525252; }
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted                      { color: #5540A3; }    /* hd-violet-600 */
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted                     { color: #0678B0; }    /* hd-blue-600  */
+.token.operator,
+.token.entity,
+.token.url,
+.token.variable                     { color: #0D0D0D; }
+.token.atrule,
+.token.attr-value,
+.token.keyword                      { color: #A50896; font-weight: 600; } /* hd-pink-600 */
+.token.function,
+.token.class-name                   { color: #045A84; font-weight: 600; }
+.token.regex,
+.token.important                    { color: #D10DBF; }
+
+/* ── Cover ──────────────────────────────────────────────────────────────────
+ * Display type below stays in `pt` — cover composition is pinned to the
+ * physical page, not to body reading scale. If 6x9 covers feel oversized,
+ * tweak these values explicitly rather than letting them scale with body.
+ * ───────────────────────────────────────────────────────────────────────── */
+.book-cover {
+  background: #ffffff;
+  position: relative;
+}
+.book-cover::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 14px;
+  background: var(--hd-gradient);
+}
+.book-cover::after {
+  content: "© 2026 herodevs";
+  position: absolute;
+  bottom: 1.5rem;
+  right: 2rem;
+  font-family: 'Manrope', sans-serif;
+  font-weight: 500;
+  font-size: 0.82rem;            /* was 9pt — print mark */
+  color: #A0A0A0;
+  letter-spacing: 0.3px;
+}
+.book-cover .book-cover-inner { max-width: 38rem; }
+.book-cover h1 {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 800;
+  font-size: 3.45rem;            /* was 38pt — cover title */
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  color: #0D0D0D;
+}
+.book-cover .subtitle {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 400;
+  font-size: 1.27rem;            /* was 14pt — cover subtitle */
+  color: #525252;
+  margin-top: 0.6rem;
+}
+.book-cover .series {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 700;
+  font-size: 0.91rem;            /* was 10pt — cover series label */
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  background: var(--hd-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin-bottom: 1.5rem;
+}
+.book-cover .author {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 500;
+  font-size: 1rem;               /* was 11pt — cover author byline */
+  color: #525252;
+  margin-top: 2rem;
+}
+
+/* ── Tier divider ─────────────────────────────────────────────────────────
+ * Also display type — full-page wayfinding, pinned to page geometry.
+ * ───────────────────────────────────────────────────────────────────────── */
+.tier-divider { color: #ffffff; }
+.tier-divider.tier-1 { background: linear-gradient(135deg, #F926E1, #A50896) !important; }
+.tier-divider.tier-2 { background: linear-gradient(135deg, #B45EE9, #5540A3) !important; }
+.tier-divider.tier-3 { background: linear-gradient(135deg, #2AB5FB, #045A84) !important; }
+.tier-divider h1 {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 800;
+  font-size: 2.91rem;            /* was 32pt — tier divider title */
+  letter-spacing: -0.02em;
+}
+.tier-divider .tier-badge-lg {
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.35);
+  font-family: 'Manrope', sans-serif;
+}
+.tier-divider .tier-count { font-family: 'Manrope', sans-serif; font-weight: 500; }
+.tier-divider .tier-toc   { font-family: 'Manrope', sans-serif; font-weight: 500; }
+
+/* ── Site mode chrome ───────────────────────────────────────────────────── */
+.site-nav {
+  background: #0D0D0D;
+  border-bottom: 3px solid transparent;
+  border-image: var(--hd-gradient) 1;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+}
+.site-nav .nav-brand {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.005em;
+  border-right-color: #373737;
+}
+.site-nav a.nav-link { font-family: 'Manrope', sans-serif; font-weight: 500; color: #C4C4C4; }
+.site-nav a.nav-link:hover { color: #ffffff; }
+.site-nav a.nav-link.tier1 { color: #FB96F3; }
+.site-nav a.nav-link.tier2 { color: #B49EFF; }
+.site-nav a.nav-link.tier3 { color: #55C4FC; }
+.site-nav a.nav-link.tier1:hover { color: #FDC8F8; }
+.site-nav a.nav-link.tier2:hover { color: #D5C7FF; }
+.site-nav a.nav-link.tier3:hover { color: #8DD8FD; }
+
+/* Hero */
+.hero { background: #0D0D0D; color: #ffffff; border-bottom: 1px solid #1F1F1F; }
+.hero h1 { font-family: 'Manrope', sans-serif; font-weight: 800; letter-spacing: -0.025em; }
+.hero .series {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 700;
+  letter-spacing: 2px;
+  background: var(--hd-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.hero .sub { font-family: 'Manrope', sans-serif; color: #A0A0A0; }
+
+/* Index, tier landing, card grid */
+.stat-box, .effort-box, .tier-box, .card-item {
+  background: #ffffff;
+  border: 1px solid #EFEFEF;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(13,13,13,0.04);
+}
+.stat-num { font-family: 'Manrope', sans-serif; font-weight: 800; }
+.stat-lbl { font-family: 'Manrope', sans-serif; font-weight: 600; color: #525252; }
+.tier-box-label { font-family: 'Manrope', sans-serif; font-weight: 700; }
+.tier-box-count { color: #525252; }
+.ci-title { font-family: 'Manrope', sans-serif; font-weight: 700; color: #0D0D0D; }
+.ci-oneliner { color: #525252; }
+.cb-effort { font-family: 'Manrope', sans-serif; font-weight: 700; }
+.cb-effort-S { background: #E8F7FF; color: #045A84; }
+.cb-effort-M { background: #FDC8F8; color: #7A0670; }
+.cb-effort-L { background: #F926E1; color: #ffffff; }
+.cb-openrewrite { background: var(--hd-gradient); color: #ffffff; font-family: 'Manrope', sans-serif; }
+
+.tier-hero { color: #ffffff; }
+.tier-hero h1 { font-family: 'Manrope', sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+
+.cards-heading { font-family: 'Manrope', sans-serif; font-weight: 700; color: #525252; }
+
+.site-content .page {
+  background: #ffffff;
+  border: 1px solid #EFEFEF;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(13,13,13,0.05);
+}
+.card-nav a, .card-nav-bottom a { font-family: 'Manrope', sans-serif; color: #0678B0; }
+.card-nav a:hover, .card-nav-bottom a:hover { color: #045A84; }
+.card-nav .tier-back { font-family: 'Manrope', sans-serif; font-weight: 600; }
+.card-nav-bottom { border-top-color: #EFEFEF; }
+
+/* ── Sidebar (when sidebar: true) ───────────────────────────────────────── */
+.site-sidebar { background: #FAFAFA; border-right: 1px solid #EFEFEF; font-family: 'Manrope', sans-serif; }
+.sidebar-tier-heading { font-family: 'Manrope', sans-serif; font-weight: 700; letter-spacing: 0.4px; }
+.sidebar-tier-heading a:hover { background: #ffffff; }
+.sidebar-tier-heading a.active { background: #ffffff; color: #0D0D0D; }
+.sidebar-cards li a:hover { background: #ffffff; }
+.sidebar-cards li.active a {
+  color: #0D0D0D;
+  background: #ffffff;
+  border-left: 2px solid var(--hd-pink);
+}
+.nav-sidebar-toggle { font-family: 'Manrope', sans-serif; border-color: #525252; color: #C4C4C4; }
+.nav-sidebar-toggle:hover { color: #ffffff; border-color: var(--hd-pink); }

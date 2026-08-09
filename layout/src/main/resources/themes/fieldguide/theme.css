@@ -1,0 +1,250 @@
+/* =============================================================================
+ * Theme: fieldguide
+ *
+ * Haynes-manual / spotter's-guide aesthetic. Manila paper, slab-serif body,
+ * caution-stripe tier badges, banded section headings, thick brown card
+ * borders. Code stays mono so listings still read like listings.
+ *
+ * Type scale: font-size in `rem`, scaled from the single :root rule below.
+ * Baseline 1rem ≡ 11pt — same convention as herodevs / book.css.
+ * ===========================================================================*/
+
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+/* ── Type scale root ────────────────────────────────────────────────────── */
+html                    { font-size: calc(11pt * var(--pw-font-scale, 1)); }  /* default print baseline; --pw-font-scale set by pagewright for custom page: sizes / explicit fontScale overrides, unset otherwise */
+html.target-web         { font-size: 16px; }     /* screen-comfortable */
+html.size-a4            { font-size: 11pt; }
+html.size-letter        { font-size: 11pt; }
+html.size-6x9           { font-size: 12pt; }     /* +9%, narrower page */
+
+/* Card width: screen-comfortable by default; @media print narrows for PDF.
+ * See herodevs/theme.css for the rationale. */
+:root                   { --card-max-width: 64rem; }
+@media print            { :root { --card-max-width: 48rem; } }
+
+body {
+  font-family: 'Roboto Slab', 'Rockwell', Georgia, serif;
+  background: #f4ebd5;
+  color: #2a2620;
+}
+body.site, body { background: #f4ebd5; }
+
+/* ── Card frame: thick dark border, no rounding, manila inner ──────────── */
+article.card {
+  max-width: var(--card-max-width, 48rem);
+  margin-left: auto;
+  margin-right: auto;
+  background: #fbf3df;
+  border: 2px solid #2a2620;
+  border-top: 6px solid var(--tier-color);
+  border-radius: 0;
+  box-shadow: 3px 3px 0 #2a2620;
+  padding: 1.75rem 2rem 2rem;
+}
+
+article.card > h1.card-title {
+  font-family: 'Roboto Slab', Georgia, serif;
+  font-weight: 700;
+  font-size: 1.64rem;            /* was 18pt */
+  letter-spacing: -0.005em;
+  border-bottom: 2px solid #2a2620;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+article.card > .card-meta { gap: 0.5rem; margin-bottom: 1.25rem; }
+article.card > .card-meta .oneliner {
+  font-style: italic;
+  font-size: 0.91rem;            /* was 10pt */
+  color: #4a4030;
+  border-left: 4px solid #2a2620;
+  padding-left: 0.7rem;
+}
+
+/* Caution-stripe tier badge */
+.tier-badge {
+  background: repeating-linear-gradient(
+    -45deg, #ffd400 0 6px, #2a2620 6px 8px
+  ) !important;
+  color: #fff !important;
+  text-shadow: 1px 1px 0 #000;
+  border: 1px solid #2a2620;
+  padding: 3pt 10pt;
+  border-radius: 0;
+}
+.effort-badge, .openrewrite-badge {
+  border: 1px solid #2a2620;
+  border-radius: 0;
+  font-family: 'JetBrains Mono', monospace;
+}
+.effort-badge.S { background: #d4e3a8; color: #2a3a10; }
+.effort-badge.M { background: #ffd400; color: #2a2620; }
+.effort-badge.L { background: #c43a1f; color: #fff; }
+.openrewrite-badge { background: #2a2620; color: #ffd400; }
+
+/* ── Block headings: yellow band with black slab type ───────────────────── */
+section.block > h2 {
+  font-family: 'Roboto Slab', Georgia, serif;
+  font-size: 0.91rem;            /* was 10pt */
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #2a2620;
+  background: #ffd400;
+  padding: 3pt 10pt;
+  display: inline-block;
+  border: 1px solid #2a2620;
+  margin-bottom: 0.6rem;
+}
+section.block.intro > h2 { display: none; }
+
+section.block p, section.block li {
+  font-size: 0.91rem;            /* was 10pt */
+  line-height: 1.55;
+}
+
+section.block.watch-out {
+  border-left: 4px solid #c43a1f;
+  background: #fbe8e0;
+  padding: 0.6rem 0.8rem;
+}
+section.block.watch-out > h2 { background: #c43a1f; color: #fff; border-color: #2a2620; }
+
+section.block.check {
+  background: #ecf3d8;
+  border: 1px solid #2a2620;
+  border-radius: 0;
+}
+section.block.check > h2 { background: #6e8b3d; color: #fff; }
+
+section.block.scope-check {
+  background: #e8e0c8;
+  border: 1px solid #2a2620;
+  border-radius: 0;
+}
+section.block.scope-check > h2 { background: #4a4030; color: #ffd400; }
+
+section.block.further-info {
+  background: #fbf3df;
+  border: 1px solid #2a2620;
+  border-top: 2px solid #2a2620;
+  border-radius: 0;
+  margin-top: 1.5rem;
+}
+section.block.further-info > h2 { background: #2a2620; color: #ffd400; }
+
+/* ── Code blocks: typewriter feel ───────────────────────────────────────── */
+pre {
+  background: #fbf3df;
+  border: 1px solid #2a2620;
+  border-radius: 0;
+}
+code {
+  background: #ecdfb8;
+  border-radius: 0;
+}
+
+/* ── Prism token colours — fieldguide manila + earth-tone palette ─────── */
+pre[class*="language-"],
+code[class*="language-"]            { background: #fbf3df; color: #2a2620; text-shadow: none; }
+.token.comment,
+.token.prolog, .token.doctype, .token.cdata { color: #6a5e4a; font-style: italic; }
+.token.punctuation                  { color: #2a2620; }
+.token.property, .token.tag, .token.boolean, .token.number,
+.token.constant, .token.symbol, .token.deleted    { color: #8b3a08; }
+.token.selector, .token.attr-name, .token.string,
+.token.char, .token.builtin, .token.inserted      { color: #2a3a10; }
+.token.operator, .token.entity, .token.url, .token.variable { color: #2a2620; }
+.token.atrule, .token.attr-value, .token.keyword  { color: #c43a1f; font-weight: 600; }
+.token.function, .token.class-name                 { color: #6e8b3d; font-weight: 600; }
+.token.regex, .token.important                     { color: #c43a1f; }
+
+/* ── Inline code categories — fieldguide palette ──────────────────────── */
+code.cls-annotation  { color: #8b3a08; }
+code.cls-keyword     { color: #6a5e4a; font-style: italic; }
+code.cls-constant    { color: #c43a1f; font-weight: 600; }
+code.cls-method      { color: #6e8b3d; }
+code.cls-type        { color: #c43a1f; font-weight: 500; }
+code.cls-path        { color: #6e8b3d; }
+code.cls-property    { color: #2a2620; }
+
+/* ── Cover ──────────────────────────────────────────────────────────────── */
+.book-cover { background: #f4ebd5; }
+.book-cover .book-cover-inner {
+  border: 3px solid #2a2620;
+  background: #fbf3df;
+  padding: 3rem 2.5rem;
+  box-shadow: 5px 5px 0 #2a2620;
+}
+.book-cover h1 {
+  font-family: 'Roboto Slab', Georgia, serif;
+  font-weight: 700;
+  font-size: 2.73rem;            /* was 30pt */
+  color: #2a2620;
+}
+.book-cover .subtitle {
+  font-family: 'Roboto Slab', Georgia, serif;
+  font-style: italic;
+  font-size: 1.18rem;            /* was 13pt */
+  color: #4a4030;
+}
+.book-cover .series {
+  background: #ffd400;
+  color: #2a2620;
+  padding: 4pt 12pt;
+  display: inline-block;
+  border: 1px solid #2a2620;
+}
+
+/* ── Tier divider — manila page, tier-coloured stripes, dark ink ──────── */
+.tier-divider {
+  background: #fbf3df !important;
+  color: #2a2620;
+  border-top: 24px solid var(--tier-color);
+  border-bottom: 24px solid var(--tier-color);
+}
+.tier-divider h1 {
+  font-family: 'Roboto Slab', Georgia, serif;
+  font-weight: 700;
+  color: #2a2620;
+}
+.tier-divider .tier-count { color: #4a4030; opacity: 1; }
+.tier-divider .tier-badge-lg {
+  background: #ffd400;
+  color: #2a2620;
+  border: 1px solid #2a2620;
+}
+.tier-divider .tier-toc { color: #2a2620; }
+.tier-divider .tier-toc li { color: #2a2620; }
+.tier-divider .tier-toc li::marker { color: #4a4030; }
+.tier-divider .tier-toc a { color: #2a2620; }
+
+/* ── Site mode chrome ───────────────────────────────────────────────────── */
+.site-nav { background: #2a2620; }
+.site-nav .nav-brand,
+.site-nav a.nav-link { font-family: 'Roboto Slab', Georgia, serif; }
+.hero {
+  background: #2a2620;
+  border-bottom: 6px solid #ffd400;
+}
+.hero h1 { font-family: 'Roboto Slab', Georgia, serif; }
+.tier-hero h1 { font-family: 'Roboto Slab', Georgia, serif; }
+.card-item {
+  background: #fbf3df;
+  border: 1px solid #2a2620;
+  border-radius: 0;
+  border-top: 4px solid var(--tier-color, #888);
+  box-shadow: 2px 2px 0 #2a2620;
+}
+.ci-title { font-family: 'Roboto Slab', Georgia, serif; font-weight: 700; }
+.tier-box {
+  background: #fbf3df;
+  border: 1px solid #2a2620;
+  border-radius: 0;
+}
+.stat-box, .effort-box {
+  background: #fbf3df;
+  border: 1px solid #2a2620;
+  border-radius: 0;
+}

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ card.title | default(card.id) }} — {{ book.title | default('pagewright') }}</title>
+  <meta name="generator" content="pagewright">
+  {% if book.title %}<meta name="book" content="{{ book.title }}">{% endif %}
+  <style>
+    /* CSS chain (book + site) inlined */
+    {{ css | raw }}
+  </style>
+</head>
+<body{% if sidebar %} class="has-sidebar{% if sidebar_collapsed %} sidebar-collapsed{% endif %}"{% endif %}>
+{% include "_site-nav" with {"book": book, "navEntries": navEntries, "urlPrefix": urlPrefix, "sidebar": sidebar, "sidebar_collapsed": sidebar_collapsed} %}
+<div class="site-layout">
+{% if sidebar %}
+{% include "_site-sidebar" with {"navEntries": navEntries, "urlPrefix": urlPrefix, "page": page, "sidebar_collapsed": sidebar_collapsed} %}
+{% endif %}
+<main class="site-main">
+
+<div class="site-content">
+  <div class="card-nav">
+    {% if axisBack is not null %}
+    <a class="tier-back {{ axisBack.axis }}-{{ axisBack.id }}" href="{{ urlPrefix }}{{ axisBack.url }}"
+       style="background: rgba(0,0,0,0.04); color: {{ axisBack.color }}; border: 1px solid {{ axisBack.color }}33">
+      ← {{ axisBack.label }}
+    </a>
+    {% elseif section is not null %}
+    <a class="section-back" href="{{ urlPrefix }}{{ section.id }}.html">
+      ← {{ section.label }}
+    </a>
+    {% else %}
+    <span></span>
+    {% endif %}
+    <a href="{{ urlPrefix }}index.html">Home</a>
+  </div>
+
+  <div class="page">
+    {# card.axes already carries every axis's resolved value; no per-page
+       "tier" param needs threading through anymore. #}
+    {% include "_card-body" with {"card": card} %}
+
+    {% if autoCards is not empty %}
+    {# Auto-cards block: rendered when the host card sets `auto_cards: true`
+       and the filter returns at least one match. Uses `is not empty` rather
+       than a bare truthiness check because Pebble — unlike Jinja — refuses
+       to evaluate a list as Boolean in an `if` statement.
+       Used by content/tech/*.md to list every card whose `tech` overlaps
+       with the host's, sorted by the book's first declared axis, via the
+       shared _tech-row partial. #}
+    <section class="auto-cards">
+      {% for row in autoCards %}
+        {% include "_tech-row" with {"card": row, "urlPrefix": urlPrefix} %}
+      {% endfor %}
+    </section>
+    {% endif %}
+  </div>
+
+  <div class="card-nav-bottom">
+    {% if prev is not null %}
+    <a href="{{ prev.id }}.html">← {{ prev.title }}</a>
+    {% else %}<span></span>{% endif %}
+    {% if next is not null %}
+    <a href="{{ next.id }}.html">{{ next.title }} →</a>
+    {% else %}<span></span>{% endif %}
+  </div>
+</div>
+
+</main>
+</div>
+</body>
+</html>

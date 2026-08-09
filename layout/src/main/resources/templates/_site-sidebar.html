@@ -1,0 +1,75 @@
+{# Site sidebar listing every axis value (across every declared axis,
+   independently) and section in walk order, each with its cards. Expects:
+   navEntries                   — unified ordered list of {kind, id, label,
+                                  count, color?, url, cards, axis?}; axis
+                                  values and sections interleaved in book order
+   urlPrefix                    — relative-link prefix ('' on top-level pages,
+                                  '../' on card pages)
+   page                         — { kind, id }; used to mark the active row
+   sidebar_collapsed            — when true, ships with data-collapsed="true"
+                                  so the page CSS / theme can render the
+                                  whole sidebar pre-collapsed.
+   sidebar_sections_collapsed   — when true, each section row renders with
+                                  the `collapsed` class so its card list is
+                                  hidden on first visit. localStorage user
+                                  overrides win; the section containing the
+                                  active page is always expanded.
+#}
+<aside id="pagewright-sidebar" class="site-sidebar"{% if sidebar_collapsed %} data-collapsed="true"{% endif %}>
+  <nav class="sidebar-nav" aria-label="Book contents">
+    {% for e in navEntries %}
+    {# A section starts collapsed when sidebar_sections_collapsed is true,
+       it has cards (otherwise there's nothing to collapse), and it isn't
+       the axis value/section currently being viewed. Card pages don't carry
+       their parent axis value/section id in the page model, so the matching
+       JS in _site-nav.html force-expands whichever section contains the
+       active card on DOMContentLoaded — that path covers card pages.
+       Axis-value rows are keyed by {axisName}-{valueId} (not just valueId)
+       so two different axes' values that happen to share an id (e.g. tier
+       "1" and some other axis's value "1") don't collide.
+       `start_collapsed_for_this_section` is recomputed inline below
+       because Pebble's `{% set %}` isn't used elsewhere in this codebase
+       and we want to keep the template footprint conservative. #}
+    <section class="sidebar-section sidebar-section-{% if e.kind == 'axis' %}{{ e.axis }}-{{ e.id }}{% else %}{{ e.id }}{% endif %}{% if sidebar_sections_collapsed and e.cards is not empty and not ((page.kind == 'axis' and e.kind == 'axis' and page.axis == e.axis and page.id == e.id) or (page.kind == 'section' and e.kind == 'section' and page.id == e.id)) %} collapsed{% endif %}"
+             data-section-id="{% if e.kind == 'axis' %}axis-{{ e.axis }}-{{ e.id }}{% else %}section-{{ e.id }}{% endif %}">
+      {% if e.kind == 'axis' %}
+      <h3 class="sidebar-tier-heading">
+        <a href="{{ urlPrefix }}{{ e.url }}"
+           class="{% if page.kind == 'axis' and page.axis == e.axis and page.id == e.id %}active{% endif %}"
+           style="border-left: 3px solid {{ e.color }}">
+          {{ e.label }}
+        </a>
+        {% if e.cards is not empty %}
+        <button class="sidebar-section-toggle" type="button"
+                aria-label="Toggle {{ e.label }}"
+                aria-expanded="{% if sidebar_sections_collapsed and not (page.kind == 'axis' and page.axis == e.axis and page.id == e.id) %}false{% else %}true{% endif %}"
+                onclick="pagewrightToggleSection(this)">▾</button>
+        {% endif %}
+      </h3>
+      {% else %}
+      <h3 class="sidebar-section-heading">
+        <a href="{{ urlPrefix }}{{ e.url }}"
+           class="{% if page.kind == 'section' and page.id == e.id %}active{% endif %}">
+          {{ e.label }}
+        </a>
+        {% if e.cards is not empty %}
+        <button class="sidebar-section-toggle" type="button"
+                aria-label="Toggle {{ e.label }}"
+                aria-expanded="{% if sidebar_sections_collapsed and not (page.kind == 'section' and page.id == e.id) %}false{% else %}true{% endif %}"
+                onclick="pagewrightToggleSection(this)">▾</button>
+        {% endif %}
+      </h3>
+      {% endif %}
+      {% if e.cards is not empty %}
+      <ol class="sidebar-cards">
+        {% for c in e.cards %}
+        <li{% if page.kind == 'card' and page.id == c.id %} class="active"{% endif %}>
+          <a href="{{ urlPrefix }}cards/{{ c.id }}.html">{{ c.title }}</a>
+        </li>
+        {% endfor %}
+      </ol>
+      {% endif %}
+    </section>
+    {% endfor %}
+  </nav>
+</aside>

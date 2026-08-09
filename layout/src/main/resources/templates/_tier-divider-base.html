@@ -1,0 +1,40 @@
+{# Full-page divider, placed before the first card of any axis's value
+   group — one axis-value's worth of structure, for any axis declared by the
+   book, not just "tier". Kept under its historical filename ("tier" in the
+   name) since renaming would require deleting/renaming files in the user's
+   repo, but the template itself is axis-generic.
+
+   Expects: axis {name, title}, value {id, label, color, count,
+   cards: [{id, title, oneliner, effort}]}.
+
+   The structural class/id names below (tier-divider, tier-badge-lg,
+   tier-count, tier-toc) are kept literal — not parametrized by axis name —
+   so every existing theme's CSS keeps working unchanged for books that
+   declare a "tier" axis, exactly as it did before axes were generalized to
+   support any number of them independently. Each divider also gets a
+   {axisName}-{valueId} identity class (a purely cosmetic hook, e.g.
+   "tier-1") plus an unambiguous "axis-divider-{axisName}-{valueId}" anchor
+   id — deliberately a different convention than the CSS class, so
+   PagesReport can recognise any divider generically without needing to know
+   which axis names a given book declares. New axes get an unstyled generic
+   "axis-divider" class to build their own look from scratch.
+
+   Override just {% block sectionOpen %} to change how the wrapping <section>
+   tag opens (e.g. dropping the inline background colour) while inheriting
+   everything else unchanged. See _card-body-base.html for why this lives
+   under a "-base" name rather than "_tier-divider". #}
+{% block sectionOpen %}<section class="axis-divider tier-divider {{ axis.name }}-{{ value.id }}" id="axis-divider-{{ axis.name }}-{{ value.id }}" style="background: {{ value.color }}">{% endblock %}
+  <div class="tier-divider-inner">
+    <div class="tier-badge-lg">{{ axis.title }} {{ value.id }}</div>
+    <h1>{{ value.label }}</h1>
+    <div class="tier-count">{{ value.count }} card{% if value.count != 1 %}s{% endif %}</div>
+
+    {% if value.cards is not empty %}
+    <ol class="tier-toc">
+      {% for c in value.cards %}
+      <li><a href="#card-{{ c.id }}">{{ c.title }}</a></li>
+      {% endfor %}
+    </ol>
+    {% endif %}
+  </div>
+</section>

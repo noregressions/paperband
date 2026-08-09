@@ -1,0 +1,9 @@
+title: "Advanced"
+
+axis:
+  section: advanced
+
+order:
+  - 01-watermarks
+  - 02-page-enforcement
+  - 03-extending

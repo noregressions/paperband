@@ -1,0 +1,4 @@
+# HeroDevs theme — built from the 2026 Brand Guidelines.
+# Manrope typeface, brand pink-to-blue gradient as signature accent,
+# tier colours mapped to slices of the gradient.
+theme.css

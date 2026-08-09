@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ book.title | default('pagewright') }}</title>
+  <meta name="generator" content="pagewright">
+  <style>
+    {{ css | raw }}
+  </style>
+</head>
+<body{% if sidebar %} class="has-sidebar{% if sidebar_collapsed %} sidebar-collapsed{% endif %}"{% endif %}>
+{% include "_site-nav" with {"book": book, "navEntries": navEntries, "urlPrefix": urlPrefix, "sidebar": sidebar, "sidebar_collapsed": sidebar_collapsed} %}
+<div class="site-layout">
+{% if sidebar %}
+{% include "_site-sidebar" with {"navEntries": navEntries, "urlPrefix": urlPrefix, "page": page, "sidebar_collapsed": sidebar_collapsed} %}
+{% endif %}
+<main class="site-main">
+
+<div class="hero">
+  {% if book.series %}<div class="series">{{ book.series }}</div>{% endif %}
+  <h1>{{ book.title | default('pagewright book') }}</h1>
+  {% if book.subtitle %}<div class="sub">{{ book.subtitle }}</div>{% endif %}
+</div>
+
+<div class="home-content">
+  {# One stat row per declared axis, independently — each axis gets its own
+     row of value/count boxes. A book with no axes (or axes with no
+     declared values) skips this section entirely, same as before. #}
+  {% for g in axisGroupings %}
+  {% if g.values | length > 0 %}
+  <div class="stat-row">
+    {% for v in g.values %}
+    <div class="stat-box">
+      <div class="stat-num" style="color: {{ v.color }}">{{ v.count }}</div>
+      <div class="stat-lbl">{{ v.label }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endfor %}
+
+  <div class="effort-box">
+    <strong>{{ stats.total }}</strong> card{% if stats.total != 1 %}s{% endif %} total{% if stats.openrewrite > 0 %} · <strong>{{ stats.openrewrite }}</strong> with OpenRewrite recipes{% endif %}
+  </div>
+
+  {# Unified, walk-ordered nav grid: axis values (across every declared axis,
+     independently) and sections appear in the order they first show up in
+     the book walk (driven by content/pagewright.yaml `order:`), rather than
+     axes-first / sections-last. #}
+  <div class="tier-grid">
+    {% for e in navEntries %}
+    {% if e.kind == 'axis' %}
+    <a class="tier-box" href="{{ e.url }}" style="border-left: 4px solid {{ e.color }}">
+      <span class="tier-box-label" style="color: {{ e.color }}">{{ e.label }}</span>
+      <span class="tier-box-count">{{ e.count }} card{% if e.count != 1 %}s{% endif %} →</span>
+    </a>
+    {% else %}
+    <a class="tier-box section-box" href="{{ e.url }}">
+      <span class="tier-box-label">{{ e.label }}</span>
+      <span class="tier-box-count">{{ e.count }} card{% if e.count != 1 %}s{% endif %} →</span>
+    </a>
+    {% endif %}
+    {% endfor %}
+  </div>
+</div>
+
+</main>
+</div>
+</body>
+</html>

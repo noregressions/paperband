@@ -1,0 +1,57 @@
+{#
+  _tech-row.html — one card summary for tech-index pages.
+
+  Single source of truth for the row layout used on by-technology pages.
+  Both the auto-block (default tech-page rendering) and any hand-authored
+  collection blocks include this partial so the row design lives in one place.
+
+  Expected in scope:
+    card             — row model (from LayoutEngine.techRowModel):
+      card.id          — card identifier (filename stem)
+      card.sortValue   — resolved value metadata {id, label, color} along the
+                         book's sort axis (its first declared axis, or null
+                         if the book declares none) — optional
+      card.title       — display title
+      card.oneliner    — short HTML-bearing summary (rendered with | raw)
+      card.impact      — S/M/L (optional)
+      card.effort      — S/M/L (optional)
+      card.openrewrite — boolean
+      card.verify      — boolean
+    urlPrefix        — relative path back to the site root ("" for root pages,
+                       "../" for one level deep, e.g. when included from tech/)
+
+  The sort axis's value is the visual spine: left-edge stripe coloured by it,
+  with a pill next to the title showing its label. Falls back to plain,
+  uncoloured rows when the book declares no axes at all.
+
+  Badge classes (cb-effort, cb-openrewrite, etc.) are reused from site-tier.html
+  styling. cb-impact and cb-verify are additions of the same shape and follow
+  the same conventions.
+#}
+<a class="tech-row{% if card.sortValue is not null %} tech-row--tier-{{ card.sortValue.id }}{% endif %}"
+   href="{{ urlPrefix }}cards/{{ card.id }}.html"
+   {% if card.sortValue.color %}style="border-left-color: {{ card.sortValue.color }}"{% endif %}>
+
+  {% if card.sortValue is not null %}
+  <div class="tech-row-tier">
+    <span class="tech-row-tier-pill tech-row-tier-pill--{{ card.sortValue.id }}"
+          {% if card.sortValue.color %}style="background: {{ card.sortValue.color }}"{% endif %}>
+      {{ card.sortValue.label }}
+    </span>
+  </div>
+  {% endif %}
+
+  <div class="tech-row-body">
+    <div class="tech-row-title">{{ card.title }}</div>
+    {% if card.oneliner %}
+    <div class="tech-row-oneliner">{{ card.oneliner | raw }}</div>
+    {% endif %}
+  </div>
+
+  <div class="tech-row-badges">
+    {% if card.impact %}<span class="cb-impact cb-impact-{{ card.impact }}" title="Impact if this hits you">Impact {{ card.impact }}</span>{% endif %}
+    {% if card.effort %}<span class="cb-effort cb-effort-{{ card.effort }}" title="Effort to fix">Effort {{ card.effort }}</span>{% endif %}
+    {% if card.openrewrite %}<span class="cb-openrewrite" title="OpenRewrite recipe available">⚙ OpenRewrite</span>{% endif %}
+    {% if card.verify %}<span class="cb-verify" title="Verified against demo project">✓ Verified</span>{% endif %}
+  </div>
+</a>

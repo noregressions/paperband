@@ -1,0 +1,2 @@
+# Editorial / magazine theme — serif body, drop caps, eyebrow headings.
+theme.css

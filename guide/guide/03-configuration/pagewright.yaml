@@ -1,0 +1,8 @@
+title: "Configuration"
+
+axis:
+  section: configuration
+
+order:
+  - 01-book-config
+  - 02-config-cascade

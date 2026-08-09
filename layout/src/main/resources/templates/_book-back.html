@@ -1,0 +1,9 @@
+{# Book back page. Expects: book {back {image}}. Rendered after the last
+   card, on its own sheet (.book-back gets page-break-before in the book
+   scaffold CSS). Books wanting more than an image (CTA copy, links, ...)
+   supply a custom template via back: { template: ... }. #}
+<section class="book-back" id="book-back">
+  {% if book.back.image is not null %}
+  <img class="book-back-image" src="{{ book.back.image }}" alt="">
+  {% endif %}
+</section>

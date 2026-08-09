@@ -1,0 +1,209 @@
+/* =============================================================================
+ * Theme: classical
+ *
+ * Print-classical / Tufte-influenced. Cream paper, serif throughout, no card
+ * frame, hairline rules, low-key block headings. The card body reads as a
+ * single continuous essay rather than a structured form.
+ *
+ * Type scale: font-size in `rem`, scaled from the single :root rule below.
+ * Baseline 1rem ≡ 11pt — same convention as herodevs / book.css.
+ * ===========================================================================*/
+
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+/* ── Type scale root ────────────────────────────────────────────────────── */
+html                    { font-size: calc(11pt * var(--pw-font-scale, 1)); }  /* default print baseline; --pw-font-scale set by pagewright for custom page: sizes / explicit fontScale overrides, unset otherwise */
+html.target-web         { font-size: 16px; }     /* screen-comfortable */
+html.size-a4            { font-size: 11pt; }
+html.size-letter        { font-size: 11pt; }
+html.size-6x9           { font-size: 12pt; }     /* +9%, narrower page */
+
+/* Card width: Tufte-narrow measure throughout, slightly wider for screen. */
+:root                   { --card-max-width: 50rem; }
+@media print            { :root { --card-max-width: 38rem; } }
+
+body {
+  font-family: 'EB Garamond', 'Adobe Garamond Pro', Georgia, serif;
+  background: #fffff8;
+  color: #1a1a1a;
+}
+body.site, body { background: #fffff8; }
+
+/* ── Strip the card frame entirely ──────────────────────────────────────── */
+article.card {
+  border: none !important;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 1.5rem 0.5rem;
+  max-width: var(--card-max-width, 38rem);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+article.card > h1.card-title {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-weight: 600;
+  font-size: 2.18rem;            /* was 24pt */
+  letter-spacing: -0.01em;
+  border-bottom: 1px solid #c8c2a8;
+  padding-bottom: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
+/* Frontmatter strip is quiet — italic prose, no badges screaming */
+article.card > .card-meta { gap: 0.4rem; margin-bottom: 1.25rem; }
+article.card > .card-meta .oneliner {
+  font-style: italic;
+  font-size: 1rem;               /* was 11pt */
+  color: #555;
+  border: none;
+  padding-left: 0;
+}
+.tier-badge, .effort-badge, .openrewrite-badge {
+  background: transparent !important;
+  color: #555 !important;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+  font-size: 0.68rem;            /* was 7.5pt */
+  border: 1px solid #c8c2a8;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 1pt 6pt;
+}
+.tier-badge { color: var(--tier-color) !important; border-color: var(--tier-color); }
+
+/* ── Block headings: italic small caps, deemphasised ────────────────────── */
+section.block > h2 {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 0.91rem;            /* was 10pt */
+  font-style: italic;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.5px;
+  color: #6a6056;
+}
+
+section.block p, section.block li {
+  font-size: 1rem;               /* was 11pt */
+  line-height: 1.65;
+}
+
+/* Quiet boxes — hairline border, no fills */
+section.block.check,
+section.block.scope-check,
+section.block.further-info {
+  background: transparent;
+  border: none;
+  border-top: 1px solid #c8c2a8;
+  border-bottom: 1px solid #c8c2a8;
+  border-radius: 0;
+  padding: 0.6rem 0;
+  margin-top: 1.25rem;
+}
+section.block.check > h2,
+section.block.scope-check > h2,
+section.block.further-info > h2 { color: #6a6056; }
+
+section.block.watch-out {
+  border-left: 1px solid var(--tier-color);
+  padding-left: 0.8rem;
+  font-style: italic;
+}
+
+/* ── Code: keep mono, but quieter background ────────────────────────────── */
+code {
+  background: #f3efe0;
+  border-radius: 0;
+}
+pre {
+  background: #f7f2e2;
+  border: 1px solid #d8d2b8;
+  border-radius: 0;
+}
+
+/* ── Prism token colours — classical, low-saturation cream palette ────── */
+pre[class*="language-"],
+code[class*="language-"]            { background: #f7f2e2; color: #1a1a1a; text-shadow: none; }
+.token.comment,
+.token.prolog, .token.doctype, .token.cdata { color: #8a7a55; font-style: italic; }
+.token.punctuation                  { color: #6a6056; }
+.token.property, .token.tag, .token.boolean, .token.number,
+.token.constant, .token.symbol, .token.deleted    { color: #6a3a3a; }
+.token.selector, .token.attr-name, .token.string,
+.token.char, .token.builtin, .token.inserted      { color: #1f5430; }
+.token.operator, .token.entity, .token.url, .token.variable { color: #1a1a1a; }
+.token.atrule, .token.attr-value, .token.keyword  { color: #6a3a3a; font-weight: 600; }
+.token.function, .token.class-name                 { color: #c43a1f; font-weight: 600; }
+.token.regex, .token.important                     { color: #8a5a1a; }
+
+/* ── Inline code categories — classical palette ────────────────────────── */
+code.cls-annotation  { color: #6a3a3a; }
+code.cls-keyword     { color: #8a7a55; font-style: italic; }
+code.cls-constant    { color: #c43a1f; font-weight: 600; }
+code.cls-method      { color: #1f5430; }
+code.cls-type        { color: #1a1a1a; font-weight: 500; }
+code.cls-path        { color: #6a6056; }
+code.cls-property    { color: #1a1a1a; }
+
+/* ── Cover ──────────────────────────────────────────────────────────────── */
+.book-cover { background: #fffff8; }
+.book-cover h1 {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 3.27rem;            /* was 36pt */
+  font-weight: 600;
+  font-style: normal;
+  color: #1a1a1a;
+}
+.book-cover .subtitle {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 1.27rem;            /* was 14pt */
+  color: #555;
+}
+.book-cover .series {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;            /* was 9pt */
+  letter-spacing: 4px;
+}
+.book-cover .author {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 1rem;               /* was 11pt */
+  color: #555;
+}
+
+/* ── Tier divider ───────────────────────────────────────────────────────── */
+.tier-divider h1 {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-weight: 600;
+  font-style: normal;
+  font-size: 2.91rem;            /* was 32pt */
+}
+.tier-divider .tier-toc {
+  font-family: 'EB Garamond', Georgia, serif;
+}
+
+/* ── Site mode chrome ───────────────────────────────────────────────────── */
+.site-nav { background: #1a1a1a; }
+.site-nav .nav-brand,
+.site-nav a.nav-link { font-family: 'EB Garamond', Georgia, serif; font-style: italic; }
+.hero {
+  background: #fffff8;
+  color: #1a1a1a;
+  border-bottom: 1px solid #c8c2a8;
+}
+.hero .series, .hero .sub { color: #555; }
+.hero h1 {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-weight: 600;
+  font-style: normal;
+  color: #1a1a1a;
+}
+.tier-hero h1 { font-family: 'EB Garamond', Georgia, serif; font-style: normal; }
+.ci-title { font-family: 'EB Garamond', Georgia, serif; }
+.site-content .page {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+}

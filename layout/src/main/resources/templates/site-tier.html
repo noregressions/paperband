@@ -1,0 +1,50 @@
+{# Landing page for one axis value — kept under its historical filename
+   ("tier"), but this template is axis-generic: it renders the landing page
+   for any declared axis's value, not just "tier". Expects: axis {name,
+   title}, value {id, label, color, count}, cards. #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ value.label }} — {{ book.title | default('pagewright') }}</title>
+  <meta name="generator" content="pagewright">
+  <style>
+    {{ css | raw }}
+  </style>
+</head>
+<body{% if sidebar %} class="has-sidebar{% if sidebar_collapsed %} sidebar-collapsed{% endif %}"{% endif %}>
+{% include "_site-nav" with {"book": book, "navEntries": navEntries, "urlPrefix": urlPrefix, "sidebar": sidebar, "sidebar_collapsed": sidebar_collapsed} %}
+<div class="site-layout">
+{% if sidebar %}
+{% include "_site-sidebar" with {"navEntries": navEntries, "urlPrefix": urlPrefix, "page": page, "sidebar_collapsed": sidebar_collapsed} %}
+{% endif %}
+<main class="site-main">
+
+<div class="tier-hero" style="background: {{ value.color }}">
+  <div class="tier-hero-inner">
+    <div class="tier-badge-lg">{{ axis.title }} {{ value.id }}</div>
+    <h1>{{ value.label }}</h1>
+  </div>
+</div>
+
+<div class="tier-body">
+  <div class="cards-heading">{{ value.count }} card{% if value.count != 1 %}s{% endif %} in this {{ axis.title | lower }}</div>
+  <div class="card-grid">
+    {% for c in cards %}
+    <a class="card-item" href="cards/{{ c.id }}.html" style="border-top-color: {{ value.color }}">
+      <div class="ci-title">{{ c.title }}</div>
+      {% if c.oneliner %}<div class="ci-oneliner">{{ c.oneliner | raw }}</div>{% endif %}
+      <div class="ci-badges">
+        {% if c.effort %}<span class="cb-effort cb-effort-{{ c.effort }}">{{ c.effort }}</span>{% endif %}
+        {% if c.openrewrite %}<span class="cb-openrewrite">⚙ OpenRewrite</span>{% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+</main>
+</div>
+</body>
+</html>

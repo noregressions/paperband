@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en" class="{% if target %}target-{{ target | lower }} {% endif %}{% if size %}size-{{ size | lower }}{% endif %}{% if orientation %} orientation-{{ orientation }}{% endif %}{% if edition is not null %} edition-{{ edition.id }}{% for c in edition.classes %} {{ c }}{% endfor %}{% endif %}" style="--pw-content-height: {{ contentHeightMm }}mm;{% if fontScale %} --pw-font-scale: {{ fontScale }};{% endif %}">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ ctx.book.title | default('pagewright book') }}</title>
+  <meta name="generator" content="pagewright">
+  {% if target %}<meta name="pagewright-target" content="{{ target }}">{% endif %}
+
+  {# Prism syntax highlighting — Prism tokenises <pre><code class="language-X">
+     blocks (flexmark emits these from fenced ``` blocks with a language tag).
+     The autoloader plugin fetches each language definition on demand from
+     the CDN. Playwright waits for network-idle before snapshotting the PDF,
+     so highlighting completes in PDF output too. Themes override
+     `.token.*` colours to match each palette. #}
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+
+  <style>
+    /* Minimal scaffold — book CSS chain follows and may override these. */
+    body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+           line-height: 1.5; margin: 2rem; color: #222; }
+    article.card { max-width: 48rem; margin: 0 auto 3rem; }
+    h1.card-title { margin-top: 0; }
+    section.block { margin-block: 1.5rem; }
+    pre, code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
+    pre { background: #f5f5f5; padding: 1rem; overflow-x: auto; }
+    .card-break { page-break-after: always; height: 0; }
+
+    /* card.slots.takeWithLayout/requireWithLayout break-preference classes —
+       bundled here (not per-theme) so every theme gets them regardless of
+       whether it opts into slot-based layout. break-inside/break-before are
+       the real levers Chromium's print engine honours; there is no
+       multi-page reflow here, just these two CSS fragmentation properties. */
+    .pw-avoid-split { break-inside: avoid; }
+    .pw-page-start  { break-before: page; }
+
+    /* Cover / back-page scaffold. A declared cover or back page always gets
+       its own sheet; the image fills the content box (the page margins come
+       from the build's PageSpec — themes can tighten with @page rules where
+       the renderer supports them). */
+    .book-cover { page-break-after: always; }
+    .book-back { page-break-before: always; }
+    .book-cover-image, .book-back-image { display: block; width: 100%; }
+
+    /* Plain-section PDF divider — theme-neutral by default (sections have no
+       colour concept the way axis values do); themes/book CSS may add their
+       own .section-divider rules below to override this. */
+    .section-divider { margin: 3rem 0; padding: 1.5rem 0; border-top: 1px solid #ddd; border-bottom: 1px solid #ddd; }
+    .section-divider h1 { margin: 0 0 0.5rem; }
+    .section-divider .tier-count { color: #666; margin-bottom: 1rem; }
+    .section-divider .tier-toc { padding-left: 1.25rem; }
+
+    /* Book CSS chain (inlined) */
+    {{ css | raw }}
+  </style>
+</head>
+<body>
+  {# Hidden link targets so Chromium emits named destinations for the cover,
+     every axis's dividers, and every plain section's divider (anchors only
+     become PDF destinations when linked). One axis-divider-{axisName}-{valueId}
+     anchor per declared value, for every axis independently, plus one
+     section-divider-{sectionId} anchor per plain section — distinct prefixes
+     are what let PagesReport recognise each kind of divider generically. #}
+  <div class="pt-anchor-bait" aria-hidden="true"
+       style="position:absolute;left:-9999px;top:-9999px;width:0;height:0;overflow:hidden">
+    <a href="#book-cover">cover</a>
+    {% if book.back.present %}<a href="#book-back">back</a>{% endif %}
+    {% for g in axisGroupings %}
+    {% for v in g.values %}<a href="#axis-divider-{{ g.axis.name }}-{{ v.id }}">{{ v.label }}</a>{% endfor %}
+    {% endfor %}
+    {% for s in sections %}<a href="#section-divider-{{ s.id }}">{{ s.label }}</a>{% endfor %}
+  </div>
+
+  {# Cover page. A custom cover template (cover: { template: ... } in the
+     book root yaml) replaces the built-in entirely; otherwise the built-in
+     _book-cover renders — full-page image when cover: declares one, the
+     text cover (title/subtitle/series/author) as before when not. #}
+  {% if book.cover.template is not null %}
+  {% include book.cover.template with {"book": book} %}
+  {% elseif book.title or book.cover.image is not null %}
+  {% include "_book-cover" with {"book": book} %}
+  {% endif %}
+
+  {# Front-matter hook: rendered between the cover and the first card.
+     The bundled default (templates/_book-front.html) is empty, so books
+     see no change unless a theme overrides it. Themes use it to GENERATE
+     summary pages from the full render context (cards, axisGroupings,
+     book all in scope via include inheritance) — e.g. a planning matrix
+     of every card's tier/effort, rebuilt on every build rather than
+     hand-maintained. Include, not extends, so a theme override applies
+     directly with no -base indirection (same reasoning as
+     _block-section.html). #}
+  {% include "_book-front" %}
+
+  {% for card in cards %}
+    {# A card can be "first of value" for more than one axis at once
+       (e.g. first card of tier 1 AND first card of subsystem "core"); stack
+       one divider per axis, in book.axes() declaration order, before that
+       card's body. #}
+    {% for g in axisGroupings %}
+      {% if card.axesFirstOf[g.axis.name] and card.axes[g.axis.name] is not null %}
+      {% include "_tier-divider" with {"axis": g.axis, "value": card.axes[g.axis.name]} %}
+      {% endif %}
+    {% endfor %}
+
+    {# A card either has a value on some axis (handled above) or falls into
+       the axis-less "section" fallback, never both — so at most one of the
+       axis-divider loop above or this section-divider check fires per card. #}
+    {% if card.sectionFirst and card.sectionMeta is not null %}
+    {% include "_section-divider" with {"section": card.sectionMeta} %}
+    {% endif %}
+
+    {% include "_card-body" with {"card": card} %}
+    {% if not loop.last %}<div class="card-break"></div>{% endif %}
+  {% endfor %}
+
+  {# Back page — only when the book root yaml declares back: (image and/or
+     template). Same override rule as the cover: a custom template replaces
+     the built-in _book-back. #}
+  {% if book.back.template is not null %}
+  {% include book.back.template with {"book": book} %}
+  {% elseif book.back.present %}
+  {% include "_book-back" with {"book": book} %}
+  {% endif %}
+</body>
+</html>

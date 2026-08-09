@@ -1,0 +1,30 @@
+title: "Paperband Guide"
+theme: editorial
+
+# The section axis makes vars.section available in each card's template context.
+# Note: static-site section grouping is driven by folder path (LayoutEngine.sectionIdFor),
+# not by this axis value. The axis is declared here to document how axes work.
+axes:
+  - name: section
+    title: "Guide Section"
+    values:
+      - id: getting-started
+        label: "Getting Started"
+      - id: authoring
+        label: "Authoring"
+      - id: configuration
+        label: "Configuration"
+      - id: rendering
+        label: "Rendering"
+      - id: advanced
+        label: "Advanced"
+
+css:
+  - styles/guide.css
+
+vars:
+  author: "The Paperband Team"
+  version: "0.1.0-SNAPSHOT"
+  subtitle: "A self-documenting reference built with Paperband itself"
+  series: "Paperband Documentation"
+  sidebar: true

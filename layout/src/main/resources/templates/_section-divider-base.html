@@ -1,0 +1,37 @@
+{# Full-page divider, placed before the first card of any plain "section"
+   (a top-level folder whose cards have no value on any declared axis — see
+   the Axis System / Sections doc in CLAUDE.md). Mirrors
+   _tier-divider-base.html's shape, but sections have no colour concept, so
+   there's no inline background and no axis badge line — just the title, and
+   (unless the section resolved to the "minimal" named preset -- see
+   NamedTemplates -- via its own folder pagewright.yaml or the book-wide
+   sections.landing.template default) a card count and table of contents,
+   matching whatever the section's site landing page shows.
+
+   Expects: section {id, label, count, minimal, cards: [{id, title, oneliner, effort}]}.
+
+   Anchor id is "section-divider-{sectionId}" — deliberately a different
+   prefix from "axis-divider-{axisName}-{valueId}" so PagesReport can tell
+   the two apart generically, without needing to know which axis names or
+   section ids a given book uses.
+
+   Override just {% block sectionOpen %} to change how the wrapping
+   <section> tag opens while inheriting everything else unchanged — see
+   _card-body-base.html for why this lives under a "-base" name rather than
+   "_section-divider". #}
+{% block sectionOpen %}<section class="section-divider" id="section-divider-{{ section.id }}">{% endblock %}
+  <div class="tier-divider-inner">
+    <h1>{{ section.label }}</h1>
+    {% if not section.minimal %}
+    <div class="tier-count">{{ section.count }} card{% if section.count != 1 %}s{% endif %}</div>
+
+    {% if section.cards is not empty %}
+    <ol class="tier-toc">
+      {% for c in section.cards %}
+      <li><a href="#card-{{ c.id }}">{{ c.title }}</a></li>
+      {% endfor %}
+    </ol>
+    {% endif %}
+    {% endif %}
+  </div>
+</section>

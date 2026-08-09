@@ -1,0 +1,15 @@
+{# HeroDevs override of the (axis-generic) divider partial. Identical to the
+   bundled default except the inline style="background: …" is dropped: the
+   theme CSS sets the gradient via the .tier-divider.tier-N class, and
+   removing the inline declaration lets the CSS rule win cleanly without
+   having to fight inline-style precedence in the renderer. This CSS gradient
+   only covers the "tier" axis; other axes fall back to the base's inline
+   background colour (from value.color) since this theme has no bespoke
+   gradient rule for axes it doesn't know about.
+
+   Extends the shared base instead of duplicating the whole file: only the
+   opening <section> tag differs, so only sectionOpen is overridden — the
+   tier-divider-inner markup, TOC loop, etc. are inherited unchanged. #}
+{% extends "_tier-divider-base" %}
+
+{% block sectionOpen %}<section class="axis-divider tier-divider {{ axis.name }}-{{ value.id }}" id="axis-divider-{{ axis.name }}-{{ value.id }}"{% if axis.name != 'tier' %} style="background: {{ value.color }}"{% endif %}>{% endblock %}

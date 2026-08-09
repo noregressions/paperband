@@ -1,0 +1,201 @@
+/* =============================================================================
+ * Theme: dark
+ *
+ * Dark-mode debugging session: charcoal paper, off-white text, neon tier
+ * accents, IDE-style code blocks. Reads like a focused review pass at 11pm
+ * rather than a polished print artefact.
+ *
+ * Type scale: this theme delegates font-sizes to book.css (which is in `rem`
+ * scaled from the root rule below). Baseline 1rem ≡ 11pt.
+ * ===========================================================================*/
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+/* ── Type scale root ────────────────────────────────────────────────────── */
+html                    { font-size: calc(11pt * var(--pw-font-scale, 1)); }  /* default print baseline; --pw-font-scale set by pagewright for custom page: sizes / explicit fontScale overrides, unset otherwise */
+html.target-web         { font-size: 16px; }     /* screen-comfortable */
+html.size-a4            { font-size: 11pt; }
+html.size-letter        { font-size: 11pt; }
+html.size-6x9           { font-size: 12pt; }     /* +9%, narrower page */
+
+/* Card width: screen-comfortable by default; @media print narrows for PDF.
+ * See herodevs/theme.css for the rationale. */
+:root                   { --card-max-width: 64rem; }
+@media print            { :root { --card-max-width: 48rem; } }
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: #0d1117;
+  color: #e6edf3;
+}
+body.site, body { background: #0d1117; }
+
+/* Neon tier colours — brighter than print so they don't get crushed on dark */
+article.card.tier-1 { --tier-color: #ff6b6b; }
+article.card.tier-2 { --tier-color: #ffa657; }
+article.card.tier-3 { --tier-color: #c4a7ff; }
+
+/* ── Card frame: dark surface, no shadow, subtle border ─────────────────── */
+article.card {
+  max-width: var(--card-max-width, 48rem);
+  margin-left: auto;
+  margin-right: auto;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-top: 3px solid var(--tier-color);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset;
+  color: #e6edf3;
+}
+
+article.card > h1.card-title {
+  color: #f0f6fc;
+  border-bottom: 2px solid var(--tier-color);
+}
+
+article.card > .card-meta .oneliner { color: #b8c1cc; }
+
+.tier-badge { color: #0d1117; }
+.effort-badge.S { background: #1f4f30; color: #a3e0a8; }
+.effort-badge.M { background: #5a4a10; color: #ffd966; }
+.effort-badge.L { background: #5a1e22; color: #ffb1b1; }
+.openrewrite-badge { background: #1f3a55; color: #79c0ff; }
+
+/* ── Block headings: tier-coloured, subtle uppercase ────────────────────── */
+section.block > h2 { color: var(--tier-color); }
+section.block.intro p { color: #d6deea; }
+section.block p, section.block li { color: #c9d1d9; }
+section.block strong { color: #f0f6fc; }
+section.block a { color: #79c0ff; }
+
+section.block.watch-out {
+  background: #1a1414;
+  border-left: 3px solid var(--tier-color);
+  padding: 0.6rem 0.8rem;
+}
+
+section.block.check {
+  background: #0e2014;
+  border: 1px solid #1f4f30;
+}
+section.block.check > h2 { color: #7ee787; }
+section.block.check code { background: #15281c; color: #c8efc7; }
+
+section.block.scope-check {
+  background: #161b22;
+  border: 1px solid #30363d;
+}
+section.block.scope-check > h2 { color: #8b949e; }
+
+section.block.further-info {
+  background: #0d1117;
+  border: 1px solid #21262d;
+  border-top: 1px solid #30363d;
+}
+section.block.further-info > h2 { color: var(--tier-color); }
+section.block.further-info p,
+section.block.further-info li { color: #8b949e; }
+
+/* ── Code blocks: VS-Dark-ish ───────────────────────────────────────────── */
+code {
+  background: #1f242c;
+  color: #e6edf3;
+  border: 1px solid #30363d;
+}
+pre {
+  background: #0a0d12;
+  color: #e6edf3;
+  border: 1px solid #30363d;
+}
+/* Diff markers — prefixed `diff-` to stay clear of Prism's .token.comment. */
+pre .diff-removed { color: #ff7b72; }
+pre .diff-added   { color: #7ee787; }
+pre .diff-comment { color: #8b949e; }
+
+/* ── Prism token colours — GitHub-Dark-ish palette ────────────────────────
+ * The default prism.min.css ships a light theme; override block colours and
+ * token colours so highlighted code feels native to this dark theme.
+ * ───────────────────────────────────────────────────────────────────────── */
+pre[class*="language-"],
+code[class*="language-"]            { background: #0a0d12; color: #e6edf3; text-shadow: none; }
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata                        { color: #8b949e; font-style: italic; }
+.token.punctuation                  { color: #b8c1cc; }
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted                      { color: #79c0ff; }
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted                     { color: #a5d6ff; }
+.token.operator,
+.token.entity,
+.token.url,
+.token.variable                     { color: #e6edf3; }
+.token.atrule,
+.token.attr-value,
+.token.keyword                      { color: #ff7b72; }
+.token.function,
+.token.class-name                   { color: #d2a8ff; }
+.token.regex,
+.token.important                    { color: #ffa657; }
+
+/* ── Inline code categories — dark palette, GitHub-Dark-ish ───────────── */
+code.cls-annotation  { color: #d2a8ff; }
+code.cls-keyword     { color: #8b949e; font-style: italic; }
+code.cls-constant    { color: #ff7b72; font-weight: 600; }
+code.cls-method      { color: #79c0ff; }
+code.cls-type        { color: #79c0ff; font-weight: 500; }
+code.cls-path        { color: #a5d6ff; }
+code.cls-property    { color: #e6edf3; }
+
+/* ── Cover ──────────────────────────────────────────────────────────────── */
+.book-cover { background: #0d1117; }
+.book-cover h1 { color: #f0f6fc; }
+.book-cover .subtitle { color: #b8c1cc; }
+.book-cover .series { color: #79c0ff; }
+.book-cover .author { color: #8b949e; }
+
+/* ── Tier divider — keep the saturated background but darken slightly ──── */
+.tier-divider {
+  background: linear-gradient(
+    135deg,
+    var(--tier-color, #888),
+    color-mix(in srgb, var(--tier-color) 60%, #0d1117)
+  ) !important;
+}
+.tier-divider .tier-toc a { color: rgba(255,255,255,0.95); }
+
+/* ── Site chrome ────────────────────────────────────────────────────────── */
+.site-nav { background: #010409; border-bottom: 1px solid #30363d; }
+.site-nav .nav-brand { color: #f0f6fc; border-right-color: #30363d; }
+.site-nav a.nav-link { color: #b8c1cc; }
+.site-nav a.nav-link.tier1 { color: #ff8585; }
+.site-nav a.nav-link.tier2 { color: #ffb878; }
+.site-nav a.nav-link.tier3 { color: #d2bbff; }
+
+.hero { background: #010409; }
+.hero .series, .hero .sub { color: #8b949e; }
+
+.stat-box, .effort-box, .tier-box, .card-item {
+  background: #161b22;
+  box-shadow: none;
+  border: 1px solid #30363d;
+  color: #e6edf3;
+}
+.stat-num { color: #f0f6fc; }
+.stat-lbl, .ci-oneliner { color: #8b949e; }
+
+.site-content .page {
+  background: #161b22;
+  box-shadow: 0 0 0 1px #30363d;
+}
+.card-nav a, .card-nav-bottom a { color: #79c0ff; }
+.card-nav-bottom { border-top-color: #30363d; }

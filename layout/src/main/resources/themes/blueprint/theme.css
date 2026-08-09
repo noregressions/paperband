@@ -1,0 +1,259 @@
+/* =============================================================================
+ * Theme: blueprint
+ *
+ * Engineering-blueprint look: slate-blue paper, white hairline rules,
+ * monospace dominant, card frame styled as a drawing border with corner
+ * ticks. Tier accent is the only chromatic accent allowed.
+ *
+ * Type scale: font-size in `rem`, scaled from the single :root rule below.
+ * Baseline 1rem ≡ 11pt — same convention as herodevs / book.css.
+ * ===========================================================================*/
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;700&display=swap');
+
+/* ── Type scale root ────────────────────────────────────────────────────── */
+html                    { font-size: calc(11pt * var(--pw-font-scale, 1)); }  /* default print baseline; --pw-font-scale set by pagewright for custom page: sizes / explicit fontScale overrides, unset otherwise */
+html.target-web         { font-size: 16px; }     /* screen-comfortable */
+html.size-a4            { font-size: 11pt; }
+html.size-letter        { font-size: 11pt; }
+html.size-6x9           { font-size: 12pt; }     /* +9%, narrower page */
+
+/* Card width: screen-comfortable by default; @media print narrows for PDF.
+ * See herodevs/theme.css for the rationale (pt site doesn't set a target
+ * class, so we switch on @media print rather than html.target-X). */
+:root                   { --card-max-width: 64rem; }
+@media print            { :root { --card-max-width: 48rem; } }
+
+body {
+  font-family: 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, monospace;
+  background: #1e3a5f;
+  color: #e8eef5;
+}
+body.site, body { background: #1e3a5f; }
+
+/* Brighter tier colours so they survive the blue background */
+article.card.tier-1 { --tier-color: #ff7e6b; }
+article.card.tier-2 { --tier-color: #ffc06b; }
+article.card.tier-3 { --tier-color: #d2a4ff; }
+
+/* ── Card frame as a drafting border with corner ticks ──────────────────── */
+article.card {
+  max-width: var(--card-max-width, 48rem);
+  margin-left: auto;
+  margin-right: auto;
+  position: relative;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.4);
+  border-top: 1px solid var(--tier-color);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 2rem 2.25rem;
+}
+/* Corner ticks — small + signs at each corner */
+article.card::before,
+article.card::after {
+  content: "";
+  position: absolute;
+  width: 14px; height: 14px;
+  border: 1px solid rgba(255,255,255,0.6);
+  pointer-events: none;
+}
+article.card::before {
+  top: -7px; left: -7px;
+  border-right: none; border-bottom: none;
+}
+article.card::after {
+  bottom: -7px; right: -7px;
+  border-left: none; border-top: none;
+}
+
+article.card > h1.card-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 700;
+  font-size: 1.45rem;            /* was 16pt */
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #ffffff;
+  border-bottom: 1px dashed rgba(255,255,255,0.4);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+article.card > .card-meta .oneliner {
+  color: #c0d0e0;
+  font-style: normal;
+  border-left: 1px solid rgba(255,255,255,0.4);
+  padding-left: 0.7rem;
+}
+
+.tier-badge {
+  background: var(--tier-color) !important;
+  color: #1e3a5f !important;
+  border-radius: 0;
+}
+.effort-badge, .openrewrite-badge {
+  background: transparent !important;
+  border: 1px solid rgba(255,255,255,0.5);
+  color: #e8eef5 !important;
+  border-radius: 0;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* ── Block headings ─────────────────────────────────────────────────────── */
+section.block > h2 {
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--tier-color);
+  border-bottom: 1px dashed rgba(255,255,255,0.3);
+  padding-bottom: 0.25rem;
+  margin-bottom: 0.6rem;
+}
+section.block.intro > h2 { display: none; }
+section.block p, section.block li {
+  font-size: 0.86rem;            /* was 9.5pt */
+  color: #d6e0ec;
+}
+/* Higher-specificity book.css rules need explicit overrides on dark paper. */
+section.block.intro p { color: #d6e0ec; }
+section.block.further-info p,
+section.block.further-info li { color: #b8c8d8; }
+section.block strong { color: #ffffff; }
+section.block a { color: #ffd966; text-decoration: underline; }
+
+section.block.watch-out {
+  background: rgba(255,126,107,0.08);
+  border-left: 1px solid var(--tier-color);
+  padding: 0.6rem 0.8rem;
+}
+
+section.block.check {
+  background: rgba(160,220,180,0.06);
+  border: 1px dashed rgba(160,220,180,0.5);
+  border-radius: 0;
+}
+section.block.check > h2 { color: #a0dcb4; }
+
+section.block.scope-check {
+  background: rgba(255,255,255,0.03);
+  border: 1px dashed rgba(255,255,255,0.3);
+  border-radius: 0;
+}
+section.block.scope-check > h2 { color: #b8c8d8; }
+
+section.block.further-info {
+  background: rgba(0,0,0,0.15);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 0;
+}
+
+/* ── Code: dark tracing-paper feel ──────────────────────────────────────── */
+code {
+  background: rgba(0,0,0,0.25);
+  color: #e8eef5;
+  border-radius: 0;
+}
+pre {
+  background: rgba(0,0,0,0.3);
+  color: #e8eef5;
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 0;
+}
+
+/* ── Prism token colours — blueprint palette on dark slate bg ─────────── */
+pre[class*="language-"],
+code[class*="language-"]            { background: rgba(0,0,0,0.3); color: #e8eef5; text-shadow: none; }
+.token.comment,
+.token.prolog, .token.doctype, .token.cdata { color: #6e8ba8; font-style: italic; }
+.token.punctuation                  { color: #c0d0e0; }
+.token.property, .token.tag, .token.boolean, .token.number,
+.token.constant, .token.symbol, .token.deleted    { color: #d2a4ff; }
+.token.selector, .token.attr-name, .token.string,
+.token.char, .token.builtin, .token.inserted      { color: #a0dcb4; }
+.token.operator, .token.entity, .token.url, .token.variable { color: #e8eef5; }
+.token.atrule, .token.attr-value, .token.keyword  { color: #ffc06b; font-weight: 600; }
+.token.function, .token.class-name                 { color: #ff7e6b; font-weight: 600; }
+.token.regex, .token.important                     { color: #ffd966; }
+
+/* ── Inline code categories — blueprint palette ───────────────────────── */
+code.cls-annotation  { color: #d2a4ff; }
+code.cls-keyword     { color: #c0d0e0; font-style: italic; }
+code.cls-constant    { color: #ff8585; font-weight: 600; }
+code.cls-method      { color: #ffc06b; }
+code.cls-type        { color: #ff7e6b; font-weight: 500; }
+code.cls-path        { color: #ffd966; }
+code.cls-property    { color: #e8eef5; }
+
+/* ── Cover ──────────────────────────────────────────────────────────────── */
+.book-cover { background: #1e3a5f; color: #ffffff; }
+.book-cover h1 {
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #ffffff;
+}
+.book-cover .subtitle {
+  font-family: 'IBM Plex Mono', monospace;
+  color: #c0d0e0;
+}
+.book-cover .series {
+  background: transparent;
+  color: var(--tier-color, #ffc06b);
+  border: 1px solid rgba(255,255,255,0.4);
+  padding: 3pt 12pt;
+  letter-spacing: 4px;
+}
+.book-cover .author { color: #c0d0e0; }
+
+/* ── Tier divider ───────────────────────────────────────────────────────── */
+.tier-divider {
+  background: #1e3a5f !important;
+  border-top: 6px solid var(--tier-color, #ffc06b);
+  border-bottom: 6px solid var(--tier-color, #ffc06b);
+}
+.tier-divider h1 {
+  font-family: 'IBM Plex Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.tier-divider .tier-badge-lg {
+  background: var(--tier-color, #ffc06b);
+  color: #1e3a5f;
+  border-radius: 0;
+}
+.tier-divider .tier-toc {
+  font-family: 'IBM Plex Mono', monospace;
+}
+.tier-divider .tier-toc a { color: #ffffff; }
+
+/* ── Site chrome ────────────────────────────────────────────────────────── */
+.site-nav { background: #142a45; border-bottom: 1px solid rgba(255,255,255,0.2); }
+.site-nav .nav-brand { color: #ffffff; border-right-color: rgba(255,255,255,0.2); }
+.site-nav a.nav-link { color: #c0d0e0; font-family: 'IBM Plex Mono', monospace; }
+
+.hero {
+  background: #142a45;
+  border-bottom: 1px solid rgba(255,255,255,0.3);
+}
+.hero h1 {
+  font-family: 'IBM Plex Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.hero .series, .hero .sub { color: #c0d0e0; }
+
+.stat-box, .effort-box, .tier-box, .card-item, .site-content .page {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.25);
+  box-shadow: none;
+  border-radius: 0;
+  color: #e8eef5;
+}
+.stat-num { color: #ffffff; }
+.stat-lbl, .ci-oneliner { color: #c0d0e0; }
+.ci-title { font-family: 'IBM Plex Mono', monospace; }
+.tier-box-label { font-family: 'IBM Plex Mono', monospace; }
+.card-nav a, .card-nav-bottom a { color: #ffd966; }
+.card-nav-bottom { border-top-color: rgba(255,255,255,0.25); }
