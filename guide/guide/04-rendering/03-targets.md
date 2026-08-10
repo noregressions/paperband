@@ -36,6 +36,25 @@ The default is `pdf-a4`. The value is not validated against the declared list �
 `--target` silently selects nothing's conditions, so the declared list serves as
 documentation and a checklist rather than an enforced enum.
 
+## Page sizes
+
+`--page-size` (CLI) and `vars.page.size` (yaml, case-insensitive) share the same slugs:
+
+| Slug | Dimensions | Notes |
+|---|---|---|
+| `a4` | 210×297mm | Default |
+| `a5` | 148×210mm | Zero margins — full-bleed card/booklet themes |
+| `letter` | 8.5×11in | |
+| `legal` | 8.5×14in | `vars.page.size` only — no CLI enum entry yet |
+| `6x9` | 6×9in | Standard trade-paperback trim |
+| `packt`, `7.5x9.25` | 7.5×9.25in | Compact tech-book trim (Packt Publishing's paperback size) — wide like A4 but noticeably shorter, so code samples get more room per line without the page feeling oversized |
+
+A size outside this list works too, via `vars.page.size: { width, height, unit }` — see
+Book Configuration / Config Cascade for the full `page:` block (margins, orientation,
+fontScale). Named presets above (except `packt`, a deliberately plain trim with no
+curated per-theme type scale yet) have hand-tuned `font-size` rules per bundled theme;
+anything else gets an automatic scale derived from page width relative to A4's.
+
 ## Target-scoped content
 
 A folder's `order:` list accepts map entries with a `where:` predicate evaluated against

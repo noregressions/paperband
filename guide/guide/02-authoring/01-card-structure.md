@@ -80,6 +80,24 @@ block with no title above it, which renders oddly in most themes.
 not just the top level — a `### Check {.check}` nested three levels deep is suppressed
 exactly like a top-level `## Check`.
 
+Wide fenced code blocks get clipped at the page edge in print/PDF targets — there's no
+scrollbar to fall back on there the way there is on the web. Rather than picking a font
+size, drop a specific block a step with the same attribute-list syntax used above,
+placed on its own line right after the closing fence:
+
+````markdown
+```java
+some wide line of code that would otherwise run off the page...
+```
+{.fs--1}
+````
+
+The attribute line has to sit immediately after the closing fence with a blank line (or
+end of file) after it — glue it directly to the next paragraph with no blank line and it
+attaches to *that* paragraph instead of the code block. `fs--1` shaves roughly 10% off
+the rendered code size, `fs--2` about 20%; going further than `fs--2` hurts legibility in
+print.
+
 ## Check
 
 ```bash

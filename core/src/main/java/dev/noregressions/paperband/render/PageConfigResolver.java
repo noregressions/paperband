@@ -97,8 +97,9 @@ public final class PageConfigResolver {
                 case "letter" -> PageSize.LETTER;
                 case "legal" -> PageSize.LEGAL;
                 case "6x9"   -> PageSize.of(6, 9, Unit.INCH);
+                case "packt", "7.5x9.25" -> PageSize.of(7.5, 9.25, Unit.INCH);
                 default -> throw new IllegalArgumentException(
-                        "page.size: unknown preset '" + s + "' (expected a4, a5, letter, legal, 6x9, "
+                        "page.size: unknown preset '" + s + "' (expected a4, a5, letter, legal, 6x9, packt, "
                         + "or a {width, height[, unit]} map)");
             };
         }

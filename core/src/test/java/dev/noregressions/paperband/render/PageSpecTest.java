@@ -38,6 +38,15 @@ class PageSpecTest {
             assertEquals(Margins.uniform(15, Unit.MM), booklet.margins());
             assertEquals(Orientation.PORTRAIT, booklet.orientation());
         }
+
+        @Test
+        void should_create_correct_packt_page_spec() {
+            PageSpec packt = PageSpec.packt();
+
+            assertEquals(PageSize.of(7.5, 9.25, Unit.INCH), packt.size());
+            assertEquals(Margins.uniform(18, Unit.MM), packt.margins());
+            assertEquals(Orientation.PORTRAIT, packt.orientation());
+        }
     }
 
     @Nested
@@ -144,6 +153,18 @@ class PageSpecTest {
             );
 
             assertEquals(bookletFromFactory, bookletManual);
+        }
+
+        @Test
+        void should_maintain_packt_spec_consistency() {
+            PageSpec packtFromFactory = PageSpec.packt();
+            PageSpec packtManual = new PageSpec(
+                PageSize.of(7.5, 9.25, Unit.INCH),
+                Margins.uniform(18, Unit.MM),
+                Orientation.PORTRAIT
+            );
+
+            assertEquals(packtFromFactory, packtManual);
         }
     }
 

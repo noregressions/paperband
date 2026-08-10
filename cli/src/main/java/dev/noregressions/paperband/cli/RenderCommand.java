@@ -89,7 +89,8 @@ public final class RenderCommand implements Callable<Integer> {
         A4("a4"),
         A5("a5"),
         LETTER("letter"),
-        BOOKLET_6X9("6x9");
+        BOOKLET_6X9("6x9"),
+        PACKT("packt");
 
         private final String slug;
         PageSizeOption(String slug) { this.slug = slug; }

@@ -22,6 +22,20 @@
     pre, code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
     pre { background: #f5f5f5; padding: 1rem; overflow-x: auto; }
 
+    /* Fenced-code font-size step-down — see book.html for the full
+       rationale. Usage:
+
+         ```java
+         some wide line of code...
+         ```
+         {.fs--1}
+
+       (own line right after the closing fence, blank line/EOF after it).
+       fs--1 ≈ -10% actual rendered code size, fs--2 ≈ -20%; don't stack
+       past fs--2. */
+    .fs--1 { font-size: 0.85em; }
+    .fs--2 { font-size: 0.8em; }
+
     /* card.slots.takeWithLayout/requireWithLayout break-preference classes —
        see book.html for the same rules and why they're bundled here rather
        than per-theme. */

@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="CompilerConfiguration">
+    <excludeFromCompile>
+      <directory url="file://$PROJECT_DIR$/archetype/src/main/resources/archetype-resources" includeSubdirectories="true" />
+    </excludeFromCompile>
     <annotationProcessing>
       <profile name="Maven default annotation processors profile" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
@@ -10,6 +13,7 @@
         <module name="cli" />
         <module name="core" />
         <module name="include" />
+        <module name="paperband-archetype" />
         <module name="cards" />
         <module name="render-playwright" />
         <module name="paperband-maven-plugin" />
