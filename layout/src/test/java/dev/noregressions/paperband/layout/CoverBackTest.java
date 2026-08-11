@@ -31,7 +31,7 @@ class CoverBackTest {
 
     private static RenderContext ctx(Path bookRoot, PageMatter cover, PageMatter back) {
         BookConfig book = new BookConfig(bookRoot, "Test Book", List.of(), List.of(),
-                Map.of(), List.of(), null, null, null, cover, back, null);
+                Map.of(), List.of(), null, null, null, cover, back, null, null);
         return new RenderContext(book, List.of(), Map.of(), null, "pdf-a4", "A4");
     }
 

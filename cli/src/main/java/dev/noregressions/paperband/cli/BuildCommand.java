@@ -435,11 +435,13 @@ public final class BuildCommand implements Callable<Integer> {
         PdfMetadata metadata = bookTitle != null
                 ? PdfMetadata.of(bookTitle)
                 : PdfMetadata.empty();
-        // Running footer (see HtmlInput.footerHtml / LayoutEngine.renderFooter
-        // javadoc) — null when the book declares no footer:, in which case
-        // HtmlInput just carries no footer either way.
+        // Running header/footer (see HtmlInput.headerHtml/footerHtml /
+        // LayoutEngine.renderHeader/renderFooter javadoc) — null when the
+        // book declares no header:/footer:, in which case HtmlInput just
+        // carries no header/footer either way.
         String footerHtml = layout.renderFooter(bookCtx);
-        HtmlInput htmlInput = new HtmlInput(html, baseUri, bookCtx.pageSpec(), metadata, footerHtml);
+        String headerHtml = layout.renderHeader(bookCtx);
+        HtmlInput htmlInput = new HtmlInput(html, baseUri, bookCtx.pageSpec(), metadata, footerHtml, headerHtml);
 
         renderer.render(htmlInput, output);
 

@@ -25,8 +25,15 @@ import java.util.Objects;
  *                   stylesheet, hence {@code footerHtml} needing to be
  *                   self-contained. Needs real page-margin space to render
  *                   into — see {@code PageSpec.margins}.
+ * @param headerHtml same shape and same constraints as {@code footerHtml}
+ *                   (self-contained, inline-styled, needs real top-margin
+ *                   space), but for a running header band; from a book root
+ *                   {@code header: { template: ... }} key, pre-rendered by
+ *                   {@code LayoutEngine.renderHeader}; null for no header.
  */
-public record HtmlInput(String html, URI baseUri, PageSpec pageSpec, PdfMetadata metadata, String footerHtml) {
+public record HtmlInput(
+        String html, URI baseUri, PageSpec pageSpec, PdfMetadata metadata,
+        String footerHtml, String headerHtml) {
 
     public HtmlInput {
         Objects.requireNonNull(html, "html");
@@ -34,10 +41,11 @@ public record HtmlInput(String html, URI baseUri, PageSpec pageSpec, PdfMetadata
         Objects.requireNonNull(pageSpec, "pageSpec");
         Objects.requireNonNull(metadata, "metadata");
         footerHtml = (footerHtml == null || footerHtml.isBlank()) ? null : footerHtml;
+        headerHtml = (headerHtml == null || headerHtml.isBlank()) ? null : headerHtml;
     }
 
-    /** Convenience constructor for the common case of no running footer. */
+    /** Convenience constructor for the common case of no running header/footer. */
     public HtmlInput(String html, URI baseUri, PageSpec pageSpec, PdfMetadata metadata) {
-        this(html, baseUri, pageSpec, metadata, null);
+        this(html, baseUri, pageSpec, metadata, null, null);
     }
 }

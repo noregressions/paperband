@@ -1,0 +1,93 @@
+{# Editorial Gold override: relocates Level/Introduced/Symptom/Detect (from
+   frontmatter) plus the card's own "Cross-references" and "References"
+   sections (found by heading text among card.blocks — no core model change
+   needed for that) into a single floated sidebar, alongside a five-value
+   failure-level legend. Cards with no frontmatter `level:` get none of
+   this — same plain single-column body the base template already renders.
+
+   Extends the shared base rather than duplicating it: header/definitionTable
+   are fully replaced, cardBlocks calls a filtered loop (not {{ parent() }})
+   so the two relocated sections don't render twice, and meta/appliesIf/
+   footer are inherited unchanged.
+
+   Deliberately avoids {% set %} inside {% for %}/{% if %} bodies to carry a
+   value back out to the enclosing scope -- Pebble does not reliably surface
+   that kind of loop/branch-local assignment to the surrounding scope, so the
+   level->CSS-class mapping is one ternary chain in a single top-level {% set
+   %}, and the Cross-references/References lookups render inline inside their
+   own {% for %} rather than trying to capture "the matching block" first. #}
+{% extends "_card-body-base" %}
+
+{% block header %}
+{% if card.frontmatter.chapter %}<div class="card-kicker">Chapter {{ card.frontmatter.chapter }}</div>{% endif %}
+{% if card.title %}<h1 class="card-title">{{ card.title }}</h1>{% endif %}
+{% endblock %}
+
+{% block definitionTable %}
+{% if card.frontmatter.level %}
+{% set _level = card.frontmatter.level %}
+{% set _levelClass = _level == "Won't Start" ? "level-1" : (_level == "Crashes at Runtime" ? "level-2" : (_level == "Runs But Wrong" ? "level-3" : (_level == "Recompilation Surprises" ? "level-4" : (_level == "Environment, Distribution & Build Toolchain" ? "level-5" : "level-0")))) %}
+
+  <div class="definition-sidebar">
+    <div class="sb-block">
+      <div class="sb-label">Level</div>
+      <div class="sb-val sb-level {{ _levelClass }}">{{ _level }}{% if card.frontmatter.level_note %} <span class="level-note">({{ card.frontmatter.level_note | raw }})</span>{% endif %}</div>
+    </div>
+    {% if card.frontmatter.introduced %}
+    <div class="sb-block">
+      <div class="sb-label">Introduced</div>
+      <div class="sb-val">{{ card.frontmatter.introduced | raw }}</div>
+    </div>
+    {% endif %}
+    {% if card.frontmatter.symptom %}
+    <div class="sb-block">
+      <div class="sb-label">Symptom</div>
+      <div class="sb-val">{{ card.frontmatter.symptom | raw }}</div>
+    </div>
+    {% endif %}
+    {% if card.frontmatter.detect %}
+    <div class="sb-block">
+      <div class="sb-label">Detect</div>
+      <div class="sb-val">{{ card.frontmatter.detect | raw }}</div>
+    </div>
+    {% endif %}
+
+    {% for b in card.blocks %}
+    {% if b.heading == "Cross-references" %}
+    <div class="sb-block sb-crossrefs">
+      <div class="sb-label">Cross-references</div>
+      {{ b.html | raw }}
+    </div>
+    {% endif %}
+    {% endfor %}
+
+    {% for b in card.blocks %}
+    {% if b.heading == "References" %}
+    <div class="sb-block sb-refs">
+      <div class="sb-label">References</div>
+      {{ b.html | raw }}
+    </div>
+    {% endif %}
+    {% endfor %}
+
+    <div class="sb-legend">
+      <div class="sb-label">Failure levels</div>
+      <div class="lg-row{% if _level == "Won't Start" %} active{% endif %}"><span class="lg-sw level-1"></span>Won't Start</div>
+      <div class="lg-row{% if _level == "Crashes at Runtime" %} active{% endif %}"><span class="lg-sw level-2"></span>Crashes at Runtime</div>
+      <div class="lg-row{% if _level == "Runs But Wrong" %} active{% endif %}"><span class="lg-sw level-3"></span>Runs But Wrong</div>
+      <div class="lg-row{% if _level == "Recompilation Surprises" %} active{% endif %}"><span class="lg-sw level-4"></span>Recompilation Surprises</div>
+      <div class="lg-row{% if _level == "Environment, Distribution & Build Toolchain" %} active{% endif %}"><span class="lg-sw level-5"></span>Environment, Distribution &amp; Build Toolchain</div>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block cardBlocks %}
+{% for block in card.blocks %}
+  {% if card.frontmatter.level and (block.heading == "Cross-references" or block.heading == "References") %}
+    {# relocated into the sidebar above; skip here #}
+  {% else %}
+    {% include "_block-section" with {"block": block} %}
+  {% endif %}
+{% endfor %}
+{% endblock %}

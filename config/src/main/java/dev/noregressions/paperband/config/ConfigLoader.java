@@ -211,15 +211,17 @@ public final class ConfigLoader {
             }
         }
 
-        // Optional front-cover / back-page / running-footer declarations.
-        // Book-level only. footer reuses the same PageMatter shape as
-        // cover/back (image field unused — a footer is always a template).
+        // Optional front-cover / back-page / running-header / running-footer
+        // declarations. Book-level only. header/footer reuse the same
+        // PageMatter shape as cover/back (image field unused — a header or
+        // footer is always a template).
         PageMatter cover  = parsePageMatter(bookRoot, bookYaml, "cover",  data.get("cover"));
         PageMatter back   = parsePageMatter(bookRoot, bookYaml, "back",  data.get("back"));
         PageMatter footer = parsePageMatter(bookRoot, bookYaml, "footer", data.get("footer"));
+        PageMatter header = parsePageMatter(bookRoot, bookYaml, "header", data.get("header"));
 
         return new BookConfig(bookRoot, title, axes, globalCss, vars, targets, theme,
-                sectionLandingTemplate, cardSchema, cover, back, footer);
+                sectionLandingTemplate, cardSchema, cover, back, footer, header);
     }
 
     /**

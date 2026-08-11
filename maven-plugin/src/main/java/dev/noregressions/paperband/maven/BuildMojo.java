@@ -221,7 +221,8 @@ public class BuildMojo extends AbstractMojo {
         String bookTitle = bookCtx.book().title();
         PdfMetadata metadata = bookTitle != null ? PdfMetadata.of(bookTitle) : PdfMetadata.empty();
         String footerHtml = layout.renderFooter(bookCtx);
-        HtmlInput htmlInput = new HtmlInput(html, baseUri, bookCtx.pageSpec(), metadata, footerHtml);
+        String headerHtml = layout.renderHeader(bookCtx);
+        HtmlInput htmlInput = new HtmlInput(html, baseUri, bookCtx.pageSpec(), metadata, footerHtml, headerHtml);
 
         ensureParentDir(output);
         htmlToPdfRenderer.render(htmlInput, output);

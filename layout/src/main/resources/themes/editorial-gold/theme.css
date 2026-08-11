@@ -1,0 +1,352 @@
+/* =============================================================================
+ * Theme: editorial-gold
+ *
+ * Ported from the "Classical" design system: cream ground, a single warm
+ * gold accent used only as strokes/rules/underlines (never a filled block),
+ * Cormorant Garamond headings over Lora body, hairline dividers, outlined
+ * tags. Adds a floated metadata sidebar for cards carrying a frontmatter
+ * `level:` field (the Failure-Catalogue shape) — Level/Introduced/Symptom/
+ * Detect, Cross-references, References, and a five-value failure-level
+ * legend with the active one bold. Cards without `level:` get the same
+ * type/color system in a plain single column.
+ *
+ * Type scale: font-size in `rem`, scaled from the single :root rule below.
+ * Baseline 1rem == 11pt — same convention as classical / herodevs / book.css.
+ * ===========================================================================*/
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
+
+/* ── Type scale root ────────────────────────────────────────────────────── */
+html                    { font-size: calc(11pt * var(--pw-font-scale, 1)); }
+html.target-web         { font-size: 16px; }
+html.size-a4            { font-size: 11pt; }
+html.size-letter        { font-size: 11pt; }
+html.size-6x9           { font-size: 12pt; }
+
+:root {
+  --eg-bg:        #ffffff;
+  --eg-surface:   #eae9e9;
+  --eg-text:      #201f1d;
+  --eg-divider:   rgba(32, 31, 29, 0.16);
+
+  --eg-neutral-100: #f8f4f4;
+  --eg-neutral-200: #eae7e7;
+  --eg-neutral-300: #d7d3d3;
+  --eg-neutral-500: #9b9797;
+  --eg-neutral-600: #7d7979;
+  --eg-neutral-700: #605d5d;
+  --eg-neutral-900: #2d2b2b;
+
+  --eg-accent-100: #fff3e4;
+  --eg-accent-200: #ffe3bf;
+  --eg-accent-300: #facb8d;
+  --eg-accent-400: #e1ad66;
+  --eg-accent-500: #c28d41;
+  --eg-accent-600: #a06f24;
+  --eg-accent-700: #7d5411;
+  --eg-accent-800: #5a3b0a;
+  --eg-accent-900: #3a270d;
+
+  --eg-radius-sm: 2px;
+  --eg-radius-md: 4px;
+
+  --card-max-width: 46rem;
+}
+/* At A4 with the standard 20mm page margin, the printable area is 170mm
+   (about 44.7rem at this theme's 11pt root). A print max-width narrower than
+   that (the original 40rem here left ~27mm of extra centering gap on top of
+   the 20mm hard margin per side, ~55mm/26% of the page unused) reads as a
+   wide empty gutter rather than a deliberate narrow column -- especially
+   with the definition-sidebar float, which needs its own share of the
+   width. 48rem matches blueprint/dark/fieldguide/herodevs and simply fills
+   the printable area (the max-width becomes a no-op ceiling at that point,
+   not an active constraint), leaving only the fixed page margin as
+   whitespace. */
+@media print { :root { --card-max-width: 48rem; } }
+
+/* margin: 0 here matters more than it looks. The base book.html/card.html
+   scaffold sets `body { margin: 2rem }` for the un-themed default; margin
+   (unlike padding) is outside an element's own background paint area, so
+   that 2rem was quietly leaving a ~7.8mm gap of un-painted default (white)
+   background on every side even where the PDF page margin itself is zero.
+   The print padding below is what actually simulates a page margin now,
+   since a real one (the PDF renderer's margin) can never show a background
+   through it -- see the print-only rule after :root. */
+body { font-family: 'Lora', Georgia, serif; background: var(--eg-bg); color: var(--eg-text); margin: 0; }
+body.site, body { background: var(--eg-bg); }
+
+/* Full-bleed background on left/right in print, horizontal only. Two
+   separate Chromium print limitations are in play here, and they don't take
+   the same fix:
+
+   1. Page.pdf()'s margin option (the PageSpec/Margins the book resolves to)
+      creates a literal unpainted border -- no CSS, including this theme's
+      own body background, can ever render inside it (the same reason
+      PageSpec.a5() ships zero margins for its full-bleed card design). The
+      book zeroes left/right in `vars.page.margins` and this padding stands
+      in for the margin that used to do that job.
+
+   2. body's own padding does NOT have the same problem on top/bottom, but
+      it can't substitute for a real page margin there either, for a
+      different reason: `body` is one continuous box that Chromium slices
+      into page-sized fragments, and a fragmented box's padding is a
+      one-time effect at the very start and very end of the *whole* box --
+      not something that reappears at the top and bottom of every fragment.
+      A horizontal offset stays correct on every page because left/right
+      padding shifts the box's entire content sideways regardless of which
+      vertical slice is showing; a vertical offset does not have that
+      luck -- it only shows on page 1's top and the last page's bottom,
+      leaving every page in between with a 0mm top/bottom margin.
+
+   So top/bottom stay real, non-zero Page.pdf() margins (see the JDK guide's
+   paperband.yaml) -- unpainted, but genuinely repeated on every page --
+   while only left/right get the zero-margin/CSS-padding treatment. */
+@media print { body { padding: 0 20mm; } }
+
+*, *::before, *::after { box-sizing: border-box; }
+
+/* ── Card shell ──────────────────────────────────────────────────────────── */
+article.card {
+  border: none !important;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 1.5rem 0.5rem;
+  max-width: var(--card-max-width, 40rem);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Clearfix: the definition sidebar below is a left float; without this the
+   article's own bottom edge (and anything after cardBlocks) can sit above
+   the float's tail on a card whose sidebar runs longer than the last
+   paragraph beside it. */
+article.card::after { content: ""; display: block; clear: both; }
+
+.card-kicker {
+  font-family: 'Lora', Georgia, serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--eg-accent-700);
+  font-weight: 600;
+  margin: 0 0 0.3rem;
+}
+
+article.card > h1.card-title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 600;
+  font-size: 2.15rem;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  border-bottom: 1px solid var(--eg-divider);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+
+/* Frontmatter strip: quiet, no badge fills */
+article.card > .card-meta { gap: 0.5rem; margin-bottom: 1.25rem; }
+article.card > .card-meta .oneliner {
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--eg-neutral-700);
+  border: none;
+  padding-left: 0;
+}
+.tier-badge, .effort-badge, .openrewrite-badge, .axis-badge {
+  background: transparent !important;
+  color: var(--eg-neutral-700) !important;
+  font-family: 'Lora', Georgia, serif;
+  font-weight: 600;
+  font-size: 0.68rem;
+  border: 1px solid var(--eg-accent-700);
+  color: var(--eg-accent-700) !important;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-radius: var(--eg-radius-sm);
+  padding: 1pt 7pt;
+}
+
+/* ── Definition sidebar (Failure-Catalogue shape) ───────────────────────── */
+/* A left float, deliberately — not a CSS grid. Chromium's print pagination
+   fragments floated content across page breaks the way it fragments any
+   other normal-flow block; a synchronized-height grid track does not
+   fragment nearly as reliably across multiple PDF pages, and these cards
+   routinely run 2-3 pages. The float's width holds for as long as the
+   sidebar's own content lasts; once the sidebar runs out (main prose is
+   almost always longer), later paragraphs simply widen back out to the
+   full column — a graceful degradation of the two-column mockup rather
+   than a hard multi-page 2-column layout, which Chromium's print engine
+   does not support (there's no CSS Paged Media "running element" here
+   either, which is why the mockup's repeating page-edge colour tab isn't
+   reproduced: nothing in Chromium re-draws a fixed decoration on every
+   printed page of a single HTML source). */
+.definition-sidebar {
+  float: left;
+  width: 30%;
+  margin: 0 1.5rem 1rem 0;
+  padding-right: 1.1rem;
+  border-right: 1px solid var(--eg-divider);
+  /* No break-inside:avoid here deliberately: the sidebar as a whole often
+     runs taller than a single printed page (Level/Introduced/Symptom/Detect
+     + Cross-references + References + the five-row legend), and Chromium's
+     print engine has a real bug where a break-inside:avoid float taller than
+     one page doesn't just ignore the hint (as the no-fit fallback in the
+     spec says it should) -- it silently fails to paint the float at all on
+     any page. Confirmed by testing: adding this rule back made the entire
+     sidebar vanish from the rendered PDF even though it rendered correctly
+     in an on-screen browser render of the same HTML. The individual
+     .sb-block chunks below keep their own break-inside:avoid since each one
+     is short and safely fits on a single page. */
+}
+.sb-block { margin-bottom: 1rem; break-inside: avoid; }
+.sb-label {
+  font-family: 'Lora', Georgia, serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--eg-neutral-600);
+  margin-bottom: 0.2rem;
+}
+.sb-val { font-size: 0.86rem; line-height: 1.5; }
+.sb-val.sb-level { color: var(--eg-accent-800); font-weight: 600; }
+.sb-val .level-note { font-weight: 400; font-style: italic; color: var(--eg-neutral-700); }
+
+/* Five failure-level colours, keyed off the exact `level:` text the JDK
+   guide's 38 catalogue chapters use. Anything that doesn't match one of
+   these five falls back to level-0 (neutral) rather than breaking. */
+.level-1 { color: var(--eg-accent-300) !important; } /* Won't Start */
+.level-2 { color: var(--eg-accent-400) !important; } /* Crashes at Runtime */
+.level-3 { color: var(--eg-accent-500) !important; } /* Runs But Wrong */
+.level-4 { color: var(--eg-accent-700) !important; } /* Recompilation Surprises */
+.level-5 { color: var(--eg-accent-900) !important; } /* Environment, Distribution & Build Toolchain */
+.level-0 { color: var(--eg-neutral-600) !important; }
+.sb-val.sb-level.level-1 { color: var(--eg-accent-600) !important; } /* accent-300 too light for text */
+
+.sb-legend { margin-top: 1.25rem; display: flex; flex-direction: column; gap: 4px; }
+.sb-legend .lg-row {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.68rem; color: var(--eg-neutral-600); opacity: 0.75;
+}
+.sb-legend .lg-row.active { opacity: 1; font-weight: 600; color: var(--eg-text); }
+.sb-legend .lg-sw { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+.sb-legend .lg-sw.level-1 { background: var(--eg-accent-300); }
+.sb-legend .lg-sw.level-2 { background: var(--eg-accent-400); }
+.sb-legend .lg-sw.level-3 { background: var(--eg-accent-500); }
+.sb-legend .lg-sw.level-4 { background: var(--eg-accent-700); }
+.sb-legend .lg-sw.level-5 { background: var(--eg-accent-900); }
+
+.sb-crossrefs ul, .sb-refs ol {
+  margin: 0; padding-left: 1.1rem; font-size: 0.8rem; line-height: 1.45;
+}
+.sb-crossrefs li, .sb-refs li { margin-bottom: 0.45rem; }
+.sb-refs a, .sb-crossrefs a { color: var(--eg-accent-700); }
+
+/* ── Body copy ───────────────────────────────────────────────────────────── */
+section.block > h2 {
+  font-family: 'Lora', Georgia, serif;
+  font-size: 0.86rem;
+  font-style: italic;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--eg-neutral-700);
+  border-top: 1px solid var(--eg-divider);
+  padding-top: 0.6rem;
+  margin: 1.4rem 0 0.6rem;
+}
+section.block:first-of-type > h2 { margin-top: 0; }
+/* Ragged-right, not justified: no other bundled theme (including the
+   classical source this one was ported from) uses text-align:justify, and
+   there's no hyphens:auto here to make it behave -- in the main prose column
+   next to the definition-sidebar float (already narrower than a full-width
+   column) full justification with monospace inline code spans of fixed
+   width produces visibly uneven word-spacing "rivers" rather than the clean
+   printed-book look it's going for. */
+section.block p, section.block li { font-size: 0.98rem; line-height: 1.62; }
+
+section.block.check,
+section.block.scope-check,
+section.block.further-info {
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--eg-divider);
+  border-bottom: 1px solid var(--eg-divider);
+  padding: 0.6rem 0;
+  margin-top: 1.25rem;
+}
+section.block.check > h2, section.block.scope-check > h2, section.block.further-info > h2 {
+  color: var(--eg-neutral-700); border-top: none; padding-top: 0;
+}
+section.block.watch-out {
+  border-left: 2px solid var(--eg-accent-700);
+  padding-left: 0.8rem;
+  font-style: italic;
+}
+.applies-if { border-left: 2px solid var(--eg-accent-700); padding-left: 0.8rem; font-style: italic; margin-bottom: 1rem; }
+.applies-if-label { font-weight: 600; font-style: normal; }
+
+/* ── Code ────────────────────────────────────────────────────────────────── */
+code { background: var(--eg-neutral-100); border-radius: var(--eg-radius-sm); padding: 0.1em 0.3em; }
+pre {
+  background: var(--eg-neutral-900);
+  color: var(--eg-neutral-100);
+  border-radius: var(--eg-radius-sm);
+  padding: 0.75rem 0.9rem;
+}
+pre code { background: transparent; padding: 0; color: inherit; }
+
+pre[class*="language-"], code[class*="language-"] { background: var(--eg-neutral-900); color: var(--eg-neutral-100); text-shadow: none; }
+.token.comment, .token.prolog, .token.doctype, .token.cdata { color: var(--eg-neutral-500); font-style: italic; }
+.token.punctuation { color: var(--eg-neutral-300); }
+.token.property, .token.tag, .token.boolean, .token.number,
+.token.constant, .token.symbol, .token.deleted { color: var(--eg-accent-300); }
+.token.selector, .token.attr-name, .token.string,
+.token.char, .token.builtin, .token.inserted { color: #9fd6a3; }
+.token.operator, .token.entity, .token.url, .token.variable { color: var(--eg-neutral-100); }
+.token.atrule, .token.attr-value, .token.keyword { color: var(--eg-accent-300); font-weight: 600; }
+.token.function, .token.class-name { color: #e59a9a; font-weight: 600; }
+.token.regex, .token.important { color: var(--eg-accent-400); }
+
+/* Inline code categories */
+code.cls-annotation { color: var(--eg-accent-700); }
+code.cls-keyword    { color: var(--eg-neutral-600); font-style: italic; }
+code.cls-constant   { color: var(--eg-accent-800); font-weight: 600; }
+code.cls-method     { color: #1f5430; }
+code.cls-type       { color: var(--eg-text); font-weight: 500; }
+code.cls-path       { color: var(--eg-neutral-700); }
+code.cls-property   { color: var(--eg-text); }
+
+/* ── Cover ──────────────────────────────────────────────────────────────── */
+.book-cover { background: var(--eg-bg); }
+.book-cover h1 {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 3.3rem; font-weight: 600; color: var(--eg-text);
+}
+.book-cover .subtitle { font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-size: 1.3rem; color: var(--eg-neutral-700); }
+.book-cover .series   { font-family: 'Lora', Georgia, serif; font-size: 0.82rem; letter-spacing: 4px; color: var(--eg-accent-700); }
+.book-cover .author   { font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-size: 1rem; color: var(--eg-neutral-700); }
+
+/* ── Tier / section dividers ─────────────────────────────────────────────── */
+.tier-divider h1 { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 600; font-size: 2.9rem; }
+.tier-divider .tier-toc { font-family: 'Lora', Georgia, serif; }
+.tier-badge-lg {
+  display: inline-block; border: 1px solid var(--eg-accent-700); color: var(--eg-accent-700);
+  font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 10px; border-radius: var(--eg-radius-sm);
+}
+.section-divider { border-top: 1px solid var(--eg-divider); border-bottom: 1px solid var(--eg-divider); }
+.section-divider h1 { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 600; }
+
+/* ── Buttons / tags (site mode) ──────────────────────────────────────────── */
+.btn { border: 1px solid var(--eg-accent-700); color: var(--eg-accent-700); background: transparent; border-radius: var(--eg-radius-md); }
+.btn:hover { background: var(--eg-accent-100); }
+.tag { border: 1px solid var(--eg-accent-700); color: var(--eg-accent-700); border-radius: var(--eg-radius-sm); font-size: 0.7rem; padding: 2px 8px; }
+
+/* ── Site mode chrome ────────────────────────────────────────────────────── */
+.site-nav { background: var(--eg-neutral-900); }
+.site-nav .nav-brand, .site-nav a.nav-link { font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; }
+.hero { background: var(--eg-bg); color: var(--eg-text); border-bottom: 1px solid var(--eg-divider); }
+.hero .series, .hero .sub { color: var(--eg-neutral-700); }
+.hero h1 { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 600; color: var(--eg-text); }
+.tier-hero h1 { font-family: 'Cormorant Garamond', Georgia, serif; }
+.ci-title { font-family: 'Cormorant Garamond', Georgia, serif; }
+.site-content .page { background: transparent; box-shadow: none; border-radius: 0; }

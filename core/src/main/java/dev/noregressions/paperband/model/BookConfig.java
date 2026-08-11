@@ -52,6 +52,12 @@ import java.util.Map;
  *        separate mini-document with no access to the main page's
  *        stylesheet. Needs real page-margin space to render into — see
  *        {@code vars.page.margins} ({@link dev.noregressions.paperband.render.PageConfigResolver}).
+ * @param header running page-header declaration from a root
+ *        {@code header: { template: ... }} key — same shape, same
+ *        pre-rendering path ({@code LayoutEngine.renderHeader} ->
+ *        {@code HtmlInput.headerHtml}), and the same real top-margin-space
+ *        requirement as {@code footer}; null when not declared, in which
+ *        case no running header renders.
  */
 public record BookConfig(
         Path bookRoot,
@@ -65,7 +71,8 @@ public record BookConfig(
         CardSchema cardSchema,
         PageMatter cover,
         PageMatter back,
-        PageMatter footer
+        PageMatter footer,
+        PageMatter header
 ) {
 
     public BookConfig {
@@ -76,7 +83,7 @@ public record BookConfig(
         theme     = (theme == null || theme.isBlank()) ? null : theme.trim();
     }
 
-    /** Convenience constructor for books with no {@code cardSchema:}, {@code cover:}, {@code back:} or {@code footer:} (the common case). */
+    /** Convenience constructor for books with no {@code cardSchema:}, {@code cover:}, {@code back:}, {@code footer:} or {@code header:} (the common case). */
     public BookConfig(
             Path bookRoot,
             String title,
@@ -87,10 +94,10 @@ public record BookConfig(
             String theme,
             String sectionLandingTemplate) {
         this(bookRoot, title, axes, globalCss, vars, targets, theme, sectionLandingTemplate,
-                null, null, null, null);
+                null, null, null, null, null);
     }
 
-    /** Convenience constructor for books with a {@code cardSchema:} but no {@code cover:}/{@code back:}/{@code footer:}. */
+    /** Convenience constructor for books with a {@code cardSchema:} but no {@code cover:}/{@code back:}/{@code footer:}/{@code header:}. */
     public BookConfig(
             Path bookRoot,
             String title,
@@ -102,11 +109,11 @@ public record BookConfig(
             String sectionLandingTemplate,
             CardSchema cardSchema) {
         this(bookRoot, title, axes, globalCss, vars, targets, theme, sectionLandingTemplate,
-                cardSchema, null, null, null);
+                cardSchema, null, null, null, null);
     }
 
     public static BookConfig empty(Path bookRoot) {
         return new BookConfig(bookRoot, null, List.of(), List.of(), Map.of(), List.of(),
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
     }
 }

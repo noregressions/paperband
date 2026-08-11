@@ -50,6 +50,39 @@
   {% endif %}
   {% endblock %}
 
+  {# A card's Level/Introduced/Symptom/Detect definition table, when present
+     in frontmatter. Themes that want a different presentation (e.g. a
+     sidebar instead of an inline table) override just this block; the
+     un-themed default and any theme that doesn't override it get this quiet
+     table rendering, which reproduces what these four fields used to look
+     like as a hand-authored markdown table directly in the card body before
+     they moved to frontmatter. Field values are pre-converted to literal
+     HTML at migration time (backtick code spans -> <code>, **bold** ->
+     <strong>, *italic* -> <em>) since frontmatter strings are never run
+     through the markdown renderer the way the card body is -- `| raw` here
+     is what lets that HTML through instead of being escaped as text. #}
+  {% block definitionTable %}
+  {% if card.frontmatter.level %}
+  <table class="definition-table">
+    <tbody>
+      <tr>
+        <td><strong>Level</strong></td>
+        <td>{{ card.frontmatter.level }}{% if card.frontmatter.level_note %} <span class="level-note">({{ card.frontmatter.level_note | raw }})</span>{% endif %}</td>
+      </tr>
+      {% if card.frontmatter.introduced %}
+      <tr><td><strong>Introduced</strong></td><td>{{ card.frontmatter.introduced | raw }}</td></tr>
+      {% endif %}
+      {% if card.frontmatter.symptom %}
+      <tr><td><strong>Symptom</strong></td><td>{{ card.frontmatter.symptom | raw }}</td></tr>
+      {% endif %}
+      {% if card.frontmatter.detect %}
+      <tr><td><strong>Detect</strong></td><td>{{ card.frontmatter.detect | raw }}</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+  {% endif %}
+  {% endblock %}
+
   {% block cardBlocks %}
   {% for block in card.blocks %}
   {% include "_block-section" with {"block": block} %}

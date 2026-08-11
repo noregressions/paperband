@@ -128,19 +128,25 @@ public final class PlaywrightRenderer implements HtmlToPdfRenderer {
                                         .setLeft(format(m.left(), m.unit())))
                                 .setPrintBackground(true);
 
-                        // Running footer (see HtmlInput.footerHtml javadoc for why this
-                        // can't be a CSS @page rule here): Chromium's print engine has no
-                        // CSS Paged Media support at all, so a repeating footer can only
-                        // come through Page.pdf()'s own header/footer option — a totally
-                        // separate mini-document with no access to the main page's
-                        // stylesheet, hence footerHtml needing to be self-contained.
-                        // headerTemplate must still be set to something non-empty or
-                        // Chromium falls back to its own default header (date + title);
-                        // an empty <span> suppresses it without adding visible content.
-                        if (input.footerHtml() != null) {
+                        // Running header/footer (see HtmlInput.headerHtml/footerHtml
+                        // javadoc for why this can't be a CSS @page rule here):
+                        // Chromium's print engine has no CSS Paged Media support at
+                        // all, so repeating content can only come through Page.pdf()'s
+                        // own header/footer option — a totally separate mini-document
+                        // with no access to the main page's stylesheet, hence
+                        // headerHtml/footerHtml needing to be self-contained.
+                        // headerTemplate/footerTemplate must still be set to something
+                        // non-empty when the OTHER one is in use, or Chromium falls
+                        // back to its own default content there (date + title in the
+                        // header, page number in the footer) instead of leaving it
+                        // blank; an empty <span> suppresses that without adding
+                        // visible content of its own.
+                        if (input.footerHtml() != null || input.headerHtml() != null) {
                             options.setDisplayHeaderFooter(true)
-                                    .setHeaderTemplate("<span></span>")
-                                    .setFooterTemplate(input.footerHtml());
+                                    .setHeaderTemplate(
+                                            input.headerHtml() != null ? input.headerHtml() : "<span></span>")
+                                    .setFooterTemplate(
+                                            input.footerHtml() != null ? input.footerHtml() : "<span></span>");
                         }
 
                         // TODO(paperband): wire PdfMetadata (title/author/subject) once

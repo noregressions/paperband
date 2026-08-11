@@ -22,7 +22,8 @@ public final class BuiltInThemes {
             "dark",
             "blueprint",
             "carded",
-            "herodevs"
+            "herodevs",
+            "editorial-gold"
     );
 
     private BuiltInThemes() {}

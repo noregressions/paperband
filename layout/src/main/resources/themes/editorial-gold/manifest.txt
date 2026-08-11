@@ -1,0 +1,8 @@
+# Editorial Gold — cream ground, single gold accent, Cormorant Garamond over
+# Lora, hairline rules, outlined tags. Ported from the "Classical" design
+# system (OKLCH tonal ramps, editorial book aesthetic). Adds a floated
+# metadata sidebar (Level/Introduced/Symptom/Detect + Cross-references +
+# References + a failure-level legend) for cards that declare a
+# frontmatter `level:` field; cards without one render as a plain single
+# column, styled the same otherwise.
+theme.css

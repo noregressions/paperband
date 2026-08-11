@@ -985,6 +985,7 @@ public final class LayoutEngine {
         m.put("cover",  pageMatterModel(ctx.book().cover(),  ctx.book().bookRoot()));
         m.put("back",   pageMatterModel(ctx.book().back(),   ctx.book().bookRoot()));
         m.put("footer", pageMatterModel(ctx.book().footer(), ctx.book().bookRoot()));
+        m.put("header", pageMatterModel(ctx.book().header(), ctx.book().bookRoot()));
         return m;
     }
 
@@ -1000,9 +1001,9 @@ public final class LayoutEngine {
      * option, which evaluates the template in total isolation from the main
      * document's stylesheet (no {@code <link>} access, only inline styles
      * render). That's why this is rendered standalone here rather than just
-     * included inline in {@code book.html} — see {@code
-     * cards/layouts/footer-herodevs.html} in a book for the inline-style
-     * convention a footer template should follow.
+     * included inline in {@code book.html} — see {@link #renderHeader} for
+     * the {@code header:} counterpart, and the inline-style convention any
+     * header/footer template should follow.
      */
     public String renderFooter(RenderContext bookCtx) {
         dev.noregressions.paperband.model.PageMatter footer = bookCtx.book().footer();
@@ -1013,6 +1014,26 @@ public final class LayoutEngine {
         model.put("book", bookSiteModel(bookCtx));
         model.put("vars", LenientMap.of(bookCtx.vars()));
         return renderSiteTemplate(footer.template(), model);
+    }
+
+    /**
+     * Pre-render a book's declared {@code header: { template: ... }} to a
+     * standalone HTML string, or {@code null} if no header is declared / the
+     * header declares no template. Call once per book build and thread the
+     * result into {@code HtmlInput.headerHtml}. See {@link #renderFooter} for
+     * the full rationale (same Playwright header/footer mechanism, same
+     * self-contained-inline-styles constraint, same real top-margin-space
+     * requirement — just the top band instead of the bottom one).
+     */
+    public String renderHeader(RenderContext bookCtx) {
+        dev.noregressions.paperband.model.PageMatter header = bookCtx.book().header();
+        if (header == null || header.template() == null || header.template().isBlank()) {
+            return null;
+        }
+        Map<String, Object> model = new HashMap<>();
+        model.put("book", bookSiteModel(bookCtx));
+        model.put("vars", LenientMap.of(bookCtx.vars()));
+        return renderSiteTemplate(header.template(), model);
     }
 
     /**
