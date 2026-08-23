@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="{% if target %}target-{{ target | lower }} {% endif %}{% if size %}size-{{ size | lower }}{% endif %}{% if orientation %} orientation-{{ orientation }}{% endif %}" style="--pw-content-height: {{ contentHeightMm }}mm;{% if fontScale %} --pw-font-scale: {{ fontScale }};{% endif %}">
+<html lang="en" class="{% if target %}target-{{ target | lower }} {% endif %}{% if size %}size-{{ size | lower }}{% endif %}{% if orientation %} orientation-{{ orientation }}{% endif %}" style="--pw-content-height: {{ contentHeightMm }}mm; --pw-page-margin-top: {{ pageMarginsMm.top }}mm; --pw-page-margin-right: {{ pageMarginsMm.right }}mm; --pw-page-margin-bottom: {{ pageMarginsMm.bottom }}mm; --pw-page-margin-left: {{ pageMarginsMm.left }}mm;{% if fontScale %} --pw-font-scale: {{ fontScale }};{% endif %}{% if measure %} --card-max-width: {{ measure }};{% endif %}">
 <head>
   <meta charset="UTF-8">
   <title>{{ card.title | default(card.id) }}</title>
@@ -16,6 +16,25 @@
     /* Minimal scaffold styles — book CSS chain follows and may override these. */
     body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
            line-height: 1.5; margin: 2rem; color: #222; }
+    /* In print, page geometry belongs to the build's page margins and the
+       theme — not to the 2rem screen default above. Left as-is it stacks a
+       fourth inset on top of the page margin, and being on `body` (one box
+       Chromium slices into pages) its vertical half lands on the first and
+       last page only, so it never applies consistently anyway.
+       What replaces it is horizontal-only — left/right padding shifts every
+       fragment alike, so it does hold per page — and sized to whatever the
+       page margin isn't already providing, so a full-bleed build still can't
+       put text on the trim edge even under a theme that sets no measure of
+       its own. Vertical insets come from the theme, which can make them
+       repeat per page with `box-decoration-break: clone`. */
+    @media print {
+      body {
+        margin: 0;
+        padding-left:  max(0mm, 8mm - var(--pw-page-margin-left, 0mm));
+        padding-right: max(0mm, 8mm - var(--pw-page-margin-right, 0mm));
+      }
+    }
+
     article.card { max-width: 48rem; margin: 0 auto; }
     h1.card-title { margin-top: 0; }
     section.block { margin-block: 1.5rem; }

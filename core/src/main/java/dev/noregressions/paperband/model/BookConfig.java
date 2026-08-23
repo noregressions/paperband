@@ -12,6 +12,12 @@ import java.util.Map;
  * @param bookRoot  absolute path of the book root directory; resolves relative paths inside the config
  * @param title     book title used in metadata and as a fallback for cover and index pages
  * @param axes      categorical axes declared for the book; drives tier dividers, landing pages and the site grouping
+ * @param parts     declared parts of the book from a root {@code parts:} key — each a titled
+ *        group of top-level folders (see {@link Part}). Empty when the book declares none,
+ *        in which case top-level grouping stays fully discovered: every top-level folder is
+ *        its own "section". Parts and discovered sections share one id namespace and one
+ *        rendering path, and folders no part claims remain discovered sections, so declaring
+ *        parts is additive rather than a mode switch.
  * @param globalCss CSS files applied to every card before any folder-level or per-card stylesheets
  * @param vars      free-form variables exposed to templates as {@code vars}
  * @param targets   names of declared build targets (e.g. {@code pdf-a4}, {@code pdf-6x9}, {@code web})
@@ -72,7 +78,8 @@ public record BookConfig(
         PageMatter cover,
         PageMatter back,
         PageMatter footer,
-        PageMatter header
+        PageMatter header,
+        List<Part> parts
 ) {
 
     public BookConfig {
@@ -80,6 +87,7 @@ public record BookConfig(
         globalCss = globalCss == null ? List.of() : List.copyOf(globalCss);
         vars      = vars      == null ? Map.of()  : Map.copyOf(vars);
         targets   = targets   == null ? List.of() : List.copyOf(targets);
+        parts     = parts     == null ? List.of() : List.copyOf(parts);
         theme     = (theme == null || theme.isBlank()) ? null : theme.trim();
     }
 
@@ -94,7 +102,7 @@ public record BookConfig(
             String theme,
             String sectionLandingTemplate) {
         this(bookRoot, title, axes, globalCss, vars, targets, theme, sectionLandingTemplate,
-                null, null, null, null, null);
+                null, null, null, null, null, List.of());
     }
 
     /** Convenience constructor for books with a {@code cardSchema:} but no {@code cover:}/{@code back:}/{@code footer:}/{@code header:}. */
@@ -109,11 +117,50 @@ public record BookConfig(
             String sectionLandingTemplate,
             CardSchema cardSchema) {
         this(bookRoot, title, axes, globalCss, vars, targets, theme, sectionLandingTemplate,
-                cardSchema, null, null, null, null);
+                cardSchema, null, null, null, null, List.of());
+    }
+
+    /**
+     * Convenience constructor for books that declare no {@code parts:} — the
+     * shape of the canonical constructor before parts existed, kept so
+     * existing callers stay source-compatible.
+     */
+    public BookConfig(
+            Path bookRoot,
+            String title,
+            List<Axis> axes,
+            List<Path> globalCss,
+            Map<String, Object> vars,
+            List<String> targets,
+            String theme,
+            String sectionLandingTemplate,
+            CardSchema cardSchema,
+            PageMatter cover,
+            PageMatter back,
+            PageMatter footer,
+            PageMatter header) {
+        this(bookRoot, title, axes, globalCss, vars, targets, theme, sectionLandingTemplate,
+                cardSchema, cover, back, footer, header, List.of());
+    }
+
+    /**
+     * A copy of this config with its {@code parts} replaced. Used when a
+     * book's top-level structure is declared somewhere other than the root
+     * {@code paperband.yaml} — the Maven plugin's {@code <book><parts>}
+     * element resolves globs into {@link Part}s and injects them here, so the
+     * rest of the pipeline sees a book that declares parts and can't tell the
+     * difference.
+     *
+     * @param newParts the parts to declare; null or empty clears them
+     * @return a copy carrying {@code newParts}
+     */
+    public BookConfig withParts(List<Part> newParts) {
+        return new BookConfig(bookRoot, title, axes, globalCss, vars, targets, theme,
+                sectionLandingTemplate, cardSchema, cover, back, footer, header, newParts);
     }
 
     public static BookConfig empty(Path bookRoot) {
         return new BookConfig(bookRoot, null, List.of(), List.of(), Map.of(), List.of(),
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, List.of());
     }
 }

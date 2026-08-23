@@ -41,6 +41,20 @@ public record RenderContext(
         vars     = vars     == null ? Map.of()  : Map.copyOf(vars);
     }
 
+    /**
+     * A copy of this context carrying a different {@link BookConfig}, leaving
+     * every per-card field alone. Used where the book-level config is
+     * amended after the cascade has already run — e.g. injecting parts
+     * declared outside the root {@code paperband.yaml} (see
+     * {@link BookConfig#withParts}).
+     *
+     * @param newBook the replacement book config
+     * @return a copy carrying {@code newBook}
+     */
+    public RenderContext withBook(BookConfig newBook) {
+        return new RenderContext(newBook, cssChain, vars, layout, target, size, pageSpec, fontScale);
+    }
+
     /** Convenience constructor for call sites that don't resolve page config (defaults to plain A4, no font-scale override). */
     public RenderContext(BookConfig book, List<Path> cssChain, Map<String, Object> vars,
                           Path layout, String target, String size) {

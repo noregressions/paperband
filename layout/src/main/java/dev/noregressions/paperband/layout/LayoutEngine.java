@@ -13,6 +13,7 @@ import dev.noregressions.paperband.model.AxisValue;
 import dev.noregressions.paperband.model.Block;
 import dev.noregressions.paperband.model.Card;
 import dev.noregressions.paperband.model.NamedTemplates;
+import dev.noregressions.paperband.model.Part;
 import dev.noregressions.paperband.model.RenderContext;
 import dev.noregressions.paperband.pebble.LenientMap;
 import dev.noregressions.paperband.pebble.LenientMapExtension;
@@ -338,18 +339,19 @@ public final class LayoutEngine {
 
         List<AxisGrouping> groupings = computeAxisGroupings(bookCtx, cards, contexts);
         Path bookRoot = book.bookRoot();
+        List<Part> bookParts = book.parts();
 
         // Same section discovery as buildBookModel: axis-less cards grouped
         // by top-level folder.
         Map<String, List<Integer>> bySection = new LinkedHashMap<>();
         for (int i = 0; i < cards.size(); i++) {
             if (hasAnyAxisValue(i, groupings)) continue;
-            String secId = sectionIdFor(bookRoot, cards.get(i).source());
+            String secId = sectionIdFor(bookRoot, bookParts, cards.get(i).source());
             if (secId == null) continue;
             bySection.computeIfAbsent(secId, k -> new ArrayList<>()).add(i);
         }
         List<Map<String, Object>> sectionMetas = buildSectionMetas(
-                bySection, bookRoot, book.sectionLandingTemplate(), new HashMap<>());
+                bySection, bookRoot, bookParts, book.sectionLandingTemplate(), new HashMap<>());
 
         Map<String, String> prevValueKeyByAxis = new HashMap<>();
         String prevSectionId = null;
@@ -377,7 +379,7 @@ public final class LayoutEngine {
 
             // Section divider — the axis-less fallback (mirrors sectionFirst).
             if (!hasAnyAxisValue(i, groupings)) {
-                String secId = sectionIdFor(bookRoot, card.source());
+                String secId = sectionIdFor(bookRoot, bookParts, card.source());
                 if (secId != null) {
                     grouped = true;
                     if (!secId.equals(prevSectionId)) {
@@ -511,16 +513,17 @@ public final class LayoutEngine {
         // the axis value pages. Front matter, back matter, delaying-tactics,
         // etc. live here.
         Path bookRoot = bookCtx.book().bookRoot();
+        List<Part> bookParts = bookCtx.book().parts();
         Map<String, List<Integer>> bySection = new LinkedHashMap<>();
         Map<String, FolderYamlInfo> sectionFolderYamlCache = new HashMap<>();
         for (int i = 0; i < cards.size(); i++) {
             if (hasAnyAxisValue(i, groupings)) continue;
-            String secId = sectionIdFor(bookRoot, cards.get(i).source());
+            String secId = sectionIdFor(bookRoot, bookParts, cards.get(i).source());
             if (secId == null) continue;
             bySection.computeIfAbsent(secId, k -> new ArrayList<>()).add(i);
         }
         List<Map<String, Object>> sectionMetas = buildSectionMetas(
-                bySection, bookRoot, bookCtx.book().sectionLandingTemplate(), sectionFolderYamlCache);
+                bySection, bookRoot, bookParts, bookCtx.book().sectionLandingTemplate(), sectionFolderYamlCache);
 
         // Sidebar opt-in lives in bookCtx.vars() so it cascades through the
         // standard yaml chain. Boolean / string-truthy both accepted.
@@ -549,7 +552,7 @@ public final class LayoutEngine {
         // this single list so every axis value and section entry appears in
         // the order cards were walked (driven by the book's paperband.yaml
         // `order:` chain) rather than always "axes first, sections last".
-        List<Map<String, Object>> navEntries = buildNavEntries(cards, groupings, bookRoot, sectionMetas);
+        List<Map<String, Object>> navEntries = buildNavEntries(cards, groupings, bookRoot, bookParts, sectionMetas);
 
         Map<String, String> out = new LinkedHashMap<>();
 
@@ -601,9 +604,14 @@ public final class LayoutEngine {
             }
         }
 
-        // <section-id>.html — one per section (front, back, ...)
+        // <section-id>.html — one per section (front, back, ...), except a
+        // declared part that opted out of having a page of its own. Its cards
+        // are already in the book and still listed under its label in the
+        // nav; there's just no page to land on (buildNavEntries drops the
+        // link to match).
         for (Map<String, Object> section : sectionMetas) {
             String id = (String) section.get("id");
+            if (Boolean.FALSE.equals(section.get("landingPage"))) continue;
             List<Integer> indices = bySection.getOrDefault(id, List.of());
             List<Map<String, Object>> sectionCards = new ArrayList<>(indices.size());
             for (int i : indices) {
@@ -633,7 +641,7 @@ public final class LayoutEngine {
             // a back-link to its containing section in nav.
             Map<String, Object> sectionMeta = null;
             if (!hasAnyAxisValue(i, groupings)) {
-                String secId = sectionIdFor(bookRoot, card.source());
+                String secId = sectionIdFor(bookRoot, bookParts, card.source());
                 if (secId != null) sectionMeta = findSectionMeta(sectionMetas, secId);
             }
             Map<String, Object> prev = (i > 0) ? siteCardLink(cards.get(i - 1), groupings, i - 1) : null;
@@ -755,7 +763,8 @@ public final class LayoutEngine {
      *   <li>{@code label}, {@code count} — copied from the source meta</li>
      *   <li>{@code color} — present for axis entries, absent for sections</li>
      *   <li>{@code url} — relative URL of the landing page
-     *       ({@code "tier-1.html"} or {@code "front.html"})</li>
+     *       ({@code "tier-1.html"} or {@code "front.html"}); absent for a
+     *       declared part that has no page of its own</li>
      * </ul>
      *
      * <p>Templates iterate this single list so the index, sidebar and top
@@ -767,6 +776,7 @@ public final class LayoutEngine {
             List<Card> cards,
             List<AxisGrouping> groupings,
             Path bookRoot,
+            List<Part> bookParts,
             List<Map<String, Object>> sectionMetas) {
         Map<String, Map<String, Object>> seen = new LinkedHashMap<>();
         for (int i = 0; i < cards.size(); i++) {
@@ -785,7 +795,7 @@ public final class LayoutEngine {
                 seen.put(key, entry);
             }
             if (any) continue;
-            String secId = sectionIdFor(bookRoot, cards.get(i).source());
+            String secId = sectionIdFor(bookRoot, bookParts, cards.get(i).source());
             if (secId == null) continue;
             String key = "section:" + secId;
             if (seen.containsKey(key)) continue;
@@ -793,7 +803,13 @@ public final class LayoutEngine {
             if (section == null) continue;
             Map<String, Object> entry = new LinkedHashMap<>(section);
             entry.put("kind", "section");
-            entry.put("url", secId + ".html");
+            // A part with no page of its own has nothing to link to, so its
+            // url is null and the templates render the label as plain text
+            // (its cards still link to their own pages). The key is always
+            // present, null or not — Pebble raises on a missing attribute,
+            // so an absent key would break every template reading e.url.
+            entry.put("url", Boolean.FALSE.equals(section.get("landingPage"))
+                    ? null : secId + ".html");
             seen.put(key, entry);
         }
         return new ArrayList<>(seen.values());
@@ -805,8 +821,31 @@ public final class LayoutEngine {
      * wrapper) — e.g. {@code /guide/content/front/foreword.md} → {@code "front"}.
      * Returns {@code null} when the card lies directly in the book root or
      * directly in {@code content/} (those cards have no enclosing section).
+     *
+     * <p>A part that claims this card <em>by path</em> ({@link Part#cards()},
+     * how the Maven plugin's pattern-declared parts express membership) wins
+     * outright, before the folder is even looked at: such a part exists
+     * precisely to group cards the directory layout doesn't group, and two of
+     * them may draw different files out of the same folder.
      */
-    private static String sectionIdFor(Path bookRoot, Path source) {
+    private static String sectionIdFor(Path bookRoot, List<Part> parts, Path source) {
+        String claimed = partIdForCard(parts, source);
+        if (claimed != null) return claimed;
+        String folder = folderIdFor(bookRoot, source);
+        if (folder == null) return null;
+        // A declared part speaks for every folder it claims, so those cards
+        // report the part's id and land in one group; unclaimed folders keep
+        // reporting their own name and stay discovered sections.
+        String partId = partIdForFolder(parts, folder);
+        return partId != null ? partId : folder;
+    }
+
+    /**
+     * The raw top-level folder a card sits in, relative to the book root (or
+     * to a {@code content/} wrapper) — the discovered section id, before any
+     * {@code parts:} declaration gets a say.
+     */
+    private static String folderIdFor(Path bookRoot, Path source) {
         if (bookRoot == null || source == null) return null;
         Path abs = source.toAbsolutePath().normalize();
         Path root = bookRoot.toAbsolutePath().normalize();
@@ -817,6 +856,37 @@ public final class LayoutEngine {
         // Need at least <section>/<card>.md beneath the start point.
         if (n <= start + 1) return null;
         return rel.getName(start).toString();
+    }
+
+    /**
+     * The id of the declared part claiming this exact card file, or null when
+     * no part does. Only pattern-declared parts claim individual cards; a
+     * yaml {@code parts:} entry claims folders and is skipped here.
+     */
+    private static String partIdForCard(List<Part> parts, Path source) {
+        if (parts == null || source == null) return null;
+        for (Part part : parts) {
+            if (part.claims(source)) return part.id();
+        }
+        return null;
+    }
+
+    /** The id of the declared part claiming {@code folder}, or null when no part does. */
+    private static String partIdForFolder(List<Part> parts, String folder) {
+        if (parts == null || folder == null) return null;
+        for (Part part : parts) {
+            if (part.folders().contains(folder)) return part.id();
+        }
+        return null;
+    }
+
+    /** The declared part with this id, or null — {@code id} may equally be a discovered folder's. */
+    private static Part partById(List<Part> parts, String id) {
+        if (parts == null || id == null) return null;
+        for (Part part : parts) {
+            if (id.equals(part.id())) return part;
+        }
+        return null;
     }
 
     /**
@@ -834,16 +904,30 @@ public final class LayoutEngine {
      * file path — both are already resolved to a bare template name by the
      * time they reach this method. Mirrors the equivalent per-axis
      * {@link Axis#landingTemplate()} override.
+     *
+     * <p>Each entry also carries {@code landingPage} — false only for a
+     * declared {@link Part} that opted out (see {@link Part#landingPage()}).
+     * The entry itself still exists, so the group keeps its label, count and
+     * card list in the nav, sidebar and index; what's dropped is its own page
+     * and every link to one.
      */
     private static List<Map<String, Object>> buildSectionMetas(
             Map<String, List<Integer>> bySection,
             Path bookRoot,
+            List<Part> parts,
             String bookDefaultSectionTemplate,
             Map<String, FolderYamlInfo> folderYamlCache) {
         List<Map<String, Object>> out = new ArrayList<>(bySection.size());
         for (var e : bySection.entrySet()) {
             String id = e.getKey();
-            FolderYamlInfo info = lookupSectionFolderYaml(bookRoot, id, folderYamlCache);
+            // A declared part carries its own title and landing template, so
+            // it needs no folder yaml lookup -- it spans several folders and
+            // no single one of them could speak for the group. Discovered
+            // sections resolve from their folder's yaml exactly as before.
+            Part part = partById(parts, id);
+            FolderYamlInfo info = part != null
+                    ? new FolderYamlInfo(part.title(), part.landingTemplate())
+                    : lookupSectionFolderYaml(bookRoot, id, folderYamlCache);
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id", id);
             m.put("label", info.title() != null ? info.title() : formatSectionLabel(id));
@@ -857,6 +941,11 @@ public final class LayoutEngine {
             // show the card count + TOC or just the title, keeping the PDF
             // and site output in sync for the same section.
             m.put("minimal", NamedTemplates.MINIMAL_SECTION_TEMPLATE.equals(template));
+            // Whether this group fronts its cards with a page of its own: the
+            // PDF divider (book.html) and the site's <id>.html landing page.
+            // Only a declared part can opt out — a discovered folder has
+            // nowhere to say so, so it always gets one.
+            m.put("landingPage", part == null || part.landingPage());
             out.add(m);
         }
         return out;
@@ -1467,6 +1556,8 @@ public final class LayoutEngine {
         model.put("fontScale", ctx.fontScale());
         model.put("orientation", ctx.pageSpec().orientation().name().toLowerCase());
         model.put("contentHeightMm", ctx.pageSpec().contentHeightMm());
+        model.put("pageMarginsMm", pageMarginsModel(ctx.pageSpec()));
+        model.put("measure", resolveMeasure(ctx.vars()));
         model.put("css", composeCss(ctx.cssChain()));
         return model;
     }
@@ -1509,10 +1600,11 @@ public final class LayoutEngine {
         // section, so this and the axis dividers above are mutually exclusive
         // per card.
         Path bookRoot = bookCtx.book().bookRoot();
+        List<Part> bookParts = bookCtx.book().parts();
         Map<String, List<Integer>> bookBySection = new LinkedHashMap<>();
         for (int i = 0; i < cards.size(); i++) {
             if (hasAnyAxisValue(i, groupings)) continue;
-            String secId = sectionIdFor(bookRoot, cards.get(i).source());
+            String secId = sectionIdFor(bookRoot, bookParts, cards.get(i).source());
             if (secId == null) continue;
             bookBySection.computeIfAbsent(secId, k -> new ArrayList<>()).add(i);
         }
@@ -1521,7 +1613,7 @@ public final class LayoutEngine {
         // resolved to the minimal preset gets a minimal PDF divider too —
         // _section-divider-base.html reads the "minimal" flag this sets.
         List<Map<String, Object>> sectionMetas = buildSectionMetas(
-                bookBySection, bookRoot, bookCtx.book().sectionLandingTemplate(), new HashMap<>());
+                bookBySection, bookRoot, bookParts, bookCtx.book().sectionLandingTemplate(), new HashMap<>());
         for (Map<String, Object> section : sectionMetas) {
             String id = (String) section.get("id");
             List<Integer> indices = bookBySection.getOrDefault(id, List.of());
@@ -1561,7 +1653,7 @@ public final class LayoutEngine {
             Map<String, Object> sectionMeta = null;
             boolean sectionFirst = false;
             if (!hasAnyAxisValue(i, groupings)) {
-                String secId = sectionIdFor(bookRoot, cards.get(i).source());
+                String secId = sectionIdFor(bookRoot, bookParts, cards.get(i).source());
                 if (secId != null) {
                     sectionMeta = findSectionMeta(sectionMetas, secId);
                     sectionFirst = !secId.equals(prevSectionId);
@@ -1586,6 +1678,8 @@ public final class LayoutEngine {
         model.put("fontScale", bookCtx.fontScale());
         model.put("orientation", bookCtx.pageSpec().orientation().name().toLowerCase());
         model.put("contentHeightMm", bookCtx.pageSpec().contentHeightMm());
+        model.put("pageMarginsMm", pageMarginsModel(bookCtx.pageSpec()));
+        model.put("measure", resolveMeasure(bookCtx.vars()));
         model.put("css", composeCss(bookCtx.cssChain()));
         return model;
     }
@@ -1728,6 +1822,65 @@ public final class LayoutEngine {
      * if the resource is somehow absent, so a packaging slip degrades gracefully
      * rather than throwing mid-render.
      */
+    /** CSS lengths a {@code page.measure} may be expressed in, plus {@code none}. */
+    private static final java.util.regex.Pattern MEASURE_PATTERN =
+            java.util.regex.Pattern.compile("(?i)none|[0-9]+(\\.[0-9]+)?(rem|em|mm|cm|in|pt|px|%)");
+
+    /**
+     * The book's {@code vars.page.measure} — the text measure (line length)
+     * themes read as {@code --card-max-width}.
+     *
+     * <p>It is stamped inline on {@code <html>} rather than added to the CSS
+     * chain because of where the chain puts a book's own stylesheet: theme CSS
+     * is inlined <em>after</em> it, so a theme's {@code :root
+     * { --card-max-width: 38rem }} wins over a book that tries to set the same
+     * property in its css. An inline style on the element outranks any
+     * selector, so declaring the measure here is the one way a book retunes a
+     * themed measure without resorting to {@code !important}.
+     *
+     * <p>This is the largest of the insets that make a full-bleed page still
+     * look margined — a 38rem measure on a 210mm page leaves 23mm of gutter
+     * either side, which is a line-length decision rather than a margin, and
+     * only the book can say whether it wants it.
+     *
+     * @param vars the resolved vars for this render
+     * @return the measure as a CSS length, or null when the book declares none
+     *         (leaving the theme's own default in force)
+     * @throws IllegalArgumentException if the value isn't a plain CSS length —
+     *         it lands in a style attribute, so it is never passed through
+     *         unvalidated
+     */
+    private static String resolveMeasure(Map<String, Object> vars) {
+        Object page = vars == null ? null : vars.get("page");
+        if (!(page instanceof Map<?, ?> pm)) return null;
+        Object measure = pm.get("measure");
+        if (measure == null) return null;
+        String value = measure.toString().trim();
+        if (value.isEmpty()) return null;
+        if (!MEASURE_PATTERN.matcher(value).matches()) {
+            throw new IllegalArgumentException(
+                    "page.measure: expected a CSS length (e.g. 42rem, 160mm) or 'none', got: " + value);
+        }
+        return value;
+    }
+
+    /**
+     * The build's page margins in millimetres, keyed for the template that
+     * stamps them as {@code --pw-page-margin-*} custom properties. Themes
+     * read them to size insets the page margin isn't already providing — see
+     * {@link dev.noregressions.paperband.render.PageSpec#marginsMm()}.
+     */
+    private static Map<String, Object> pageMarginsModel(
+            dev.noregressions.paperband.render.PageSpec pageSpec) {
+        double[] mm = pageSpec.marginsMm();
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("top", mm[0]);
+        out.put("right", mm[1]);
+        out.put("bottom", mm[2]);
+        out.put("left", mm[3]);
+        return out;
+    }
+
     private static String siteBaseCss() {
         try (java.io.InputStream in =
                      LayoutEngine.class.getResourceAsStream("/site/site-base.css")) {

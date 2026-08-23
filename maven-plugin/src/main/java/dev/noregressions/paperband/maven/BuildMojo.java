@@ -4,14 +4,17 @@ import dev.noregressions.paperband.cards.CardLoader;
 import dev.noregressions.paperband.cards.CardParseException;
 import dev.noregressions.paperband.cards.MarkdownPreprocessor;
 import dev.noregressions.paperband.cards.YamlCardTranspiler;
+import dev.noregressions.paperband.config.BookPlan;
 import dev.noregressions.paperband.config.BookWalker;
 import dev.noregressions.paperband.config.ConfigLoader;
+import dev.noregressions.paperband.render.Margins;
 import dev.noregressions.paperband.include.Includes;
 import dev.noregressions.paperband.layout.LayoutEngine;
 import dev.noregressions.paperband.layout.ThemeBundle;
 import dev.noregressions.paperband.layout.ThemeResolver;
 import dev.noregressions.paperband.model.Card;
 import dev.noregressions.paperband.model.CardSchema;
+import dev.noregressions.paperband.model.Part;
 import dev.noregressions.paperband.model.RenderContext;
 import dev.noregressions.paperband.render.HtmlInput;
 import dev.noregressions.paperband.render.HtmlToPdfRenderer;
@@ -76,6 +79,23 @@ import java.util.Map;
  * </plugin>
  * }</pre>
  * or invoked directly: {@code mvn paperband:build -Dpaperband.input=guide -Dpaperband.output=guide.pdf}
+ *
+ * <p>In place of {@code <input>}, a book's structure can be declared in the
+ * POM itself and its cards selected by glob — see {@link BookLayout}:
+ *
+ * <pre>
+ * &lt;configuration&gt;
+ *   &lt;output&gt;${project.build.directory}/traces.pdf&lt;/output&gt;
+ *   &lt;book&gt;
+ *     &lt;parts&gt;
+ *       &lt;part&gt;
+ *         &lt;title&gt;Execution Traces&lt;/title&gt;
+ *         &lt;includes&gt;&lt;include&gt;services/&#42;/TRACE.md&lt;/include&gt;&lt;/includes&gt;
+ *       &lt;/part&gt;
+ *     &lt;/parts&gt;
+ *   &lt;/book&gt;
+ * &lt;/configuration&gt;
+ * </pre>
  */
 @Mojo(name = "build", defaultPhase = LifecyclePhase.PROCESS_RESOURCES, threadSafe = true)
 public class BuildMojo extends AbstractMojo {
@@ -83,9 +103,29 @@ public class BuildMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project}", readonly = true)
     private MavenProject project;
 
-    /** Input markdown file (single card) or directory (book). Relative paths resolve against the module's basedir. */
-    @Parameter(property = "paperband.input", required = true)
+    /**
+     * Input markdown file (single card) or directory (book). Relative paths
+     * resolve against the module's basedir. Mutually exclusive with
+     * {@link #book} — exactly one of the two says what to build.
+     */
+    @Parameter(property = "paperband.input")
     private java.io.File input;
+
+    /**
+     * A book whose structure is declared here rather than inferred from a
+     * directory tree: an ordered list of titled parts, each selecting its
+     * cards by glob. See {@link BookLayout} for the element's shape.
+     *
+     * <p>Use this instead of {@code <input>} when the book's shape doesn't
+     * match the disk — one card pulled out of each of many sibling
+     * directories, several folders' worth of cards fronted by a single
+     * divider, a card list assembled from patterns rather than filename
+     * order. Where {@code <input>} points at a tree and lets
+     * {@code BookWalker} and the {@code paperband.yaml} sequencing keys decide
+     * the rest, this states the answer outright.
+     */
+    @Parameter
+    private BookLayout book;
 
     /** Output PDF file. Relative paths resolve against the module's basedir. */
     @Parameter(property = "paperband.output", required = true)
@@ -103,12 +143,42 @@ public class BuildMojo extends AbstractMojo {
     @Parameter(property = "paperband.pageSize", defaultValue = "a4")
     private String pageSize;
 
+    /**
+     * Page margins, as a CSS-style shorthand: one to four lengths, optionally
+     * with a unit ({@code mm} by default, or {@code cm}/{@code in}/{@code pt}).
+     *
+     * <pre>
+     * &lt;margins&gt;0&lt;/margins&gt;              full bleed — see below
+     * &lt;margins&gt;18mm&lt;/margins&gt;           18mm on every edge
+     * &lt;margins&gt;20mm 15mm&lt;/margins&gt;      vertical, horizontal
+     * &lt;margins&gt;20 15 25 15&lt;/margins&gt;    top, right, bottom, left
+     * </pre>
+     *
+     * <p>Unset, the page size preset's own margins apply (20mm for A4, zero
+     * for A5). Like {@link #pageSize}, this seeds the <em>base</em> geometry,
+     * so a {@code vars.page.margins} block in the book's yaml still wins.
+     *
+     * <p>{@code 0} is what a theme whose ground is the paper needs: Chromium
+     * paints nothing into a PDF page margin, so any margin shows as a white
+     * border around every page, and zero is the only way a coloured ground
+     * reaches the trim edge. The bundled full-bleed themes supply their own
+     * insets in that case — see the Themes guide.
+     */
+    @Parameter(property = "paperband.margins")
+    private String margins;
+
     /** Layout template name override. Defaults to the context layout, or 'card'/'book' if unset. */
-    @Parameter(property = "paperband.layout")
+    // alias: the POM element every doc and example uses is <layout>, matching
+    // the -Dpaperband.layout property; without it Maven silently ignores
+    // <layout> (it warns, but a warning in a resource-phase build is easy to
+    // miss) and the build runs with no override at all.
+    @Parameter(property = "paperband.layout", alias = "layout")
     private String layoutOverride;
 
     /** Named theme to apply. Overrides any {@code theme:} declared in the book's {@code paperband.yaml}. */
-    @Parameter(property = "paperband.theme")
+    // alias: <theme>, as documented and as the property is named. See the
+    // note on layoutOverride above.
+    @Parameter(property = "paperband.theme", alias = "theme")
     private String themeName;
 
     /** Directory of user themes, checked before classpath built-ins. */
@@ -126,10 +196,25 @@ public class BuildMojo extends AbstractMojo {
             return;
         }
 
-        Path inputPath = resolve(input);
+        if (input != null && book != null) {
+            throw new MojoExecutionException(
+                    "Configure either <input> or <book>, not both: <input> walks a directory tree, "
+                            + "<book> declares the structure and selects cards by glob");
+        }
+        if (input == null && book == null) {
+            throw new MojoExecutionException(
+                    "Nothing to build: configure <input> (a card file or book directory) or <book> "
+                            + "(a declared book layout)");
+        }
+
         Path outputPath = resolve(output);
 
         try {
+            if (book != null) {
+                buildPlannedBook(outputPath);
+                return;
+            }
+            Path inputPath = resolve(input);
             if (Files.isRegularFile(inputPath)) {
                 buildSingle(inputPath, outputPath);
             } else if (Files.isDirectory(inputPath)) {
@@ -144,6 +229,22 @@ public class BuildMojo extends AbstractMojo {
         }
     }
 
+    /**
+     * The {@code <margins>} shorthand as real {@link Margins}, or null when
+     * the POM declares none.
+     *
+     * @throws MojoExecutionException if the shorthand is malformed — a typo in
+     *         page geometry should fail the build, not silently render at the
+     *         preset's margins
+     */
+    private Margins resolveMargins() throws MojoExecutionException {
+        try {
+            return Margins.parse(margins);
+        } catch (IllegalArgumentException e) {
+            throw new MojoExecutionException("<margins>: " + e.getMessage(), e);
+        }
+    }
+
     private Path resolve(java.io.File f) {
         Path p = f.toPath();
         if (p.isAbsolute() || project == null) return p;
@@ -153,7 +254,7 @@ public class BuildMojo extends AbstractMojo {
     // ---- single-card path (mirrors BuildCommand.buildSingle) ----
 
     private void buildSingle(Path input, Path output) throws Exception {
-        RenderContext ctx = new ConfigLoader().load(input, target, pageSize);
+        RenderContext ctx = new ConfigLoader().load(input, target, pageSize, resolveMargins());
         MarkdownPreprocessor preprocessor =
                 Includes.defaultPreprocessor(ctx.book().bookRoot(), Map.of(), ctx.vars());
         Card card = loadCard(new CardLoader(), preprocessor, input, ctx.book().cardSchema());
@@ -177,6 +278,7 @@ public class BuildMojo extends AbstractMojo {
                 + " (renderer=" + htmlToPdfRenderer.name()
                 + ", target=" + target
                 + ", size=" + pageSize
+                + (margins == null ? "" : ", margins=" + margins)
                 + ", blocks=" + card.blocks().size() + ")");
     }
 
@@ -189,7 +291,57 @@ public class BuildMojo extends AbstractMojo {
             throw new MojoFailureException("No cards found under " + input);
         }
         getLog().info("Found " + cardFiles.size() + " cards under " + input);
+        renderBook(input, cardFiles, List.of(), output);
+    }
 
+    /**
+     * Book from a declared {@code <book>} layout: resolve the patterns into an
+     * ordered card list plus the parts grouping it, then render exactly as a
+     * walked book does. The only difference downstream is that the parts came
+     * from the POM rather than the root {@code paperband.yaml}, and that they
+     * claim individual cards instead of whole folders.
+     */
+    private void buildPlannedBook(Path output) throws Exception {
+        Path root = book.getRoot() != null
+                ? resolve(book.getRoot())
+                : (project == null ? Path.of("") : project.getBasedir().toPath());
+        if (!Files.isDirectory(root)) {
+            throw new MojoExecutionException("<book><root> is not a directory: " + root);
+        }
+
+        List<BookPlan.PartSpec> specs;
+        try {
+            specs = book.toSpecs();
+        } catch (IllegalArgumentException e) {
+            throw new MojoExecutionException(e.getMessage(), e);
+        }
+
+        BookPlan.Plan plan = BookPlan.resolve(root, specs, target);
+        if (plan.cards().isEmpty()) {
+            throw new MojoFailureException("No cards matched the <book> patterns under " + root);
+        }
+        getLog().info("Planned " + plan.cards().size() + " cards in "
+                + plan.parts().size() + (plan.parts().size() == 1 ? " part under " : " parts under ") + root);
+        for (Part part : plan.parts()) {
+            getLog().debug("  part " + part.id() + " (" + part.title() + "): "
+                    + part.cards().size() + " cards");
+        }
+        renderBook(root, plan.cards(), plan.parts(), output);
+    }
+
+    /**
+     * Load every card in {@code cardFiles}, in order, and render them as one
+     * book PDF.
+     *
+     * @param bookRoot      directory the build was rooted at — the PDF's base URI
+     *                      for relative asset references
+     * @param cardFiles     ordered card files, however they were selected
+     * @param declaredParts parts to declare on the book, replacing anything the
+     *                      root {@code paperband.yaml} declared; empty to leave
+     *                      the yaml's own {@code parts:} (or lack of them) alone
+     */
+    private void renderBook(Path bookRoot, List<Path> cardFiles, List<Part> declaredParts, Path output)
+            throws Exception {
         ConfigLoader configLoader = new ConfigLoader();
         List<Card> cards = new ArrayList<>(cardFiles.size());
         List<RenderContext> contexts = new ArrayList<>(cardFiles.size());
@@ -197,7 +349,7 @@ public class BuildMojo extends AbstractMojo {
         CardLoader cardLoader = new CardLoader();
         int totalBlocks = 0;
         for (Path cardFile : cardFiles) {
-            RenderContext ctx = configLoader.load(cardFile, target, pageSize);
+            RenderContext ctx = configLoader.load(cardFile, target, pageSize, resolveMargins());
             if (bookCtx == null) {
                 bookCtx = ctx; // capture book-root css/title once, same as BuildCommand
             }
@@ -209,6 +361,17 @@ public class BuildMojo extends AbstractMojo {
             totalBlocks += card.blocks().size();
         }
 
+        // Declared parts replace whatever the root yaml said: two sources for
+        // one book's top-level structure can only disagree, and the POM is the
+        // one the user just edited.
+        if (!declaredParts.isEmpty()) {
+            if (!bookCtx.book().parts().isEmpty()) {
+                getLog().warn("<book><parts> overrides the 'parts:' declared in "
+                        + bookCtx.book().bookRoot().resolve("paperband.yaml"));
+            }
+            bookCtx = bookCtx.withBook(bookCtx.book().withParts(declaredParts));
+        }
+
         ThemeBundle theme = ThemeResolver.resolve(resolveThemeName(bookCtx), themeDirPath());
         LayoutEngine layout = new LayoutEngine(bookCtx.book().bookRoot(), theme);
         String html = (layoutOverride != null)
@@ -217,7 +380,7 @@ public class BuildMojo extends AbstractMojo {
 
         HtmlToPdfRenderer htmlToPdfRenderer = resolveRenderer();
 
-        URI baseUri = input.toAbsolutePath().toUri();
+        URI baseUri = bookRoot.toAbsolutePath().toUri();
         String bookTitle = bookCtx.book().title();
         PdfMetadata metadata = bookTitle != null ? PdfMetadata.of(bookTitle) : PdfMetadata.empty();
         String footerHtml = layout.renderFooter(bookCtx);
@@ -227,10 +390,11 @@ public class BuildMojo extends AbstractMojo {
         ensureParentDir(output);
         htmlToPdfRenderer.render(htmlInput, output);
 
-        getLog().info("Built book " + input + " -> " + output
+        getLog().info("Built book " + bookRoot + " -> " + output
                 + " (renderer=" + htmlToPdfRenderer.name()
                 + ", target=" + target
                 + ", size=" + pageSize
+                + (margins == null ? "" : ", margins=" + margins)
                 + ", cards=" + cards.size()
                 + ", blocks=" + totalBlocks + ")");
     }

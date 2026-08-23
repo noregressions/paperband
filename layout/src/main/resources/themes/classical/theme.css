@@ -207,3 +207,53 @@ code.cls-property    { color: #1a1a1a; }
   box-shadow: none;
   border-radius: 0;
 }
+
+/* ── Part / section divider — a part-title page ───────────────────────────
+ * Hairline rules and small caps, the same register as the card furniture. */
+.section-divider .tier-divider-inner {
+  border-top: 1px solid #c8c2a8;
+  border-bottom: 1px solid #c8c2a8;
+  padding: 2.5rem 1.25rem;
+}
+.section-divider h1 {
+  font-family: 'EB Garamond', 'Adobe Garamond Pro', Georgia, serif;
+  font-weight: 600;
+  font-size: 2.3rem;
+}
+.section-divider .tier-count {
+  color: #6a6056;
+  opacity: 1;
+  font-variant: small-caps;
+  letter-spacing: 0.1em;
+  font-size: 0.85rem;
+}
+.section-divider .tier-toc a { color: #1a1a1a; }
+
+/* ── Full-bleed print insets ──────────────────────────────────────────────
+ * Chromium paints nothing into a PDF page margin, so on a theme whose ground
+ * is the paper any page margin shows up as a white border round every page.
+ * Reaching the trim edge means a full-bleed build — `vars.page.margins: 0`,
+ * or the Maven plugin's `<margins>0</margins>` — which hands every inset to
+ * the theme:
+ *
+ *   - `box-decoration-break: clone` repeats the card's padding (and frame) on
+ *     every page a long card spans. Without it Chromium pads the first and
+ *     last fragment of a fragmented box only, so a card running to 150 pages
+ *     puts body text hard against the trim edge on every page in between.
+ *   - The insets are sized against the build's own margin
+ *     (`--pw-page-margin-*`, stamped on <html> from the resolved PageSpec),
+ *     so these rules read correctly whether or not the book zeroes it: the
+ *     full inset at full bleed, the floor when the page margin already
+ *     provides one.
+ *
+ * Horizontal inset still comes from the card's centred measure, which holds
+ * on every page regardless of fragmentation. */
+@media print {
+  article.card {
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    box-sizing: border-box;
+    padding-top: max(10mm, 18mm - var(--pw-page-margin-top, 0mm));
+    padding-bottom: max(10mm, 18mm - var(--pw-page-margin-bottom, 0mm));
+  }
+}

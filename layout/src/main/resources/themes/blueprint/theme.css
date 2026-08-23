@@ -36,6 +36,60 @@ article.card.tier-1 { --tier-color: #ff7e6b; }
 article.card.tier-2 { --tier-color: #ffc06b; }
 article.card.tier-3 { --tier-color: #d2a4ff; }
 
+/* ── Print insets — this theme owns them ─────────────────────────────────
+ * Blueprint's ground is the sheet itself, so the theme is built full-bleed:
+ * `vars.page.margins: { top: 0, right: 0, bottom: 0, left: 0 }` in the book
+ * root. Chromium paints nothing into a PDF page margin, so any page margin
+ * shows up as a white mount around the slate ground — full-bleed is the only
+ * way to get colour to the trim edge, and it means every inset has to come
+ * from here instead:
+ *
+ *   - `body { margin: 0 }` — the scaffold's 2rem is a screen unit, and being
+ *     on the body it lands on the first and last page only.
+ *   - `box-decoration-break: clone` — repeats the card's frame *and its
+ *     padding* on every page a long card spans. Without it Chromium pads the
+ *     first and last fragment only, so a card running to 150 pages puts body
+ *     text hard against the trim edge on every page in between. This is the
+ *     one property that makes a full-bleed build usable for long cards.
+ *
+ * Books that do keep a page margin still render correctly — these insets
+ * simply stack on top of it. */
+@media print {
+  /* How much inset the theme has to supply itself: the target inset, less
+     whatever the build's page margin already provides, never below a floor.
+     A full-bleed build (margins 0) gets the full amount; a book that keeps
+     20mm page margins gets the floor, so the same theme reads correctly
+     either way instead of being tuned for one of them. */
+  :root {
+    --bp-frame-block:  max(0mm, 10mm - var(--pw-page-margin-top, 0mm));
+    --bp-frame-inline: max(0mm, 12mm - var(--pw-page-margin-left, 0mm));
+    --bp-pad-block:    max(6mm, 13mm - var(--pw-page-margin-top, 0mm));
+    --bp-pad-inline:   max(6mm, 13mm - var(--pw-page-margin-left, 0mm));
+  }
+  /* This theme places the frame by its own margins, so it opts out of the
+     scaffold's horizontal safety padding rather than stacking with it. */
+  body { margin: 0; padding: 0; }
+  article.card {
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    /* border-box, and max-width dropped: --card-max-width sizes the CONTENT
+       box, so with real print padding on top the frame overflowed the trim.
+       At full bleed the sheet is the measure, so the frame is placed by its
+       own margins instead of by a centred max-width. */
+    box-sizing: border-box;
+    max-width: none;
+    margin: var(--bp-frame-block) var(--bp-frame-inline);
+    padding: var(--bp-pad-block) var(--bp-pad-inline);
+  }
+  /* Single-page furniture: no fragmentation to worry about, just room to
+     breathe once the page margin is gone. */
+  .book-cover, .book-back {
+    box-sizing: border-box;
+    padding: max(12mm, 32mm - var(--pw-page-margin-top, 0mm))
+             max(10mm, 22mm - var(--pw-page-margin-left, 0mm));
+  }
+}
+
 /* ── Card frame as a drafting border with corner ticks ──────────────────── */
 article.card {
   max-width: var(--card-max-width, 48rem);
@@ -49,7 +103,12 @@ article.card {
   box-shadow: none;
   padding: 2rem 2.25rem;
 }
-/* Corner ticks — small + signs at each corner */
+/* Corner brackets — drafting ticks at the frame's corners. Drawn just
+ * INSIDE the card box, not straddling it: a card starts at the top of its
+ * page (every card follows a page break), so a tick offset outside the box
+ * lands on the sheet before it — which is how a stray corner mark used to
+ * appear at the bottom of the preceding divider page, and the card's own top
+ * tick came out clipped. */
 article.card::before,
 article.card::after {
   content: "";
@@ -59,11 +118,11 @@ article.card::after {
   pointer-events: none;
 }
 article.card::before {
-  top: -7px; left: -7px;
+  top: 3px; left: 3px;
   border-right: none; border-bottom: none;
 }
 article.card::after {
-  bottom: -7px; right: -7px;
+  bottom: 3px; right: 3px;
   border-left: none; border-top: none;
 }
 
@@ -227,6 +286,43 @@ code.cls-property    { color: #e8eef5; }
   font-family: 'IBM Plex Mono', monospace;
 }
 .tier-divider .tier-toc a { color: #ffffff; }
+
+/* ── Part / section divider — a title plate on the drawing sheet ──────────
+ * Sections carry no tier colour, so the plate takes the sheet's own amber
+ * annotation accent rather than a value colour. Written against the divider
+ * as a full page (it is one sheet, centred): the accent rules bracket the
+ * title block instead of running edge to edge the way the inline rule this
+ * theme was first written for did. Everything here lives inside the PDF's
+ * printable area — Chromium paints nothing into the page margin, so the
+ * plate is what the theme can own. */
+.section-divider {
+  color: #ffffff;
+}
+.section-divider .tier-divider-inner {
+  border-top: 6px solid #ffc06b;
+  border-bottom: 6px solid #ffc06b;
+  padding: 2.25rem 2rem 2rem;
+}
+.section-divider h1 {
+  font-family: 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, monospace;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 1.9rem;
+}
+.section-divider .tier-count {
+  font-family: 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, monospace;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 0.75rem;
+  color: #ffc06b;
+  opacity: 1;
+}
+.section-divider .tier-toc {
+  font-family: 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.9rem;
+}
+.section-divider .tier-toc a { color: #ffffff; }
+.section-divider .tier-toc li::marker { color: #ffc06b; }
 
 /* ── Site chrome ────────────────────────────────────────────────────────── */
 .site-nav { background: #142a45; border-bottom: 1px solid rgba(255,255,255,0.2); }

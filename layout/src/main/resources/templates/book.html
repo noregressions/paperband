@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="{% if target %}target-{{ target | lower }} {% endif %}{% if size %}size-{{ size | lower }}{% endif %}{% if orientation %} orientation-{{ orientation }}{% endif %}{% if edition is not null %} edition-{{ edition.id }}{% for c in edition.classes %} {{ c }}{% endfor %}{% endif %}" style="--pw-content-height: {{ contentHeightMm }}mm;{% if fontScale %} --pw-font-scale: {{ fontScale }};{% endif %}">
+<html lang="en" class="{% if target %}target-{{ target | lower }} {% endif %}{% if size %}size-{{ size | lower }}{% endif %}{% if orientation %} orientation-{{ orientation }}{% endif %}{% if edition is not null %} edition-{{ edition.id }}{% for c in edition.classes %} {{ c }}{% endfor %}{% endif %}" style="--pw-content-height: {{ contentHeightMm }}mm; --pw-page-margin-top: {{ pageMarginsMm.top }}mm; --pw-page-margin-right: {{ pageMarginsMm.right }}mm; --pw-page-margin-bottom: {{ pageMarginsMm.bottom }}mm; --pw-page-margin-left: {{ pageMarginsMm.left }}mm;{% if fontScale %} --pw-font-scale: {{ fontScale }};{% endif %}{% if measure %} --card-max-width: {{ measure }};{% endif %}">
 <head>
   <meta charset="UTF-8">
   <title>{{ ctx.book.title | default('paperband book') }}</title>
@@ -20,6 +20,25 @@
     /* Minimal scaffold — book CSS chain follows and may override these. */
     body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
            line-height: 1.5; margin: 2rem; color: #222; }
+    /* In print, page geometry belongs to the build's page margins and the
+       theme — not to the 2rem screen default above. Left as-is it stacks a
+       fourth inset on top of the page margin, and being on `body` (one box
+       Chromium slices into pages) its vertical half lands on the first and
+       last page only, so it never applies consistently anyway.
+       What replaces it is horizontal-only — left/right padding shifts every
+       fragment alike, so it does hold per page — and sized to whatever the
+       page margin isn't already providing, so a full-bleed build still can't
+       put text on the trim edge even under a theme that sets no measure of
+       its own. Vertical insets come from the theme, which can make them
+       repeat per page with `box-decoration-break: clone`. */
+    @media print {
+      body {
+        margin: 0;
+        padding-left:  max(0mm, 8mm - var(--pw-page-margin-left, 0mm));
+        padding-right: max(0mm, 8mm - var(--pw-page-margin-right, 0mm));
+      }
+    }
+
     article.card { max-width: 48rem; margin: 0 auto 3rem; }
     h1.card-title { margin-top: 0; }
     section.block { margin-block: 1.5rem; }
@@ -66,13 +85,43 @@
     .book-back { page-break-before: always; }
     .book-cover-image, .book-back-image { display: block; width: 100%; }
 
-    /* Plain-section PDF divider — theme-neutral by default (sections have no
-       colour concept the way axis values do); themes/book CSS may add their
-       own .section-divider rules below to override this. */
-    .section-divider { margin: 3rem 0; padding: 1.5rem 0; border-top: 1px solid #ddd; border-bottom: 1px solid #ddd; }
+    /* Plain-section / part PDF divider — a page, not a rule between cards.
+       It gets a sheet of its own (forced break on both sides; adjacent
+       forced breaks collapse, so the .card-break before it doesn't leave a
+       blank page) and stands up to the full printable height so its content
+       centres on the sheet. That height comes from --pw-content-height,
+       stamped on <html> from the build's PageSpec — never a hardcoded page
+       height, which overflows onto a second sheet the moment a book sets its
+       own page margins (see PageSpec.contentHeightMm). Theme-neutral by
+       default (sections have no colour concept the way axis values do);
+       themes/book CSS may add their own .section-divider rules below to
+       override this. */
+    .section-divider {
+      break-before: page;
+      break-after: page;
+      page-break-before: always;
+      page-break-after: always;
+      box-sizing: border-box;
+      min-height: var(--pw-content-height, 100vh);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+    /* The flex item — width-capped so a long title wraps to a readable
+       measure rather than the full page width, and left-aligned again for
+       the table of contents, which reads badly centred. */
+    .section-divider .tier-divider-inner { width: 100%; max-width: 34rem; }
     .section-divider h1 { margin: 0 0 0.5rem; }
-    .section-divider .tier-count { color: #666; margin-bottom: 1rem; }
-    .section-divider .tier-toc { padding-left: 1.25rem; }
+    /* Colours inherit rather than hardcode: a divider covers a whole sheet in
+       whatever ground the theme paints, so a fixed grey and the UA's link
+       blue turn invisible the moment that ground is dark (they did). Themes
+       that want more than legibility still style .section-divider directly. */
+    .section-divider .tier-count { color: inherit; opacity: 0.65; margin-bottom: 1rem; }
+    .section-divider .tier-toc { display: inline-block; text-align: left; padding-left: 1.25rem; }
+    .section-divider .tier-toc a { color: inherit; text-decoration: none; }
 
     /* Book CSS chain (inlined) */
     {{ css | raw }}
@@ -84,7 +133,9 @@
      become PDF destinations when linked). One axis-divider-{axisName}-{valueId}
      anchor per declared value, for every axis independently, plus one
      section-divider-{sectionId} anchor per plain section — distinct prefixes
-     are what let PagesReport recognise each kind of divider generically. #}
+     are what let PagesReport recognise each kind of divider generically.
+     A declared part that opted out of a divider page (landingPage false) has
+     no anchor to bait, so it's skipped here as well as below. #}
   <div class="pt-anchor-bait" aria-hidden="true"
        style="position:absolute;left:-9999px;top:-9999px;width:0;height:0;overflow:hidden">
     <a href="#book-cover">cover</a>
@@ -92,7 +143,14 @@
     {% for g in axisGroupings %}
     {% for v in g.values %}<a href="#axis-divider-{{ g.axis.name }}-{{ v.id }}">{{ v.label }}</a>{% endfor %}
     {% endfor %}
-    {% for s in sections %}<a href="#section-divider-{{ s.id }}">{{ s.label }}</a>{% endfor %}
+    {% for s in sections %}{% if s.landingPage %}<a href="#section-divider-{{ s.id }}">{{ s.label }}</a>{% endif %}{% endfor %}
+    {# Every card, so each one is addressable in the PDF and shows up in
+       `paperband pages`. Card anchors are otherwise only linked from a
+       divider's table of contents, which leaves the cards of a part that
+       declined its divider page (landingPage false) with no named
+       destination at all — present in the book, invisible to any tool
+       reading it. #}
+    {% for card in cards %}<a href="#card-{{ card.id }}">{{ card.title }}</a>{% endfor %}
   </div>
 
   {# Cover page. A custom cover template (cover: { template: ... } in the
@@ -130,7 +188,7 @@
     {# A card either has a value on some axis (handled above) or falls into
        the axis-less "section" fallback, never both — so at most one of the
        axis-divider loop above or this section-divider check fires per card. #}
-    {% if card.sectionFirst and card.sectionMeta is not null %}
+    {% if card.sectionFirst and card.sectionMeta is not null and card.sectionMeta.landingPage %}
     {% include "_section-divider" with {"section": card.sectionMeta} %}
     {% endif %}
 

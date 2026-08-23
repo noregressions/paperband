@@ -1,7 +1,9 @@
 package dev.noregressions.paperband.config;
 
 import dev.noregressions.paperband.model.BookConfig;
+import dev.noregressions.paperband.model.Part;
 import dev.noregressions.paperband.model.RenderContext;
+import dev.noregressions.paperband.render.Margins;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -496,6 +498,227 @@ class ConfigLoaderTest {
             RenderContext context = loader.load(mdFile, "pdf", "A4");
 
             assertNull(context.book().title());
+        }
+    }
+
+    @Nested
+    @DisplayName("Caller-supplied margins")
+    class CallerSuppliedMargins {
+
+        /** The full-bleed case the Maven plugin's {@code <margins>0</margins>} asks for. */
+        @Test
+        void should_replace_the_page_presets_margins(@TempDir Path tempDir) throws IOException {
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
+                title: "Test Book"
+                """);
+            Path mdFile = tempDir.resolve("test.md");
+            Files.createFile(mdFile);
+
+            RenderContext ctx = new ConfigLoader().load(
+                    mdFile, "pdf", "A4", Margins.parse("0"));
+
+            double[] mm = ctx.pageSpec().marginsMm();
+            assertArrayEquals(new double[] {0, 0, 0, 0}, mm, 0.01,
+                    "A4's own 20mm margins are replaced, so the render is full-bleed");
+            assertEquals(297.0, ctx.pageSpec().size().unit()
+                            .toMillimetres(ctx.pageSpec().size().height()), 0.01,
+                    "and only the margins — the size preset is untouched");
+        }
+
+        @Test
+        void should_lose_to_the_books_own_page_block(@TempDir Path tempDir) throws IOException {
+            // Same precedence `size` has: the caller seeds the base, yaml wins.
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
+                title: "Test Book"
+                vars:
+                  page:
+                    margins: { top: 12, right: 9, bottom: 12, left: 9 }
+                """);
+            Path mdFile = tempDir.resolve("test.md");
+            Files.createFile(mdFile);
+
+            RenderContext ctx = new ConfigLoader().load(
+                    mdFile, "pdf", "A4", Margins.parse("0"));
+
+            assertArrayEquals(new double[] {12, 9, 12, 9}, ctx.pageSpec().marginsMm(), 0.01,
+                    "the book's own page block overrides what the caller passed");
+        }
+
+        @Test
+        void should_keep_the_presets_margins_when_none_are_passed(@TempDir Path tempDir) throws IOException {
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
+                title: "Test Book"
+                """);
+            Path mdFile = tempDir.resolve("test.md");
+            Files.createFile(mdFile);
+
+            RenderContext ctx = new ConfigLoader().load(mdFile, "pdf", "A4", null);
+
+            assertArrayEquals(new double[] {20, 20, 20, 20}, ctx.pageSpec().marginsMm(), 0.01,
+                    "A4's standard margins");
+        }
+    }
+
+    @Nested
+    @DisplayName("Declared parts")
+    class DeclaredParts {
+
+        @Test
+        void should_parse_parts_with_titles_and_folders(@TempDir Path tempDir) throws IOException {
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
+                title: "Test Book"
+                parts:
+                  - title: "Foundations"
+                    folders:
+                      - 01-getting-started
+                      - 02-authoring
+                  - title: "Reference"
+                    folders:
+                      - 03-configuration
+                """);
+            Path mdFile = tempDir.resolve("test.md");
+            Files.createFile(mdFile);
+
+            List<Part> parts = new ConfigLoader().load(mdFile, "pdf", "A4").book().parts();
+
+            assertEquals(2, parts.size());
+            assertEquals("Foundations", parts.get(0).title());
+            assertEquals(List.of("01-getting-started", "02-authoring"), parts.get(0).folders());
+            assertEquals("Reference", parts.get(1).title());
+            assertEquals(List.of("03-configuration"), parts.get(1).folders());
+        }
+
+        @Test
+        void should_default_part_id_to_a_slug_of_the_title(@TempDir Path tempDir) throws IOException {
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
+                parts:
+                  - title: "Getting Started & Beyond"
+                    folders: [intro]
+                """);
+            Path mdFile = tempDir.resolve("test.md");
+            Files.createFile(mdFile);
+
+            List<Part> parts = new ConfigLoader().load(mdFile, "pdf", "A4").book().parts();
+            assertEquals("getting-started-beyond", parts.get(0).id());
+        }
+
+        @Test
+        void should_honour_an_explicit_part_id(@TempDir Path tempDir) throws IOException {
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
+                parts:
+                  - id: ref
+                    title: "Reference Material"
+                    folders: [config]
+                """);
+            Path mdFile = tempDir.resolve("test.md");
+            Files.createFile(mdFile);
+
+            List<Part> parts = new ConfigLoader().load(mdFile, "pdf", "A4").book().parts();
+            assertEquals("ref", parts.get(0).id());
+        }
+
+        @Test
+        void should_resolve_a_part_landing_template_preset(@TempDir Path tempDir) throws IOException {
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
+                parts:
+                  - title: "Quiet Part"
+                    folders: [quiet]
+                    landing:
+                      template: minimal
+                  - title: "Loud Part"
+                    folders: [loud]
+                """);
+            Path mdFile = tempDir.resolve("test.md");
+            Files.createFile(mdFile);
+
+            List<Part> parts = new ConfigLoader().load(mdFile, "pdf", "A4").book().parts();
+            assertEquals("site-section-minimal", parts.get(0).landingTemplate());
+            assertNull(parts.get(1).landingTemplate(),
+                    "no landing key falls through to the book-wide default later");
+        }
+
+        @Test
+        void should_default_to_no_parts_when_the_key_is_absent(@TempDir Path tempDir) throws IOException {
+            createYamlFile(tempDir.resolve("paperband.yaml"), "title: \"Plain Book\"\n");
+            Path mdFile = tempDir.resolve("test.md");
+            Files.createFile(mdFile);
+
+            assertEquals(List.of(), new ConfigLoader().load(mdFile, "pdf", "A4").book().parts());
+        }
+
+        @Test
+        void should_reject_duplicate_part_ids(@TempDir Path tempDir) throws IOException {
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
+                parts:
+                  - title: "Same Name"
+                    folders: [a]
+                  - title: "Same Name"
+                    folders: [b]
+                """);
+            Path mdFile = tempDir.resolve("test.md");
+            Files.createFile(mdFile);
+
+            ConfigParseException e = assertThrows(ConfigParseException.class,
+                    () -> new ConfigLoader().load(mdFile, "pdf", "A4"));
+            assertTrue(e.getMessage().contains("duplicate part id"), e.getMessage());
+        }
+
+        @Test
+        void should_reject_a_folder_claimed_by_two_parts(@TempDir Path tempDir) throws IOException {
+            // Ambiguous: the folder's cards would have no single group to report.
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
+                parts:
+                  - title: "One"
+                    folders: [shared]
+                  - title: "Two"
+                    folders: [shared]
+                """);
+            Path mdFile = tempDir.resolve("test.md");
+            Files.createFile(mdFile);
+
+            ConfigParseException e = assertThrows(ConfigParseException.class,
+                    () -> new ConfigLoader().load(mdFile, "pdf", "A4"));
+            assertTrue(e.getMessage().contains("claimed by both part"), e.getMessage());
+        }
+
+        @Test
+        void should_reject_a_part_with_no_folders(@TempDir Path tempDir) throws IOException {
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
+                parts:
+                  - title: "Empty"
+                """);
+            Path mdFile = tempDir.resolve("test.md");
+            Files.createFile(mdFile);
+
+            ConfigParseException e = assertThrows(ConfigParseException.class,
+                    () -> new ConfigLoader().load(mdFile, "pdf", "A4"));
+            assertTrue(e.getMessage().contains("declares no 'folders'"), e.getMessage());
+        }
+
+        @Test
+        void should_reject_a_part_with_neither_title_nor_id(@TempDir Path tempDir) throws IOException {
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
+                parts:
+                  - folders: [orphan]
+                """);
+            Path mdFile = tempDir.resolve("test.md");
+            Files.createFile(mdFile);
+
+            ConfigParseException e = assertThrows(ConfigParseException.class,
+                    () -> new ConfigLoader().load(mdFile, "pdf", "A4"));
+            assertTrue(e.getMessage().contains("neither a usable 'title' nor an 'id'"),
+                    e.getMessage());
+        }
+
+        @Test
+        void should_reject_a_non_list_parts_key(@TempDir Path tempDir) throws IOException {
+            createYamlFile(tempDir.resolve("paperband.yaml"), "parts: nonsense\n");
+            Path mdFile = tempDir.resolve("test.md");
+            Files.createFile(mdFile);
+
+            ConfigParseException e = assertThrows(ConfigParseException.class,
+                    () -> new ConfigLoader().load(mdFile, "pdf", "A4"));
+            assertTrue(e.getMessage().contains("'parts' must be a list"), e.getMessage());
         }
     }
 

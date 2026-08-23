@@ -93,6 +93,39 @@ public record PageSpec(PageSize size, Margins margins, Orientation orientation) 
      * margins on top of that theme's own internal padding, since the actual
      * printable area shrank but the CSS didn't know to shrink with it.
      */
+    /**
+     * The page margins in millimetres, in CSS shorthand order (top, right,
+     * bottom, left).
+     *
+     * <p>Companion to {@link #contentHeightMm()}: {@code LayoutEngine} stamps
+     * these onto {@code <html>} as {@code --pw-page-margin-top} and friends so
+     * a theme's CSS can size its own insets <em>relative to the margin the
+     * build actually uses</em>. Chromium paints nothing into a PDF page
+     * margin, so a theme with a coloured ground has to be built full-bleed
+     * (zero margins) to reach the trim edge — and then every inset has to come
+     * from the theme instead. A theme that reads these can supply exactly the
+     * inset that's missing:
+     *
+     * <pre>
+     * padding: max(4mm, 13mm - var(--pw-page-margin-top, 0mm));
+     * </pre>
+     *
+     * <p>which is the full 13mm on a full-bleed build and collapses to the
+     * floor once the build's own margin already provides it — one theme that
+     * looks right either way, rather than one tuned for a single margin.
+     *
+     * @return the four margins in millimetres, top/right/bottom/left
+     */
+    public double[] marginsMm() {
+        Margins m = margins();
+        return new double[] {
+                m.unit().toMillimetres(m.top()),
+                m.unit().toMillimetres(m.right()),
+                m.unit().toMillimetres(m.bottom()),
+                m.unit().toMillimetres(m.left())
+        };
+    }
+
     public double contentHeightMm() {
         double pageHeightMm = orientation() == Orientation.LANDSCAPE
                 ? size().unit().toMillimetres(size().width())

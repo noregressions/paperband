@@ -22,6 +22,11 @@ body.has-sidebar { margin: 0; }
 .site-nav .nav-brand { font-weight: 700; text-decoration: none; color: inherit; }
 .site-nav .nav-link { text-decoration: none; color: inherit; opacity: 0.85; }
 .site-nav .nav-link:hover { opacity: 1; }
+/* A declared part with no page of its own (Part.landingPage false) still
+   labels its cards, but the label is text rather than a link — dimmer, and
+   no hover affordance. Same treatment in the sidebar and on the index. */
+.site-nav .section-link-unlinked { opacity: 0.6; cursor: default; }
+.site-nav .section-link-unlinked:hover { opacity: 0.6; }
 .nav-spacer { flex: 1 1 auto; }
 .nav-sidebar-toggle {
   cursor: pointer;
@@ -73,6 +78,7 @@ body.has-sidebar { margin: 0; }
 }
 .sidebar-tier-heading a,
 .sidebar-section-heading a { text-decoration: none; color: inherit; }
+.sidebar-section-heading .sidebar-section-label { color: inherit; opacity: 0.75; }
 .sidebar-section-toggle {
   cursor: pointer;
   background: none;

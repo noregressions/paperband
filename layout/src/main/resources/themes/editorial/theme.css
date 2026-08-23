@@ -195,3 +195,56 @@ code.cls-property    { color: #1a1a1a; }
 .hero h1 { font-family: 'Source Serif 4', Georgia, serif; font-style: italic; }
 .tier-hero h1 { font-family: 'Source Serif 4', Georgia, serif; font-style: italic; }
 .ci-title { font-family: 'Source Serif 4', Georgia, serif; }
+
+/* ── Part / section divider — a part-title spread ─────────────────────────
+ * Hairline rules above and below the title block, the same furniture the
+ * body copy uses, sized for a page rather than a rule between cards. */
+.section-divider .tier-divider-inner {
+  border-top: 1px solid #d8d2c4;
+  border-bottom: 1px solid #d8d2c4;
+  padding: 2.5rem 1.25rem;
+}
+.section-divider h1 {
+  font-family: 'Source Serif 4', 'Source Serif Pro', Georgia, serif;
+  font-weight: 600;
+  font-size: 2.4rem;
+  line-height: 1.15;
+}
+.section-divider .tier-count {
+  color: #4a4a4a;
+  opacity: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.72rem;
+}
+.section-divider .tier-toc { font-size: 0.95rem; }
+.section-divider .tier-toc a { color: #1a1a1a; }
+
+/* ── Full-bleed print insets ──────────────────────────────────────────────
+ * Chromium paints nothing into a PDF page margin, so on a theme whose ground
+ * is the paper any page margin shows up as a white border round every page.
+ * Reaching the trim edge means a full-bleed build — `vars.page.margins: 0`,
+ * or the Maven plugin's `<margins>0</margins>` — which hands every inset to
+ * the theme:
+ *
+ *   - `box-decoration-break: clone` repeats the card's padding (and frame) on
+ *     every page a long card spans. Without it Chromium pads the first and
+ *     last fragment of a fragmented box only, so a card running to 150 pages
+ *     puts body text hard against the trim edge on every page in between.
+ *   - The insets are sized against the build's own margin
+ *     (`--pw-page-margin-*`, stamped on <html> from the resolved PageSpec),
+ *     so these rules read correctly whether or not the book zeroes it: the
+ *     full inset at full bleed, the floor when the page margin already
+ *     provides one.
+ *
+ * Horizontal inset still comes from the card's centred measure, which holds
+ * on every page regardless of fragmentation. */
+@media print {
+  article.card {
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    box-sizing: border-box;
+    padding-top: max(10mm, 18mm - var(--pw-page-margin-top, 0mm));
+    padding-bottom: max(10mm, 18mm - var(--pw-page-margin-bottom, 0mm));
+  }
+}

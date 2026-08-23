@@ -110,8 +110,11 @@ function paperbandToggleSection(btn) {
      for the tier axis (existing theme CSS keeps working); other axes get an
      equivalently-namespaced, initially-unstyled hook. #}
   <a class="nav-link {{ e.axis }}{{ e.id }}" href="{{ urlPrefix }}{{ e.url }}">{{ e.label }}</a>
-  {% else %}
+  {% elseif e.url is not null %}
   <a class="nav-link section-link" href="{{ urlPrefix }}{{ e.url }}">{{ e.label }}</a>
+  {% else %}
+  {# Page-less declared part — label only, no link target. #}
+  <span class="nav-link section-link section-link-unlinked">{{ e.label }}</span>
   {% endif %}
   {% endfor %}
   <span class="nav-spacer"></span>

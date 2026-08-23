@@ -269,6 +269,410 @@ class LayoutEngineTest {
     }
 
     @Nested
+    @DisplayName("Declared part dividers")
+    class DeclaredPartDividers {
+
+        /** A book whose parts: groups two folders under one title. */
+        private BookConfig bookWithFoundationsPart(Path tempDir, String landingTemplate) {
+            Part foundations = new Part(
+                    "foundations", "Foundations", List.of("intro", "authoring"), landingTemplate);
+            return new BookConfig(tempDir, "Test Book", List.of(), List.of(), Map.of(),
+                    List.of(), null, null, null, null, null, null, null, List.of(foundations));
+        }
+
+        @Test
+        void should_render_one_divider_for_a_part_spanning_several_folders(@TempDir Path tempDir) {
+            LayoutEngine engine = new LayoutEngine();
+
+            // Two folders, one declared part -- so one divider, not two.
+            List<Card> cards = List.of(
+                    createCardAtPath("intro", tempDir.resolve("intro").resolve("intro.md")),
+                    createCardAtPath("authoring", tempDir.resolve("authoring").resolve("authoring.md")));
+            List<RenderContext> contexts = List.of(createMinimalContext(), createMinimalContext());
+
+            String result = engine.renderBook(cards, contexts,
+                    new RenderContext(bookWithFoundationsPart(tempDir, null),
+                            List.of(), Map.of(), null, "pdf", "A4"));
+
+            assertEquals(1, countOccurrences(result, "id=\"section-divider-foundations\""),
+                    "the part is one group, so it gets exactly one divider");
+            assertFalse(result.contains("id=\"section-divider-intro\""),
+                    "a folder claimed by a part must not also divide on its own name");
+            assertFalse(result.contains("id=\"section-divider-authoring\""));
+            assertTrue(result.contains("Foundations"), "divider shows the part's title");
+        }
+
+        @Test
+        void should_place_the_part_divider_before_the_first_card_of_the_part(@TempDir Path tempDir) {
+            LayoutEngine engine = new LayoutEngine();
+
+            List<Card> cards = List.of(
+                    createCardAtPath("intro", tempDir.resolve("intro").resolve("intro.md")),
+                    createCardAtPath("authoring", tempDir.resolve("authoring").resolve("authoring.md")));
+            List<RenderContext> contexts = List.of(createMinimalContext(), createMinimalContext());
+
+            String result = engine.renderBook(cards, contexts,
+                    new RenderContext(bookWithFoundationsPart(tempDir, null),
+                            List.of(), Map.of(), null, "pdf", "A4"));
+
+            int divider = result.indexOf("id=\"section-divider-foundations\"");
+            int first = result.indexOf("id=\"card-intro\"");
+            int second = result.indexOf("id=\"card-authoring\"");
+            assertTrue(divider >= 0 && divider < first, "divider precedes the part's first card");
+            assertTrue(first < second, "cards keep their walk order inside the part");
+        }
+
+        @Test
+        void should_leave_unclaimed_folders_as_discovered_sections(@TempDir Path tempDir) {
+            LayoutEngine engine = new LayoutEngine();
+
+            // "extras" belongs to no part -- the mix of declaration and discovery.
+            List<Card> cards = List.of(
+                    createCardAtPath("intro", tempDir.resolve("intro").resolve("intro.md")),
+                    createCardAtPath("extra", tempDir.resolve("extras").resolve("extra.md")));
+            List<RenderContext> contexts = List.of(createMinimalContext(), createMinimalContext());
+
+            String result = engine.renderBook(cards, contexts,
+                    new RenderContext(bookWithFoundationsPart(tempDir, null),
+                            List.of(), Map.of(), null, "pdf", "A4"));
+
+            assertEquals(1, countOccurrences(result, "id=\"section-divider-foundations\""));
+            assertEquals(1, countOccurrences(result, "id=\"section-divider-extras\""),
+                    "a folder no part claims still divides on its own folder name");
+            assertTrue(result.contains("Extras"), "auto-formatted label for the discovered section");
+        }
+
+        @Test
+        void should_honour_a_per_part_landing_template(@TempDir Path tempDir) {
+            LayoutEngine engine = new LayoutEngine();
+
+            List<Card> cards = List.of(
+                    createCardAtPath("intro", tempDir.resolve("intro").resolve("intro.md")));
+            List<RenderContext> contexts = List.of(createMinimalContext());
+
+            // Same already-resolved form ConfigLoader produces for `landing: { template: minimal }`.
+            String result = engine.renderBook(cards, contexts,
+                    new RenderContext(bookWithFoundationsPart(tempDir, "site-section-minimal"),
+                            List.of(), Map.of(), null, "pdf", "A4"));
+
+            assertTrue(result.contains("id=\"section-divider-foundations\""));
+            assertFalse(result.contains("class=\"tier-count\""),
+                    "the part resolved to the minimal preset, so no count/TOC");
+        }
+    }
+
+    @Nested
+    @DisplayName("Pattern-declared part dividers")
+    class PatternDeclaredPartDividers {
+
+        /**
+         * The shape {@code BookPlan} produces for a POM-declared
+         * {@code <book><parts>}: parts that claim individual card files rather
+         * than whole folders, so two of them can draw different files out of
+         * one directory.
+         */
+        private BookConfig bookWithCardClaimingParts(Path tempDir, List<Path> traces, List<Path> notes) {
+            Part tracesPart = new Part("traces", "Execution Traces", List.of(), null, traces);
+            Part notesPart = new Part("notes", "Notes", List.of(), null, notes);
+            return new BookConfig(tempDir, "Test Book", List.of(), List.of(), Map.of(),
+                    List.of(), null, null, null, null, null, null, null,
+                    List.of(tracesPart, notesPart));
+        }
+
+        @Test
+        void should_group_cards_a_part_claims_by_path_whatever_folder_they_sit_in(@TempDir Path tempDir) {
+            LayoutEngine engine = new LayoutEngine();
+
+            // One TRACE and one NOTES card in each of two service folders.
+            Path authTrace = tempDir.resolve("services").resolve("auth").resolve("TRACE.md");
+            Path billingTrace = tempDir.resolve("services").resolve("billing").resolve("TRACE.md");
+            Path authNotes = tempDir.resolve("services").resolve("auth").resolve("NOTES.md");
+            Path billingNotes = tempDir.resolve("services").resolve("billing").resolve("NOTES.md");
+
+            List<Card> cards = List.of(
+                    createCardAtPath("auth-trace", authTrace),
+                    createCardAtPath("billing-trace", billingTrace),
+                    createCardAtPath("auth-notes", authNotes),
+                    createCardAtPath("billing-notes", billingNotes));
+            List<RenderContext> contexts = List.of(createMinimalContext(), createMinimalContext(),
+                    createMinimalContext(), createMinimalContext());
+
+            String result = engine.renderBook(cards, contexts,
+                    new RenderContext(
+                            bookWithCardClaimingParts(tempDir,
+                                    List.of(authTrace, billingTrace),
+                                    List.of(authNotes, billingNotes)),
+                            List.of(), Map.of(), null, "pdf", "A4"));
+
+            assertEquals(1, countOccurrences(result, "id=\"section-divider-traces\""),
+                    "every claimed trace card is one group, however its folder is named");
+            assertEquals(1, countOccurrences(result, "id=\"section-divider-notes\""));
+            assertFalse(result.contains("id=\"section-divider-services\""),
+                    "the shared folder name must not surface as a section of its own");
+            assertTrue(result.contains("Execution Traces"), "divider shows the part's title");
+
+            int traces = result.indexOf("id=\"section-divider-traces\"");
+            int notes = result.indexOf("id=\"section-divider-notes\"");
+            int firstNotesCard = result.indexOf("id=\"card-auth-notes\"");
+            assertTrue(traces < notes, "parts divide in declared order");
+            assertTrue(notes < firstNotesCard, "each divider precedes its part's first card");
+        }
+
+        @Test
+        void should_leave_unclaimed_cards_to_folder_derived_sections(@TempDir Path tempDir) {
+            LayoutEngine engine = new LayoutEngine();
+
+            Path authTrace = tempDir.resolve("services").resolve("auth").resolve("TRACE.md");
+            Path appendix = tempDir.resolve("appendix").resolve("glossary.md");
+
+            List<Card> cards = List.of(
+                    createCardAtPath("auth-trace", authTrace),
+                    createCardAtPath("glossary", appendix));
+            List<RenderContext> contexts = List.of(createMinimalContext(), createMinimalContext());
+
+            String result = engine.renderBook(cards, contexts,
+                    new RenderContext(
+                            bookWithCardClaimingParts(tempDir, List.of(authTrace), List.of()),
+                            List.of(), Map.of(), null, "pdf", "A4"));
+
+            assertEquals(1, countOccurrences(result, "id=\"section-divider-traces\""));
+            assertEquals(1, countOccurrences(result, "id=\"section-divider-appendix\""),
+                    "a card no part claims still divides on its own folder name");
+        }
+    }
+
+    @Nested
+    @DisplayName("Divider page geometry")
+    class DividerPageGeometry {
+
+        /**
+         * A part divider is a <em>page</em>, not a rule between cards. The
+         * scaffold has to say both halves of that: a forced break on each
+         * side (so nothing shares the sheet) and a box standing up to the
+         * full printable height (so the heading has a page to centre in).
+         * Verified against a real render at every bundled page size — the
+         * assertion here is the guard against a CSS edit quietly turning the
+         * page back into a horizontal rule.
+         */
+        /**
+         * A theme with a coloured ground can only reach the trim edge in a
+         * full-bleed build, and then has to supply every inset itself. It can
+         * only size those insets against the build's own margin if the margin
+         * is actually stamped where CSS can read it.
+         */
+        @Test
+        void the_builds_page_margins_reach_css_as_custom_properties(@TempDir Path tempDir) {
+            LayoutEngine engine = new LayoutEngine();
+
+            List<Card> cards = List.of(
+                    createCardAtPath("intro", tempDir.resolve("front").resolve("intro.md")));
+            List<RenderContext> contexts = List.of(createMinimalContext());
+            BookConfig book = new BookConfig(tempDir, "Test Book", List.of(), List.of(), Map.of(),
+                    List.of(), null, null);
+
+            String result = engine.renderBook(cards, contexts,
+                    new RenderContext(book, List.of(), Map.of(), null, "pdf", "A4"));
+
+            // A4's standard margins are 20mm on every edge.
+            assertTrue(result.contains("--pw-page-margin-top: 20"), "top margin, in mm");
+            assertTrue(result.contains("--pw-page-margin-right: 20"));
+            assertTrue(result.contains("--pw-page-margin-bottom: 20"));
+            assertTrue(result.contains("--pw-page-margin-left: 20"));
+        }
+
+        /**
+         * The text measure is the largest of the insets that make a
+         * full-bleed page still look margined, and a book can't reach it
+         * through its css (theme CSS is inlined after it). Declaring it puts
+         * it inline on {@code <html>}, which outranks the theme's own rule.
+         */
+        @Test
+        void a_declared_measure_is_stamped_inline_where_it_outranks_the_theme(@TempDir Path tempDir) {
+            LayoutEngine engine = new LayoutEngine();
+
+            List<Card> cards = List.of(
+                    createCardAtPath("intro", tempDir.resolve("front").resolve("intro.md")));
+            List<RenderContext> contexts = List.of(createMinimalContext());
+            BookConfig book = new BookConfig(tempDir, "Test Book", List.of(), List.of(), Map.of(),
+                    List.of(), null, null);
+
+            String declared = engine.renderBook(cards, contexts, new RenderContext(
+                    book, List.of(), Map.of("page", Map.of("measure", "58rem")),
+                    null, "pdf", "A4"));
+            assertTrue(declared.contains("--card-max-width: 58rem"),
+                    "stamped in the style attribute, not the stylesheet");
+
+            String undeclared = engine.renderBook(cards, contexts,
+                    new RenderContext(book, List.of(), Map.of(), null, "pdf", "A4"));
+            assertFalse(undeclared.contains("--card-max-width"),
+                    "a book that says nothing leaves the theme's own measure alone");
+        }
+
+        @Test
+        void a_measure_that_is_not_a_length_is_rejected(@TempDir Path tempDir) {
+            LayoutEngine engine = new LayoutEngine();
+
+            List<Card> cards = List.of(
+                    createCardAtPath("intro", tempDir.resolve("front").resolve("intro.md")));
+            List<RenderContext> contexts = List.of(createMinimalContext());
+            BookConfig book = new BookConfig(tempDir, "Test Book", List.of(), List.of(), Map.of(),
+                    List.of(), null, null);
+
+            // It lands in a style attribute, so it is never passed through
+            // unvalidated. The engine reports it like any other layout
+            // failure, with the offending value named.
+            LayoutException e = assertThrows(LayoutException.class, () -> engine.renderBook(cards, contexts,
+                    new RenderContext(book, List.of(),
+                            Map.of("page", Map.of("measure", "58rem; background: red")),
+                            null, "pdf", "A4")));
+            assertTrue(e.getMessage().contains("page.measure"),
+                    "the message names the key at fault: " + e.getMessage());
+        }
+
+        @Test
+        void the_section_divider_scaffold_makes_the_divider_its_own_centred_page(@TempDir Path tempDir) {
+            LayoutEngine engine = new LayoutEngine();
+
+            List<Card> cards = List.of(
+                    createCardAtPath("intro", tempDir.resolve("front").resolve("intro.md")));
+            List<RenderContext> contexts = List.of(createMinimalContext());
+            BookConfig book = new BookConfig(tempDir, "Test Book", List.of(), List.of(), Map.of(),
+                    List.of(), null, null);
+
+            String result = engine.renderBook(cards, contexts,
+                    new RenderContext(book, List.of(), Map.of(), null, "pdf", "A4"));
+
+            int rule = result.indexOf(".section-divider {");
+            assertTrue(rule >= 0, "the scaffold styles .section-divider");
+            String scaffold = result.substring(rule, result.indexOf('}', rule));
+            assertTrue(scaffold.contains("break-before: page"), "a sheet of its own");
+            assertTrue(scaffold.contains("break-after: page"), "and the next card starts a new one");
+            assertTrue(scaffold.contains("var(--pw-content-height"),
+                    "full printable height, from the build's PageSpec rather than a hardcoded page size");
+            assertTrue(scaffold.contains("align-items: center") && scaffold.contains("justify-content: center"),
+                    "heading centred on the page, both axes");
+            assertTrue(result.contains("--pw-content-height:"),
+                    "and the variable the rule reads is actually stamped on <html>");
+        }
+    }
+
+    @Nested
+    @DisplayName("Parts with no page of their own")
+    class PageLessParts {
+
+        /**
+         * Two pattern-declared parts, the first of which opted out of a page
+         * of its own — the shape {@code BookPlan} produces for
+         * {@code <part><landingPage>false</landingPage></part>}.
+         */
+        private BookConfig bookWithPageLessFirstPart(Path tempDir, List<Path> setup, List<Path> traces) {
+            Part setupPart = new Part("setup", "Introduction and Setup", List.of(), null, setup, false);
+            Part tracesPart = new Part("traces", "Scenarios", List.of(), null, traces, true);
+            return new BookConfig(tempDir, "Test Book", List.of(), List.of(), Map.of(),
+                    List.of(), null, null, null, null, null, null, null,
+                    List.of(setupPart, tracesPart));
+        }
+
+        @Test
+        void should_omit_the_divider_for_a_part_that_declined_a_page(@TempDir Path tempDir) {
+            LayoutEngine engine = new LayoutEngine();
+
+            Path install = tempDir.resolve("setup").resolve("install.md");
+            Path trace = tempDir.resolve("scenarios").resolve("checkout").resolve("TRACE.md");
+
+            List<Card> cards = List.of(
+                    createCardAtPath("install", install),
+                    createCardAtPath("checkout-trace", trace));
+            List<RenderContext> contexts = List.of(createMinimalContext(), createMinimalContext());
+
+            String result = engine.renderBook(cards, contexts,
+                    new RenderContext(
+                            bookWithPageLessFirstPart(tempDir, List.of(install), List.of(trace)),
+                            List.of(), Map.of(), null, "pdf", "A4"));
+
+            assertFalse(result.contains("id=\"section-divider-setup\""),
+                    "the part declined a page, so no divider fronts its cards");
+            assertFalse(result.contains("href=\"#section-divider-setup\""),
+                    "and no anchor bait either -- there's no destination to name");
+            assertEquals(1, countOccurrences(result, "id=\"section-divider-traces\""),
+                    "a sibling part that kept its page still gets one");
+            assertTrue(result.contains("id=\"card-install\""),
+                    "the part's cards are still in the book, in place");
+        }
+
+        @Test
+        void should_not_emit_a_site_landing_page_for_a_part_that_declined_one(@TempDir Path tempDir) {
+            LayoutEngine engine = new LayoutEngine();
+
+            Path install = tempDir.resolve("setup").resolve("install.md");
+            Path trace = tempDir.resolve("scenarios").resolve("checkout").resolve("TRACE.md");
+
+            List<Card> cards = List.of(
+                    createCardAtPath("install", install),
+                    createCardAtPath("checkout-trace", trace));
+            List<RenderContext> contexts = List.of(createMinimalContext(), createMinimalContext());
+
+            Map<String, String> site = engine.renderSite(cards, contexts,
+                    new RenderContext(
+                            bookWithPageLessFirstPart(tempDir, List.of(install), List.of(trace)),
+                            List.of(), Map.of(), null, "pdf", "A4"));
+
+            assertFalse(site.containsKey("setup.html"), "no page for the part that declined one");
+            assertTrue(site.containsKey("traces.html"), "the sibling part still gets its page");
+            assertTrue(site.containsKey("cards/install.html"),
+                    "its cards keep their own pages regardless");
+
+            String index = site.get("index.html");
+            assertTrue(index.contains("Introduction and Setup"),
+                    "the group is still labelled on the index");
+            assertFalse(index.contains("href=\"setup.html\""),
+                    "but nothing links to a page that was never written");
+            assertTrue(index.contains("href=\"traces.html\""));
+        }
+
+        @Test
+        void should_drop_the_section_back_link_on_a_page_less_parts_cards(@TempDir Path tempDir) {
+            LayoutEngine engine = new LayoutEngine();
+
+            Path install = tempDir.resolve("setup").resolve("install.md");
+
+            List<Card> cards = List.of(createCardAtPath("install", install));
+            List<RenderContext> contexts = List.of(createMinimalContext());
+
+            Map<String, String> site = engine.renderSite(cards, contexts,
+                    new RenderContext(
+                            bookWithPageLessFirstPart(tempDir, List.of(install), List.of()),
+                            List.of(), Map.of(), null, "pdf", "A4"));
+
+            String card = site.get("cards/install.html");
+            assertNotNull(card);
+            assertFalse(card.contains("href=\"../setup.html\""),
+                    "the card page cannot link back to a page that doesn't exist");
+        }
+
+        @Test
+        void should_keep_the_page_by_default(@TempDir Path tempDir) {
+            LayoutEngine engine = new LayoutEngine();
+
+            Path install = tempDir.resolve("setup").resolve("install.md");
+            // Same part, declared without saying anything about a page.
+            Part setupPart = new Part("setup", "Introduction and Setup", List.of(), null,
+                    List.of(install));
+            BookConfig book = new BookConfig(tempDir, "Test Book", List.of(), List.of(), Map.of(),
+                    List.of(), null, null, null, null, null, null, null, List.of(setupPart));
+
+            List<Card> cards = List.of(createCardAtPath("install", install));
+            List<RenderContext> contexts = List.of(createMinimalContext());
+            RenderContext bookCtx = new RenderContext(book, List.of(), Map.of(), null, "pdf", "A4");
+
+            assertTrue(engine.renderBook(cards, contexts, bookCtx)
+                            .contains("id=\"section-divider-setup\""),
+                    "generation is on unless a declaration opts out");
+            assertTrue(engine.renderSite(cards, contexts, bookCtx).containsKey("setup.html"));
+        }
+    }
+
+    @Nested
     @DisplayName("Book section dividers")
     class BookSectionDividers {
 
@@ -377,14 +781,6 @@ class LayoutEngineTest {
             assertTrue(result.contains("axis-divider-tier-1"));
         }
 
-        private int countOccurrences(String haystack, String needle) {
-            int count = 0, idx = 0;
-            while ((idx = haystack.indexOf(needle, idx)) != -1) {
-                count++;
-                idx += needle.length();
-            }
-            return count;
-        }
     }
 
     @Nested
@@ -872,6 +1268,15 @@ class LayoutEngineTest {
         );
         Frontmatter fm = new Frontmatter(frontmatterData);
         return new Card(id, Path.of(id + ".md"), fm, "Test Card", List.of(block));
+    }
+
+    private int countOccurrences(String haystack, String needle) {
+        int count = 0, idx = 0;
+        while ((idx = haystack.indexOf(needle, idx)) != -1) {
+            count++;
+            idx += needle.length();
+        }
+        return count;
     }
 
     private Card createCardAtPath(String id, Path path) {

@@ -47,6 +47,55 @@ reaches a theme:
 - **Component classes.** Fixed names for the furniture: `.card-title`, `.oneliner`,
   `.card-meta`, badge classes, `.card-grid`/`.card-item` on landing pages, `.site-nav`,
   `.site-sidebar`, and so on.
+- **Page geometry, as CSS custom properties.** PDF pages stamp the build's real geometry
+  on `<html>`: `--pw-content-height` (printable height), `--pw-page-margin-top` /
+  `-right` / `-bottom` / `-left` (the page margins), and `--pw-font-scale`. Read these
+  rather than hardcoding a page size — see Full-bleed themes below.
+
+## Full-bleed themes
+
+Chromium paints nothing into a PDF page margin — no `@page` rule or `html` background
+reaches it — so on a theme with a coloured ground, any page margin shows up as a white
+border around every page. A theme whose ground *is* the paper (`blueprint`, `dark`,
+`carded`) therefore only reaches the trim edge in a full-bleed build, which the book asks
+for by zeroing its page margins:
+
+```yaml
+# book root paperband.yaml
+vars:
+  page:
+    margins: { top: 0, right: 0, bottom: 0, left: 0 }
+```
+
+That hands every inset to the theme, and a full-bleed theme needs two things to supply
+them:
+
+- **`box-decoration-break: clone` on the card.** Without it Chromium gives a fragmented
+  box its padding on the first and last page only, so a card running to 150 pages puts
+  body text hard against the trim edge on every page in between. With it, the padding and
+  frame repeat on each page the card spans. Horizontal padding survives fragmentation
+  either way; this is what fixes the vertical.
+- **Insets sized against the build's own margin.** `max(6mm, 13mm - var(--pw-page-margin-top, 0mm))`
+  gives the full inset on a full-bleed build and collapses to the floor when the build
+  keeps its margins — one theme that reads correctly either way, instead of one tuned for
+  a single margin setting.
+
+Every bundled theme carries this treatment, so any of them can be built full-bleed;
+`blueprint` is the fullest worked example (it also places its card frame by margin rather
+than by a centred measure). A custom theme needs the two rules above and nothing else.
+
+## Part pages
+
+A part or section divider is a full page, centred (see Organising Content). Themes style it
+through `.section-divider`, with `.section-divider .tier-divider-inner` as the centred
+title block — the divider itself is the page-sized flex container, so put backgrounds,
+frames and rules on the inner element rather than on `.section-divider`. Every bundled
+theme styles it in its own idiom; the built-in fallback inherits the book's own colours, so
+an unstyled theme still renders a legible page rather than light-theme greys on a dark
+ground.
+
+For a divider showing the title alone, a part can ask for the `minimal` preset — see
+Organising Content and the Maven plugin's `<landingTemplate>`.
 
 ## How axis colours reach CSS
 

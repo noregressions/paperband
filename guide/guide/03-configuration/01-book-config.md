@@ -7,7 +7,7 @@ oneliner: "The root paperband.yaml declares the book: title, axes, CSS, vars, an
 
 The `paperband.yaml` at the book root holds global configuration that applies to every
 card: the book `title`, categorical `axes`, the base `css` chain, free-form `vars`, the
-default `theme`, and the declared build `targets`.
+default `theme`, the declared build `targets`, and the book's `parts`.
 
 ## `axes`
 
@@ -72,6 +72,23 @@ is finalized in the yaml.
 
 Cards with no value on any declared axis are grouped by their top-level folder name
 instead ("sections") and get their own landing pages alongside the axis-value pages.
+
+## `parts`
+
+Folder-derived sections are discovered — one group per top-level folder. `parts:` declares
+those groups instead, giving one title to a run of folders:
+
+```yaml
+parts:
+  - title: "Foundations"
+    folders:
+      - 01-getting-started
+      - 02-authoring
+```
+
+A part is one group wherever a section would be: one divider, one landing page, one nav
+entry. Folders no part claims stay discovered sections. See Organising Content for the full
+treatment, alongside the folder-level `order:`, `include:`, and `sort:` keys.
 
 ## `sections.landing.template`
 

@@ -6,3 +6,4 @@ axis:
 order:
   - 01-book-config
   - 02-config-cascade
+  - 03-organising-content

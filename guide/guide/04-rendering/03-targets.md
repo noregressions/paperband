@@ -51,9 +51,38 @@ documentation and a checklist rather than an enforced enum.
 
 A size outside this list works too, via `vars.page.size: { width, height, unit }` — see
 Book Configuration / Config Cascade for the full `page:` block (margins, orientation,
-fontScale). Named presets above (except `packt`, a deliberately plain trim with no
+fontScale, measure). Named presets above (except `packt`, a deliberately plain trim with no
 curated per-theme type scale yet) have hand-tuned `font-size` rules per bundled theme;
 anything else gets an automatic scale derived from page width relative to A4's.
+
+## Where a page's insets come from
+
+Four separate things push content away from the paper edge, and only the first is a page
+margin. On a full-bleed build that still looks margined, it's usually the last one:
+
+| Layer | Set by | Repeats per page? |
+|---|---|---|
+| Page margin | `vars.page.margins`, or the plugin's `<margins>` | Yes — it's the physical printable area |
+| Body safety padding | Built in: `max(0mm, 8mm - page margin)`, horizontal only | Yes |
+| Text measure | The theme's `--card-max-width`, retunable per book with `vars.page.measure` | Yes |
+| Card padding | The theme, repeated per page via `box-decoration-break: clone` | Yes |
+
+The measure is the one that surprises people, because it reads as a margin but isn't: it's
+a line-length decision. `classical` sets a Tufte-narrow 38rem in print, which on A4 is
+147mm of text in a 210mm page — 23mm of gutter either side that no margin setting will
+remove. Retune it from the book:
+
+```yaml
+vars:
+  page:
+    margins: { top: 0, right: 0, bottom: 0, left: 0 }
+    measure: 58rem      # or a length in mm, or `none` for the full width
+```
+
+`measure` is stamped inline on `<html>` as `--card-max-width`, which is deliberate: theme
+CSS is inlined *after* a book's own stylesheet, so a book that sets that property in its
+css loses to the theme's `:root` rule. The inline value outranks both, which makes this the
+one reliable way to override a themed measure.
 
 ## Target-scoped content
 

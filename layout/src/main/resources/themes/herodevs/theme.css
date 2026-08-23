@@ -652,3 +652,61 @@ section.block.cra code {
   border-color: #AFA9EC;
   color: #26215C;
 }
+
+/* ── Part / section divider — brand rule over the part title ──────────────
+ * Sections have no tier gradient of their own, so the plate takes the full
+ * brand gradient as a short rule above the title. */
+.section-divider { color: #0D0D0D; }
+.section-divider .tier-divider-inner { padding: 2.5rem 1.5rem; }
+.section-divider .tier-divider-inner::before {
+  content: "";
+  display: block;
+  width: 120px;
+  height: 6px;
+  margin: 0 auto 1.75rem;
+  border-radius: 3px;
+  background: var(--hd-gradient);
+}
+.section-divider h1 {
+  font-family: 'Manrope', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 2.4rem;
+  letter-spacing: -0.02em;
+}
+.section-divider .tier-count {
+  color: #6b6b6b;
+  opacity: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+}
+.section-divider .tier-toc a { color: #0D0D0D; }
+
+/* ── Full-bleed print insets ──────────────────────────────────────────────
+ * Chromium paints nothing into a PDF page margin, so on a theme whose ground
+ * is the paper any page margin shows up as a white border round every page.
+ * Reaching the trim edge means a full-bleed build — `vars.page.margins: 0`,
+ * or the Maven plugin's `<margins>0</margins>` — which hands every inset to
+ * the theme:
+ *
+ *   - `box-decoration-break: clone` repeats the card's padding (and frame) on
+ *     every page a long card spans. Without it Chromium pads the first and
+ *     last fragment of a fragmented box only, so a card running to 150 pages
+ *     puts body text hard against the trim edge on every page in between.
+ *   - The insets are sized against the build's own margin
+ *     (`--pw-page-margin-*`, stamped on <html> from the resolved PageSpec),
+ *     so these rules read correctly whether or not the book zeroes it: the
+ *     full inset at full bleed, the floor when the page margin already
+ *     provides one.
+ *
+ * Horizontal inset still comes from the card's centred measure, which holds
+ * on every page regardless of fragmentation. */
+@media print {
+  article.card {
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    box-sizing: border-box;
+    padding-top: max(8mm, 15mm - var(--pw-page-margin-top, 0mm));
+    padding-bottom: max(8mm, 15mm - var(--pw-page-margin-bottom, 0mm));
+  }
+}

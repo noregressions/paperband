@@ -6,7 +6,9 @@ import dev.noregressions.paperband.model.BookConfig;
 import dev.noregressions.paperband.model.CardSchema;
 import dev.noregressions.paperband.model.NamedTemplates;
 import dev.noregressions.paperband.model.PageMatter;
+import dev.noregressions.paperband.model.Part;
 import dev.noregressions.paperband.model.RenderContext;
+import dev.noregressions.paperband.render.Margins;
 import dev.noregressions.paperband.render.PageConfigResolver;
 import dev.noregressions.paperband.render.PageSpec;
 
@@ -43,8 +45,10 @@ import java.util.Map;
  * </ul>
  *
  * <p>The book root may additionally declare {@code title}, {@code axes},
- * {@code theme}, and {@code sections.landing.template}; these don't cascade
- * because they're book-level concepts. The {@code theme} value is the default
+ * {@code theme}, {@code parts}, and {@code sections.landing.template}; these
+ * don't cascade because they're book-level concepts. {@code parts} declares
+ * titled groups of top-level folders (see {@link Part}) — the declared
+ * counterpart to folder-discovered sections. The {@code theme} value is the default
  * theme name; the {@code --theme} CLI flag overrides it when supplied. The
  * {@code sections.landing.template} value is the book-wide default landing
  * page for folder-based "sections" (see {@link BookConfig#sectionLandingTemplate()});
@@ -68,9 +72,32 @@ public final class ConfigLoader {
      *         parent treated as the book root
      */
     public RenderContext load(Path mdFile, String target, String size) {
+        return load(mdFile, target, size, null);
+    }
+
+    /**
+     * Load and resolve config for {@code mdFile}, with the page-size preset's
+     * margins replaced before the yaml cascade runs.
+     *
+     * <p>{@code margins} sits exactly where {@code size} does: it seeds the
+     * <em>base</em> geometry, so a {@code vars.page.margins} block in the
+     * book still wins over it — same precedence a {@code vars.page.size}
+     * block has over {@code size}. Its reason to exist is the build tool that
+     * has no yaml of its own to edit: the Maven plugin's {@code <margins>},
+     * which is how a book asks for a full-bleed render ({@code 0}) from the
+     * POM.
+     *
+     * @param mdFile  the markdown card file
+     * @param target  current build target (e.g. {@code "pdf-a4"}); may be null
+     * @param size    current page size (e.g. {@code "A4"}); may be null
+     * @param margins margins to use in place of the size preset's own; null
+     *                keeps the preset's
+     * @return resolved {@link RenderContext}
+     */
+    public RenderContext load(Path mdFile, String target, String size, Margins margins) {
         Path startDir = mdFile.toAbsolutePath().getParent();
         if (startDir == null) {
-            PageConfigResolver.Resolved page = PageConfigResolver.resolve(null, PageSpec.forSizeName(size));
+            PageConfigResolver.Resolved page = PageConfigResolver.resolve(null, basePageSpec(size, margins));
             return new RenderContext(BookConfig.empty(mdFile.toAbsolutePath()),
                     List.of(), Map.of(), null, target, size, page.pageSpec(), page.fontScale());
         }
@@ -87,7 +114,7 @@ public final class ConfigLoader {
         }
 
         if (chain.isEmpty()) {
-            PageConfigResolver.Resolved page = PageConfigResolver.resolve(null, PageSpec.forSizeName(size));
+            PageConfigResolver.Resolved page = PageConfigResolver.resolve(null, basePageSpec(size, margins));
             return new RenderContext(BookConfig.empty(startDir),
                     List.of(), Map.of(), null, target, size, page.pageSpec(), page.fontScale());
         }
@@ -146,12 +173,23 @@ public final class ConfigLoader {
         Map<String, Object> pageNode = vars.get("page") instanceof Map<?, ?> pm
                 ? (Map<String, Object>) pm
                 : null;
-        PageConfigResolver.Resolved page = PageConfigResolver.resolve(pageNode, PageSpec.forSizeName(size));
+        PageConfigResolver.Resolved page = PageConfigResolver.resolve(pageNode, basePageSpec(size, margins));
 
         return new RenderContext(book, cssChain, vars, layout, target, size, page.pageSpec(), page.fontScale());
     }
 
     // ---- internals ----
+
+    /**
+     * The page-size preset the yaml cascade layers on, with its margins
+     * swapped out when the caller supplied their own.
+     */
+    private static PageSpec basePageSpec(String size, Margins margins) {
+        PageSpec base = PageSpec.forSizeName(size);
+        return margins == null
+                ? base
+                : new PageSpec(base.size(), margins, base.orientation());
+    }
 
     @SuppressWarnings("unchecked")
     private BookConfig parseBookConfig(Path bookRoot, Path bookYaml) {
@@ -220,8 +258,93 @@ public final class ConfigLoader {
         PageMatter footer = parsePageMatter(bookRoot, bookYaml, "footer", data.get("footer"));
         PageMatter header = parsePageMatter(bookRoot, bookYaml, "header", data.get("header"));
 
+        // Optional declared parts: titled groups of top-level folders. Book-level
+        // only -- a part describes the shape of the whole book, and the folders
+        // it names are resolved relative to the book root.
+        List<Part> parts = parseParts(bookRoot, bookYaml, data.get("parts"));
+
         return new BookConfig(bookRoot, title, axes, globalCss, vars, targets, theme,
-                sectionLandingTemplate, cardSchema, cover, back, footer, header);
+                sectionLandingTemplate, cardSchema, cover, back, footer, header, parts);
+    }
+
+    /**
+     * Parse the book root {@code parts:} list into {@link Part} records.
+     *
+     * <p>Shape — a list of maps, each with a {@code title}, a {@code folders}
+     * list (a bare string is tolerated as a one-folder list), an optional
+     * explicit {@code id}, and an optional {@code landing: { template: ... }}
+     * of the same shape as a section folder's own override:
+     * <pre>
+     * parts:
+     *   - title: "Foundations"
+     *     folders: [01-getting-started, 02-authoring]
+     * </pre>
+     *
+     * <p>The id defaults to a slug of the title. Validation is structural and
+     * strict, because a mistake here silently reshapes the whole book: a part
+     * must have a title (or explicit id) and at least one folder, ids must be
+     * unique, and no two parts may claim the same folder — an ambiguous
+     * folder has no single correct group to report.
+     */
+    private static List<Part> parseParts(Path bookRoot, Path bookYaml, Object node) {
+        if (node == null) return List.of();
+        if (!(node instanceof List<?> list)) {
+            throw new ConfigParseException(bookYaml + ": 'parts' must be a list of parts");
+        }
+        List<Part> parts = new ArrayList<>();
+        Map<String, String> folderOwner = new LinkedHashMap<>();
+        List<String> ids = new ArrayList<>();
+        for (Object item : list) {
+            if (item == null) continue;
+            if (!(item instanceof Map<?, ?> m)) {
+                throw new ConfigParseException(bookYaml
+                        + ": each 'parts' entry must be a mapping, got: " + item);
+            }
+            String partTitle = string(m.get("title"));
+            String rawId = string(m.get("id"));
+            String id = rawId != null && !rawId.isBlank() ? rawId.trim() : Part.slug(partTitle);
+            if (id == null) {
+                throw new ConfigParseException(bookYaml
+                        + ": part declares neither a usable 'title' nor an 'id': " + m);
+            }
+            if (ids.contains(id)) {
+                throw new ConfigParseException(bookYaml
+                        + ": duplicate part id '" + id + "'");
+            }
+            ids.add(id);
+
+            List<String> folders = new ArrayList<>();
+            Object foldersNode = m.get("folders");
+            if (foldersNode instanceof List<?> fl) {
+                for (Object f : fl) {
+                    if (f != null && !f.toString().isBlank()) folders.add(f.toString().trim());
+                }
+            } else if (foldersNode != null && !foldersNode.toString().isBlank()) {
+                folders.add(foldersNode.toString().trim());
+            }
+            if (folders.isEmpty()) {
+                throw new ConfigParseException(bookYaml
+                        + ": part '" + id + "' declares no 'folders'");
+            }
+            for (String f : folders) {
+                String owner = folderOwner.putIfAbsent(f, id);
+                if (owner != null) {
+                    throw new ConfigParseException(bookYaml + ": folder '" + f
+                            + "' is claimed by both part '" + owner + "' and part '" + id + "'");
+                }
+            }
+
+            String landing = null;
+            Object landingNode = m.get("landing");
+            if (landingNode instanceof Map<?, ?> lm) {
+                Object t = lm.get("template");
+                if (t != null) {
+                    landing = NamedTemplates.resolveSectionTemplate(bookRoot, t.toString());
+                }
+            }
+            parts.add(new Part(id, partTitle, folders, landing));
+        }
+        return List.copyOf(parts);
     }
 
     /**

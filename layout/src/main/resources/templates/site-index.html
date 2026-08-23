@@ -55,11 +55,19 @@
       <span class="tier-box-label" style="color: {{ e.color }}">{{ e.label }}</span>
       <span class="tier-box-count">{{ e.count }} card{% if e.count != 1 %}s{% endif %} →</span>
     </a>
-    {% else %}
+    {% elseif e.url is not null %}
     <a class="tier-box section-box" href="{{ e.url }}">
       <span class="tier-box-label">{{ e.label }}</span>
       <span class="tier-box-count">{{ e.count }} card{% if e.count != 1 %}s{% endif %} →</span>
     </a>
+    {% else %}
+    {# A declared part with no page of its own: still listed, but nothing to
+       link to — its cards are reachable from the sidebar and from each
+       other's prev/next. #}
+    <div class="tier-box section-box section-box-unlinked">
+      <span class="tier-box-label">{{ e.label }}</span>
+      <span class="tier-box-count">{{ e.count }} card{% if e.count != 1 %}s{% endif %}</span>
+    </div>
     {% endif %}
     {% endfor %}
   </div>

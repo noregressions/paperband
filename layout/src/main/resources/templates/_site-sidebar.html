@@ -48,10 +48,15 @@
       </h3>
       {% else %}
       <h3 class="sidebar-section-heading">
+        {% if e.url is not null %}
         <a href="{{ urlPrefix }}{{ e.url }}"
            class="{% if page.kind == 'section' and page.id == e.id %}active{% endif %}">
           {{ e.label }}
         </a>
+        {% else %}
+        {# Page-less declared part: a heading over its cards, not a link. #}
+        <span class="sidebar-section-label">{{ e.label }}</span>
+        {% endif %}
         {% if e.cards is not empty %}
         <button class="sidebar-section-toggle" type="button"
                 aria-label="Toggle {{ e.label }}"
