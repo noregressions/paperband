@@ -202,7 +202,9 @@ final class BookBuild {
     private void renderBook(Path bookRoot, List<Path> cardFiles, List<Part> declaredParts)
             throws Exception {
         ConfigLoader configLoader = new ConfigLoader();
-        CardLoader cardLoader = new CardLoader();
+        // Constructed once the book root is known, on the first card: ids for
+        // cards that declare none are derived from their path relative to it.
+        CardLoader cardLoader = null;
         List<Card> cards = new ArrayList<>(cardFiles.size());
         List<RenderContext> contexts = new ArrayList<>(cardFiles.size());
         RenderContext bookCtx = null;
@@ -213,6 +215,7 @@ final class BookBuild {
             if (bookCtx == null) {
                 bookCtx = ctx;                 // book-root css/title captured once
             }
+            if (cardLoader == null) cardLoader = new CardLoader(bookCtx.book().bookRoot());
             contexts.add(ctx);
             Map<String, Object> vars = ctx.vars();
             if (editionVars != null && !editionVars.isEmpty()) {

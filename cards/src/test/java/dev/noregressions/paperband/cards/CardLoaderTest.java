@@ -132,6 +132,82 @@ class CardLoaderTest {
     }
 
     @Nested
+    @DisplayName("Derived card ids")
+    class DerivedIds {
+
+        /**
+         * A book that names every scenario's file {@code TRACE.md} used to give
+         * them all the id {@code TRACE} — and an id is the PDF's anchor and the
+         * site's page filename, so they overwrote each other. The whole relative
+         * path is unique by construction, so no author has to hand-write ids to
+         * get a correct book.
+         */
+        @Test
+        void should_derive_a_unique_id_from_the_path_within_the_book(@TempDir Path root) {
+            CardLoader loader = new CardLoader(root);
+
+            Card a = loader.parse(root.resolve("scenarios/S01-spring-node/TRACE.md"), "# A\n");
+            Card b = loader.parse(root.resolve("scenarios/S02-payara/TRACE.md"), "# B\n");
+            Card deep = loader.parse(root.resolve("scenarios/S02-payara/deep/TRACE.md"), "# C\n");
+
+            assertEquals("scenarios-s01-spring-node-trace", a.id());
+            assertEquals("scenarios-s02-payara-trace", b.id());
+            assertEquals("scenarios-s02-payara-deep-trace", deep.id());
+        }
+
+        @Test
+        void should_depend_only_on_that_cards_own_path(@TempDir Path root) {
+            // Stability matters more than brevity: qualifying names only as far
+            // as current collisions require would mean adding one card silently
+            // changed another card's URL.
+            CardLoader loader = new CardLoader(root);
+            String alone = loader.parse(root.resolve("scenarios/S01/TRACE.md"), "# A\n").id();
+
+            loader.parse(root.resolve("scenarios/S02/TRACE.md"), "# B\n");
+            String withSibling = loader.parse(root.resolve("scenarios/S01/TRACE.md"), "# A\n").id();
+
+            assertEquals(alone, withSibling);
+        }
+
+        @Test
+        void should_let_frontmatter_win(@TempDir Path root) {
+            Card card = new CardLoader(root).parse(
+                    root.resolve("scenarios/S01/TRACE.md"), "---\nid: s01\n---\n\n# A\n");
+
+            assertEquals("s01", card.id(), "a declared id is the author's choice");
+        }
+
+        @Test
+        void should_produce_a_filename_safe_slug(@TempDir Path root) {
+            Card card = new CardLoader(root).parse(
+                    root.resolve("setup/04 PREPULL-PREWARM.md"), "# A\n");
+
+            assertEquals("setup-04-prepull-prewarm", card.id(),
+                    "spaces and case are normalised — it becomes cards/<id>.html");
+        }
+
+        @Test
+        void should_fall_back_to_the_filename_without_a_book(@TempDir Path root) {
+            // A card parsed on its own has nothing to be relative to. Still
+            // slugified: an id becomes cards/<id>.html, so `01 intro.md` must
+            // not produce a URL with %20 in it.
+            assertEquals("trace", new CardLoader().parse(
+                    root.resolve("scenarios/S01/TRACE.md"), "# A\n").id());
+            assertEquals("01-intro", new CardLoader().parse(
+                    root.resolve("setup/01 intro.md"), "# A\n").id());
+        }
+
+        @Test
+        void should_ignore_a_book_root_the_card_is_not_under(@TempDir Path root) {
+            Card card = new CardLoader(root.resolve("elsewhere")).parse(
+                    root.resolve("scenarios/S01/TRACE.md"), "# A\n");
+
+            assertEquals("trace", card.id(),
+                    "relativising would give ../.. — meaningless as an id");
+        }
+    }
+
+    @Nested
     @DisplayName("Frontmatter parsing")
     class FrontmatterParsing {
 
@@ -966,7 +1042,7 @@ class CardLoaderTest {
                 Original content.
                 """;
 
-            CardLoader loader = new CardLoader(null);
+            CardLoader loader = new CardLoader((MarkdownPreprocessor) null);
             Card card = loader.parse(Path.of("test.md"), markdown);
 
             assertTrue(card.blocks().get(0).html().contains("Original content"));

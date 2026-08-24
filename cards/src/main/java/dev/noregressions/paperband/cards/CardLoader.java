@@ -108,13 +108,19 @@ public final class CardLoader {
             "\\A---[ \\t]*\\R(.*?)^---[ \\t]*(?:\\R|\\z)",
             Pattern.DOTALL | Pattern.MULTILINE);
 
+    /**
+     * The book root ids are derived relative to, or null to fall back to the
+     * filename alone. See {@link #deriveIdFromFile}.
+     */
+    private final Path bookRoot;
+
     private final Parser parser;
     private final HtmlRenderer renderer;
     private final MarkdownPreprocessor preprocessor;
 
     /** Construct a loader with no markdown preprocessor. */
     public CardLoader() {
-        this(null);
+        this((MarkdownPreprocessor) null, null);
     }
 
     /**
@@ -123,7 +129,30 @@ public final class CardLoader {
      * before frontmatter parsing and HTML rendering.
      */
     public CardLoader(MarkdownPreprocessor preprocessor) {
+        this(preprocessor, (Path) null);
+    }
+
+    /**
+     * Construct a loader that derives ids from each card's path relative to
+     * {@code bookRoot} — the form a book wants, since it's unique per file
+     * without the author writing an {@code id:} anywhere (see
+     * {@link #deriveIdFromFile}).
+     *
+     * @param bookRoot the book root, or null to derive ids from the filename alone
+     */
+    public CardLoader(Path bookRoot) {
+        this((MarkdownPreprocessor) null, bookRoot);
+    }
+
+    /**
+     * Construct a loader with both a preprocessor and a book root.
+     *
+     * @param preprocessor pre-flexmark pass, or null
+     * @param bookRoot     the book root ids are relative to, or null
+     */
+    public CardLoader(MarkdownPreprocessor preprocessor, Path bookRoot) {
         this.preprocessor = preprocessor;
+        this.bookRoot = bookRoot;
         MutableDataSet options = new MutableDataSet();
         options.set(Parser.EXTENSIONS,
                 List.<Extension>of(AttributesExtension.create(), TablesExtension.create()));
@@ -387,9 +416,57 @@ public final class CardLoader {
         return s;
     }
 
-    private static String deriveIdFromFile(Path source) {
-        String name = source.getFileName().toString();
+    /**
+     * The id for a card whose frontmatter declares none: its path relative to
+     * the book root, slugified.
+     *
+     * <p>{@code scenarios/S01-spring-node/TRACE.md} &rarr;
+     * {@code scenarios-s01-spring-node-trace}.
+     *
+     * <p>The filename alone isn't enough. A book that names every scenario's
+     * file {@code TRACE.md} gives them all the id {@code TRACE}, and an id is
+     * an identity everywhere downstream — the PDF's {@code #card-<id>}
+     * destination, the site's {@code cards/<id>.html} page — so the duplicates
+     * used to overwrite each other rather than coexist. The whole relative path
+     * is unique by construction, which means no author has to hand-write ids to
+     * get a correct book.
+     *
+     * <p>It's derived from that file's own path and nothing else, so it stays
+     * put: adding, removing or renaming a <em>different</em> card can't change
+     * this one's URL. That rules out the tempting alternative of qualifying
+     * names only as far as the current collisions require.
+     *
+     * <p>With no book root (a card parsed on its own, outside a book) there's
+     * nothing to be relative to, so the filename stands.
+     */
+    private String deriveIdFromFile(Path source) {
+        Path relative = relativeToBookRoot(source);
+        String withoutExtension = stripExtension(relative.toString());
+        String slug = withoutExtension
+                .replace('\\', '/')
+                .toLowerCase(java.util.Locale.ROOT)
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("^-+|-+$", "");
+        return slug.isEmpty() ? stripExtension(source.getFileName().toString()) : slug;
+    }
+
+    /** The card's path relative to the book root, or its filename when that isn't possible. */
+    private Path relativeToBookRoot(Path source) {
+        if (bookRoot == null) return source.getFileName();
+        try {
+            Path relative = bookRoot.toAbsolutePath().normalize()
+                    .relativize(source.toAbsolutePath().normalize());
+            // A card outside the root would relativise to ../.. — meaningless
+            // as an id, and a sign the caller passed the wrong root.
+            return relative.startsWith("..") ? source.getFileName() : relative;
+        } catch (IllegalArgumentException e) {
+            return source.getFileName();
+        }
+    }
+
+    private static String stripExtension(String name) {
+        int slash = Math.max(name.lastIndexOf('/'), name.lastIndexOf('\\'));
         int dot = name.lastIndexOf('.');
-        return dot > 0 ? name.substring(0, dot) : name;
+        return dot > slash + 1 ? name.substring(0, dot) : name;
     }
 }

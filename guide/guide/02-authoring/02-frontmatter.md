@@ -19,7 +19,7 @@ write is rendered rather than swallowed.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `id` | string | filename stem | Stable identifier. Becomes the PDF named-destination anchor and the site URL slug. Change with care after publishing. |
+| `id` | string | path within the book, slugified | Stable identifier. Becomes the PDF named-destination anchor and the site URL slug, so it's unique per card by construction — `scenarios/S01-spring-node/TRACE.md` → `scenarios-s01-spring-node-trace`. Declare one for a shorter URL; change with care after publishing. |
 | `title` | string | first H1 | Card title. With `title:` set, no heading is consumed — the first `#` stays a heading in the body. Without it, the first `#` names the card and isn't repeated. |
 | `oneliner` | string | — | Short summary line shown in card meta and index listings. |
 | `effort` | string | — | Size estimate (`XS` / `S` / `M` / `L` / `XL`). Rendered as a badge. |

@@ -58,6 +58,11 @@ final class BookSource {
         if (resolved.cards().isEmpty()) {
             throw new MojoFailureException("No cards matched the <book> patterns under " + root);
         }
+        // Through the build's own log, not stderr: a warning nobody sees is the
+        // same as no warning, and these are the ones that explain missing cards.
+        for (String warning : resolved.warnings()) {
+            log.warn(warning);
+        }
         log.info("Planned " + resolved.cards().size() + " cards in " + resolved.parts().size()
                 + (resolved.parts().size() == 1 ? " part under " : " parts under ") + root);
         for (Part part : resolved.parts()) {

@@ -151,7 +151,7 @@ public class StructureMojo extends AbstractPaperbandMojo {
             throws MojoExecutionException, MojoFailureException {
         List<Path> cardFiles = source.cardFiles();
         ConfigLoader configLoader = new ConfigLoader();
-        CardLoader cardLoader = new CardLoader();
+        CardLoader cardLoader = null;      // see BookBuild: needs the book root
         Map<String, Map<String, Object>> providerConfig = includeProviderConfig();
         List<Card> cards = new ArrayList<>(cardFiles.size());
         List<RenderContext> contexts = new ArrayList<>(cardFiles.size());
@@ -160,6 +160,7 @@ public class StructureMojo extends AbstractPaperbandMojo {
             RenderContext ctx = configLoader.load(
                     cardFile, target, pageSize, resolveMargins(), declaredRoot, declaredVars());
             if (bookCtx == null) bookCtx = ctx;
+            if (cardLoader == null) cardLoader = new CardLoader(bookCtx.book().bookRoot());
             contexts.add(ctx);
             MarkdownPreprocessor preprocessor = Includes.defaultPreprocessor(
                     bookCtx.book().bookRoot(), providerConfig, ctx.vars());

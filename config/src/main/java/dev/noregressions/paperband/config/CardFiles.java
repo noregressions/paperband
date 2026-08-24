@@ -22,7 +22,7 @@ final class CardFiles {
     private CardFiles() {}
 
     /**
-     * Is {@code p} a card file?
+     * Is {@code p} a card file, for a book that <em>discovered</em> it?
      *
      * <p>{@code .md} is always a card except {@code README.md}, which is
      * conventionally a repo readme. {@code .yaml}/{@code .yml} count only
@@ -34,9 +34,29 @@ final class CardFiles {
      * @return true when the file should be loaded as a card
      */
     static boolean isCard(Path p, boolean acceptYamlCards) {
+        return isCard(p, acceptYamlCards, false);
+    }
+
+    /**
+     * Is {@code p} a card file?
+     *
+     * <p>The {@code README.md} rule is a <em>discovery</em> heuristic: walking a
+     * tree, a readme is documentation about the repo rather than a card in the
+     * book, and sweeping it up is almost always wrong. A glob is the opposite
+     * situation — {@code scenarios/&#42;/README.md} names those files and nothing
+     * else, so refusing them means a pattern that quietly matches nothing, with
+     * no way to tell that from an empty directory.
+     *
+     * @param p                the candidate file
+     * @param acceptYamlCards  whether the book root declares a {@code cardSchema:}
+     * @param namedExplicitly  true when a pattern asked for this file by name,
+     *                         which overrides the readme heuristic
+     * @return true when the file should be loaded as a card
+     */
+    static boolean isCard(Path p, boolean acceptYamlCards, boolean namedExplicitly) {
         String name = p.getFileName().toString();
         if (name.endsWith(".md")) {
-            return !name.equalsIgnoreCase("README.md");
+            return namedExplicitly || !name.equalsIgnoreCase("README.md");
         }
         if (acceptYamlCards && (name.endsWith(".yaml") || name.endsWith(".yml"))) {
             String lower = name.toLowerCase(Locale.ROOT);

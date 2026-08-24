@@ -131,7 +131,7 @@ public class SiteMojo extends AbstractPaperbandMojo {
         // Book root captured once (from the first card); the preprocessor is
         // rebuilt per card since it binds that card's vars at construction.
         ConfigLoader configLoader = new ConfigLoader();
-        CardLoader cardLoader = new CardLoader();
+        CardLoader cardLoader = null;      // see BookBuild: needs the book root
         Map<String, Map<String, Object>> providerConfig = includeProviderConfig();
         List<Card> cards = new ArrayList<>(cardFiles.size());
         List<RenderContext> contexts = new ArrayList<>(cardFiles.size());
@@ -140,6 +140,7 @@ public class SiteMojo extends AbstractPaperbandMojo {
             RenderContext ctx = configLoader.load(
                     cardFile, siteTarget, pageSize, resolveMargins(), declaredRoot, declaredVars());
             if (bookCtx == null) bookCtx = ctx;
+            if (cardLoader == null) cardLoader = new CardLoader(bookCtx.book().bookRoot());
             contexts.add(ctx);
             MarkdownPreprocessor preprocessor = Includes.defaultPreprocessor(
                     bookCtx.book().bookRoot(), providerConfig, ctx.vars());

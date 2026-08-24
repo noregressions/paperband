@@ -28,9 +28,9 @@ final class CardLoading {
     /**
      * Fail on cards sharing an id.
      *
-     * <p>A card's id comes from its filename unless its frontmatter sets one,
-     * so a book that names every scenario's file {@code TRACE.md} gives them
-     * all the id {@code TRACE}. That id is an identity everywhere downstream:
+     * <p>An undeclared id is derived from the card's path, so it's unique per
+     * file — a clash therefore means two cards <em>declare</em> the same one.
+     * That id is an identity everywhere downstream:
      * the PDF's {@code #card-<id>} named destination, the static site's
      * {@code cards/<id>.html} page, and every cross-link to either. A
      * collision therefore doesn't merge cards, it loses them — the site writes
@@ -64,8 +64,9 @@ final class CardLoading {
                 message.append("\n    ").append(relativise(bookRoot, source));
             }
         }
-        message.append("\n\nAn id defaults to the card's filename. Give each card its own "
-                + "`id:` in frontmatter (e.g. id: s01-trace).");
+        message.append("\n\nAn undeclared id is derived from the card's path, which is unique "
+                + "per file — so a clash means these cards declare the same `id:` in their "
+                + "frontmatter. Change one, or drop it and take the derived id.");
         throw new MojoFailureException(message.toString());
     }
 

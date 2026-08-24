@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -155,11 +156,12 @@ public final class BookPlan {
      *              its claimed cards in {@link Part#cards()}. Anonymous and
      *              predicate-excluded specs contribute none.
      */
-    public record Plan(List<Path> cards, List<Part> parts) {
-        /** Normalises both lists to immutable, non-null copies. */
+    public record Plan(List<Path> cards, List<Part> parts, List<String> warnings) {
+        /** Normalises the lists to immutable, non-null copies. */
         public Plan {
-            cards = cards == null ? List.of() : List.copyOf(cards);
-            parts = parts == null ? List.of() : List.copyOf(parts);
+            cards    = cards    == null ? List.of() : List.copyOf(cards);
+            parts    = parts    == null ? List.of() : List.copyOf(parts);
+            warnings = warnings == null ? List.of() : List.copyOf(warnings);
         }
     }
 
@@ -194,6 +196,13 @@ public final class BookPlan {
         List<Part> parts = new ArrayList<>();
         Set<Path> claimed = new LinkedHashSet<>();
         Set<String> ids = new LinkedHashSet<>();
+        List<String> warnings = new ArrayList<>();
+        // Files a pattern asked for that aren't cards. Reported rather than
+        // dropped in silence: a glob written as `**/*.md` plainly means "these
+        // files", so the one rule that quietly disagrees -- README.md is a repo
+        // readme, not a card -- has to say so, or content goes missing with no
+        // way to find out why.
+        warnings.addAll(nearMissWarnings(base, specs, acceptYamlCards));
 
         for (PartSpec spec : specs) {
             String id = idOf(spec);
@@ -213,7 +222,7 @@ public final class BookPlan {
 
             List<Path> matched = match(base, spec, candidates, claimed, acceptYamlCards);
             if (matched.isEmpty()) {
-                System.err.println("warn: no cards matched " + describe(id)
+                warnings.add("no cards matched " + describe(id)
                         + " under " + base + ": " + spec.includes());
                 continue;
             }
@@ -224,7 +233,72 @@ public final class BookPlan {
                         spec.landingPage()));
             }
         }
-        return new Plan(cards, parts);
+        return new Plan(cards, parts, warnings);
+    }
+
+    /**
+     * Warn about files an {@code include} pattern matched that still won't
+     * become cards.
+     *
+     * <p>Since a pattern now overrides the readme heuristic, what's left is the
+     * {@code .yaml} a book never opted into with a {@code cardSchema:} — asked
+     * for by name, and silently absent otherwise. Files that are nothing like a
+     * card ({@code pom.xml}, images) aren't reported: a {@code **} pattern
+     * matches the whole tree, and that warning would be noise nobody reads.
+     */
+    private static List<String> nearMissWarnings(
+            Path base, List<PartSpec> specs, boolean acceptYamlCards) {
+        List<Path> nearMisses;
+        try (Stream<Path> stream = Files.walk(base)) {
+            nearMisses = stream
+                    .filter(Files::isRegularFile)
+                    .filter(p -> !isHidden(base, p))
+                    .filter(p -> !CardFiles.isCard(p, acceptYamlCards, true))
+                    .filter(p -> isNearMiss(p, acceptYamlCards))
+                    .map(p -> p.toAbsolutePath().normalize())
+                    .toList();
+        } catch (IOException e) {
+            return List.of();
+        }
+        if (nearMisses.isEmpty()) return List.of();
+
+        List<String> out = new ArrayList<>();
+        for (PartSpec spec : specs) {
+            List<GlobSet> excludes = GlobSet.of(spec.excludes());
+            List<String> hits = new ArrayList<>();
+            for (String pattern : spec.includes()) {
+                GlobSet include = GlobSet.of(pattern);
+                for (Path miss : nearMisses) {
+                    Path rel = base.relativize(miss);
+                    if (include.matches(rel) && excludes.stream().noneMatch(x -> x.matches(rel))) {
+                        hits.add(rel.toString());
+                    }
+                }
+            }
+            if (!hits.isEmpty()) {
+                List<String> shown = hits.size() > 5 ? hits.subList(0, 5) : hits;
+                out.add(describe(idOf(spec)) + " matched " + hits.size()
+                        + (hits.size() == 1 ? " file that is not a card: " : " files that are not cards: ")
+                        + shown + (hits.size() > shown.size()
+                                ? " and " + (hits.size() - shown.size()) + " more" : "")
+                        + " — a .yaml card needs the book root to declare a cardSchema:. "
+                        + "Declare one, rename the file, or narrow the pattern.");
+            }
+        }
+        return out;
+    }
+
+    /** A file close enough to a card that a pattern matching it is probably a mistake. */
+    private static boolean isNearMiss(Path p, boolean acceptYamlCards) {
+        String name = p.getFileName().toString().toLowerCase(Locale.ROOT);
+        return !acceptYamlCards && (name.endsWith(".yaml") || name.endsWith(".yml"))
+                && !name.equals("paperband.yaml") && !name.equals("paperband.yml");
+    }
+
+    /** True when this pattern would have claimed {@code file} but for the readme rule. */
+    private static boolean skippedReadme(String pattern, Path relative) {
+        return "readme.md".equals(relative.getFileName().toString().toLowerCase(Locale.ROOT))
+                && !namesAFile(pattern);
     }
 
     // ---- internals ----
@@ -240,7 +314,9 @@ public final class BookPlan {
             return stream
                     .filter(Files::isRegularFile)
                     .filter(p -> !isHidden(base, p))
-                    .filter(p -> CardFiles.isCard(p, acceptYamlCards))
+                    // Readmes included: for a planned book the pattern decides,
+                    // and one naming README.md means it. See CardFiles.isCard.
+                    .filter(p -> CardFiles.isCard(p, acceptYamlCards, true))
                     .map(p -> p.toAbsolutePath().normalize())
                     .toList();
         } catch (IOException e) {
@@ -272,12 +348,19 @@ public final class BookPlan {
         List<Path> out = new ArrayList<>();
         for (String pattern : spec.includes()) {
             GlobSet include = GlobSet.of(pattern);
+            boolean namesAFile = namesAFile(pattern);
             List<Path> hits = new ArrayList<>();
             for (Path candidate : candidates) {
                 if (claimed.contains(candidate)) continue;
                 Path rel = base.relativize(candidate);
                 if (!include.matches(rel)) continue;
                 if (excludes.stream().anyMatch(x -> x.matches(rel))) continue;
+                // A file the discovery rules skip -- README.md -- is claimed
+                // only by a pattern that NAMES it. `scenarios/*/README.md` means
+                // those files; `**` is a sweep, and there the readme rule earns
+                // its keep: it's what stops a book swallowing every readme in
+                // node_modules.
+                if (!CardFiles.isCard(candidate, acceptYamlCards) && !namesAFile) continue;
                 hits.add(candidate);
             }
             Comparator<Path> byRelativePath = Comparator.comparing(p -> base.relativize(p).toString());
@@ -288,6 +371,24 @@ public final class BookPlan {
             out.addAll(hits);
         }
         return out;
+    }
+
+    /**
+     * Does {@code pattern} end in a literal filename rather than a wildcard?
+     *
+     * <p>The difference between asking for a file and sweeping up whatever is
+     * there — which is what decides whether the {@code README.md} rule applies
+     * (see {@link CardFiles#isCard(Path, boolean, boolean)}).
+     */
+    private static boolean namesAFile(String pattern) {
+        String trimmed = pattern.trim().replace('\\', '/');
+        int slash = trimmed.lastIndexOf('/');
+        String last = slash < 0 ? trimmed : trimmed.substring(slash + 1);
+        return !last.isEmpty()
+                && last.indexOf('*') < 0
+                && last.indexOf('?') < 0
+                && last.indexOf('[') < 0
+                && last.indexOf('{') < 0;
     }
 
     /**

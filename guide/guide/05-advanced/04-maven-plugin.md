@@ -302,6 +302,25 @@ Two rules, and they deliberately differ:
   starting point and a `vars.page` block in the yaml can still tune it, matching how
   `--page-size` always behaved.
 
+### Card ids and what a pattern claims
+
+A card's id is the PDF's `#card-<id>` destination and the site's `cards/<id>.html` page.
+Undeclared, it's derived from the card's path within the book, slugified —
+`scenarios/S01-spring-node/TRACE.md` → `scenarios-s01-spring-node-trace`. That's unique per
+file, so a book whose every scenario file is called `TRACE.md` needs no hand-written ids;
+and it depends on that card's own path alone, so adding or renaming a *different* card can
+never change this one's URL. Declare `id:` in frontmatter for something shorter.
+
+Two rules about what a pattern actually claims are worth knowing, because both are silent
+by nature:
+
+- **`README.md` is claimed only by a pattern that names it.** `scenarios/*/README.md` means
+  those files and gets them. A wildcard sweep — `**`, `scenarios/**/*.md` — leaves readmes
+  out, which is what stops a book swallowing every readme under `node_modules`.
+- **A `.yaml` card needs the book root to declare a `cardSchema:`.** Without one, a pattern
+  naming a yaml file matches nothing — and the build now says so rather than leaving you to
+  wonder, naming the files and the reason.
+
 ## Part pages
 
 Every named part gets a page of its own, generated for you: a full-page divider before its

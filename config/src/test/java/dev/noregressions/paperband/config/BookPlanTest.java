@@ -102,6 +102,29 @@ class BookPlanTest {
     }
 
     @Test
+    void aPatternThatNamesAReadmeClaimsIt() throws IOException {
+        // The readme rule is a discovery heuristic: walking a tree, a readme is
+        // documentation about the repo. A pattern naming README.md is the
+        // opposite — it means those files, and refusing them leaves a pattern
+        // that matches nothing with no way to tell why.
+        Files.writeString(bookRoot.resolve("paperband.yaml"), "title: Book\n");
+        card("scenarios/S01/README.md", "# S01 overview\n");
+        card("scenarios/S01/TRACE.md", "# S01 trace\n");
+        card("scenarios/S01/frontend/node_modules/lodash/README.md", "# vendored\n");
+
+        BookPlan.Plan named = BookPlan.resolve(bookRoot,
+                List.of(part("Scenarios", "scenarios/*/README.md")), "pdf-a4");
+        assertEquals(List.of("scenarios/S01/README.md"), relative(named.cards()),
+                "named, so claimed — and one level, so nothing vendored");
+
+        BookPlan.Plan swept = BookPlan.resolve(bookRoot,
+                List.of(part("Scenarios", "scenarios/**/*.md")), "pdf-a4");
+        assertEquals(List.of("scenarios/S01/TRACE.md"), relative(swept.cards()),
+                "a wildcard sweep leaves readmes alone — that rule is what stops "
+                        + "a book swallowing every readme under node_modules");
+    }
+
+    @Test
     void nonCardFilesAreNeverMatchedHoweverBroadThePattern() throws IOException {
         Files.writeString(bookRoot.resolve("paperband.yaml"), "title: Book\n");
         card("docs/README.md", "# Readme\n");
