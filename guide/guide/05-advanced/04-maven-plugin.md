@@ -1,14 +1,30 @@
 ---
 id: maven-plugin
-oneliner: "Run Paperband builds as part of a Maven build, via a `build` goal Mojo."
+oneliner: "Nine goals: build, site, publish, and the inspection goals around them."
 ---
 
 # Maven Plugin
 
-For projects that already build with Maven, `paperband-maven-plugin` runs a Paperband
-build directly as part of `mvn install` (or any phase you bind it to) — no shell alias, no
-separate CLI jar. It wraps the same single-card / book pipeline as the CLI's `build`
-command, just with Maven parameters instead of picocli options.
+`paperband-maven-plugin` is how Paperband runs: a book builds as part of `mvn install`
+(or any phase you bind it to), in the same reactor and CI as the rest of the project.
+
+## Goals
+
+| Goal | What it does | Default phase |
+|---|---|---|
+| `build` | PDF from a card, a book directory, or a POM-declared book | `process-resources` |
+| `site` | Multi-file static HTML site from the same book | `process-resources` |
+| `publish` | Every edition declared in the book's `publication:` block | `process-resources` |
+| `structure` | Dump the resolved structure — parts, cards, blocks — without rendering | `process-resources` |
+| `pages` | Page-span report read from a rendered PDF | `verify` |
+| `scan` | One card's parsed frontmatter, blocks and resolved config | *(invoke directly)* |
+| `render` | One HTML file straight to PDF, no card pipeline in the way | *(invoke directly)* |
+| `renderers` | List the renderers this build can reach | *(invoke directly)* |
+| `themes` | List the themes `<theme>` can name | *(invoke directly)* |
+
+Every goal runs standalone as well as from an execution — `mvn paperband:structure
+-Dpaperband.input=book` needs no POM edit — and every parameter has a `-D` property, so a
+bound execution can be overridden from the command line.
 
 ## Add the plugin
 
@@ -20,7 +36,7 @@ The plugin shares the parent's version. The parent POM version:
 <plugin>
   <groupId>dev.noregressions.paperband</groupId>
   <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.0.1</version>
+  <version>0.1.0</version>
   <executions>
     <execution>
       <goals><goal>build</goal></goals>
@@ -50,7 +66,15 @@ The `build` goal's default phase is `process-resources`; override `<phase>` in t
 | `layout` | `paperband.layout` | *(context default)* | Layout template override. |
 | `theme` | `paperband.theme` | *(book's `theme:`)* | Named theme; overrides `paperband.yaml`. |
 | `themeDir` | `paperband.themeDir` | — | User theme directory, checked before built-ins. |
+| `stylesheets` | `paperband.stylesheets` | — | Stylesheets this build contributes, inlined *after* the theme. See Declaring the whole book below. |
 | `skip` | `paperband.skip` | `false` | Skip the goal without failing the build. |
+| `emitHtml` | `paperband.emitHtml` | — | Also write the rendered HTML here, before the renderer sees it. A book's copy gets a `<base href>` so its assets resolve in a browser. |
+| `reportPages` | `paperband.reportPages` | `false` | Print a per-anchor page-span table after rendering. |
+| `maxPagesPerCard` | `paperband.maxPagesPerCard` | *(`vars.maxPagesPerCard`)* | Fail the build if a card runs longer. See Page Enforcement. |
+| `select` | `paperband.select` | — | Keep only cards whose `field=value` matches. Book builds only. |
+| `watermark` | `paperband.watermark` | *(`vars.watermark`)* | Stamp this text on every page. See Watermarks for the four tuning parameters. |
+| `externalIncludeDirs` | `paperband.externalIncludeDirs` | — | Permit `{{#include}}` to read below these directories, outside the book root. |
+| `externalIncludeFiles` | `paperband.externalIncludeFiles` | — | Permit `{{#include}}` to read these specific files. |
 
 ### Full-bleed builds
 
@@ -139,6 +163,145 @@ Two parts may draw *different* files out of the *same* folder, which is the thin
 `parts:` in a `paperband.yaml` can't express: a yaml part claims whole folders, while a
 POM-declared part claims the individual cards its patterns matched.
 
+## Declaring the whole book
+
+A book normally describes itself: a `paperband.yaml` at its root carries the title, cover,
+theme and vars, and the directory layout supplies the structure. The POM can take over
+both, which leaves a clean three-way split — **structure in XML, content in markdown,
+appearance in CSS**:
+
+```xml
+<configuration>
+  <output>${project.build.directory}/runbook.pdf</output>
+  <margins>0</margins>
+  <theme>none</theme>
+  <stylesheets>
+    <stylesheet>css/tokens.css</stylesheet>     <!-- colours, fonts -->
+  </stylesheets>
+  <book>
+    <root>${project.basedir}</root>
+    <title>Incident Runbook</title>
+    <cover><template>layouts/runbook.html</template></cover>
+    <footer><template>layouts/footer.html</template></footer>
+    <sectionLandingTemplate>minimal</sectionLandingTemplate>
+    <vars>
+      <subtitle>Trace-driven investigations</subtitle>
+      <author>Platform Team</author>
+    </vars>
+    <axes>
+      <axis>
+        <name>tier</name>
+        <title>Tier</title>
+        <values>
+          <value><id>1</id><label>Critical</label><color>#c0392b</color></value>
+          <value><id>2</id><label>Standard</label><color>#e67e22</color></value>
+        </values>
+      </axis>
+    </axes>
+    <parts>
+      <part>
+        <title>Scenarios</title>
+        <includes><include>scenarios/**/TRACE.md</include></includes>
+      </part>
+    </parts>
+  </book>
+</configuration>
+```
+
+That book needs no `paperband.yaml` at all. It's the natural shape for **generated**
+content — cards written by tooling, structure selected by pattern — where there's no
+sensible owner for a config file sitting among the output.
+
+| Element | Notes |
+|---|---|
+| `book/title` | Book title, for the cover and the PDF metadata. |
+| `book/cover`, `book/back` | A full-page `<image>` or `<template>`. Templates live in the book's `layouts/` — see below. |
+| `book/header`, `book/footer` | Running fixtures, same `<image>`/`<template>` shape. |
+| `book/sectionLandingTemplate` | Default landing/divider template for parts and sections that name none — a preset (`minimal`) or a path. |
+| `book/vars` | Book-level template vars (`author`, `subtitle`, `series`, …). Flat strings only — see Watch Out. |
+| `book/axes` | Declared axes: `name` (the frontmatter key cards use), `title`, and `values` of `id`/`label`/`color`. Declared axes replace a yaml `axes:` wholesale. |
+
+An axis value's `<id>` is a string, where a yaml one keeps its native type. That costs
+nothing: every comparison between an axis value and a card's frontmatter runs both sides
+through `String.valueOf` first, so `<id>1</id>` matches a card declaring `tier: 1`.
+
+`<book>` doesn't have to select cards. Declare config with no `<parts>` or `<includes>` and
+the cards come from walking `<root>`, exactly as `<input>` would — so a book can take its
+title and cover from the POM while keeping its structure in the directory tree.
+
+### Layouts without a theme
+
+A theme supplies two things: stylesheets, and template overrides. `<stylesheets>` replaces
+the first. The second was never theme-only — the book's own **`layouts/` directory** sits
+in the template loader chain, ahead of the bundled defaults and behind a theme's overrides:
+
+```
+theme overrides  →  <bookRoot>/layouts/  →  bundled templates
+```
+
+So with no theme, drop a file in `layouts/` named after whatever you want to replace:
+
+| File in `layouts/` | Replaces |
+|---|---|
+| `book.html` | the whole book shell — `<html>`, scaffold CSS, the card loop |
+| `_card-body.html` | how one card renders |
+| `_block-section.html` | how one block renders, at every nesting depth |
+| `_section-divider.html` | the part/section divider page |
+| `_book-cover.html`, `_book-back.html` | cover and back matter |
+| `_tier-divider.html` | axis-value divider pages |
+| anything else | any bundled template, by its own name |
+
+Everything a theme could override, a book can — the recursion resolves through the same
+chain, so an overridden `_block-section.html` is used at every depth.
+
+Templates named from config — `<cover><template>`, `<sectionLandingTemplate>`, an axis's
+`<landingTemplate>`, and `<layout>` — are paths **relative to `layouts/`**, extension
+stripped. A leading `layouts/` is accepted and dropped, since that's the file as it sits on
+disk:
+
+| Declared | Loads |
+|---|---|
+| `layouts/footer.html` | `<bookRoot>/layouts/footer.html` |
+| `footer.html` | the same file |
+| `layouts/covers/front.html` | `<bookRoot>/layouts/covers/front.html` — subdirectories work |
+| `_book-cover` | the bundled template of that name |
+
+A path that resolves nowhere fails the build and names every place it looked.
+
+### theme=none
+
+`<theme>none</theme>` turns theming off, whatever the book's yaml asked for. It's needed
+because an unset `<theme>` *falls back* to the book's own — without `none` the build can
+replace one theme with another but never with nothing. With no theme, the built-in scaffold
+still supplies the structural CSS (divider pages, page geometry, code blocks) and colours
+inherit, so what you get is plain rather than broken — the right base for a `<stylesheets>`
+layer of your own. `none` is therefore a reserved name: a theme directory containing a
+bundle called `none` can't be selected.
+
+### Where declared CSS sits in the cascade
+
+`<stylesheets>` are inlined **after** the theme, making them the strongest layer:
+
+```
+book's own css: chain  →  theme  →  <stylesheets>
+```
+
+That ordering earns its keep beyond the themeless case: theme CSS is inlined after a book's
+own, so a book can't override a bundled theme's rule without `!important`. A build-declared
+stylesheet can. `<theme>blueprint</theme>` plus one stylesheet means "that theme, with my
+corrections".
+
+### Precedence
+
+Two rules, and they deliberately differ:
+
+- **Anything inside `<book>` wins over the yaml.** It's a declaration, not a default, and
+  the POM is the file you just edited. Declared `<parts>` also replace a yaml `parts:`,
+  with a warning.
+- **Build geometry outside `<book>` seeds the base.** `<margins>` and `<pageSize>` set the
+  starting point and a `vars.page` block in the yaml can still tune it, matching how
+  `--page-size` always behaved.
+
 ## Part pages
 
 Every named part gets a page of its own, generated for you: a full-page divider before its
@@ -219,25 +382,151 @@ mvn paperband:build -Dpaperband.input=guide -Dpaperband.output=guide.pdf
 artifactId, so that short form works; the fully-qualified
 `dev.noregressions.paperband:paperband-maven-plugin:build` works too.
 
-## What's not supported yet
+## Where the pipeline lives
 
 The plugin depends only on the library modules (`core`, `cards`, `config`, `layout`,
-`include`, `render-playwright`) — deliberately not on `cli`, whose shaded jar bundles
-picocli and Playwright as a console entry point. A few CLI-only features currently live in
-`cli` itself rather than a shared library module, so the plugin doesn't have them yet:
+`include`, `render-playwright`), and the goals are thin: `build` and `publish` both drive
+one `BookBuild`, so an edition build and a plain build can't drift apart, and `build`,
+`site` and `structure` share one card-selection step, which is what lets `structure`
+describe exactly the book `build` would render.
 
-- Watermarking (`--watermark` and friends)
-- `--select` / multi-edition publishing
-- Page-count reporting and enforcement (`--report-pages`, `--max-pages-per-card`)
-- Debug HTML emission (`--emit-html`), external include escape hatches
+PDF post-processing — watermark stamping, and the page-span analysis behind `pages` and
+`<reportPages>` — reads and rewrites a finished PDF, so it needs PDFBox directly and lives
+in the plugin alongside the goals that use it.
 
 ## Watch Out
+
+**Axes and parts compete for the divider slot.** A card is never in both an axis group and
+a section, so declaring an axis over cards that also belong to parts replaces the part
+divider pages with axis dividers — the cards regroup by axis value. Declare axes when the
+axis *is* the structure you want; leave them out when the parts are. Check which you got
+with `mvn paperband:structure` before rendering.
+
+`<book><vars>` takes **flat string values only**. Maven's configurator maps
+`<vars><author>Name</author></vars>` onto a string map cleanly and nested structures
+badly, so the nested config that matters has typed parameters instead — `<margins>`,
+`<pageSize>`, `<maxPagesPerCard>`. Anything genuinely nested belongs in a `paperband.yaml`,
+which is better at it.
 
 `<book><root>` has to *be* the book root — the directory whose `paperband.yaml` carries the
 title, css, theme and vars. That side of the config is still resolved from each card's own
 parent chain, not from the `<book>` element, so a pattern reaching outside the root would
 match cards that belong to a different book.
 
-Like the CLI, the `playwright` renderer needs headless Chromium on first use — see the
-Watch Out in Quickstart. A Maven build with no internet access (an offline CI runner, say)
-needs Chromium pre-cached before the goal runs, exactly as with the CLI.
+The `playwright` renderer needs headless Chromium on first use — see the Watch Out in
+Quickstart. A Maven build with no internet access (an offline CI runner, say) needs
+Chromium pre-cached before the goal runs.
+
+## The site goal
+
+The same book, as a browsable static site — an index, a landing page per part or axis
+value, and a page per card with prev/next navigation:
+
+```xml
+<execution>
+  <id>site</id>
+  <goals><goal>site</goal></goals>
+  <configuration>
+    <input>${project.basedir}/guide</input>
+    <outputDirectory>${project.build.directory}/site</outputDirectory>
+    <clean>true</clean>
+  </configuration>
+</execution>
+```
+
+`<clean>` clears the `cards/` subtree first, so a card removed from the book stops being
+served from a stale page. This goal's build target is `<siteTarget>` and defaults to `web`
+rather than the `pdf-a4` the others use, since target-scoped content is usually written to
+distinguish exactly that. `<book>` works here too, so one declaration feeds both the PDF
+and the site — put it in the plugin's own `<configuration>` and both goals read it:
+
+```xml
+<plugin>
+  <groupId>dev.noregressions.paperband</groupId>
+  <artifactId>paperband-maven-plugin</artifactId>
+  <version>0.1.0</version>
+
+  <!-- Shared by every goal: what the book is, and how it renders. -->
+  <configuration>
+    <theme>workshop</theme>
+    <margins>0</margins>
+    <book>
+      <root>${project.basedir}</root>
+      <title>…</title>
+      <parts>…</parts>
+    </book>
+  </configuration>
+
+  <executions>
+    <execution>
+      <id>pdf</id>
+      <goals><goal>build</goal></goals>
+      <configuration>
+        <output>${project.build.directory}/book.pdf</output>
+      </configuration>
+    </execution>
+    <execution>
+      <id>site</id>
+      <goals><goal>site</goal></goals>
+      <configuration>
+        <outputDirectory>${project.build.directory}/site</outputDirectory>
+        <clean>true</clean>
+      </configuration>
+    </execution>
+  </executions>
+</plugin>
+```
+
+Each execution then contributes only what's its own — where the output goes. A goal-specific
+parameter belongs in its execution rather than the shared block, since goals read the shared
+one indiscriminately: `structure`'s `<outputFile>` is separate from `build`'s `<output>` for
+exactly that reason.
+
+## The publish goal
+
+Builds every edition declared in the book's `publication:` block — the same content cut
+several ways without an execution per cut:
+
+```xml
+<execution>
+  <id>editions</id>
+  <goals><goal>publish</goal></goals>
+  <configuration>
+    <bookDirectory>${project.basedir}/guide</bookDirectory>
+  </configuration>
+</execution>
+```
+
+Everything describing an artefact — theme, size, output path, card selection, vars, page
+contract — lives in the yaml. The POM contributes only session settings: `<renderer>`,
+`<emitHtmlDirectory>`, `<editions>` to build a subset, and `<set>` for one-off overrides
+(`defaults.theme=carded`, `editions.mini.vars.audience=manager`). Editions build in
+declaration order; one failing doesn't stop the rest, and the goal fails at the end naming
+those that did.
+
+## Inspection goals
+
+None of these render a book, and all four are usually run directly rather than bound:
+
+```bash
+# What does this declaration actually produce?
+mvn paperband:structure -Dpaperband.input=book
+mvn paperband:structure -Dpaperband.outputFile=structure.txt   # with a <book> in the POM
+
+# Why did this card render like that?
+mvn paperband:scan -Dpaperband.input=book/setup/install.md
+
+# How long is each card in the finished PDF?
+mvn paperband:pages -Dpaperband.pdf=target/book.pdf -Dpaperband.byPages=true
+
+# What's available in this build?
+mvn paperband:renderers
+mvn paperband:themes -Dpaperband.themeDir=mythemes
+```
+
+`structure` takes the same `<book>` element `build` does, which is the point of it: the
+outline lists exactly which cards each pattern claimed, in which part, in what order — the
+cheapest way to check a declaration without waiting for a render.
+
+`render` is the odd one out: it takes an HTML file and a renderer and nothing else, which
+makes it the way to turn an `<emitHtml>` file back into a PDF after hand-editing it.

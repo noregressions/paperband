@@ -7,15 +7,27 @@ oneliner: "Themes are directories of CSS (and optional templates) that cascade o
 
 A theme is a directory with a `manifest.txt` listing its CSS files, plus an optional
 `templates/` directory of Pebble overrides. Built-in themes ship on the classpath; custom
-themes are discovered via `--theme-dir`. Theme CSS loads after user CSS, so the theme wins
-on conflicts. List available themes with `paperband themes`.
+themes are discovered via `<themeDir>`. Theme CSS loads after user CSS, so the theme wins
+on conflicts. List available themes with `mvn paperband:themes`. `<theme>none</theme>`
+turns theming off entirely, overriding whatever the book's yaml asked for — see the Maven
+Plugin section for why that needs a name of its own, and how `<stylesheets>` layers your
+own CSS above a theme.
 
 ## Built-in themes
 
-Seven themes ship with paperband: `editorial` (serif, drop caps, magazine feel — this
-guide uses it), `classical`, `fieldguide`, `dark`, `blueprint`, `carded`, and `herodevs`.
-Pick one with the `theme:` key in the root `paperband.yaml`, or override at build time
-with `--theme`; the CLI flag wins when both are given.
+Nine themes ship with paperband: `editorial` (serif, drop caps, magazine feel — this
+guide uses it), `editorial-gold`, `classical`, `fieldguide`, `dark`, `blueprint`,
+`carded`, `herodevs`, and `workshop`. Pick one with the `theme:` key in the root
+`paperband.yaml`, or override at build time with `<theme>`; the build setting wins when
+both are given.
+
+`workshop` is the one built for a document with a *repeating rhythm* — a lab or workshop
+whose every step runs why → how → run → observe → establish. It keys off the block classes
+those headings produce, so the phases get treatments matching what they hold (commands to
+follow, output to compare against, a conclusion to keep) and the repeated headings become
+small-caps markers rather than headings competing with the numbered steps. It also tells
+commands from output by the fence's own language class, since a lab is mostly those two
+things.
 
 ## How CSS composes
 
@@ -212,17 +224,17 @@ Split larger themes into several files (tokens first, components after) — they
 listed order. Then build with it:
 
 ```bash
-paperband build mybook out.pdf --theme-dir mythemes --theme inkwell
+mvn paperband:build -Dpaperband.input=mybook -Dpaperband.output=out.pdf -Dpaperband.themeDir=mythemes -Dpaperband.theme=inkwell
 ```
 
-A `--theme-dir` theme with the same name as a built-in **overrides** the built-in — handy
+A `<themeDir>` theme with the same name as a built-in **overrides** the built-in — handy
 for forking `editorial` into a house variant: copy its directory out of
 `layout`'s resources, keep the name, and iterate.
 
 ## Check
 
 ```bash
-paperband themes --theme-dir mythemes
+mvn paperband:themes -Dpaperband.themeDir=mythemes
 ```
 
 Lists every discovered theme with its source (`built-in`, your directory, or

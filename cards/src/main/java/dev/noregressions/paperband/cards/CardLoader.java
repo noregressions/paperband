@@ -42,8 +42,13 @@ import java.util.regex.Pattern;
  *       {@code ## Watch Out {.watch-out #wo-1}} attaches class/id to the {@code h2})
  *       and {@code TablesExtension} (GFM pipe tables).</li>
  *   <li>Parse that HTML with jsoup; walk top-level children.</li>
- *   <li>{@code h1} (if any) becomes the card title (frontmatter {@code title:} wins if set).</li>
- *   <li>Every other heading level ({@code h2}–{@code h6}) opens a new
+ *   <li>A frontmatter {@code title:} names the card. Without one, the first
+ *       {@code h1} does instead, and is consumed rather than rendered — so a
+ *       card shows one heading, not a title plus a copy of it. With one, no
+ *       {@code h1} is consumed: the card is already named, and every heading the
+ *       author wrote renders.</li>
+ *   <li>Every heading that isn't consumed as the title — {@code h2}–{@code h6},
+ *       and any {@code h1} — opens a new
  *       {@link Block.Kind#HEADING_SECTION HEADING_SECTION} block, nested by rank — see below.
  *       Class set comes from the heading's {@code class} attribute, falling back to a slug
  *       derived from the heading text.</li>
@@ -74,9 +79,34 @@ import java.util.regex.Pattern;
  */
 public final class CardLoader {
 
-    /** Match a YAML frontmatter block at the very start of the file. */
-    private static final Pattern FRONTMATTER =
-            Pattern.compile("\\A---\\s*\\R(.*?)\\R---\\s*(?:\\R|\\z)", Pattern.DOTALL);
+    /**
+     * Match a YAML frontmatter block at the very start of the file.
+     *
+     * <p>The closing fence is anchored to the start of a line ({@code ^} under
+     * {@code MULTILINE}) rather than written as "a line break then {@code ---}".
+     * The difference is an <em>empty</em> block:
+     *
+     * <pre>
+     * ---
+     * ---
+     * # Title
+     * </pre>
+     *
+     * <p>which an authoring tool writes when it has no metadata to add, and a
+     * hand-edited card is left with once its last key goes. Requiring a line
+     * break before the closing fence meant the opening fence's own newline had
+     * already been consumed, so the second {@code ---} was read as content and
+     * the scan ran on to the <em>next</em> {@code ---} in the document — parsing
+     * the prose in between as YAML, and failing on whatever punctuation YAML
+     * happens to reserve.
+     *
+     * <p>{@code [ \t]*} rather than {@code \s*} around the fences for the same
+     * reason: {@code \s} matches line breaks, so it could swallow the very
+     * boundary the pattern is trying to find.
+     */
+    private static final Pattern FRONTMATTER = Pattern.compile(
+            "\\A---[ \\t]*\\R(.*?)^---[ \\t]*(?:\\R|\\z)",
+            Pattern.DOTALL | Pattern.MULTILINE);
 
     private final Parser parser;
     private final HtmlRenderer renderer;
@@ -159,6 +189,11 @@ public final class CardLoader {
         InlineCodeClassifier.process(bodyEl);
 
         String title = fm.getString("title").orElse(null);
+        // An h1 fills the title slot only when the frontmatter hasn't. With a
+        // `title:` declared, the card is already named and the author's first
+        // h1 is just a heading -- consuming it would silently delete something
+        // they wrote.
+        boolean titleWanted = title == null || title.isBlank();
         List<Block> topLevel = new ArrayList<>();
         Deque<OpenSection> stack = new ArrayDeque<>();
         StringBuilder introHtml = new StringBuilder();
@@ -168,13 +203,17 @@ public final class CardLoader {
             if (child instanceof Element el) {
                 String tag = el.tagName();
                 int level = headingLevel(tag);
-                if (level == 1) {
-                    if (title == null || title.isBlank()) {
-                        title = el.text();
-                    }
+                // A card with no `title:` takes it from its first h1, which is
+                // then consumed rather than rendered -- one heading, not a title
+                // plus a duplicate of it. Every other h1 is structure the author
+                // wrote (a long card numbering its steps with `#`) and opens a
+                // section like any other heading.
+                if (level == 1 && titleWanted) {
+                    titleWanted = false;
+                    title = el.text();
                     continue;
                 }
-                if (level >= 2) {
+                if (level >= 1) {
                     // A heading at this level closes every section at this
                     // level or deeper -- see the class javadoc for why.
                     while (!stack.isEmpty() && stack.peek().level >= level) {

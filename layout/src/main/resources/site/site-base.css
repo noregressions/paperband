@@ -107,6 +107,34 @@ body.has-sidebar { margin: 0; }
 .sidebar-cards li a:hover { opacity: 1; background: rgba(0, 0, 0, 0.05); }
 .sidebar-cards li.active a { font-weight: 600; opacity: 1; background: rgba(0, 0, 0, 0.07); }
 
+/* ---- index: the part/axis-value grid ----
+ * site-index.html emits .tier-grid holding one .tier-box per part, axis value
+ * or section. Nothing styled it — not this scaffold, not any bundled theme —
+ * so every site's landing page ran its parts together as inline text. This is
+ * the scaffold's job: a usable grid that themes then colour. */
+.tier-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.85rem;
+  margin: 1.4rem 0;
+}
+.tier-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.85rem 1rem;
+  text-decoration: none;
+  color: inherit;
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+a.tier-box:hover { background: rgba(0, 0, 0, 0.05); }
+.tier-box-label { font-weight: 600; }
+.tier-box-count { font-size: 0.85em; opacity: 0.7; }
+/* A part with no page of its own is listed but not linked (see Part.landingPage). */
+.tier-box.section-box-unlinked { opacity: 0.75; cursor: default; }
+
 /* ---- prev/next + breadcrumb strips ---- */
 .card-nav,
 .card-nav-bottom {

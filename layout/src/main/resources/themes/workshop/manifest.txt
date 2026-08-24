@@ -1,0 +1,6 @@
+# Workshop / lab manual — numbered steps, labelled phases, evidence panels.
+# Built for documents with a repeating rhythm: why → how → run → observe →
+# establish. Phase headings become eyebrow labels rather than headings, so the
+# numbered steps stay the visible structure however many times the rhythm
+# repeats.
+theme.css

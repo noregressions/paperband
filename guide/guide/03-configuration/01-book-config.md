@@ -114,10 +114,11 @@ this is overridable in two places, checked in this order:
        template: "layouts/default-section.html"
    ```
 
-Template paths are resolved relative to the book root, and — like any custom layout —
-need to actually be reachable through the book's `layouts/` directory (or a theme's
-template overrides) for paperband to find them by name. If neither is set, the built-in
-template is used, same as before this override existed.
+Template paths are relative to the book's `layouts/` directory, extension stripped — a
+leading `layouts/` is accepted and dropped, so write the path as the file sits on disk.
+Subdirectories work: `layouts/sections/scanners.html` loads exactly that. A theme's
+template overrides are searched first, the bundled templates last. If neither `landing` is
+set, the built-in template is used, same as before this override existed.
 
 Instead of a path, `template:` also accepts a **named preset** — no file needed:
 

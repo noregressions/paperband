@@ -8,19 +8,19 @@ max_pages: 2
 verify: true
 ---
 
-# Frontmatter Reference
-
 YAML frontmatter sits between `---` delimiters at the very start of the file, before
-the H1 title. It is parsed by SnakeYAML, so all YAML types work: strings, booleans,
+the body. It is parsed by SnakeYAML, so all YAML types work: strings, booleans,
 integers, lists, and nested maps. This card uses every field it documents in its own
-frontmatter.
+frontmatter — including `title:`, which is why it has no `#` heading of its own: a card
+that declares a title doesn't need to repeat it as a heading, and any heading it does
+write is rendered rather than swallowed.
 
 ## Field reference
 
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `id` | string | filename stem | Stable identifier. Becomes the PDF named-destination anchor and the site URL slug. Change with care after publishing. |
-| `title` | string | H1 text | Card title. Frontmatter wins over the H1 when both are set. |
+| `title` | string | first H1 | Card title. With `title:` set, no heading is consumed — the first `#` stays a heading in the body. Without it, the first `#` names the card and isn't repeated. |
 | `oneliner` | string | — | Short summary line shown in card meta and index listings. |
 | `effort` | string | — | Size estimate (`XS` / `S` / `M` / `L` / `XL`). Rendered as a badge. |
 | `tags` | list | — | Free-form tag list. Reserved for future filtering and index generation. |
@@ -47,7 +47,7 @@ If `id` is not set, the card's filename stem is used (e.g. `02-frontmatter.md` �
 ## Check
 
 ```bash
-paperband scan path/to/card.md
+mvn paperband:scan -Dpaperband.input=path/to/card.md
 ```
 
 The first line of scan output shows the resolved `id` — useful for confirming the id

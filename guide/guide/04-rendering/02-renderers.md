@@ -8,7 +8,7 @@ oneliner: "Playwright is the only HTML-to-PDF renderer paperband ships with."
 Paperband renders HTML to PDF through a pluggable `HtmlToPdfRenderer`, discovered via
 `ServiceLoader`. `playwright` — real Chromium, driven headless — is the only renderer
 paperband ships with. Select it with `--renderer` (`-r`, default `playwright`) and check
-availability with `paperband renderers`. Renderer choice is CLI-only — there is no
+availability with `mvn paperband:renderers`. Renderer choice is a build setting — there is no
 `renderer:` key in `paperband.yaml`.
 
 ## Why only one
@@ -40,14 +40,14 @@ cache under `~/.cache/ms-playwright/`.
 
 ## Watch Out
 
-`paperband renderers` shows an `AVAILABLE yes/no` column, but `build` does **not** fall
+`mvn paperband:renderers` shows an `AVAILABLE yes/no` column, but `build` does **not** fall
 back automatically: a missing Chromium install fails the build rather than silently
 degrading fidelity. Pre-cache the browser download for offline/CI builds.
 
 ## Check
 
 ```bash
-paperband renderers
+mvn paperband:renderers
 ```
 
 ```

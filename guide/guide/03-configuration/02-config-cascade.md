@@ -85,7 +85,7 @@ yaml gives reproducible builds.
 ## Check
 
 ```bash
-paperband scan path/to/card.md
+mvn paperband:scan -Dpaperband.input=path/to/card.md
 ```
 
 The scan output includes the fully resolved context for that card — book root, CSS chain

@@ -31,7 +31,7 @@ declared order.
 
 This guide documents Paperband **by using Paperband to build it**. Every card is both
 the documentation and a live demonstration: the rendered PDF and static site you are
-reading were produced by running `paperband build` and `paperband site` on the source
+reading were produced by running the plugin's `build` and `site` goals on the source
 in `guide/guide/`.
 
 Excerpts pulled from the actual project source via `{% fragment %}` tags are current
@@ -39,6 +39,6 @@ at build time — if the source drifts, the next build catches it.
 
 ## Check
 
-Run `paperband scan path/to/card.md` to inspect any card's parsed structure: frontmatter
+Run `mvn paperband:scan -Dpaperband.input=path/to/card.md` to inspect any card's parsed structure: frontmatter
 fields, resolved id, block list, and a snippet of each block's rendered HTML. A good first
 step before committing to a full book build.

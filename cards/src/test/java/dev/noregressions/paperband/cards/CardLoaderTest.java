@@ -11,6 +11,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -133,6 +134,142 @@ class CardLoaderTest {
     @Nested
     @DisplayName("Frontmatter parsing")
     class FrontmatterParsing {
+
+        /**
+         * An empty frontmatter block — {@code ---} straight onto {@code ---} —
+         * is what an authoring tool writes when it has no metadata to add, and
+         * what a hand-written card is left with after its last key is deleted.
+         *
+         * <p>It used to consume the closing delimiter as content and keep
+         * scanning for another {@code ---}, so the whole document up to the next
+         * thematic break was parsed as YAML. On a card whose prose contained a
+         * backticked list item that failed with "found character '`' that cannot
+         * start any token", pointing at a line in the body.
+         */
+        @Test
+        void should_treat_an_empty_frontmatter_block_as_no_frontmatter() {
+            String markdown = """
+                ---
+                ---
+                # Software Supply Chain Trace Lab
+
+                This lab follows three tracer components:
+
+                - `jackson-databind` — an ordinary Java dependency.
+                - `commons-codec` — shaded and relocated into another JAR.
+
+                ---
+
+                ## Next section
+                """;
+
+            CardLoader loader = new CardLoader();
+            Card card = loader.parse(Path.of("TRACE.md"), markdown);
+
+            assertEquals("Software Supply Chain Trace Lab", card.title(),
+                    "the h1 is body, not frontmatter");
+            assertTrue(card.frontmatter().values().isEmpty(), "an empty block declares nothing");
+            assertTrue(card.blocks().stream().anyMatch(b -> b.html().contains("jackson-databind")),
+                    "the prose stays in the body where it belongs");
+        }
+
+        @Test
+        void should_treat_an_empty_frontmatter_block_with_trailing_spaces_the_same() {
+            String markdown = "---  \n---\t\n# Title\n\nBody.\n";
+
+            Card card = new CardLoader().parse(Path.of("t.md"), markdown);
+
+            assertEquals("Title", card.title());
+            assertTrue(card.frontmatter().values().isEmpty());
+        }
+
+        /**
+         * A long card that numbers its top-level steps with {@code #} — the
+         * shape a workshop or lab document takes. Only the first h1 is the
+         * card's title; the rest are its structure, and used to be dropped
+         * outright: heading text discarded, and the content beneath them
+         * absorbed into whichever earlier section was still open.
+         */
+        @Test
+        void should_keep_h1_headings_after_the_first_as_level_one_blocks() {
+            String markdown = """
+                # Software Supply Chain Trace Lab
+
+                Intro prose.
+
+                # 1. Start clean
+
+                ## Why we need to do this
+
+                Because.
+
+                # 4. Resolve Jackson
+
+                ## Run
+
+                Do the thing.
+                """;
+
+            Card card = new CardLoader().parse(Path.of("TRACE.md"), markdown);
+
+            assertEquals("Software Supply Chain Trace Lab", card.title(),
+                    "the first h1 is still the card title");
+
+            List<Block> top = card.blocks();
+            List<String> headings = top.stream().map(Block::heading).toList();
+            assertEquals(Arrays.asList(null, "1. Start clean", "4. Resolve Jackson"), headings,
+                    "intro, then one block per numbered step");
+            assertEquals(1, top.get(1).level());
+            assertEquals(1, top.get(2).level());
+
+            // Each step's own h2s nest beneath it rather than floating up.
+            assertEquals(List.of("Why we need to do this"),
+                    top.get(1).children().stream().map(Block::heading).toList());
+            assertEquals(List.of("Run"),
+                    top.get(2).children().stream().map(Block::heading).toList());
+        }
+
+        @Test
+        void should_render_every_h1_when_frontmatter_titles_the_card() {
+            // The card is already named, so no heading is consumed: an h1 the
+            // author wrote is a heading, not a title the loader swallows.
+            String markdown = """
+                ---
+                title: From Frontmatter
+                ---
+                # First Step
+
+                Body.
+
+                # Second Step
+                """;
+
+            Card card = new CardLoader().parse(Path.of("t.md"), markdown);
+
+            assertEquals("From Frontmatter", card.title());
+            assertEquals(Arrays.asList("First Step", "Second Step"),
+                    card.blocks().stream().map(Block::heading).toList(),
+                    "both headings survive, and there's no stray intro block");
+            assertEquals(1, card.blocks().get(0).level());
+        }
+
+        @Test
+        void should_consume_the_first_h1_only_when_it_supplies_the_title() {
+            String markdown = """
+                # The Card Title
+
+                Body.
+
+                # Second Step
+                """;
+
+            Card card = new CardLoader().parse(Path.of("t.md"), markdown);
+
+            assertEquals("The Card Title", card.title());
+            assertEquals(Arrays.asList(null, "Second Step"),
+                    card.blocks().stream().map(Block::heading).toList(),
+                    "the title heading isn't repeated in the body");
+        }
 
         @Test
         void should_parse_simple_frontmatter() {
@@ -893,7 +1030,16 @@ class CardLoaderTest {
             Card card = loader.parse(Path.of("test.md"), markdown);
 
             assertEquals("First Title", card.title()); // Uses first H1
-            assertEquals(1, card.blocks().size()); // All content in intro block
+            // The second h1 is a section of its own. This used to assert a
+            // single intro block holding everything, which is what dropping
+            // later h1s produced: the heading gone, its content absorbed into
+            // whatever came before it.
+            assertEquals(2, card.blocks().size());
+            assertNull(card.blocks().get(0).heading(), "content before any heading is the intro");
+            assertEquals("Second Title", card.blocks().get(1).heading());
+            assertEquals(1, card.blocks().get(1).level());
+            assertTrue(card.blocks().get(1).html().contains("Content after second."),
+                    "and its content goes with it");
         }
 
         @Test

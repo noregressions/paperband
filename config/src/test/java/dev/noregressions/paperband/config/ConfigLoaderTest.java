@@ -34,7 +34,14 @@ class ConfigLoaderTest {
             assertNotNull(context);
             assertEquals(tempDir, context.book().bookRoot());
             assertTrue(context.cssChain().isEmpty(), "CSS chain should be empty when no config files");
-            assertTrue(context.vars().isEmpty(), "No vars when no YAML files exist");
+            // Built-in vars are computed, not configured, so they're present
+            // whether or not a yaml is: a book declared entirely outside the
+            // tree (the Maven plugin's <book>) reads {{ vars.build_date }} like
+            // any other, and this path used to be the one place it came back
+            // empty.
+            assertFalse(context.vars().isEmpty(), "built-ins are seeded with or without yaml");
+            assertTrue(context.vars().containsKey("build_date"));
+            assertNull(context.vars().get("author"), "but nothing a book would have declared");
             assertNull(context.layout());
             assertEquals("web", context.target());
             assertEquals("A4", context.size());
@@ -114,12 +121,29 @@ class ConfigLoaderTest {
         }
 
         @Test
+        void should_keep_a_landing_template_subdirectory(@TempDir Path tempDir) throws IOException {
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
+                title: "Test Book"
+                sections:
+                  landing:
+                    template: "layouts/sections/scanners.html"
+                """);
+            Path mdFile = tempDir.resolve("test.md");
+            Files.createFile(mdFile);
+
+            RenderContext context = new ConfigLoader().load(mdFile, "pdf", "A4");
+
+            assertEquals("sections/scanners", context.book().sectionLandingTemplate(),
+                    "a template nested under layouts/ is addressable");
+        }
+
+        @Test
         void should_parse_section_landing_template_default(@TempDir Path tempDir) throws IOException {
             createYamlFile(tempDir.resolve("paperband.yaml"), """
                 title: "Test Book"
                 sections:
                   landing:
-                    template: "templates/my-section.html"
+                    template: "layouts/my-section.html"
                 """);
             Path mdFile = tempDir.resolve("test.md");
             Files.createFile(mdFile);
@@ -127,8 +151,10 @@ class ConfigLoaderTest {
             ConfigLoader loader = new ConfigLoader();
             RenderContext context = loader.load(mdFile, "pdf", "A4");
 
-            // Resolved to the bare Pebble template name (extension stripped),
-            // ready for the engine's template loader chain to find by name.
+            // Resolved to the template name the engine's loader chain resolves:
+            // the path relative to the book's layouts/ directory, extension
+            // stripped. This used to keep only the filename, which discarded
+            // any directory the author wrote.
             assertEquals("my-section", context.book().sectionLandingTemplate());
         }
 
@@ -556,6 +582,94 @@ class ConfigLoaderTest {
 
             assertArrayEquals(new double[] {20, 20, 20, 20}, ctx.pageSpec().marginsMm(), 0.01,
                     "A4's standard margins");
+        }
+    }
+
+    @Nested
+    @DisplayName("Declared book root")
+    class DeclaredBookRoot {
+
+        /**
+         * The case that has no yaml at all: a book whose structure and config
+         * are declared in a build tool. Without a declared root the loader
+         * infers one from the card's own parent directory, so every card lands
+         * in a different "book".
+         */
+        @Test
+        void should_pin_the_book_root_when_no_yaml_exists(@TempDir Path tempDir) throws IOException {
+            Path card = tempDir.resolve("setup").resolve("install.md");
+            Files.createDirectories(card.getParent());
+            Files.writeString(card, "# Install\n");
+
+            RenderContext inferred = new ConfigLoader().load(card, "pdf", "A4");
+            assertEquals(tempDir.resolve("setup"), inferred.book().bookRoot(),
+                    "inference can only guess the card's own folder");
+
+            RenderContext declared = new ConfigLoader().load(card, "pdf", "A4", null, tempDir);
+            assertEquals(tempDir, declared.book().bookRoot(),
+                    "a declared root is the book root, yaml or no yaml");
+        }
+
+        @Test
+        void should_stop_the_cascade_at_the_declared_root(@TempDir Path tempDir) throws IOException {
+            // A yaml above the declared root belongs to somebody else's book.
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
+                title: "Outer Book"
+                vars:
+                  outer: "yes"
+                """);
+            Path inner = tempDir.resolve("inner");
+            Files.createDirectories(inner.resolve("cards"));
+            createYamlFile(inner.resolve("paperband.yaml"), """
+                title: "Inner Book"
+                """);
+            Path card = inner.resolve("cards").resolve("a.md");
+            Files.writeString(card, "# A\n");
+
+            RenderContext ctx = new ConfigLoader().load(card, "pdf", "A4", null, inner);
+
+            assertEquals(inner, ctx.book().bookRoot());
+            assertEquals("Inner Book", ctx.book().title());
+            assertNull(ctx.vars().get("outer"), "the outer book's vars stay out of this one");
+        }
+
+        @Test
+        void should_seed_declared_vars_where_the_books_own_vars_go(@TempDir Path tempDir) throws IOException {
+            // Book-level, so every card sees them, and a folder can still win.
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
+                title: "Book"
+                vars:
+                  author: "Yaml Author"
+                """);
+            Path folder = tempDir.resolve("part");
+            Files.createDirectories(folder);
+            createYamlFile(folder.resolve("paperband.yaml"), """
+                vars:
+                  subtitle: "Folder Subtitle"
+                """);
+            Path card = folder.resolve("a.md");
+            Files.writeString(card, "# A\n");
+
+            RenderContext ctx = new ConfigLoader().load(card, "pdf", "A4", null, tempDir,
+                    Map.of("author", "Declared Author", "series", "Declared Series"));
+
+            assertEquals("Declared Author", ctx.vars().get("author"),
+                    "a declared var wins over the book yaml's");
+            assertEquals("Declared Series", ctx.vars().get("series"));
+            assertEquals("Folder Subtitle", ctx.vars().get("subtitle"),
+                    "and the folder cascade still applies on top");
+        }
+
+        @Test
+        void should_reach_a_card_even_with_no_yaml_anywhere(@TempDir Path tempDir) throws IOException {
+            Path card = tempDir.resolve("a.md");
+            Files.writeString(card, "# A\n");
+
+            RenderContext ctx = new ConfigLoader().load(card, "pdf", "A4", null, tempDir,
+                    Map.of("author", "Declared Author"));
+
+            assertEquals(tempDir, ctx.book().bookRoot());
+            assertEquals("Declared Author", ctx.vars().get("author"));
         }
     }
 

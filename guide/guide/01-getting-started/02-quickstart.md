@@ -13,40 +13,53 @@ oneliner: "Build and run Paperband from source in five minutes."
 | Maven 3.8+ | Standard Maven install |
 | Playwright | The only renderer; downloads ~300 MB Chromium on first use |
 
-## Clone and build
+## Add the plugin
+
+Paperband builds books from Maven. Declare the plugin in the project that holds your book:
+
+```xml
+<plugin>
+  <groupId>dev.noregressions.paperband</groupId>
+  <artifactId>paperband-maven-plugin</artifactId>
+  <version>0.1.0</version>
+  <executions>
+    <execution>
+      <goals><goal>build</goal></goals>
+      <configuration>
+        <input>${project.basedir}/book</input>
+        <output>${project.build.directory}/book.pdf</output>
+      </configuration>
+    </execution>
+  </executions>
+</plugin>
+```
+
+The plugin shares the parent's version. The parent POM version:
+
+{% fragment "../../../pom.xml:version-declaration" %}
+
+`mvn package` now builds the book as part of the build. Every goal can also be invoked
+directly, without an execution, which is how the examples throughout this guide are
+written.
+
+## Building from source
 
 ```bash
 git clone https://github.com/gruff-dev/paperband.git
 cd paperband
-mvn -DskipTests package
+mvn -DskipTests install
 ```
 
-The build produces a shaded all-in-one jar. The parent POM version:
-
-{% fragment "../../../pom.xml:version-declaration" %}
-
-The jar lands at:
-
-```
-cli/target/cli-0.1.0-SNAPSHOT-all.jar
-```
-
-## Create a shell alias
-
-```bash
-alias paperband='java -jar /path/to/cli-0.1.0-SNAPSHOT-all.jar'
-```
-
-Add it to your shell profile to persist across sessions.
+That installs the plugin into your local repository, ready for the POM above to resolve.
 
 ## Build your first book
 
 ```bash
 # PDF
-paperband build path/to/your-book out.pdf
+mvn paperband:build -Dpaperband.input=path/to/your-book -Dpaperband.output=out.pdf
 
 # Static site
-paperband site path/to/your-book out-site/
+mvn paperband:site -Dpaperband.input=path/to/your-book -Dpaperband.outputDirectory=out-site
 ```
 
 A "book" is any directory containing a `paperband.yaml` at its root. Cards are any
@@ -56,10 +69,10 @@ A "book" is any directory containing a `paperband.yaml` at its root. Cards are a
 
 ```bash
 # List discovered renderers and whether each is available in your environment
-paperband renderers
+mvn paperband:renderers
 
-# List all themes (built-in and any under --theme-dir)
-paperband themes
+# List all themes (built-in and any under <themeDir>)
+mvn paperband:themes
 ```
 
 ## Watch Out

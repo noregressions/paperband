@@ -78,6 +78,8 @@ public final class LayoutEngine {
 
     private final PebbleEngine engine;
     private final ThemeBundle theme;
+    /** Kept for diagnostics: naming the layouts dir a missing template should have been in. */
+    private final Path bookRoot;
 
     /**
      * Optional edition identity for publication builds (DESIGN-publications.md):
@@ -123,6 +125,7 @@ public final class LayoutEngine {
      */
     public LayoutEngine(Path bookRoot, ThemeBundle theme) {
         this.theme = (theme == null) ? ThemeBundle.NONE : theme;
+        this.bookRoot = bookRoot;
         this.engine = buildEngine(bookRoot, this.theme);
     }
 
@@ -210,7 +213,7 @@ public final class LayoutEngine {
         } catch (RuntimeException e) {
             throw new LayoutException(
                     "Layout '" + layoutName + "' failed for card " + card.id()
-                            + locationOf(e) + ": " + messageOf(e), e);
+                            + locationOf(e) + ": " + explain(e), e);
         }
         checkSlots(layoutName, List.of((Map<String, Object>) model.get("card")));
         return html;
@@ -280,7 +283,7 @@ public final class LayoutEngine {
         } catch (RuntimeException e) {
             throw new LayoutException(
                     "Book layout '" + layoutName + "' failed"
-                            + locationOf(e) + ": " + messageOf(e), e);
+                            + locationOf(e) + ": " + explain(e), e);
         }
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> cardModels = (List<Map<String, Object>>) model.get("cards");
@@ -578,7 +581,7 @@ public final class LayoutEngine {
         for (AxisGrouping g : groupings) {
             String landingTemplate = g.axis().landingTemplate() == null
                     ? "site-tier"
-                    : templateNameOf(g.axis().landingTemplate());
+                    : templateNameOf(bookRoot, g.axis().landingTemplate());
             for (Map<String, Object> value : g.valueMetas()) {
                 List<Integer> indices = g.byValue().getOrDefault(normalizeAxisId(value.get("id")), List.of());
                 List<Map<String, Object>> valueCards = new ArrayList<>(indices.size());
@@ -707,10 +710,14 @@ public final class LayoutEngine {
     }
 
     /** Strip a stored template path down to the bare name Pebble's loader expects (no extension). */
-    private static String templateNameOf(Path landingTemplate) {
-        String filename = landingTemplate.getFileName().toString();
-        int dot = filename.lastIndexOf('.');
-        return dot > 0 ? filename.substring(0, dot) : filename;
+    /**
+     * The template name for an axis's landing template — a path the config
+     * already resolved, so it goes through the {@code Path} form of
+     * {@link NamedTemplates#templateName} to keep any {@code layouts/}
+     * subdirectory in the name.
+     */
+    private static String templateNameOf(Path bookRoot, Path landingTemplate) {
+        return NamedTemplates.templateName(bookRoot, landingTemplate);
     }
 
     /** Output filename stem for one axis value's landing page: {@code {axisName}-{valueId}}. */
@@ -1515,6 +1522,33 @@ public final class LayoutEngine {
      * location info we've already extracted, producing duplicate
      * "at <filename>:<line>" fragments in the final error message.
      */
+    /**
+     * {@link #messageOf} plus, for the one failure that reliably misleads, the
+     * places a template was actually looked for.
+     *
+     * <p>Pebble reports only the name it couldn't resolve, which is a path
+     * relative to the book's {@code layouts/} directory (see
+     * {@link NamedTemplates#templateName}) — so the bare message names
+     * something that looks unrelated to what the author wrote, and says nothing
+     * about where it was expected to be.
+     */
+    private String explain(Throwable t) {
+        String message = messageOf(t);
+        if (message == null || !message.contains("Could not find template")) return message;
+        StringBuilder hint = new StringBuilder(message).append(" — looked in: ");
+        if (!theme.isEmpty() && theme.templateLoader() != null) {
+            hint.append("theme '").append(theme.name()).append("' overrides, then ");
+        }
+        if (bookRoot != null) {
+            hint.append(bookRoot.resolve(NamedTemplates.LAYOUTS_DIR)).append("/<name>.html, then ");
+        }
+        hint.append("the bundled templates. A book's own templates live under its ")
+                .append(NamedTemplates.LAYOUTS_DIR)
+                .append("/ directory and are named by their path relative to it, so declare "
+                        + "the path as the file sits there — or name a bundled template.");
+        return hint.toString();
+    }
+
     private static String messageOf(Throwable t) {
         Throwable deepest = t;
         for (Throwable cur = t; cur != null; cur = cur.getCause()) {
@@ -1892,12 +1926,35 @@ public final class LayoutEngine {
         }
     }
 
+    /**
+     * Stylesheets inlined <em>after</em> the theme's own — the strongest layer
+     * in the cascade.
+     *
+     * <p>The book's {@code css:} chain goes first and the theme second, which
+     * is what lets a theme restyle any book. That leaves nothing above the
+     * theme, so a build that wants to correct one of its rules has to resort to
+     * {@code !important}. This layer is that missing level: stylesheets named
+     * by the build (the Maven plugin's {@code <stylesheets>}), applied last
+     * because they're the most specific thing anyone declared.
+     */
+    private List<Path> extraCss = List.of();
+
+    /**
+     * Declare the build's own stylesheets, inlined after the theme.
+     *
+     * @param stylesheets css files in application order; null or empty clears
+     */
+    public void setExtraCss(List<Path> stylesheets) {
+        this.extraCss = stylesheets == null ? List.of() : List.copyOf(stylesheets);
+    }
+
     private String composeCss(List<Path> chain) {
         StringBuilder sb = new StringBuilder(inlineCss(chain));
         for (String css : theme.stylesheets()) {
             sb.append(css);
             if (!css.endsWith("\n")) sb.append('\n');
         }
+        sb.append(inlineCss(extraCss));
         return sb.toString();
     }
 }

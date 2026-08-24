@@ -31,7 +31,7 @@ Register it in `META-INF/services/dev.noregressions.paperband.render.HtmlToPdfRe
 com.example.render.PrinceRenderer
 ```
 
-With the jar on the classpath, `paperband renderers` lists it and `--renderer prince`
+With the jar on the plugin's classpath, `mvn paperband:renderers` lists it and `<renderer>prince</renderer>`
 selects it — `name()` is the selector, matched case-sensitively. `canRender` and
 `isAvailable` have sensible defaults (`true`); override `isAvailable` when the backend
 needs an external binary, so the `renderers` table can say so.
@@ -77,5 +77,5 @@ ServiceLoader discovery for these is planned once more than one provider exists.
 ## A new theme
 
 No code at all: a directory containing a `manifest.txt` and the CSS files it lists,
-passed via `--theme-dir`. See Themes in the Rendering section for the full walkthrough,
+passed via `<themeDir>`. See Themes in the Rendering section for the full walkthrough,
 including template overrides.

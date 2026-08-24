@@ -1,0 +1,469 @@
+/* =============================================================================
+ * Theme: workshop
+ *
+ * A lab manual you work from with a laptop open: numbered steps as milestones,
+ * and the repeating phases of each step (why, how, run, observe, establish)
+ * marked by labels rather than headings.
+ *
+ * The design problem this solves: a lab document says "Establish" 150 times and
+ * "Run" 120 times. Rendered as ordinary h2s those repetitions shout over the
+ * numbered steps, which are the thing a reader navigates by. So the phase
+ * headings are set as small-caps eyebrow labels — present, scannable, quiet —
+ * and each phase gets a treatment matching what it holds: instructions to
+ * follow, output to compare against, or a conclusion to take away.
+ *
+ * Phase hooks come from paperband's block classes (a heading's text slugified
+ * onto its <section>), so nothing here needs a per-document convention beyond
+ * writing the same headings the document already uses.
+ *
+ * Type scale: font-size in `rem`, from the single :root rule below.
+ * Baseline 1rem = 11pt — same convention as the other bundled themes.
+ * ===========================================================================*/
+
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap');
+
+/* ── Type scale root ────────────────────────────────────────────────────── */
+html                    { font-size: calc(11pt * var(--pw-font-scale, 1)); }
+html.target-web         { font-size: 16px; }
+html.size-a4            { font-size: 10.5pt; }   /* dense document, slightly tighter */
+html.size-letter        { font-size: 10.5pt; }
+html.size-6x9           { font-size: 11pt; }
+
+:root {
+  --ws-ink:        #1b2028;   /* body text */
+  --ws-ink-soft:   #565f6b;   /* secondary text, labels */
+  --ws-paper:      #fbfaf7;   /* page */
+  --ws-rule:       #d8d5cd;   /* hairlines */
+
+  --ws-do:         #b0561a;   /* instructions — warm, "act now" */
+  --ws-evidence:   #4a6b8a;   /* observed output — cool, "read this" */
+  --ws-establish:  #2f6d44;   /* conclusions — green, "settled" */
+  --ws-ask:        #7a4a8f;   /* questions — violet, "your turn" */
+
+  --ws-panel:      #f2efe8;   /* output/code panel */
+  --ws-panel-edge: #e2ded4;
+  --card-max-width: 62rem;
+}
+@media print { :root { --card-max-width: 48rem; } }
+
+body {
+  font-family: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif;
+  background: var(--ws-paper);
+  color: var(--ws-ink);
+  line-height: 1.55;
+}
+body.site, body { background: var(--ws-paper); }
+
+/* ── Card: a clean page, no frame. The steps inside carry the structure. ─── */
+article.card {
+  max-width: var(--card-max-width, 48rem);
+  margin-left: auto;
+  margin-right: auto;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+article.card > h1.card-title {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.35rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 3px solid var(--ws-ink);
+}
+
+article.card > .card-meta .oneliner {
+  color: var(--ws-ink-soft);
+  font-size: 1.02rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ── Numbered steps: the h1s an author writes inside a long card ──────────
+ * These are the milestones. They get the most space on the page and a rule
+ * above, so a reader flicking through lands on step boundaries. */
+section.block > h1 {
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  color: var(--ws-ink);
+  margin: 2.6rem 0 1.1rem;
+  padding-top: 0.9rem;
+  border-top: 2px solid var(--ws-ink);
+}
+
+/* ── Two kinds of h2 ─────────────────────────────────────────────────────
+ * A step's h2s are either a PHASE of the rhythm (why / how / run / observe /
+ * establish, repeated on every step) or a TOPIC within it ("Jackson",
+ * "commons-codec", "lodash"). They're the same markdown level, so the class
+ * tells them apart: phases become eyebrow labels — markers, quiet, scannable —
+ * while topics stay headings, because each one names something different and
+ * carries the local structure. */
+section.block > h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ws-ink);
+  margin: 1.5rem 0 0.45rem;
+}
+section.block.why-we-need-to-do-this > h2,
+section.block.how-were-going-to-do-it > h2,
+section.block.why > h2,
+section.block.look > h2,
+section.block.run > h2,
+section.block.build > h2,
+section.block.observe > h2,
+section.block.observed-output > h2,
+section.block.tooling-observed > h2,
+section.block.establish > h2,
+section.block.ground-truth > h2,
+section.block.final-conclusion > h2,
+section.block.what-this-lab-establishes > h2,
+section.block.question > h2,
+section.block.objective > h2,
+section.block.scenario > h2 {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  margin: 0 0 0.55rem;
+  color: var(--ws-ink-soft);
+}
+section.block > h3 { font-size: 1.02rem; font-weight: 600; margin: 1.3rem 0 0.4rem; }
+section.block > h4 { font-size: 0.95rem; font-weight: 600; color: var(--ws-ink-soft); }
+
+/* A phase can be written as an h1 rather than an h2 — `# Final conclusion`
+ * closing a document, say. It's then both a step (rule above, generous space)
+ * and a panel, and the two treatments collide: a rule floating inside a tinted
+ * box above an oversized title. Inside a panel the step furniture comes off
+ * and the heading becomes the panel's title. */
+section.block.establish > h1,
+section.block.ground-truth > h1,
+section.block.final-conclusion > h1,
+section.block.what-this-lab-establishes > h1,
+section.block.question > h1,
+section.block.objective > h1,
+section.block.scenario > h1 {
+  border-top: none;
+  padding-top: 0;
+  margin: 0 0 0.6rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+section.block.establish > h1 { color: var(--ws-establish); }
+section.block.question > h1 { color: var(--ws-ask); }
+
+/* Keep a heading with what it introduces: a stranded "RUN" at the foot of a
+ * page, its command overleaf, is the one break this document can't afford. */
+section.block > h1,
+section.block > h2,
+section.block > h3 { break-after: avoid; }
+section.block.run,
+section.block.look,
+section.block.question { break-inside: avoid; }
+
+/* ── The phases ──────────────────────────────────────────────────────────
+ * Each is keyed by the slug of its own heading text, so the document's own
+ * vocabulary drives the styling. */
+
+/* Context: why / how. Quiet prose, indented off a hairline. */
+section.block.why-we-need-to-do-this,
+section.block.how-were-going-to-do-it,
+section.block.why {
+  border-left: 2px solid var(--ws-rule);
+  padding-left: 1rem;
+  margin-block: 1.2rem;
+}
+
+/* Do this: look / run. Warm accent, and the commands inside get the same. */
+section.block.run,
+section.block.look,
+section.block.build {
+  border-left: 3px solid var(--ws-do);
+  padding-left: 1rem;
+  margin-block: 1.2rem;
+}
+section.block.run > h2,
+section.block.look > h2,
+section.block.build > h2 { color: var(--ws-do); }
+
+/* Evidence: what the tool actually printed. Cool accent, monospace body. */
+section.block.observe,
+section.block.observed-output,
+section.block.tooling-observed {
+  border-left: 3px solid var(--ws-evidence);
+  padding-left: 1rem;
+  margin-block: 1.2rem;
+}
+section.block.observe > h2,
+section.block.observed-output > h2,
+section.block.tooling-observed > h2 { color: var(--ws-evidence); }
+
+/* Establish: the point of the step. A panel, because it's what survives. */
+section.block.establish,
+section.block.ground-truth,
+section.block.final-conclusion,
+section.block.what-this-lab-establishes {
+  background: #f0f5f1;
+  border: 1px solid #cfe0d5;
+  border-left: 3px solid var(--ws-establish);
+  border-radius: 2px;
+  padding: 0.9rem 1.1rem 0.95rem;
+  margin-block: 1.3rem;
+}
+section.block.establish > h2,
+section.block.ground-truth > h2,
+section.block.final-conclusion > h2,
+section.block.what-this-lab-establishes > h2 {
+  color: var(--ws-establish);
+  margin-top: 0;
+}
+section.block.establish > p:last-child,
+section.block.ground-truth > p:last-child { margin-bottom: 0; }
+
+/* Question: the learner's turn. Its content is usually a blockquote. */
+section.block.question {
+  background: #f7f3f9;
+  border: 1px solid #e3d7ea;
+  border-left: 3px solid var(--ws-ask);
+  border-radius: 2px;
+  padding: 0.9rem 1.1rem;
+  margin-block: 1.3rem;
+}
+section.block.question > h2 { color: var(--ws-ask); margin-top: 0; }
+section.block.question blockquote {
+  margin: 0;
+  padding: 0;
+  border: none;
+  font-size: 1.05rem;
+  font-style: italic;
+  color: var(--ws-ink);
+}
+
+/* Framing: objective / scenario / intro summary. */
+section.block.objective,
+section.block.scenario {
+  background: var(--ws-panel);
+  border-radius: 2px;
+  padding: 0.9rem 1.1rem;
+  margin-block: 1.2rem;
+}
+section.block.objective > h2, section.block.scenario > h2 { margin-top: 0; }
+
+/* ── Code: commands read differently from output ─────────────────────────
+ * The document is ~600 output fences and ~190 command fences. Telling them
+ * apart at a glance is most of the legibility win, so they're keyed off the
+ * language class the renderer already emits. */
+pre, code { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+pre {
+  background: var(--ws-panel);
+  border: 1px solid var(--ws-panel-edge);
+  border-radius: 2px;
+  padding: 0.7rem 0.85rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  overflow-x: auto;
+}
+
+/* Commands to type: warm edge, matching the RUN label above them. */
+pre:has(> code.language-bash),
+pre:has(> code.language-sh),
+pre:has(> code.language-cmd) {
+  background: #fdf6ef;
+  border-color: #ecd9c4;
+  border-left: 3px solid var(--ws-do);
+}
+
+/* Output to compare against: plain, recessive, tighter for long dumps. */
+pre:has(> code.language-text) {
+  background: #f4f4f2;
+  border-color: #e4e3de;
+  font-size: 0.76rem;
+}
+
+/* Inline code: a token, not a block. */
+:not(pre) > code {
+  background: #efece4;
+  border-radius: 2px;
+  padding: 0.08em 0.32em;
+  font-size: 0.86em;
+}
+
+/* ── Prose furniture ─────────────────────────────────────────────────────── */
+p { margin-block: 0.7rem; }
+ul, ol { padding-left: 1.35rem; margin-block: 0.7rem; }
+li { margin-block: 0.28rem; }
+li > p { margin-block: 0.3rem; }
+
+blockquote {
+  margin: 0.9rem 0;
+  padding: 0.1rem 0 0.1rem 1rem;
+  border-left: 2px solid var(--ws-rule);
+  color: var(--ws-ink-soft);
+}
+
+a { color: var(--ws-evidence); }
+
+/* A `---` between steps ends up inside the last block of the step above it,
+ * where it draws a rule and a gap inside that block's own panel. The panel
+ * edge and the next step's rule already do the separating, so it's dropped
+ * where it lands inside a phase and kept as a light divider elsewhere. */
+hr { border: none; border-top: 1px solid var(--ws-rule); margin-block: 1.2rem; }
+section.block.establish hr,
+section.block.ground-truth hr,
+section.block.final-conclusion hr,
+section.block.what-this-lab-establishes hr,
+section.block.question hr,
+section.block.objective hr,
+section.block.scenario hr,
+section.block.observe hr,
+section.block.observed-output hr,
+section.block.run hr { display: none; }
+
+img { max-width: 100%; border: 1px solid var(--ws-rule); border-radius: 2px; }
+
+/* Tables: comparison matrices, so compact and ruled, with numbers right. */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.82rem;
+  margin-block: 1rem;
+}
+th, td {
+  border-bottom: 1px solid var(--ws-rule);
+  padding: 0.32rem 0.55rem;
+  text-align: left;
+  vertical-align: top;
+}
+thead th {
+  border-bottom: 2px solid var(--ws-ink);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ws-ink-soft);
+}
+tbody tr:last-child td { border-bottom: none; }
+td[align="right"], th[align="right"] { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── Part divider pages ──────────────────────────────────────────────────
+ * One sheet per part, the title centred with rules above and below. Sections
+ * carry no colour of their own, so these take the ink. */
+.section-divider { color: var(--ws-ink); }
+.section-divider .tier-divider-inner {
+  border-top: 3px solid var(--ws-ink);
+  border-bottom: 3px solid var(--ws-ink);
+  padding: 2.4rem 2rem 2.2rem;
+}
+.section-divider h1 {
+  font-size: 2.3rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.section-divider .tier-count {
+  color: var(--ws-ink-soft);
+  opacity: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.72rem;
+}
+.section-divider .tier-toc { font-size: 0.95rem; }
+.section-divider .tier-toc a { color: var(--ws-ink); text-decoration: none; }
+.section-divider .tier-toc li::marker { color: var(--ws-do); }
+
+/* ── Cover ───────────────────────────────────────────────────────────────── */
+.book-cover { color: var(--ws-ink); }
+.book-cover h1 {
+  font-size: 3rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  border-bottom: 4px solid var(--ws-do);
+  padding-bottom: 0.7rem;
+}
+.book-cover .subtitle { font-size: 1.2rem; color: var(--ws-ink-soft); margin-top: 0.9rem; }
+.book-cover .author { font-size: 1rem; color: var(--ws-ink-soft); margin-top: 2rem; }
+.book-cover .series {
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.75rem;
+  color: var(--ws-do);
+}
+
+/* ── Full-bleed readiness ────────────────────────────────────────────────
+ * Light paper, so a page margin is invisible and this theme doesn't need a
+ * full-bleed build. The insets still adapt if one is asked for: the target
+ * amount less whatever the page margin already gives, never below a floor.
+ * box-decoration-break: clone is what makes the vertical half repeat on every
+ * page a long card spans (see the Themes guide). */
+@media print {
+  article.card {
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    box-sizing: border-box;
+    padding-top: max(0mm, 14mm - var(--pw-page-margin-top, 0mm));
+    padding-bottom: max(0mm, 14mm - var(--pw-page-margin-bottom, 0mm));
+  }
+}
+
+/* ── Site chrome ─────────────────────────────────────────────────────────
+ * The site is the same content read at a laptop rather than printed, so the
+ * navigator carries the part structure the PDF gets from divider pages. */
+.site-nav { background: var(--ws-ink); border-bottom: 3px solid var(--ws-do); }
+.site-nav .nav-brand { color: var(--ws-paper); font-weight: 700; }
+.site-nav a.nav-link { color: #c9cfd7; }
+.site-nav a.nav-link:hover { color: #ffffff; }
+.site-nav .nav-sidebar-toggle { color: var(--ws-paper); font-size: 1.15rem; }
+
+/* Navigator: parts as headings, their cards listed beneath. */
+.site-sidebar {
+  background: #f4f2ec;
+  border-right: 1px solid var(--ws-rule);
+  font-size: 0.92rem;
+}
+.sidebar-section { margin-bottom: 1.1rem; }
+.sidebar-section-heading,
+.sidebar-tier-heading {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ws-ink-soft);
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--ws-rule);
+}
+.sidebar-section-heading a,
+.sidebar-section-heading .sidebar-section-label { color: var(--ws-ink-soft); }
+.sidebar-cards { list-style: none; padding-left: 0; margin: 0.45rem 0 0; }
+.sidebar-cards li { margin: 0.12rem 0; }
+.sidebar-cards a {
+  display: block;
+  padding: 0.16rem 0.5rem;
+  border-left: 2px solid transparent;
+  color: var(--ws-ink);
+  text-decoration: none;
+  border-radius: 0 2px 2px 0;
+}
+.sidebar-cards a:hover { background: #ece9e0; }
+.sidebar-cards li.active > a,
+.sidebar-cards a.active {
+  border-left-color: var(--ws-do);
+  background: #ffffff;
+  font-weight: 600;
+}
+.sidebar-section-toggle { color: var(--ws-ink-soft); }
+
+/* Index: one box per part, in the theme's ink and accent. */
+.tier-box, .tier-box.section-box {
+  background: #ffffff;
+  border: 1px solid var(--ws-rule);
+  border-left: 4px solid var(--ws-do);
+  border-radius: 2px;
+}
+a.tier-box:hover { background: var(--ws-panel); }
+.tier-box-label { font-size: 1.02rem; }
+.hero { background: var(--ws-panel); border-bottom: 1px solid var(--ws-rule); }
+
+/* Card pages: the same measure as print, so a long trace reads the same way. */
+.site-content .page, .site-content article.card { max-width: 62rem; }

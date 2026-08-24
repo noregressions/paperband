@@ -20,21 +20,19 @@
         <module>include</module>
         <module>layout</module>
         <module>render-playwright</module>
-        <module>cli</module>
         <module>maven-plugin</module>
         <module>archetype</module>
     </modules>
 
     <properties>
         <!-- ANCHOR: version-declaration -->
-        <revision>0.0.3</revision>
+        <revision>0.1.0</revision>
         <!-- ANCHOR_END: version-declaration -->
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <!-- dependency versions -->
-        <picocli.version>4.7.6</picocli.version>
         <jsoup.version>1.18.1</jsoup.version>
         <playwright.version>1.47.0</playwright.version>
         <flexmark.version>0.64.8</flexmark.version>
@@ -139,12 +137,6 @@
                 <artifactId>maven-plugin-annotations</artifactId>
                 <version>${maven-plugin-annotations.version}</version>
                 <scope>provided</scope>
-            </dependency>
-
-            <dependency>
-                <groupId>info.picocli</groupId>
-                <artifactId>picocli</artifactId>
-                <version>${picocli.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.vladsch.flexmark</groupId>
@@ -275,11 +267,10 @@
 
     <profiles>
         <!--
-            Guide generation is opt-in so the default build stays fast and free of
-            the CLI/Playwright dependency. Activate with -Pguide (e.g.
-            `mvn install -Pguide`): the guide module is added to the reactor and,
-            because it depends on cli, is ordered last, so it renders
-            using the jar built earlier in the same run.
+            Guide generation is opt-in so the default build stays fast and free
+            of the Playwright/Chromium round trip. Activate with -Pguide (e.g.
+            `mvn install -Pguide`): the guide module joins the reactor last, so
+            it renders with the paperband plugin built earlier in the same run.
         -->
         <profile>
             <id>guide</id>

@@ -1,10 +1,16 @@
 package dev.noregressions.paperband.maven;
 
 import dev.noregressions.paperband.config.BookPlan;
+import dev.noregressions.paperband.model.Axis;
+import dev.noregressions.paperband.model.BookConfig;
+import dev.noregressions.paperband.model.NamedTemplates;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * The {@code <book>} element of the {@code build} goal: a book's structure
@@ -84,6 +90,56 @@ public class BookLayout {
      */
     private String sort;
 
+    // ---- book-level config, otherwise read from the root paperband.yaml ----
+    //
+    // Declaring these here is what lets a book have no yaml at all: structure
+    // and configuration in the POM, content in the markdown, appearance in CSS.
+    // Anything declared here WINS over the root yaml -- it's a declaration, not
+    // a default, and the POM is the file the author just edited. (Build
+    // geometry outside this element -- <margins>, <pageSize> -- keeps the
+    // opposite convention: it seeds the base and the yaml can still tune it.)
+
+    /** Book title, used by the cover and the PDF metadata. */
+    private String title;
+
+    /** Full-page cover, as an image or a template. */
+    private PageMatterConfig cover;
+
+    /** Full-page back matter, as an image or a template. */
+    private PageMatterConfig back;
+
+    /** Running page header. */
+    private PageMatterConfig header;
+
+    /** Running page footer. */
+    private PageMatterConfig footer;
+
+    /**
+     * Default landing/divider template for every section and part that doesn't
+     * name its own — a built-in preset ({@code minimal}) or a template path.
+     */
+    private String sectionLandingTemplate;
+
+    /**
+     * Book-level template variables, reaching templates as {@code vars.*} —
+     * {@code author}, {@code subtitle}, {@code series} and whatever else a
+     * cover or footer template reads.
+     *
+     * <p>Flat string values only. Maven's configurator maps
+     * {@code <vars><author>Name</author></vars>} onto a string map cleanly and
+     * nested structures badly, so the nested config that matters has typed
+     * parameters of its own instead ({@code <margins>}, {@code <pageSize>}).
+     */
+    private Map<String, String> vars = new LinkedHashMap<>();
+
+    /**
+     * Axes this book declares — the categorical dimensions that produce divider
+     * pages, per-value landing pages and nav entries. Declared axes replace a
+     * yaml {@code axes:} wholesale rather than merging by name: an axis list is
+     * one structural statement, and two half-statements could only disagree.
+     */
+    private List<AxisConfig> axes = new ArrayList<>();
+
     /** @return the declared book root, or null for the module basedir */
     public File getRoot() {
         return root;
@@ -109,6 +165,97 @@ public class BookLayout {
         return sort;
     }
 
+    /** @return the declared book title, or null */
+    public String getTitle() {
+        return title;
+    }
+
+    /** @return the declared cover, or null */
+    public PageMatterConfig getCover() {
+        return cover;
+    }
+
+    /** @return the declared back matter, or null */
+    public PageMatterConfig getBack() {
+        return back;
+    }
+
+    /** @return the declared running header, or null */
+    public PageMatterConfig getHeader() {
+        return header;
+    }
+
+    /** @return the declared running footer, or null */
+    public PageMatterConfig getFooter() {
+        return footer;
+    }
+
+    /** @return the declared default section landing template, or null */
+    public String getSectionLandingTemplate() {
+        return sectionLandingTemplate;
+    }
+
+    /** @return the declared book vars, never null */
+    public Map<String, String> getVars() {
+        return vars;
+    }
+
+    /** @return the declared axes, never null */
+    public List<AxisConfig> getAxes() {
+        return axes;
+    }
+
+    /** True when this element declares any book-level config at all. */
+    boolean declaresBookConfig() {
+        return title != null || cover != null || back != null || header != null
+                || footer != null || sectionLandingTemplate != null || !vars.isEmpty()
+                || !axes.isEmpty();
+    }
+
+    /**
+     * Layer everything this element declares onto {@code base} — the config the
+     * root yaml supplied, or an empty one when the book has no yaml.
+     *
+     * <p>Each field is independent: declaring a {@code <title>} doesn't clear a
+     * yaml-declared cover. Parts are handled separately, since they're resolved
+     * from patterns rather than copied across.
+     *
+     * @param base     the yaml-derived (or empty) book config
+     * @param bookRoot the book root that page-matter templates resolve against
+     * @return the merged config
+     * @throws IllegalArgumentException if a declared page is empty
+     */
+    BookConfig mergeInto(BookConfig base, Path bookRoot) {
+        Map<String, Object> mergedVars = new LinkedHashMap<>(base.vars());
+        mergedVars.putAll(vars);
+        return new BookConfig(
+                base.bookRoot(),
+                title != null ? title : base.title(),
+                axes.isEmpty() ? base.axes() : resolvedAxes(bookRoot),
+                base.globalCss(),
+                mergedVars,
+                base.targets(),
+                base.theme(),
+                sectionLandingTemplate != null
+                        ? NamedTemplates.resolveSectionTemplate(bookRoot, sectionLandingTemplate.trim())
+                        : base.sectionLandingTemplate(),
+                base.cardSchema(),
+                cover != null ? cover.toPageMatter(bookRoot, "cover") : base.cover(),
+                back != null ? back.toPageMatter(bookRoot, "back") : base.back(),
+                footer != null ? footer.toPageMatter(bookRoot, "footer") : base.footer(),
+                header != null ? header.toPageMatter(bookRoot, "header") : base.header(),
+                base.parts());
+    }
+
+    /** The declared axes as model {@link Axis} objects, in declaration order. */
+    private List<Axis> resolvedAxes(Path bookRoot) {
+        List<Axis> out = new ArrayList<>(axes.size());
+        for (AxisConfig axis : axes) {
+            out.add(axis.toAxis(bookRoot));
+        }
+        return out;
+    }
+
     /**
      * Translate this element into the ordered part specs {@code BookPlan}
      * resolves. Validation that needs no filesystem happens here so a
@@ -119,6 +266,17 @@ public class BookLayout {
      * @throws IllegalArgumentException if the element declares both forms,
      *         neither form, or a part with no include patterns
      */
+    /**
+     * True when this element says which cards the book contains. False for a
+     * {@code <book>} that only carries book-level config — the cards then come
+     * from walking {@link #root}, exactly as {@code <input>} would, so a book
+     * can declare its title and cover in the POM while still taking its
+     * structure from the directory tree.
+     */
+    boolean declaresCardSelection() {
+        return !parts.isEmpty() || !includes.isEmpty();
+    }
+
     List<BookPlan.PartSpec> toSpecs() {
         boolean hasParts = !parts.isEmpty();
         boolean hasPatterns = !includes.isEmpty();
@@ -129,7 +287,7 @@ public class BookLayout {
         }
         if (!hasParts && !hasPatterns) {
             throw new IllegalArgumentException(
-                    "<book> declares no <parts> and no <includes> — nothing to build");
+                    "<book> declares no <parts> and no <includes> — nothing to select");
         }
 
         if (hasPatterns) {

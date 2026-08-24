@@ -1,4 +1,4 @@
-package dev.noregressions.paperband.cli;
+package dev.noregressions.paperband.maven.pdf;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentNameDictionary;

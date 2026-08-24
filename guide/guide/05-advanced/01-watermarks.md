@@ -35,27 +35,29 @@ vars:
 
 ## The options
 
-| Key | CLI flag | Default | Notes |
+| Key | Build parameter | Default | Notes |
 |---|---|---|---|
-| `text` | `--watermark` | — (off) | Required; single line, centred on each page |
-| `color` | `--watermark-color` | `#888888` | `#RRGGBB`, `RRGGBB`, or short `#abc`; malformed falls back to mid-grey |
-| `opacity` | `--watermark-opacity` | `0.12` | Must be within 0–1 |
-| `angle` | `--watermark-angle` | `-30` | Degrees, rotated about the page centre |
-| `font_size` | `--watermark-font-size` | `96` | Points; minimum 8 |
+| `text` | `<watermark>` | — (off) | Required; single line, centred on each page |
+| `color` | `<watermarkColor>` | `#888888` | `#RRGGBB`, `RRGGBB`, or short `#abc`; malformed falls back to mid-grey |
+| `opacity` | `<watermarkOpacity>` | `0.12` | Must be within 0–1 |
+| `angle` | `<watermarkAngle>` | `-30` | Degrees, rotated about the page centre |
+| `font_size` | `<watermarkFontSize>` | `96` | Points; minimum 8 |
 | `bold` | *(yaml only)* | `true` | Helvetica-Bold vs Helvetica |
+
+Each also has a `-D` property — `paperband.watermark`, `paperband.watermarkColor`, and so
+on — so a one-off stamp needs no POM edit.
 
 ## Precedence
 
-`--watermark` on the command line **replaces** the yaml declaration entirely — when the
-flag is present, the yaml map isn't consulted at all, so a release build can stamp
-`REVIEW COPY` over a book whose yaml says `DRAFT` without inheriting the yaml's colour or
-angle. The per-knob flags (`--watermark-color` and friends) then layer over whichever base
-was chosen, yaml or CLI. Passing only knob flags with no text anywhere produces no
-watermark.
+`<watermark>` on the build **replaces** the yaml declaration entirely — when it's set, the
+yaml map isn't consulted at all, so a release build can stamp `REVIEW COPY` over a book
+whose yaml says `DRAFT` without inheriting the yaml's colour or angle. The per-knob
+parameters (`<watermarkColor>` and friends) then layer over whichever base was chosen,
+yaml or build. Setting only knob parameters with no text anywhere produces no watermark.
 
 ```bash
 # yaml says DRAFT; this build says otherwise
-paperband build mybook out.pdf --watermark "REVIEW COPY" --watermark-opacity 0.2
+mvn paperband:build -Dpaperband.input=mybook -Dpaperband.output=out.pdf -Dpaperband.watermark="REVIEW COPY" -Dpaperband.watermarkOpacity=0.2
 ```
 
 A successful application prints `Applied watermark: "REVIEW COPY"` after rendering.

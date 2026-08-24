@@ -95,14 +95,77 @@ public final class ConfigLoader {
      * @return resolved {@link RenderContext}
      */
     public RenderContext load(Path mdFile, String target, String size, Margins margins) {
+        return load(mdFile, target, size, margins, null);
+    }
+
+    /**
+     * Load and resolve config for {@code mdFile}, with the book root declared
+     * rather than discovered.
+     *
+     * <p>Normally the book root is the directory of the <em>topmost</em>
+     * {@code paperband.yaml} above the card. That inference has nowhere to go
+     * when a book has no yaml at all — a book whose structure and config are
+     * declared in a build tool instead (the Maven plugin's {@code <book>}) —
+     * and it silently picks the card's own parent directory, so every card
+     * ends up in a different "book". Passing the root fixes it at the one
+     * directory that is actually the root:
+     *
+     * <ul>
+     *   <li>the book root is {@code declaredRoot}, whether or not a yaml sits
+     *       there;</li>
+     *   <li>the book-level config comes from {@code declaredRoot/paperband.yaml}
+     *       when that exists, and is empty when it doesn't;</li>
+     *   <li>the cascade still collects the yamls <em>between</em> root and card,
+     *       so per-folder css/vars/layout keep working — it just stops at the
+     *       root instead of walking to the filesystem root.</li>
+     * </ul>
+     *
+     * @param mdFile       the markdown card file
+     * @param target       current build target; may be null
+     * @param size         current page size; may be null
+     * @param margins      margins replacing the size preset's own; may be null
+     * @param declaredRoot the book root; null to discover it as usual
+     * @return resolved {@link RenderContext}
+     */
+    public RenderContext load(Path mdFile, String target, String size, Margins margins,
+                              Path declaredRoot) {
+        return load(mdFile, target, size, margins, declaredRoot, Map.of());
+    }
+
+    /**
+     * Load and resolve config for {@code mdFile}, with the book root declared
+     * and extra book-level vars supplied by the caller.
+     *
+     * <p>{@code declaredVars} enter the cascade exactly where the root yaml's
+     * own {@code vars:} would — above the built-ins, below any folder-level
+     * override. That placement is the point: a build-declared var
+     * ({@code <book><vars>}) has to reach every card's template context, the
+     * way {@code author} or {@code subtitle} does, and it has to remain
+     * overridable per folder like any other book var. Merging it into the book
+     * config after the fact would do neither.
+     *
+     * @param mdFile       the markdown card file
+     * @param target       current build target; may be null
+     * @param size         current page size; may be null
+     * @param margins      margins replacing the size preset's own; may be null
+     * @param declaredRoot the book root; null to discover it as usual
+     * @param declaredVars book-level vars from the caller; may be empty
+     * @return resolved {@link RenderContext}
+     */
+    public RenderContext load(Path mdFile, String target, String size, Margins margins,
+                              Path declaredRoot, Map<String, Object> declaredVars) {
+        Map<String, Object> extraVars = declaredVars == null ? Map.of() : declaredVars;
         Path startDir = mdFile.toAbsolutePath().getParent();
+        Path root = declaredRoot == null ? null : declaredRoot.toAbsolutePath().normalize();
         if (startDir == null) {
             PageConfigResolver.Resolved page = PageConfigResolver.resolve(null, basePageSpec(size, margins));
             return new RenderContext(BookConfig.empty(mdFile.toAbsolutePath()),
-                    List.of(), Map.of(), null, target, size, page.pageSpec(), page.fontScale());
+                    List.of(), seedVars(extraVars), null, target, size,
+                    page.pageSpec(), page.fontScale());
         }
 
-        // Walk parents, collecting yamls. Order: leaf-first.
+        // Walk parents, collecting yamls. Order: leaf-first. A declared root
+        // is where the walk stops -- above it is somebody else's book.
         Deque<Path> chain = new ArrayDeque<>();
         Path dir = startDir;
         while (dir != null) {
@@ -110,20 +173,37 @@ public final class ConfigLoader {
             if (Files.isRegularFile(yaml)) {
                 chain.addFirst(yaml);                 // book-first ordering
             }
+            if (root != null && dir.toAbsolutePath().normalize().equals(root)) break;
             dir = dir.getParent();
         }
 
         if (chain.isEmpty()) {
             PageConfigResolver.Resolved page = PageConfigResolver.resolve(null, basePageSpec(size, margins));
-            return new RenderContext(BookConfig.empty(startDir),
-                    List.of(), Map.of(), null, target, size, page.pageSpec(), page.fontScale());
+            // With a declared root, an absent yaml is expected rather than a
+            // fallback: the book is described somewhere else entirely.
+            return new RenderContext(BookConfig.empty(root != null ? root : startDir),
+                    List.of(), seedVars(extraVars), null, target, size,
+                    page.pageSpec(), page.fontScale());
         }
 
-        // First yaml in chain = book root.
-        Path bookRootYaml = chain.peekFirst();
-        Path bookRoot = bookRootYaml.getParent();
-
-        BookConfig book = parseBookConfig(bookRoot, bookRootYaml);
+        // Book root: declared when the caller knows it, otherwise the
+        // directory of the topmost yaml found. The book-level config is read
+        // from the root's own yaml -- with a declared root that has none, the
+        // book carries no yaml-declared config at all, which is the point:
+        // it's declared elsewhere.
+        Path bookRoot;
+        BookConfig book;
+        if (root != null) {
+            bookRoot = root;
+            Path rootYaml = root.resolve(CONFIG_FILENAME);
+            book = Files.isRegularFile(rootYaml)
+                    ? parseBookConfig(root, rootYaml)
+                    : BookConfig.empty(root);
+        } else {
+            Path bookRootYaml = chain.peekFirst();
+            bookRoot = bookRootYaml.getParent();
+            book = parseBookConfig(bookRoot, bookRootYaml);
+        }
 
         // Cascade resolution: walk yamls book-first → file-closest.
         List<Path> cssChain = new ArrayList<>(book.globalCss());
@@ -131,6 +211,7 @@ public final class ConfigLoader {
         // override (e.g. pin build_date in the book root yaml for reproducibility).
         Map<String, Object> vars = new LinkedHashMap<>(BuiltInVars.compute());
         vars.putAll(book.vars());
+        vars.putAll(extraVars);        // build-declared book vars sit with the book's own
         Path layout = null;
         List<String> targets = new ArrayList<>(book.targets());
 
@@ -179,6 +260,13 @@ public final class ConfigLoader {
     }
 
     // ---- internals ----
+
+    /** Built-in vars plus whatever the caller declared, for the no-yaml paths. */
+    private static Map<String, Object> seedVars(Map<String, Object> declaredVars) {
+        Map<String, Object> vars = new LinkedHashMap<>(BuiltInVars.compute());
+        vars.putAll(declaredVars);
+        return vars;
+    }
 
     /**
      * The page-size preset the yaml cascade layers on, with its margins
@@ -362,7 +450,7 @@ public final class ConfigLoader {
             PageMatter matter = new PageMatter(
                     image == null ? null : image.toString(),
                     template == null ? null
-                            : NamedTemplates.bareTemplateName(bookRoot.resolve(template.toString())));
+                            : NamedTemplates.templateName(template.toString()));
             if (matter.isEmpty()) {
                 throw new ConfigParseException(bookYaml + ": '" + key
                         + "' declares neither 'image' nor 'template'");

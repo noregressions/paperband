@@ -1,4 +1,4 @@
-package dev.noregressions.paperband.cli;
+package dev.noregressions.paperband.maven.pdf;
 
 import dev.noregressions.paperband.render.Orientation;
 import dev.noregressions.paperband.render.PageSize;

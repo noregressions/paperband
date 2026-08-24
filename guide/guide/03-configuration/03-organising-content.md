@@ -147,7 +147,7 @@ Part `folders:` are resolved relative to the folder that declares `parts:`, like
 ## Check
 
 ```bash
-paperband structure path/to/book
+mvn paperband:structure -Dpaperband.input=path/to/book
 ```
 
 The structure dump shows the resolved grouping and card order — dividers, sections, and

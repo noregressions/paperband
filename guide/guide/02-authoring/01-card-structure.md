@@ -6,8 +6,11 @@ oneliner: "A card is a Markdown file. H2 headings create named, styled blocks."
 # Card Structure
 
 A card is a `.md` file. YAML frontmatter between `---` delimiters carries metadata.
-The H1 becomes the card title. Every H2 heading starts a new block, and the heading
-text is slugified to produce a CSS class on that block's `<section>` element.
+The first H1 becomes the card title, unless the frontmatter declares a `title:` — then
+nothing is consumed and every heading renders. Every H2 heading starts a new block, and
+the heading text is slugified to produce a CSS class on that block's `<section>` element.
+A *further* H1 is a block too, one rank above the H2s beneath it — which is how a long
+card numbers its top-level steps with `#`.
 
 This card uses all five conventional block types — the rendered output IS the demo.
 
@@ -101,7 +104,7 @@ print.
 ## Check
 
 ```bash
-paperband scan path/to/card.md
+mvn paperband:scan -Dpaperband.input=path/to/card.md
 ```
 
 The scan output lists every block's heading, resolved CSS classes, and a snippet of its

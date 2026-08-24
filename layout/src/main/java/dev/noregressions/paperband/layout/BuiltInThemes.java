@@ -23,7 +23,8 @@ public final class BuiltInThemes {
             "blueprint",
             "carded",
             "herodevs",
-            "editorial-gold"
+            "editorial-gold",
+            "workshop"
     );
 
     private BuiltInThemes() {}

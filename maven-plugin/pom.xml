@@ -46,19 +46,21 @@
             <groupId>dev.noregressions.paperband</groupId>
             <artifactId>include</artifactId>
         </dependency>
+        <!--
+            PDF post-processing (watermark stamping) and page-span analysis
+            (the `pages` goal, and `build`'s page-count enforcement) read and
+            rewrite the finished PDF, which needs PDFBox directly - the
+            renderer only ever writes one. Moved here with those classes when
+            the CLI module was retired; see maven/pdf/PagesReport.
+        -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+        </dependency>
         <dependency>
             <groupId>dev.noregressions.paperband</groupId>
             <artifactId>layout</artifactId>
         </dependency>
-
-        <!--
-            Deliberately NOT depending on the cli module: its shaded/uber jar
-            bundles picocli and Playwright as a 180MB console entry point,
-            none of which a Mojo classpath needs. Watermarking (Watermark /
-            WatermarkApplier) currently lives only in cli, which is why
-            BuildMojo doesn't support it yet - promote those two classes to
-            a library module first if this goal should pick it up.
-        -->
 
         <dependency>
             <groupId>org.apache.maven</groupId>

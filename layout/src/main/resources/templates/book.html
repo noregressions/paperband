@@ -42,6 +42,11 @@
     article.card { max-width: 48rem; margin: 0 auto 3rem; }
     h1.card-title { margin-top: 0; }
     section.block { margin-block: 1.5rem; }
+    /* An h1 inside a card body is a section heading the author wrote below the
+       card's own title (CardLoader consumes only the first h1). Themes size
+       h1.card-title but have no rule for this one, so without a size here it
+       takes the UA's 2em and outshouts the very title it sits under. */
+    section.block > h1 { font-size: 1.35rem; margin-block: 1.5rem 0.75rem; }
     pre, code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
     pre { background: #f5f5f5; padding: 1rem; overflow-x: auto; }
     .card-break { page-break-after: always; height: 0; }
