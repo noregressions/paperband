@@ -83,6 +83,17 @@ public class SectionConfig {
      */
     private boolean landingPage = true;
 
+    /**
+     * Misplacement trap, never a real setting: {@code <page>} belongs
+     * <em>between</em> {@code <section>} elements (directly under
+     * {@code <sections>}), but nesting it inside one is a natural mistake —
+     * and without this field the configurator fails with "Cannot find 'page'
+     * in class SectionConfig", which names the symptom and not the fix. With
+     * it, configuration succeeds and {@link BookLayout#validate()} rejects the
+     * declaration with a message saying where the marker goes.
+     */
+    private Page page;
+
     /** @return the section id, or null to derive it from the title */
     public String getId() {
         return id;
@@ -121,6 +132,11 @@ public class SectionConfig {
     /** @return whether this section gets its own divider/landing page; true unless declared false */
     public boolean isLandingPage() {
         return landingPage;
+    }
+
+    /** @return a misplaced nested {@code <page>}, for {@link BookLayout#validate()} to reject; null when none */
+    Page getMisplacedPage() {
+        return page;
     }
 
     /** Parse {@link #sort} into individual field names, dropping blanks. */

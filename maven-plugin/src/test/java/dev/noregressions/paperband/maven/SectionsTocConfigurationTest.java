@@ -177,6 +177,29 @@ class SectionsTocConfigurationTest {
     }
 
     @Test
+    void pageNestedInsideASectionFailsWithGuidance() throws Exception {
+        // The natural mistake. Without SectionConfig's trap field the
+        // configurator itself fails with "Cannot find 'page' in class
+        // SectionConfig" — symptom, not fix — so the trap lets configuration
+        // succeed and validate() say where the marker goes.
+        BookLayout book = configured("""
+                <book>
+                  <sections>
+                    <section>
+                      <title>A</title>
+                      <includes><include>a/**</include></includes>
+                      <page><template>diagnostics</template></page>
+                    </section>
+                  </sections>
+                </book>
+                """);
+
+        IllegalArgumentException e = org.junit.jupiter.api.Assertions.assertThrows(
+                IllegalArgumentException.class, book::validate);
+        assertTrue(e.getMessage().contains("BETWEEN <section> elements"), e.getMessage());
+    }
+
+    @Test
     void pageWithNoTemplateStopsTheBuild() throws Exception {
         BookLayout book = configured("""
                 <book>

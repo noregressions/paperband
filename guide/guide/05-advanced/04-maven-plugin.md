@@ -373,7 +373,10 @@ A card is loaded before the book is assembled, so a card template only ever sees
 it can't list the other cards, count a section, or summarise the book it sits in. A
 `<page>` marker can: it names a Pebble template that renders **after** everything is
 known, with the same model `book.html` itself sees — `cards`, `sections`,
-`axisGroupings`, `book`, `vars` — placed at the marker's position in the flow:
+`axisGroupings`, `book`, `vars` — placed at the marker's position in the flow.
+Like `<toc/>`, the marker is positional: it sits directly under `<sections>`, *between*
+`<section>` elements, never inside one (a nested `<page>` fails the build with a message
+saying so):
 
 ```xml
 <sections>

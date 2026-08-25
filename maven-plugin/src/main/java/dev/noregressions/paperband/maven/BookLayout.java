@@ -261,6 +261,12 @@ public class BookLayout {
                                 + "nothing but its template: <page><template>matrix</template></page>, "
                                 + "resolved against the book's layouts/ directory.");
             }
+            if (s.getMisplacedPage() != null) {
+                throw new IllegalArgumentException(
+                        "<book> " + s + " declares a nested <page> — a page marker is positional, "
+                                + "like <toc/>: put it BETWEEN <section> elements, directly under "
+                                + "<sections>, and its template renders at that point in the book.");
+            }
         }
     }
 
