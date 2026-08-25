@@ -187,6 +187,20 @@ class BookDeclarationTest {
         }
 
         @Test
+        void should_reject_fullPage_on_anything_but_the_cover() {
+            PageMatterConfig back = pageMatter("x.png", null);
+            set(back, "fullPage", Boolean.TRUE);
+
+            IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                    () -> back.toPageMatter(Path.of("."), "back"));
+            assertTrue(e.getMessage().contains("fullPage"), e.getMessage());
+
+            PageMatterConfig cover = pageMatter("x.png", null);
+            set(cover, "fullPage", Boolean.TRUE);
+            assertTrue(cover.toPageMatter(Path.of("."), "cover").fullPage());
+        }
+
+        @Test
         void should_pass_index_modes_through_vars_and_reject_junk() {
             BookLayout book = new BookLayout();
             set(book, "index", "auto");

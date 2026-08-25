@@ -215,7 +215,7 @@ sensible owner for a config file sitting among the output.
 | Element | Notes |
 |---|---|
 | `book/title` | Book title, for the cover and the PDF metadata. |
-| `book/cover`, `book/back` | A full-page `<image>`, a `<template>`, and/or the cover's own text: `<text>true</text>` overlays the standard title/subtitle/series/author block on the image, and `<title>`, `<subtitle>`, `<series>`, `<author>` elements override individual lines (each inherits the book's value when unset). Templates live in the book's `layouts/` — see below. |
+| `book/cover`, `book/back` | A full-page `<image>`, a `<template>`, and/or the cover's own text: `<text>true</text>` overlays the standard title/subtitle/series/author block on the image, and `<title>`, `<subtitle>`, `<series>`, `<author>` elements override individual lines (each inherits the book's value when unset). `<fullPage>true</fullPage>` (cover only) fills the sheet trim edge to trim edge — the first page loses its margins, the image scales to cover it, and any running header/footer is suppressed on that page. Templates live in the book's `layouts/` — see below. |
 | `book/header`, `book/footer` | Running fixtures, same `<image>`/`<template>` shape. |
 | `book/sectionLandingTemplate` | Default landing/divider template for parts and sections that name none — a preset (`minimal`) or a path. |
 | `book/author` | The book's author, for the cover. |

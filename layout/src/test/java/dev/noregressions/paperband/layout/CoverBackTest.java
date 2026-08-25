@@ -128,6 +128,25 @@ class CoverBackTest {
     }
 
     @Test
+    void fullPageCoverDropsFirstPageMarginsAndFillsTheSheet(@TempDir Path root) {
+        String html = render(root,
+                new PageMatter("images/front.png", null, null, null, null, null, false, true),
+                null);
+
+        assertTrue(html.contains("book-cover-fullpage\""), "full-page class on the section");
+        assertTrue(html.contains("@page :first { margin: 0; }"),
+                "first-page margins dropped so the artwork reaches the trim edge");
+        assertTrue(html.contains("object-fit: cover"), "image scales to cover the sheet");
+    }
+
+    @Test
+    void ordinaryCoversEmitNoFirstPageMarginRule(@TempDir Path root) {
+        String html = render(root, new PageMatter("images/front.png", null), null);
+        assertFalse(html.contains("@page :first"),
+                "the margin escape is opt-in — a plain image cover keeps the build's margins");
+    }
+
+    @Test
     void scaffoldCssGivesCoverAndBackTheirOwnSheets(@TempDir Path root) {
         String html = render(root,
                 new PageMatter("front.png", null), new PageMatter("back.png", null));

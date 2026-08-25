@@ -1161,6 +1161,7 @@ public final class LayoutEngine {
             m.put("subtitle", null);
             m.put("series", null);
             m.put("author", null);
+            m.put("fullPage", false);
             return m;
         }
         String image = matter.image();
@@ -1179,6 +1180,7 @@ public final class LayoutEngine {
         m.put("subtitle", matter.subtitle());
         m.put("series", matter.series());
         m.put("author", matter.author());
+        m.put("fullPage", matter.fullPage());
         return m;
     }
 

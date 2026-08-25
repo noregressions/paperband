@@ -15,7 +15,7 @@
    overrides just that line. A custom template (cover: { template: ... })
    replaces this file entirely and receives the same model. #}
 {% set coverText = book.cover.image is null or book.cover.hasText %}
-<section class="book-cover{% if book.cover.image is not null %} book-cover-has-image{% endif %}{% if book.cover.image is not null and coverText %} book-cover-overlay{% endif %}" id="book-cover">
+<section class="book-cover{% if book.cover.image is not null %} book-cover-has-image{% endif %}{% if book.cover.image is not null and coverText %} book-cover-overlay{% endif %}{% if book.cover.fullPage %} book-cover-fullpage{% endif %}" id="book-cover">
   {% if book.cover.image is not null %}
   <img class="book-cover-image" src="{{ book.cover.image }}" alt="{{ book.cover.title | default(book.title) | default('cover') }}">
   {% endif %}

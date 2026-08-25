@@ -94,6 +94,32 @@
        shadow forced here — legibility against a given image is a design
        call, so themes/book CSS restyle via .book-cover-overlay. */
     .book-cover-overlay { position: relative; }
+{% if book.cover.fullPage %}
+    /* Full-page cover (cover: { fullPage: true }): the first sheet loses its
+       page margins entirely — Chromium honours a CSS @page rule over the
+       Page.pdf margin options, and :first scopes it to this sheet alone.
+       Running headers/footers draw inside the margin boxes, so they vanish
+       from the cover page for free and reappear from page 2. The section is
+       sized to the full paper (content height plus both vertical margins,
+       from the vars stamped on <html>) and the image covers it. */
+    @page :first { margin: 0; }
+    .book-cover-fullpage {
+      height: calc(var(--pw-content-height, 100vh)
+                   + var(--pw-page-margin-top, 0mm)
+                   + var(--pw-page-margin-bottom, 0mm));
+      overflow: hidden;
+      position: relative;
+      /* Cancel the print body padding (the full-bleed safety inset above),
+         which would otherwise hold the artwork off the trim edge. */
+      margin-left:  calc(-1 * max(0mm, 8mm - var(--pw-page-margin-left, 0mm)));
+      margin-right: calc(-1 * max(0mm, 8mm - var(--pw-page-margin-right, 0mm)));
+    }
+    .book-cover-fullpage .book-cover-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+{% endif %}
     .book-cover-overlay .book-cover-inner {
       position: absolute;
       inset: 0;

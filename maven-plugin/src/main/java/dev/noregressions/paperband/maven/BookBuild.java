@@ -7,6 +7,7 @@ import dev.noregressions.paperband.config.ConfigLoader;
 import dev.noregressions.paperband.include.Includes;
 import dev.noregressions.paperband.layout.LayoutEngine;
 import dev.noregressions.paperband.layout.ThemeBundle;
+import dev.noregressions.paperband.maven.pdf.FullPageCover;
 import dev.noregressions.paperband.maven.pdf.PageRefs;
 import dev.noregressions.paperband.maven.pdf.Watermark;
 import dev.noregressions.paperband.maven.pdf.WatermarkApplier;
@@ -294,6 +295,23 @@ final class BookBuild {
                     output);
             log.info("Resolved " + refs.resolved() + " page reference(s) (toc/index)"
                     + " in a second render pass");
+        }
+
+        // A full-page cover must not carry the running header/footer, but
+        // Chromium paints those bands onto every page with no per-page
+        // switch. Render once more with no bands at all — same HTML, same
+        // pagination — and splice that version's first page in. Runs after
+        // the TOC pass so the spliced page is the final cover.
+        if (FullPageCover.needsBareFirstPage(html, footer, header)) {
+            Path barePdf = FullPageCover.bareRenderPath(output);
+            try {
+                renderer.render(new HtmlInput(html, baseUri, bookCtx.pageSpec(), metadata,
+                        null, null), barePdf);
+                FullPageCover.replaceFirstPage(output, barePdf);
+            } finally {
+                Files.deleteIfExists(barePdf);
+            }
+            log.info("Replaced the cover page with a header/footer-free render (fullPage cover)");
         }
         applyWatermark(bookCtx);
 

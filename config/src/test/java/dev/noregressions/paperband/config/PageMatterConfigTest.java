@@ -63,4 +63,45 @@ class PageMatterConfigTest {
     void emptyMapIsRejected() {
         assertThrows(ConfigParseException.class, () -> load("cover: {}\n"));
     }
+
+    @Test
+    void coverTextFieldsParse() throws IOException {
+        RenderContext ctx = load("""
+                title: T
+                cover:
+                  image: images/front.png
+                  text: true
+                  subtitle: "2026 edition"
+                """);
+        PageMatter cover = ctx.book().cover();
+        assertEquals("2026 edition", cover.subtitle());
+        assertEquals(true, cover.text());
+        assertEquals(true, cover.hasText());
+    }
+
+    @Test
+    void unknownCoverKeyIsRejected() {
+        assertThrows(ConfigParseException.class,
+                () -> load("cover:\n  image: x.png\n  subtile: typo\n"),
+                "a typo'd key must fail, not silently vanish");
+    }
+
+    @Test
+    void fullPageParsesOnCover() throws IOException {
+        RenderContext ctx = load("""
+                title: T
+                cover:
+                  image: images/front.png
+                  fullPage: true
+                """);
+        assertEquals(true, ctx.book().cover().fullPage());
+    }
+
+    @Test
+    void fullPageOnBackIsRejected() {
+        // CSS can address the first page (:first) but not the last.
+        ConfigParseException e = assertThrows(ConfigParseException.class,
+                () -> load("back:\n  image: x.png\n  fullPage: true\n"));
+        assertEquals(true, e.getMessage().contains("fullPage"), e.getMessage());
+    }
 }

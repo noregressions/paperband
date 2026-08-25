@@ -51,14 +51,30 @@ package dev.noregressions.paperband.model;
  * @param author   cover author line, overriding {@code vars.author}; null to inherit
  * @param text     render the text block even over an image; implied true when
  *                 any text field above is declared, or when there's no image
+ * @param fullPage cover only: fill the entire sheet, trim edge to trim edge.
+ *                 Emits {@code @page :first { margin: 0 }}, which Chromium
+ *                 honours over the build's page margins for the first page
+ *                 alone — and since Chromium draws running headers/footers
+ *                 inside the margin boxes, they're suppressed on the cover
+ *                 page automatically. The image scales to cover the sheet
+ *                 ({@code object-fit: cover}). First-page-only is exactly
+ *                 what CSS can express ({@code :first} exists, {@code :last}
+ *                 doesn't), so {@code back:} can't take this flag.
  */
 public record PageMatter(String image, String template,
                          String title, String subtitle, String series, String author,
-                         boolean text) {
+                         boolean text, boolean fullPage) {
 
     /** Image and/or template only — no cover-level text. */
     public PageMatter(String image, String template) {
-        this(image, template, null, null, null, null, false);
+        this(image, template, null, null, null, null, false, false);
+    }
+
+    /** Text-capable form without the full-page flag. */
+    public PageMatter(String image, String template,
+                      String title, String subtitle, String series, String author,
+                      boolean text) {
+        this(image, template, title, subtitle, series, author, text, false);
     }
 
     /** True when nothing at all was declared. */

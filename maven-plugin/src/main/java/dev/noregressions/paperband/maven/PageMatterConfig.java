@@ -51,6 +51,12 @@ public class PageMatterConfig {
     /** Render the text block even over an image; implied by any text element above. */
     private Boolean text;
 
+    /**
+     * Cover only: fill the entire sheet, trim edge to trim edge, with the
+     * page margins and any running header/footer suppressed on that page.
+     */
+    private Boolean fullPage;
+
     /** @return the image path, or null */
     public String getImage() {
         return image;
@@ -71,12 +77,20 @@ public class PageMatterConfig {
      * @throws IllegalArgumentException when the element declares nothing at all
      */
     PageMatter toPageMatter(Path bookRoot, String element) {
+        boolean full = Boolean.TRUE.equals(fullPage);
+        if (full && !"cover".equals(element)) {
+            // CSS can address the first page (:first) but not the last, so
+            // full-page is a cover-only capability — erroring beats a flag
+            // that silently does nothing.
+            throw new IllegalArgumentException("<" + element + "> cannot declare <fullPage> — "
+                    + "only <cover> can fill the sheet (CSS has @page :first, but no :last)");
+        }
         PageMatter matter = new PageMatter(
                 trimmed(image),
                 template == null || template.isBlank()
                         ? null : NamedTemplates.templateName(template.trim()),
                 trimmed(title), trimmed(subtitle), trimmed(series), trimmed(author),
-                Boolean.TRUE.equals(text));
+                Boolean.TRUE.equals(text), full);
         if (matter.isEmpty()) {
             throw new IllegalArgumentException(
                     "<" + element + "> declares neither <image>, <template> nor any text element");

@@ -444,7 +444,8 @@ public final class ConfigLoader {
      */
     /** The keys a {@code cover:}/{@code back:}/{@code header:}/{@code footer:} map may carry. */
     private static final java.util.Set<String> PAGE_MATTER_KEYS = java.util.Set.of(
-            "image", "template", "title", "subtitle", "series", "author", "text");
+            "image", "template", "title", "subtitle", "series", "author", "text",
+            "fullPage", "fullpage");
 
     private static PageMatter parsePageMatter(Path bookRoot, Path bookYaml, String key, Object node) {
         if (node == null) return null;
@@ -459,6 +460,15 @@ public final class ConfigLoader {
             }
             Object image = m.get("image");
             Object template = m.get("template");
+            boolean fullPage = truthy(m.get("fullPage")) || truthy(m.get("fullpage"));
+            if (fullPage && !"cover".equals(key)) {
+                // CSS can address the first page (:first) but not the last,
+                // so full-page is a cover-only capability — erroring beats a
+                // flag that silently does nothing.
+                throw new ConfigParseException(bookYaml + ": '" + key
+                        + "' cannot declare fullPage — only 'cover' can fill the sheet"
+                        + " (CSS has @page :first, but no :last)");
+            }
             PageMatter matter = new PageMatter(
                     image == null ? null : image.toString(),
                     template == null ? null
@@ -467,8 +477,8 @@ public final class ConfigLoader {
                     string(m.get("subtitle")),
                     string(m.get("series")),
                     string(m.get("author")),
-                    Boolean.TRUE.equals(m.get("text"))
-                            || "true".equalsIgnoreCase(String.valueOf(m.get("text"))));
+                    truthy(m.get("text")),
+                    fullPage);
             if (matter.isEmpty()) {
                 throw new ConfigParseException(bookYaml + ": '" + key
                         + "' declares neither 'image', 'template' nor any text field");
@@ -530,6 +540,11 @@ public final class ConfigLoader {
     }
 
     private static String string(Object o) { return o == null ? null : o.toString(); }
+
+    /** Yaml-flexible boolean: a real {@code true} or the string spelling of one. */
+    private static boolean truthy(Object o) {
+        return Boolean.TRUE.equals(o) || "true".equalsIgnoreCase(String.valueOf(o));
+    }
 
     @SuppressWarnings("unchecked")
     private Map<String, Object> readYaml(Path yaml) {
