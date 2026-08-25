@@ -134,6 +134,65 @@ class SectionsTocConfigurationTest {
     }
 
     @Test
+    void pageElementBecomesAMarkerWithItsTemplateAndPosition() throws Exception {
+        BookLayout book = configured("""
+                <book>
+                  <sections>
+                    <section><title>A</title><includes><include>a/**</include></includes></section>
+                    <page><template>layouts/matrix.html</template></page>
+                    <section><title>B</title><includes><include>b/**</include></includes></section>
+                    <page><template>appendix</template></page>
+                  </sections>
+                </book>
+                """);
+
+        assertInstanceOf(Page.class, book.getSections().get(1), "the converter maps <page> here");
+        assertEquals(2, book.toSpecs().size(), "markers are not section specs");
+
+        var markers = book.pageMarkers();
+        assertEquals(2, markers.size());
+        assertEquals(1, markers.get(0).afterSpec(), "one section precedes the first marker");
+        assertEquals("matrix", markers.get(0).template(),
+                "layouts/ prefix and extension stripped, like every declared template");
+        assertEquals(2, markers.get(1).afterSpec(), "trailing marker sits after both sections");
+        assertEquals("appendix", markers.get(1).template());
+    }
+
+    @Test
+    void pageMarkersDoNotShiftTheTocPosition() throws Exception {
+        BookLayout book = configured("""
+                <book>
+                  <sections>
+                    <page><template>front</template></page>
+                    <section><title>A</title><includes><include>a/**</include></includes></section>
+                    <toc/>
+                    <section><title>B</title><includes><include>b/**</include></includes></section>
+                  </sections>
+                </book>
+                """);
+
+        assertEquals(1, book.tocAfterSpec(),
+                "the <page> marker before it is not a section, so it doesn't count");
+        assertEquals(0, book.pageMarkers().get(0).afterSpec());
+    }
+
+    @Test
+    void pageWithNoTemplateStopsTheBuild() throws Exception {
+        BookLayout book = configured("""
+                <book>
+                  <sections>
+                    <section><title>A</title><includes><include>a/**</include></includes></section>
+                    <page/>
+                  </sections>
+                </book>
+                """);
+
+        IllegalArgumentException e = org.junit.jupiter.api.Assertions.assertThrows(
+                IllegalArgumentException.class, book::validate);
+        assertTrue(e.getMessage().contains("<template>"), e.getMessage());
+    }
+
+    @Test
     void markerWithNoSectionsAroundItStopsTheBuild() throws Exception {
         BookLayout book = configured("""
                 <book>

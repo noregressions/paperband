@@ -12,6 +12,7 @@ import dev.noregressions.paperband.maven.pdf.PageRefs;
 import dev.noregressions.paperband.maven.pdf.Watermark;
 import dev.noregressions.paperband.maven.pdf.WatermarkApplier;
 import dev.noregressions.paperband.model.Card;
+import dev.noregressions.paperband.model.PlacedPage;
 import dev.noregressions.paperband.model.Section;
 import dev.noregressions.paperband.model.RenderContext;
 import dev.noregressions.paperband.predicate.PredicateEvaluator;
@@ -75,8 +76,12 @@ final class BookBuild {
      * @param tocAfterSpec how many specs precede the {@code <toc/>} marker
      *                     placing the printed table of contents, or null when
      *                     the declaration carries no marker
+     * @param pageMarkers  {@code <page>} markers among the specs, each a
+     *                     generated page placed at that point in the book;
+     *                     empty when none is declared
      */
-    record PlannedBook(Path root, List<BookPlan.SectionSpec> specs, Integer tocAfterSpec) {}
+    record PlannedBook(Path root, List<BookPlan.SectionSpec> specs, Integer tocAfterSpec,
+                       List<BookPlan.PageMarker> pageMarkers) {}
 
     // ---- how to build it ----
 
@@ -190,7 +195,8 @@ final class BookBuild {
 
     private void buildBook() throws Exception {
         BookSource.Resolved source = BookSource.of(input, plan, target, log);
-        renderBook(source.root(), source.cardFiles(), source.sections(), source.tocCardIndex());
+        renderBook(source.root(), source.cardFiles(), source.sections(), source.tocCardIndex(),
+                source.pages());
     }
 
     /**
@@ -207,9 +213,12 @@ final class BookBuild {
      *                      table of contents renders, or null when the build
      *                      declares no position (yaml {@code vars.toc} then
      *                      decides whether one renders at all, up front)
+     * @param pages         generated pages placed into the card flow
+     *                      ({@code <page>} markers), each with its card index
+     *                      already resolved; empty when none was declared
      */
     private void renderBook(Path bookRoot, List<Path> cardFiles, List<Section> declaredSections,
-            Integer tocCardIndex) throws Exception {
+            Integer tocCardIndex, List<PlacedPage> pages) throws Exception {
         ConfigLoader configLoader = new ConfigLoader();
         // Constructed once the book root is known, on the first card: ids for
         // cards that declare none are derived from their path relative to it.
@@ -241,10 +250,11 @@ final class BookBuild {
 
         CardLoading.requireUniqueIds(cards, bookRoot);
 
-        Selection selected = applySelection(cards, contexts, tocCardIndex);
+        Selection selected = applySelection(cards, contexts, tocCardIndex, pages);
         cards = selected.cards();
         contexts = selected.contexts();
         tocCardIndex = selected.tocCardIndex();
+        pages = selected.pages();
 
         // Book-level config declared in the POM layers over the root yaml's,
         // field by field. A declaration wins over a default: the POM is the
@@ -269,6 +279,7 @@ final class BookBuild {
         layout.setExtraCss(stylesheets);
         if (editionModel != null) layout.setEdition(editionModel);
         layout.setTocAt(tocCardIndex);
+        layout.setPagesAt(pages);
         String html = layoutOverride != null
                 ? layout.renderBook(cards, contexts, bookCtx, layoutOverride)
                 : layout.renderBook(cards, contexts, bookCtx);
@@ -335,7 +346,7 @@ final class BookBuild {
     // ---- selection ----
 
     private record Selection(List<Card> cards, List<RenderContext> contexts,
-                             Integer tocCardIndex) {}
+                             Integer tocCardIndex, List<PlacedPage> pages) {}
 
     /**
      * Narrow the book to the cards a selection asks for. Union semantics: the
@@ -348,18 +359,19 @@ final class BookBuild {
      * matches its config spelling.
      */
     private Selection applySelection(List<Card> cards, List<RenderContext> contexts,
-            Integer tocCardIndex) throws MojoFailureException {
+            Integer tocCardIndex, List<PlacedPage> pages) throws MojoFailureException {
         List<String> inclusion = selectCards == null ? List.of() : selectCards;
         boolean hasWhere = selectWhere != null && !selectWhere.isBlank();
         boolean hasQuery = (selectClauses != null && !selectClauses.isEmpty()) || hasWhere;
         if (!hasQuery && inclusion.isEmpty()) {
-            return new Selection(cards, contexts, tocCardIndex);
+            return new Selection(cards, contexts, tocCardIndex, pages);
         }
 
         PredicateEvaluator predicate = hasWhere ? new PredicateEvaluator() : null;
         List<Card> keptCards = new ArrayList<>();
         List<RenderContext> keptContexts = new ArrayList<>();
         int keptBeforeToc = 0;
+        int[] keptBeforePage = new int[pages.size()];
         for (int i = 0; i < cards.size(); i++) {
             boolean keep = inclusion.contains(cards.get(i).id());
             if (!keep && hasQuery) {
@@ -388,10 +400,13 @@ final class BookBuild {
             if (keep) {
                 keptCards.add(cards.get(i));
                 keptContexts.add(contexts.get(i));
-                // The TOC position survives selection as "before the first
+                // A marker position survives selection as "before the first
                 // kept card that followed the marker": kept cards ahead of
-                // the marker are all that still precede the contents page.
+                // the marker are all that still precede its page.
                 if (tocCardIndex != null && i < tocCardIndex) keptBeforeToc++;
+                for (int p = 0; p < pages.size(); p++) {
+                    if (i < pages.get(p).cardIndex()) keptBeforePage[p]++;
+                }
             }
         }
 
@@ -400,8 +415,12 @@ final class BookBuild {
             throw new MojoFailureException("select " + description + " matched no cards");
         }
         log.info("Selected " + keptCards.size() + " of " + cards.size() + " cards " + description);
+        List<PlacedPage> keptPages = new ArrayList<>(pages.size());
+        for (int p = 0; p < pages.size(); p++) {
+            keptPages.add(new PlacedPage(keptBeforePage[p], pages.get(p).template()));
+        }
         return new Selection(keptCards, keptContexts,
-                tocCardIndex == null ? null : keptBeforeToc);
+                tocCardIndex == null ? null : keptBeforeToc, keptPages);
     }
 
     private String describeSelection(List<String> inclusion) {

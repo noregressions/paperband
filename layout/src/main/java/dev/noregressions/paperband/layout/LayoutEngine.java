@@ -13,6 +13,7 @@ import dev.noregressions.paperband.model.AxisValue;
 import dev.noregressions.paperband.model.Block;
 import dev.noregressions.paperband.model.Card;
 import dev.noregressions.paperband.model.NamedTemplates;
+import dev.noregressions.paperband.model.PlacedPage;
 import dev.noregressions.paperband.model.Section;
 import dev.noregressions.paperband.model.RenderContext;
 import dev.noregressions.paperband.pebble.LenientMap;
@@ -119,6 +120,23 @@ public final class LayoutEngine {
      */
     public void setTocAt(Integer cardIndex) {
         this.tocAt = cardIndex;
+    }
+
+    /**
+     * Generated pages placed into the card flow ({@code <page>} markers inside
+     * a POM-declared {@code <sections>}): each template renders with the whole
+     * book model in scope — the same context {@code book.html} sees — in front
+     * of the card its index names ({@code cards.size()} puts it after the last
+     * card). Empty (the default) renders none.
+     */
+    private List<PlacedPage> pagesAt = List.of();
+
+    /**
+     * Place generated pages for subsequent book renders.
+     * @param pages the pages, each with its card index resolved; null clears
+     */
+    public void setPagesAt(List<PlacedPage> pages) {
+        this.pagesAt = pages == null ? List.of() : List.copyOf(pages);
     }
 
     /** Construct an engine that resolves templates from the classpath only, no theme. */
@@ -1778,6 +1796,20 @@ public final class LayoutEngine {
         // index, cards.size() meaning after the last card. A vars-toggled TOC
         // with no declared position keeps its traditional spot up front.
         model.put("tocAt", tocAt == null ? 0 : Math.min(tocAt, cards.size()));
+        // Generated pages (<page> markers): book.html includes each entry's
+        // template in front of the card its index names, with this whole model
+        // in scope via include inheritance — the capability cards can't have,
+        // since they load before the model exists. The n is a stable ordinal
+        // for the page's anchor id (book-page-{n}).
+        List<Map<String, Object>> pageModels = new ArrayList<>(pagesAt.size());
+        for (int p = 0; p < pagesAt.size(); p++) {
+            Map<String, Object> pm = new LinkedHashMap<>();
+            pm.put("n", p);
+            pm.put("at", Math.min(pagesAt.get(p).cardIndex(), cards.size()));
+            pm.put("template", pagesAt.get(p).template());
+            pageModels.add(pm);
+        }
+        model.put("bookPages", pageModels);
         Map<String, List<String>> indexTerms = resolvedIndexTerms(cards, bookCtx.vars());
         model.put("bookIndex",
                 indexTerms.isEmpty() ? null : buildIndexModel(cards, indexTerms));

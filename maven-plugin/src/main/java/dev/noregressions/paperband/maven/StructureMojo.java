@@ -138,7 +138,7 @@ public class StructureMojo extends AbstractPaperbandMojo {
             throw new MojoExecutionException(e.getMessage(), e);
         }
         Path root = book.getRoot() != null ? resolve(book.getRoot()) : basedir();
-        return BookSource.plan(root, specs, book.tocAfterSpec(), target, getLog());
+        return BookSource.plan(root, specs, book.tocAfterSpec(), book.pageMarkers(), target, getLog());
     }
 
     /**

@@ -1,6 +1,7 @@
 package dev.noregressions.paperband.config;
 
 import dev.noregressions.paperband.model.NamedTemplates;
+import dev.noregressions.paperband.model.PlacedPage;
 import dev.noregressions.paperband.model.Section;
 import dev.noregressions.paperband.predicate.PredicateEvaluator;
 
@@ -149,6 +150,19 @@ public final class BookPlan {
     }
 
     /**
+     * A declared position for a generated page: how many specs precede its
+     * marker (the same counting {@code tocAfterSpec} uses), and the bare
+     * Pebble template name to render there. {@link #resolve} turns the spec
+     * position into the {@link PlacedPage#cardIndex()} the layout consumes.
+     *
+     * @param afterSpec how many specs precede the marker — 0 puts the page
+     *                  before everything, the spec count after everything
+     * @param template  bare Pebble template name, resolved against the book's
+     *                  {@code layouts/} directory
+     */
+    public record PageMarker(int afterSpec, String template) {}
+
+    /**
      * A resolved plan: the flat card list to build, and the sections grouping it.
      *
      * @param cards        ordered card files, absolute and normalised
@@ -159,19 +173,30 @@ public final class BookPlan {
      *                     table of contents renders — {@code cards.size()}
      *                     puts it after the last card — or null when the plan
      *                     declared no TOC position
+     * @param pages        generated pages placed into the card flow, each
+     *                     marker's spec position resolved to a card index the
+     *                     same way {@code tocCardIndex} is; empty when none
+     *                     was declared
      */
     public record Plan(List<Path> cards, List<Section> sections, List<String> warnings,
-                       Integer tocCardIndex) {
+                       Integer tocCardIndex, List<PlacedPage> pages) {
         /** Normalises the lists to immutable, non-null copies. */
         public Plan {
             cards    = cards    == null ? List.of() : List.copyOf(cards);
             sections = sections == null ? List.of() : List.copyOf(sections);
             warnings = warnings == null ? List.of() : List.copyOf(warnings);
+            pages    = pages    == null ? List.of() : List.copyOf(pages);
+        }
+
+        /** A plan with no generated pages. */
+        public Plan(List<Path> cards, List<Section> sections, List<String> warnings,
+                    Integer tocCardIndex) {
+            this(cards, sections, warnings, tocCardIndex, List.of());
         }
 
         /** A plan with no declared TOC position. */
         public Plan(List<Path> cards, List<Section> sections, List<String> warnings) {
-            this(cards, sections, warnings, null);
+            this(cards, sections, warnings, null, List.of());
         }
     }
 
@@ -203,6 +228,20 @@ public final class BookPlan {
      *        specs actually claimed, so skipped and empty specs cost nothing.
      */
     public static Plan resolve(Path root, List<SectionSpec> specs, Integer tocAfterSpec, String target) {
+        return resolve(root, specs, tocAfterSpec, List.of(), target);
+    }
+
+    /**
+     * Resolve {@code specs} against {@code root}, with declared positions for
+     * the printed table of contents and any generated pages.
+     *
+     * @param pageMarkers generated-page markers among the specs; each resolves
+     *        to a {@link PlacedPage} whose card index is the count of cards
+     *        the preceding specs actually claimed — the same arithmetic as
+     *        {@code tocAfterSpec}, so skipped and empty specs cost nothing
+     */
+    public static Plan resolve(Path root, List<SectionSpec> specs, Integer tocAfterSpec,
+                               List<PageMarker> pageMarkers, String target) {
         if (root == null || !Files.isDirectory(root)) {
             throw new ConfigParseException("Book root is not a directory: " + root);
         }
@@ -229,12 +268,18 @@ public final class BookPlan {
         warnings.addAll(nearMissWarnings(base, specs, acceptYamlCards));
 
         Integer tocCardIndex = null;
+        List<PlacedPage> pages = new ArrayList<>();
         for (int s = 0; s < specs.size(); s++) {
             SectionSpec spec = specs.get(s);
-            // The marker sits BEFORE spec s: however many cards the specs
-            // ahead of it actually claimed is where the contents page goes.
+            // A marker sits BEFORE spec s: however many cards the specs
+            // ahead of it actually claimed is where its page goes.
             if (tocAfterSpec != null && s == tocAfterSpec) {
                 tocCardIndex = cards.size();
+            }
+            for (PageMarker marker : pageMarkers) {
+                if (marker.afterSpec() == s) {
+                    pages.add(new PlacedPage(cards.size(), marker.template()));
+                }
             }
             String id = idOf(spec);
             if (id != null && !ids.add(id)) {
@@ -267,7 +312,12 @@ public final class BookPlan {
         if (tocAfterSpec != null && tocCardIndex == null) {
             tocCardIndex = cards.size();   // marker after the last spec
         }
-        return new Plan(cards, sections, warnings, tocCardIndex);
+        for (PageMarker marker : pageMarkers) {
+            if (marker.afterSpec() >= specs.size()) {
+                pages.add(new PlacedPage(cards.size(), marker.template()));
+            }
+        }
+        return new Plan(cards, sections, warnings, tocCardIndex, pages);
     }
 
     /**

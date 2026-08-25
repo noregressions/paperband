@@ -156,6 +156,21 @@
       padding: 0;
       text-align: center;
     }
+    /* Generated page (a <page> marker in a POM-declared <sections>): a sheet
+       of its own, like a divider, but the template inside decides its own
+       layout — no centring flex, just the page break and the full printable
+       height to work with. */
+    .book-page {
+      break-before: page;
+      break-after: page;
+      page-break-before: always;
+      page-break-after: always;
+      box-sizing: border-box;
+      min-height: var(--pw-content-height, 100vh);
+      margin: 0;
+      padding: 0;
+    }
+
     /* The flex item — width-capped so a long title wraps to a readable
        measure rather than the full page width, and left-aligned again for
        the table of contents, which reads badly centred. */
@@ -233,6 +248,7 @@
     {% for v in g.values %}<a href="#axis-divider-{{ g.axis.name }}-{{ v.id }}">{{ v.label }}</a>{% endfor %}
     {% endfor %}
     {% for s in sections %}{% if s.landingPage %}<a href="#section-divider-{{ s.id }}">{{ s.label }}</a>{% endif %}{% endfor %}
+    {% for pg in bookPages %}<a href="#book-page-{{ pg.n }}">{{ pg.template }}</a>{% endfor %}
     {# Every card, so each one is addressable in the PDF and shows up in
        `paperband pages`. Card anchors are otherwise only linked from a
        divider's table of contents, which leaves the cards of a section that
@@ -276,6 +292,19 @@
     {% if toc is not empty and loop.index == tocAt %}
     {% include "_book-toc" %}
     {% endif %}
+    {# Generated pages (a <page> marker in a POM-declared <sections>): the
+       named template renders here with this whole model in scope — cards,
+       sections, axisGroupings, book, vars — via include inheritance. That's
+       the point of a placed page: a card loads before the model exists, so
+       only a template rendered here can summarise the whole book. The card
+       loop's index is captured first — inside the page loop, `loop` would
+       mean the inner loop. #}
+    {% set cardIndex = loop.index %}
+    {% for pg in bookPages %}
+      {% if pg.at == cardIndex %}
+      <section class="book-page" id="book-page-{{ pg.n }}">{% include pg.template %}</section>
+      {% endif %}
+    {% endfor %}
     {# A card can be "first of value" for more than one axis at once
        (e.g. first card of tier 1 AND first card of subsystem "core"); stack
        one divider per axis, in book.axes() declaration order, before that
@@ -297,8 +326,13 @@
     {% if not loop.last %}<div class="card-break"></div>{% endif %}
   {% endfor %}
 
-  {# A <toc/> marker after the last section: the contents page lands here,
-     after every card and before the index / back page. #}
+  {# Markers after the last section land here, after every card and before
+     the index / back page: generated pages first, then the contents page. #}
+  {% for pg in bookPages %}
+    {% if pg.at >= (cards | length) %}
+    <section class="book-page" id="book-page-{{ pg.n }}">{% include pg.template %}</section>
+    {% endif %}
+  {% endfor %}
   {% if toc is not empty and tocAt >= (cards | length) %}
   {% include "_book-toc" %}
   {% endif %}

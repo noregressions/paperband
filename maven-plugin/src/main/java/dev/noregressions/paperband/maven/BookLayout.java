@@ -253,6 +253,20 @@ public class BookLayout {
                     "<sections> declares <toc/> " + tocMarkers + " times — there is one table of "
                             + "contents, so it can only sit in one place. Keep one.");
         }
+        for (SectionConfig s : sections) {
+            if (s instanceof Page page
+                    && (page.getTemplate() == null || page.getTemplate().isBlank())) {
+                throw new IllegalArgumentException(
+                        "<sections> declares a <page> with no <template> — a page marker is "
+                                + "nothing but its template: <page><template>matrix</template></page>, "
+                                + "resolved against the book's layouts/ directory.");
+            }
+        }
+    }
+
+    /** True for the positional markers that live among {@code <section>}s but select no cards. */
+    private static boolean isMarker(SectionConfig s) {
+        return s instanceof Toc || s instanceof Page;
     }
 
     /**
@@ -428,15 +442,15 @@ public class BookLayout {
 
     List<BookPlan.SectionSpec> toSpecs() {
         validate();
-        List<SectionConfig> realSections = sections.stream().filter(p -> !(p instanceof Toc)).toList();
+        List<SectionConfig> realSections = sections.stream().filter(p -> !isMarker(p)).toList();
         boolean hasSections = !realSections.isEmpty();
         boolean hasPatterns = !includes.isEmpty();
         if (realSections.size() < sections.size() && !hasSections) {
-            // <toc/> means "the contents page goes between these sections" — with
-            // no sections around it there is no between.
+            // <toc/> and <page> mean "this page goes between these sections" —
+            // with no sections around them there is no between.
             throw new IllegalArgumentException(
-                    "<sections> declares a <toc/> but no <section> — the marker places the table of "
-                            + "contents between sections, so declare the sections it sits among");
+                    "<sections> declares only markers (<toc/>/<page>) and no <section> — a marker "
+                            + "places its page between sections, so declare the sections it sits among");
         }
         if (hasSections && hasPatterns) {
             throw new IllegalArgumentException(
@@ -477,14 +491,35 @@ public class BookLayout {
      * number of {@code <section>} elements before it — 0 places the contents
      * page before everything, {@code section count} after everything — or null
      * when no marker is declared. Indexes the specs {@link #toSpecs} returns,
-     * which is what {@code BookPlan} turns into a card position.
+     * which is what {@code BookPlan} turns into a card position. Other markers
+     * ({@code <page>}) don't count: they produce no spec either.
      */
     Integer tocAfterSpec() {
         int before = 0;
         for (SectionConfig section : sections) {
             if (section instanceof Toc) return before;
-            before++;
+            if (!isMarker(section)) before++;
         }
         return null;
+    }
+
+    /**
+     * Every {@code <page>} marker among the declared sections, as (position,
+     * template) pairs — the position counted in {@code <section>} elements,
+     * exactly as {@link #tocAfterSpec()} counts, and the template already
+     * resolved to a bare Pebble name. Empty when none is declared.
+     */
+    List<BookPlan.PageMarker> pageMarkers() {
+        List<BookPlan.PageMarker> out = new ArrayList<>();
+        int before = 0;
+        for (SectionConfig section : sections) {
+            if (section instanceof Page page) {
+                out.add(new BookPlan.PageMarker(
+                        before, NamedTemplates.templateName(page.getTemplate())));
+            } else if (!isMarker(section)) {
+                before++;
+            }
+        }
+        return out;
     }
 }

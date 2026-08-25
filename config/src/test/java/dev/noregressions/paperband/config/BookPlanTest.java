@@ -78,6 +78,43 @@ class BookPlanTest {
                         + "marker after them still lands before the first real card");
     }
 
+    // ---- page positions ----
+
+    @Test
+    void pageMarkersResolveToTheCardCountTheEarlierSpecsClaimed() throws IOException {
+        servicesTree();
+        List<BookPlan.SectionSpec> specs = List.of(
+                part("Traces", "services/*/TRACE.md"),
+                part("Notes", "services/*/NOTES.md"));
+        List<BookPlan.PageMarker> markers = List.of(
+                new BookPlan.PageMarker(0, "front"),
+                new BookPlan.PageMarker(1, "matrix"),
+                new BookPlan.PageMarker(2, "appendix"));
+
+        var pages = BookPlan.resolve(bookRoot, specs, null, markers, "pdf-a4").pages();
+
+        assertEquals(3, pages.size());
+        assertEquals(0, pages.get(0).cardIndex(), "marker before everything");
+        assertEquals("front", pages.get(0).template());
+        assertEquals(3, pages.get(1).cardIndex(), "between the sections: after the three traces");
+        assertEquals(6, pages.get(2).cardIndex(), "trailing marker: after the last card");
+    }
+
+    @Test
+    void pageMarkersAndTheTocMarkerResolveIndependently() throws IOException {
+        servicesTree();
+        List<BookPlan.SectionSpec> specs = List.of(
+                part("Traces", "services/*/TRACE.md"),
+                part("Notes", "services/*/NOTES.md"));
+
+        BookPlan.Plan plan = BookPlan.resolve(bookRoot, specs, 1,
+                List.of(new BookPlan.PageMarker(1, "matrix")), "pdf-a4");
+
+        assertEquals(3, plan.tocCardIndex());
+        assertEquals(3, plan.pages().get(0).cardIndex(),
+                "a page and the toc can share a position; each keeps its own");
+    }
+
     // ---- selection ----
 
     @Test

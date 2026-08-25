@@ -183,7 +183,8 @@ public class BuildMojo extends AbstractPaperbandMojo {
             build.bookDeclaration = book;
             if (book.declaresCardSelection()) {
                 try {
-                    build.plan = new BookBuild.PlannedBook(root, book.toSpecs(), book.tocAfterSpec());
+                    build.plan = new BookBuild.PlannedBook(root, book.toSpecs(), book.tocAfterSpec(),
+                            book.pageMarkers());
                 } catch (IllegalArgumentException e) {
                     throw new MojoExecutionException(e.getMessage(), e);
                 }

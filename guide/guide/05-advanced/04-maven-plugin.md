@@ -221,6 +221,7 @@ sensible owner for a config file sitting among the output.
 | `book/author` | The book's author, for the cover. |
 | `book/authors` | Several authors: `<authors><author>A</author><author>B</author></authors>`. Templates get `book.authors` as a list and `book.author` rendered as "A and B", so a theme written for one author still shows both. Declaring both `<author>` and `<authors>` is an error. |
 | `book/sections/toc` | An empty `<toc/>` between `<section>` elements renders the printed table of contents at that point in the book — first for the traditional spot up front, last for contents-at-the-back. It always lists the whole book, with real page numbers from a second render pass, and at most one is allowed (two markers fail the build). See TOC and Index. |
+| `book/sections/page` | `<page><template>matrix</template></page>` between `<section>` elements renders a generated page at that point — a Pebble template with the **whole book model** in scope. Any number of markers is fine. See Generated pages below. |
 | `book/index` | `true` renders a back-of-book index from each card's `index:` frontmatter terms; `auto` additionally extracts each card's distinctive terms from its text. Anything else is an error. See TOC and Index. |
 | `book/vars` | Book-level template vars (`subtitle`, `series`, …). Flat strings only — see Watch Out. |
 | `book/axes` | Declared axes: `name` (the frontmatter key cards use), `title`, and `values` of `id`/`label`/`color`. Declared axes replace a yaml `axes:` wholesale. |
@@ -365,6 +366,42 @@ is already its own title page. For a page that's present but plainer, reach for
 table of contents.
 
 Only a declared section can decline a page. Discovered section folders always get one.
+
+## Generated pages
+
+A card is loaded before the book is assembled, so a card template only ever sees `vars` —
+it can't list the other cards, count a section, or summarise the book it sits in. A
+`<page>` marker can: it names a Pebble template that renders **after** everything is
+known, with the same model `book.html` itself sees — `cards`, `sections`,
+`axisGroupings`, `book`, `vars` — placed at the marker's position in the flow:
+
+```xml
+<sections>
+  <section>…</section>
+  <page><template>matrix</template></page>   <!-- layouts/matrix.html -->
+  <section>…</section>
+</sections>
+```
+
+```html
+<!-- layouts/matrix.html: a planning matrix rebuilt on every build -->
+<h1>All {{ cards | length }} cards of {{ book.title }}</h1>
+<table>
+  {% for c in cards %}<tr><td>{{ c.title }}</td><td>{{ c.axes.tier.label }}</td></tr>{% endfor %}
+</table>
+```
+
+The template name resolves against `layouts/` like every other declared template (theme
+overrides first). The page takes a sheet of its own — forced break on both sides, the
+full printable height to lay out — and gets a named PDF destination (`book-page-0`,
+`book-page-1`, …) so it shows up in `paperband:pages`. Position arithmetic matches
+`<toc/>`: skipped and empty sections cost nothing, and a `-Dpaperband.cards` selection
+keeps the page before the first kept card that followed it.
+
+Use a `<page>` for pages *derived from* the book; content someone writes belongs in a
+card. (Themes have a related hook, `_book-front`, which renders between the cover and
+the first card without any POM declaration — a `<page>` is the positioned, book-declared
+version of the same idea.)
 
 For the plain "just glob me these files" case, put the patterns straight on `<book>` and
 skip `<sections>`. The cards are emitted in pattern order and grouped by their own folders,

@@ -116,7 +116,8 @@ public class SiteMojo extends AbstractPaperbandMojo {
             declaredRoot = book.getRoot() != null ? resolve(book.getRoot()) : basedir();
             if (book.declaresCardSelection()) {
                 try {
-                    plan = new BookBuild.PlannedBook(declaredRoot, book.toSpecs(), book.tocAfterSpec());
+                    plan = new BookBuild.PlannedBook(declaredRoot, book.toSpecs(), book.tocAfterSpec(),
+                            book.pageMarkers());
                 } catch (IllegalArgumentException e) {
                     throw new MojoExecutionException(e.getMessage(), e);
                 }
