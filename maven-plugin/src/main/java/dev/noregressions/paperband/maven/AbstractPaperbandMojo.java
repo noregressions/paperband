@@ -3,17 +3,24 @@ package dev.noregressions.paperband.maven;
 import dev.noregressions.paperband.render.Margins;
 
 import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
+import org.codehaus.plexus.util.xml.Xpp3Dom;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * What every Paperband goal shares: the parameters that describe the build
@@ -26,6 +33,17 @@ public abstract class AbstractPaperbandMojo extends AbstractMojo {
 
     @Parameter(defaultValue = "${project}", readonly = true)
     protected MavenProject project;
+
+    /**
+     * This execution, for its raw configuration DOM.
+     *
+     * <p>Maven hands a mojo the <em>resolved</em> values, by which point a
+     * repeated singular element has already collapsed to one — see
+     * {@link #checkBookDeclaration}. The DOM is the only place the duplicate is
+     * still visible.
+     */
+    @Parameter(defaultValue = "${mojoExecution}", readonly = true)
+    protected MojoExecution mojoExecution;
 
     /** Build target, e.g. {@code pdf-a4}, {@code pdf-6x9}, {@code web}. */
     @Parameter(property = "paperband.target", defaultValue = "pdf-a4")
@@ -110,6 +128,71 @@ public abstract class AbstractPaperbandMojo extends AbstractMojo {
     /** Skip this goal without failing the build. */
     @Parameter(property = "paperband.skip", defaultValue = "false")
     protected boolean skip;
+
+    /**
+     * Fail on a {@code <book>} element that declares the same singular thing
+     * twice.
+     *
+     * <p>Maven maps configuration onto fields, so two {@code <author>} elements
+     * set one {@code String} field twice and the second wins. Nothing warns:
+     * the build succeeds with a cover naming one of two authors, and the only
+     * clue is the missing name. Since a repeated element can only ever mean
+     * "the author didn't realise", it's an error — and the raw configuration
+     * DOM is the one place both elements still exist to be counted.
+     *
+     * <p>Collections are exempt, obviously: {@code <part>} and {@code <author>}
+     * inside {@code <authors>} are meant to repeat.
+     *
+     * @param book the declaration, or null when the goal has no {@code <book>}
+     * @throws MojoExecutionException on a repeated singular element, or a
+     *         declaration that's invalid on its own terms
+     */
+    protected void checkBookDeclaration(BookLayout book) throws MojoExecutionException {
+        if (book != null) {
+            try {
+                book.validate();
+            } catch (IllegalArgumentException e) {
+                throw new MojoExecutionException(e.getMessage(), e);
+            }
+        }
+        if (mojoExecution == null || mojoExecution.getConfiguration() == null) return;
+        Xpp3Dom bookDom = mojoExecution.getConfiguration().getChild("book");
+        if (bookDom == null) return;
+
+        Set<String> singular = singularElementNames();
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        for (Xpp3Dom child : bookDom.getChildren()) {
+            counts.merge(child.getName(), 1, Integer::sum);
+        }
+        for (Map.Entry<String, Integer> entry : counts.entrySet()) {
+            if (entry.getValue() > 1 && singular.contains(entry.getKey())) {
+                throw new MojoExecutionException(String.format(
+                        "<book> declares <%s> %d times. Maven keeps the last one, so the "
+                                + "others are silently dropped. Declare it once%s.",
+                        entry.getKey(), entry.getValue(),
+                        "author".equals(entry.getKey())
+                                ? ", or use <authors> for several: "
+                                        + "<authors><author>A</author><author>B</author></authors>"
+                                : ""));
+            }
+        }
+    }
+
+    /**
+     * The {@code <book>} elements that can only be declared once — every field
+     * of {@link BookLayout} that isn't a collection or a map. Read from the
+     * class so a new field can't quietly fall outside the check.
+     */
+    private static Set<String> singularElementNames() {
+        Set<String> names = new LinkedHashSet<>();
+        for (Field field : BookLayout.class.getDeclaredFields()) {
+            if (field.isSynthetic()) continue;
+            Class<?> type = field.getType();
+            if (Collection.class.isAssignableFrom(type) || Map.class.isAssignableFrom(type)) continue;
+            names.add(field.getName());
+        }
+        return names;
+    }
 
     /** Log and report whether {@code paperband.skip} turned this goal off. */
     protected boolean skipped(String goal) {

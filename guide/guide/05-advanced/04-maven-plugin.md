@@ -218,7 +218,9 @@ sensible owner for a config file sitting among the output.
 | `book/cover`, `book/back` | A full-page `<image>` or `<template>`. Templates live in the book's `layouts/` — see below. |
 | `book/header`, `book/footer` | Running fixtures, same `<image>`/`<template>` shape. |
 | `book/sectionLandingTemplate` | Default landing/divider template for parts and sections that name none — a preset (`minimal`) or a path. |
-| `book/vars` | Book-level template vars (`author`, `subtitle`, `series`, …). Flat strings only — see Watch Out. |
+| `book/author` | The book's author, for the cover. |
+| `book/authors` | Several authors: `<authors><author>A</author><author>B</author></authors>`. Templates get `book.authors` as a list and `book.author` rendered as "A and B", so a theme written for one author still shows both. Declaring both `<author>` and `<authors>` is an error. |
+| `book/vars` | Book-level template vars (`subtitle`, `series`, …). Flat strings only — see Watch Out. |
 | `book/axes` | Declared axes: `name` (the frontmatter key cards use), `title`, and `values` of `id`/`label`/`color`. Declared axes replace a yaml `axes:` wholesale. |
 
 An axis value's `<id>` is a string, where a yaml one keeps its native type. That costs
@@ -414,6 +416,13 @@ PDF post-processing — watermark stamping, and the page-span analysis behind `p
 in the plugin alongside the goals that use it.
 
 ## Watch Out
+
+**A repeated singular element is an error, not a merge.** Maven maps configuration onto
+fields, so two `<author>` elements set one field twice and the second wins — the build
+succeeds with one of two authors on the cover and nothing said. Any `<book>` element that
+can only be declared once (`<title>`, `<author>`, `<root>`, …) now fails the build when it
+appears twice, naming it. Elements meant to repeat — `<part>`, `<axis>`, `<author>` inside
+`<authors>` — are unaffected.
 
 **Axes and parts compete for the divider slot.** A card is never in both an axis group and
 a section, so declaring an axis over cards that also belong to parts replaces the part

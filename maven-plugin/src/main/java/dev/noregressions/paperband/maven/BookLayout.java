@@ -102,6 +102,35 @@ public class BookLayout {
     /** Book title, used by the cover and the PDF metadata. */
     private String title;
 
+    /**
+     * The book's author, for the cover.
+     *
+     * <pre>
+     * &lt;author&gt;Ada Lovelace&lt;/author&gt;
+     * </pre>
+     *
+     * <p>For more than one, use {@link #authors} — repeating this element
+     * doesn't stack, it overwrites, so declaring both is an error rather than a
+     * silent loss.
+     */
+    private String author;
+
+    /**
+     * The book's authors, when there's more than one.
+     *
+     * <pre>
+     * &lt;authors&gt;
+     *   &lt;author&gt;Ada Lovelace&lt;/author&gt;
+     *   &lt;author&gt;Grace Hopper&lt;/author&gt;
+     * &lt;/authors&gt;
+     * </pre>
+     *
+     * <p>Templates get the list as {@code book.authors} and a rendered form as
+     * {@code book.author} ("Ada Lovelace and Grace Hopper"), so a theme written
+     * for one author keeps working.
+     */
+    private List<String> authors = new ArrayList<>();
+
     /** Full-page cover, as an image or a template. */
     private PageMatterConfig cover;
 
@@ -170,6 +199,58 @@ public class BookLayout {
         return title;
     }
 
+    /** @return the single declared author, or null */
+    public String getAuthor() {
+        return author;
+    }
+
+    /** @return the declared authors, never null */
+    public List<String> getAuthors() {
+        return authors;
+    }
+
+    /**
+     * Check what this element declares before anything acts on it.
+     *
+     * @throws IllegalArgumentException when it declares authorship two ways at
+     *         once — one of them would have to be dropped, and dropping half of
+     *         a declaration silently is how a book ends up with the wrong name
+     *         on the cover
+     */
+    void validate() {
+        if (author != null && !author.isBlank() && !authors.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "<book> declares both <author> and <authors> — use one: <author> for a "
+                            + "single name, <authors> for several.");
+        }
+    }
+
+    /**
+     * Authors as declared, single or several, in order.
+     *
+     * @return the authors, empty when none is declared
+     */
+    List<String> resolvedAuthors() {
+        if (author != null && !author.isBlank()) return List.of(author.trim());
+        List<String> out = new ArrayList<>(authors.size());
+        for (String a : authors) {
+            if (a != null && !a.isBlank()) out.add(a.trim());
+        }
+        return out;
+    }
+
+    /**
+     * The authors as one readable string — {@code "Ada Lovelace and Grace
+     * Hopper"}, {@code "A, B and C"} — so a cover template that knows only
+     * about {@code book.author} renders every declared name instead of one.
+     */
+    static String joinAuthors(List<String> names) {
+        if (names.isEmpty()) return null;
+        if (names.size() == 1) return names.get(0);
+        return String.join(", ", names.subList(0, names.size() - 1))
+                + " and " + names.get(names.size() - 1);
+    }
+
     /** @return the declared cover, or null */
     public PageMatterConfig getCover() {
         return cover;
@@ -200,6 +281,28 @@ public class BookLayout {
         return vars;
     }
 
+    /**
+     * Everything this element contributes to the template context: the declared
+     * {@code <vars>}, plus authorship.
+     *
+     * <p>These have to enter through the config cascade rather than being
+     * merged into the book config afterwards. A cover reads {@code book.author}
+     * from the <em>render context's</em> vars, which are assembled while each
+     * card is loaded — so a value attached to the book config later is a value
+     * the cover never sees.
+     *
+     * @return the vars, in cascade form; empty when nothing is declared
+     */
+    Map<String, Object> declaredVars() {
+        Map<String, Object> out = new LinkedHashMap<>(vars);
+        List<String> declaredAuthors = resolvedAuthors();
+        if (!declaredAuthors.isEmpty()) {
+            out.put("author", joinAuthors(declaredAuthors));
+            out.put("authors", declaredAuthors);
+        }
+        return out;
+    }
+
     /** @return the declared axes, never null */
     public List<AxisConfig> getAxes() {
         return axes;
@@ -209,7 +312,7 @@ public class BookLayout {
     boolean declaresBookConfig() {
         return title != null || cover != null || back != null || header != null
                 || footer != null || sectionLandingTemplate != null || !vars.isEmpty()
-                || !axes.isEmpty();
+                || !axes.isEmpty() || author != null || !authors.isEmpty();
     }
 
     /**
@@ -226,8 +329,17 @@ public class BookLayout {
      * @throws IllegalArgumentException if a declared page is empty
      */
     BookConfig mergeInto(BookConfig base, Path bookRoot) {
+        validate();
         Map<String, Object> mergedVars = new LinkedHashMap<>(base.vars());
         mergedVars.putAll(vars);
+        // Authorship reaches templates through vars, where covers already look
+        // for it: `author` rendered for the templates that know that name, and
+        // `authors` as the list for those that want to lay several out.
+        List<String> declaredAuthors = resolvedAuthors();
+        if (!declaredAuthors.isEmpty()) {
+            mergedVars.put("author", joinAuthors(declaredAuthors));
+            mergedVars.put("authors", declaredAuthors);
+        }
         return new BookConfig(
                 base.bookRoot(),
                 title != null ? title : base.title(),

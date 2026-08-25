@@ -414,8 +414,7 @@ final class BookBuild {
 
     /** Book-level vars the POM declared, as the loader's map type. */
     private Map<String, Object> declaredVars() {
-        if (bookDeclaration == null || bookDeclaration.getVars().isEmpty()) return Map.of();
-        return new LinkedHashMap<>(bookDeclaration.getVars());
+        return bookDeclaration == null ? Map.of() : bookDeclaration.declaredVars();
     }
 
     /** The geometry half of the "Built ..." line, so a full-bleed build is visible in the log. */

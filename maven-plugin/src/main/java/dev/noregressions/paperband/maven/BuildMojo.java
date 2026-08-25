@@ -141,6 +141,7 @@ public class BuildMojo extends AbstractPaperbandMojo {
     public void execute() throws MojoExecutionException, org.apache.maven.plugin.MojoFailureException {
         if (skipped("build")) return;
 
+        checkBookDeclaration(book);
         boolean hasInput = input != null;
         boolean hasBook = book != null;
         if (hasInput && hasBook) {

@@ -87,13 +87,13 @@ public class SiteMojo extends AbstractPaperbandMojo {
 
     /** Book-level vars the POM's {@code <book>} declared, for the config cascade. */
     private java.util.Map<String, Object> declaredVars() {
-        if (book == null || book.getVars().isEmpty()) return java.util.Map.of();
-        return new java.util.LinkedHashMap<>(book.getVars());
+        return book == null ? java.util.Map.of() : book.declaredVars();
     }
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         if (skipped("site")) return;
+        checkBookDeclaration(book);
         try {
             build();
         } catch (MojoExecutionException | MojoFailureException e) {

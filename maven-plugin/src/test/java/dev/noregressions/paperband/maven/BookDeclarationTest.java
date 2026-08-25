@@ -10,11 +10,16 @@ import dev.noregressions.paperband.model.PageMatter;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugin.descriptor.MojoDescriptor;
+import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.lang.reflect.Field;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -130,6 +135,130 @@ class BookDeclarationTest {
             set(part, "includes", List.of("setup/**/*.md"));
             set(withParts, "parts", List.of(part));
             assertTrue(withParts.declaresCardSelection());
+        }
+    }
+
+    @Nested
+    @DisplayName("Authorship")
+    class Authors {
+
+        @Test
+        void should_take_a_single_author(@TempDir Path root) {
+            BookLayout book = new BookLayout();
+            set(book, "author", "Ada Lovelace");
+
+            assertEquals("Ada Lovelace", book.declaredVars().get("author"));
+            assertEquals(List.of("Ada Lovelace"), book.declaredVars().get("authors"));
+        }
+
+        @Test
+        void should_render_several_authors_for_templates_that_know_only_one() {
+            // A theme written against `book.author` is every theme, so the list
+            // has to arrive as something readable there too.
+            BookLayout book = new BookLayout();
+            set(book, "authors", List.of("Ada Lovelace", "Grace Hopper"));
+            assertEquals("Ada Lovelace and Grace Hopper", book.declaredVars().get("author"));
+
+            BookLayout three = new BookLayout();
+            set(three, "authors", List.of("A", "B", "C"));
+            assertEquals("A, B and C", three.declaredVars().get("author"));
+
+            assertEquals(List.of("Ada Lovelace", "Grace Hopper"), book.declaredVars().get("authors"),
+                    "and as a list, for a theme that wants to lay them out itself");
+        }
+
+        @Test
+        void should_reject_declaring_authorship_two_ways() {
+            BookLayout book = new BookLayout();
+            set(book, "author", "Solo");
+            set(book, "authors", List.of("Ada Lovelace", "Grace Hopper"));
+
+            IllegalArgumentException e = assertThrows(IllegalArgumentException.class, book::validate);
+            assertTrue(e.getMessage().contains("<author>") && e.getMessage().contains("<authors>"),
+                    e.getMessage());
+        }
+
+        @Test
+        void should_ignore_blank_entries(@TempDir Path root) {
+            BookLayout book = new BookLayout();
+            set(book, "authors", Arrays.asList("Ada Lovelace", "  ", null));
+
+            assertEquals(List.of("Ada Lovelace"), book.declaredVars().get("authors"));
+        }
+
+        @Test
+        void should_leave_vars_alone_when_no_author_is_declared() {
+            BookLayout book = new BookLayout();
+            set(book, "vars", new java.util.LinkedHashMap<>(Map.of("author", "From Vars")));
+
+            assertEquals("From Vars", book.declaredVars().get("author"),
+                    "an author set the old way still reaches the cover");
+        }
+    }
+
+    @Nested
+    @DisplayName("Repeated singular elements in the raw configuration")
+    class RepeatedSingularElements {
+
+        /** A goal with the given raw {@code <configuration>} DOM. */
+        private AbstractPaperbandMojo mojoWith(Xpp3Dom configuration) {
+            AbstractPaperbandMojo mojo = new AbstractPaperbandMojo() {
+                @Override
+                public void execute() {}
+            };
+            mojo.mojoExecution = new MojoExecution(new MojoDescriptor(), configuration);
+            return mojo;
+        }
+
+        private Xpp3Dom book(String... childrenXml) {
+            Xpp3Dom config = new Xpp3Dom("configuration");
+            Xpp3Dom book = new Xpp3Dom("book");
+            config.addChild(book);
+            for (int i = 0; i + 1 < childrenXml.length; i += 2) {
+                Xpp3Dom child = new Xpp3Dom(childrenXml[i]);
+                child.setValue(childrenXml[i + 1]);
+                book.addChild(child);
+            }
+            return config;
+        }
+
+        @Test
+        void should_reject_two_top_level_author_elements() {
+            // Maven maps both onto one String field and keeps the last, so
+            // without this check the first author silently vanishes.
+            AbstractPaperbandMojo mojo = mojoWith(
+                    book("author", "Ada Lovelace", "author", "Grace Hopper"));
+
+            MojoExecutionException e = assertThrows(MojoExecutionException.class,
+                    () -> mojo.checkBookDeclaration(null));
+            assertTrue(e.getMessage().contains("<author>"), e.getMessage());
+            assertTrue(e.getMessage().contains("<authors>"),
+                    "should point at the plural form: " + e.getMessage());
+        }
+
+        @Test
+        void should_accept_a_single_author() throws Exception {
+            mojoWith(book("author", "Ada Lovelace")).checkBookDeclaration(null);
+        }
+
+        @Test
+        void should_leave_collection_elements_free_to_repeat() throws Exception {
+            AbstractPaperbandMojo mojo = mojoWith(book("include", "a/**", "include", "b/**"));
+            mojo.checkBookDeclaration(null);
+        }
+
+        @Test
+        void should_reject_other_repeated_singular_elements_too() {
+            AbstractPaperbandMojo mojo = mojoWith(book("title", "One", "title", "Two"));
+
+            MojoExecutionException e = assertThrows(MojoExecutionException.class,
+                    () -> mojo.checkBookDeclaration(null));
+            assertTrue(e.getMessage().contains("<title>"), e.getMessage());
+        }
+
+        @Test
+        void should_pass_a_goal_with_no_book_element() throws Exception {
+            mojoWith(new Xpp3Dom("configuration")).checkBookDeclaration(null);
         }
     }
 
