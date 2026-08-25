@@ -17,13 +17,13 @@ import java.util.Set;
 
 /**
  * Parses the {@code publication:} block of a book root {@code paperband.yaml}
- * into a {@link Publication} (see DESIGN-publications.md). Deliberately a
+ * into a {@link Publication}. Deliberately a
  * separate loader from {@link ConfigLoader}: the per-card config cascade and
  * the publication block answer different questions ({@code ConfigLoader}
  * resolves one card's context; this resolves the set of build outputs), and
  * keeping them apart means neither grows the other's concerns.
  *
- * <p>{@code --set} overrides (dotted paths, e.g. {@code defaults.theme=carded}
+ * <p>{@code <set>} overrides (dotted paths, e.g. {@code defaults.theme=carded}
  * or {@code editions.batch-guide.size=A4}) are applied to the raw yaml map
  * after parse and before record construction, so they participate as the
  * topmost layer of the settings cascade. Editions are addressed by id, not
@@ -36,7 +36,7 @@ import java.util.Set;
  */
 public final class PublicationLoader {
 
-    /** Scalar leaf keys settable via --set, per level. vars.* and select.* pass through. */
+    /** Scalar leaf keys settable via <set>, per level. vars.* and select.* pass through. */
     private static final Set<String> DEFAULTS_KEYS =
             Set.of("theme", "size", "output", "themeDir");
     private static final Set<String> EDITION_KEYS =
@@ -112,7 +112,7 @@ public final class PublicationLoader {
         return Optional.of(new Publication(defaults, editions));
     }
 
-    // ── --set override application ──────────────────────────────────────────
+    // ── <set> override application ──────────────────────────────────────────
 
     /**
      * Apply one {@code path=value} override onto the raw publication map.
@@ -124,7 +124,7 @@ public final class PublicationLoader {
     private static void applyOverride(Map<String, Object> pub, String override) {
         int eq = override.indexOf('=');
         if (eq <= 0 || eq == override.length() - 1) {
-            throw new IllegalArgumentException("Bad --set (expected path=value): " + override);
+            throw new IllegalArgumentException("Bad <set> (expected path=value): " + override);
         }
         String path = override.substring(0, eq).trim();
         Object value = new Yaml().load(override.substring(eq + 1).trim());
@@ -140,7 +140,7 @@ public final class PublicationLoader {
             setLeaf(edition, seg, 2, EDITION_KEYS, value, path);
             return;
         }
-        throw new IllegalArgumentException("Unknown --set path: " + path);
+        throw new IllegalArgumentException("Unknown <set> path: " + path);
     }
 
     /** Set a validated leaf: bare scalar key, or vars.* / select.* / pages.* one level down. */
@@ -150,7 +150,7 @@ public final class PublicationLoader {
         boolean last = i == seg.length - 1;
         if (last) {
             if (!scalarKeys.contains(key)) {
-                throw new IllegalArgumentException("Unknown --set path: " + path
+                throw new IllegalArgumentException("Unknown <set> path: " + path
                         + " (settable keys here: " + scalarKeys + ", vars.*, select.*, pages.*)");
             }
             node.put(key, value);
@@ -158,26 +158,26 @@ public final class PublicationLoader {
         }
         // One nested level: vars.<name>, select.<field>, pages.<key>.
         if (i != seg.length - 2) {
-            throw new IllegalArgumentException("Unknown --set path: " + path);
+            throw new IllegalArgumentException("Unknown <set> path: " + path);
         }
         String nested = seg[i + 1];
         switch (key) {
             case "vars" -> childMap(node, "vars").put(nested, value);
             case "select" -> {
                 if (SELECT_RESERVED.contains(nested)) {
-                    throw new IllegalArgumentException("--set cannot address select."
+                    throw new IllegalArgumentException("<set> cannot address select."
                             + nested + " (list/predicate values belong in the yaml): " + path);
                 }
                 childMap(node, "select").put(nested, value);
             }
             case "pages" -> {
                 if (!PAGES_KEYS.contains(nested)) {
-                    throw new IllegalArgumentException("Unknown --set path: " + path
+                    throw new IllegalArgumentException("Unknown <set> path: " + path
                             + " (pages keys: " + PAGES_KEYS + ")");
                 }
                 childMap(node, "pages").put(nested, value);
             }
-            default -> throw new IllegalArgumentException("Unknown --set path: " + path);
+            default -> throw new IllegalArgumentException("Unknown <set> path: " + path);
         }
     }
 
@@ -189,7 +189,7 @@ public final class PublicationLoader {
             }
         }
         throw new IllegalArgumentException(
-                "Unknown edition '" + id + "' in --set path: " + path);
+                "Unknown edition '" + id + "' in <set> path: " + path);
     }
 
     @SuppressWarnings("unchecked")

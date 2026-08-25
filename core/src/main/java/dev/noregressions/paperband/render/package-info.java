@@ -13,10 +13,11 @@
  *   <li>Register the implementation in
  *       {@code src/main/resources/META-INF/services/dev.noregressions.paperband.render.HtmlToPdfRenderer}
  *       (one fully-qualified class name per line).</li>
- *   <li>Add the new module as a dependency of {@code cli} (or any other consumer).</li>
+ *   <li>Add the new module as a dependency of {@code maven-plugin} (or any other consumer).</li>
  * </ol>
  *
- * <p>The CLI selects a renderer via {@code --renderer <name>}; lookup uses
+ * <p>The Maven plugin selects a renderer via its {@code <renderer>} parameter
+ * ({@code -Dpaperband.renderer}); lookup uses
  * {@link dev.noregressions.paperband.render.RendererRegistry}.
  *
  * <h2>Existing renderers</h2>

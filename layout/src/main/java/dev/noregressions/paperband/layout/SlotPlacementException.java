@@ -6,10 +6,9 @@ package dev.noregressions.paperband.layout;
  * never consumed by any {@code card.slots} call, or a {@code require(...)}
  * slot matched nothing. See {@link SlotTracker}.
  *
- * <p>Kept as a distinct subtype so the CLI can map it to its own exit code
- * (4 — structural check failed) the same way page enforcement owns exit
- * code 3, letting CI tell "card has the wrong shape" apart from "build
- * broken".
+ * <p>Kept as a distinct subtype so a build can report it as its own failure
+ * kind, the same way page enforcement is reported distinctly — letting CI
+ * tell "card has the wrong shape" apart from "build broken".
  */
 public class SlotPlacementException extends LayoutException {
 

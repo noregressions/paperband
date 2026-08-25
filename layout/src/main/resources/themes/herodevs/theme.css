@@ -29,7 +29,7 @@
 
 /* ── Type scale root ────────────────────────────────────────────────────────
  * One rule per page size. Templates add `class="target-... size-..."` on
- * <html>; the size class is set deterministically from `--page-size` (the
+ * <html>; the size class is set deterministically from the resolved page size (the
  * target class is informational and may be left at the default `pdf-a4`).
  * Everything below is in rem and scales from this single number.
  * ───────────────────────────────────────────────────────────────────────── */

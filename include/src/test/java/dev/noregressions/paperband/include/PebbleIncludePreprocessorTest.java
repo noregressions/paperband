@@ -24,8 +24,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * <p>These stand in for the deleted {@code IncludePreprocessorTest} and
  * {@code EnhancedIncludePreprocessorTest} coverage of the old regex directive
  * — same behavioural contract (fragment resolution, masking, error surfacing),
- * new syntax and parsing layer. The masking-vs-real-call scenarios mirror the
- * actual bug history recorded in {@code SECURITY_TODO.md} and the real
+ * new syntax and parsing layer. The masking-vs-real-call scenarios mirror
+ * actual bug history ("Include preprocessor ignored code fences") and the real
  * collision in {@code guide/guide/02-authoring/03-includes.md}.
  */
 class PebbleIncludePreprocessorTest {

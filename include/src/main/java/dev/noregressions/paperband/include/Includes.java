@@ -14,7 +14,7 @@ import java.util.Map;
  *       {@link HtmlProcessor}, {@link TextProcessor}.</li>
  * </ul>
  *
- * <p>The CLI uses {@link #defaultPreprocessor(Path, Map, Map)} to wire a
+ * <p>The Maven plugin uses {@link #defaultPreprocessor(Path, Map, Map)} to wire a
  * working preprocessor into {@code CardLoader}. Tests and other callers can
  * mix in additional providers via
  * {@link #buildPreprocessor(List, List, Path, Map, Map)}.

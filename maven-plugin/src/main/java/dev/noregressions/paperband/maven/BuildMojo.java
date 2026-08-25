@@ -20,7 +20,7 @@ import java.util.Map;
  * <plugin>
  *   <groupId>dev.noregressions.paperband</groupId>
  *   <artifactId>paperband-maven-plugin</artifactId>
- *   <version>0.0.3</version>
+ *   <version>0.1.0</version>
  *   <executions>
  *     <execution>
  *       <goals><goal>build</goal></goals>

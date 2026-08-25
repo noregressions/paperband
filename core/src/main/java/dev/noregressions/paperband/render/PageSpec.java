@@ -60,10 +60,11 @@ public record PageSpec(PageSize size, Margins margins, Orientation orientation) 
     }
 
     /**
-     * Resolve one of the CLI's page-size slugs ({@code a4}, {@code a5},
+     * Resolve a page-size slug ({@code a4}, {@code a5},
      * {@code letter}, {@code 6x9}, {@code packt} — case-insensitive) to its factory preset.
      * Shared by {@code ConfigLoader} (to seed the base a {@code page:} yaml
-     * override layers on top of) and the CLI commands, so both sides agree
+     * override layers on top of) and the Maven plugin's {@code <pageSize>}
+     * parameter, so both sides agree
      * on the same slug-to-preset mapping without duplicating the switch.
      */
     public static PageSpec forSizeName(String slug) {

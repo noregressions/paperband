@@ -7,13 +7,13 @@ import java.util.Map;
 /**
  * The {@code publication:} block of a book root {@code paperband.yaml}:
  * named editions cut from one card source, each resolving its build settings
- * against a shared {@link Defaults} block (see DESIGN-publications.md).
+ * against a shared {@link Defaults} block.
  *
  * <p>Resolution rule: scalar edition keys override defaults keys;
  * {@code vars} maps merge with edition entries winning; {@code classes} is
  * edition-only; {@code pages} contract fields cascade per field. The
  * resolved settings for one edition are exposed via
- * {@link Edition#resolve(Defaults)} so the CLI never re-implements the
+ * {@link Edition#resolve(Defaults)} so no caller ever re-implements the
  * cascade.
  *
  * @param defaults  shared settings root; never null (empty defaults if absent)

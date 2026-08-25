@@ -8,7 +8,7 @@ package dev.noregressions.paperband.include;
  *
  * <p>Providers are looked up by {@link #name()} via a simple registry; for the
  * first cut they're constructed and registered explicitly by the host
- * application (typically the CLI). A {@code ServiceLoader}-driven registry can
+ * application (the Maven plugin). A {@code ServiceLoader}-driven registry can
  * follow once we have more than one provider in flight.
  *
  * <h2>Reference format</h2>

@@ -11,10 +11,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * {@code {% fragment %}} tag and {@code cards}' whole-body vars/
  * conditionals pass both depend on this exact behaviour.
  *
- * <p>This is the mechanism that fixed the real bug recorded in
- * {@code SECURITY_TODO.md} ("Include preprocessor ignored code fences, broke
- * the guide build") — moved here, unchanged, when the logic was promoted out
- * of {@code include} to be shared by both modules.
+ * <p>This is the mechanism that fixed a real historical bug ("Include
+ * preprocessor ignored code fences, broke the guide build") — moved here,
+ * unchanged, when the logic was promoted out of {@code include} to be shared
+ * by both modules.
  */
 class MaskedRegionsTest {
 

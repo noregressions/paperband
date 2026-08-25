@@ -21,7 +21,7 @@ import java.util.Map;
  * @param globalCss CSS files applied to every card before any folder-level or per-card stylesheets
  * @param vars      free-form variables exposed to templates as {@code vars}
  * @param targets   names of declared build targets (e.g. {@code pdf-a4}, {@code pdf-6x9}, {@code web})
- * @param theme     default theme name for the book; the CLI {@code --theme} flag overrides this when supplied
+ * @param theme     default theme name for the book; the plugin's {@code <theme>} parameter overrides this when supplied
  * @param sectionLandingTemplate  book-wide default bare Pebble template name for a
  *        "section" (a folder of cards with no value on any declared axis) landing page,
  *        from a root {@code sections: { landing: { template: <name-or-path> } }} key;

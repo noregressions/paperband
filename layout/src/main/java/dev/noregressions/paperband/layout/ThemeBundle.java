@@ -10,8 +10,8 @@ import java.util.List;
  * specific partials.
  *
  * <p>Themes live under {@code themes/&lt;name&gt;/} on the classpath (bundled
- * with layout) or under any directory passed via
- * {@code --theme-dir}. Each theme directory contains:
+ * with layout) or under any directory passed via the plugin's
+ * {@code <themeDir>} parameter. Each theme directory contains:
  * <ul>
  *   <li>{@code manifest.txt} — one stylesheet path per line (relative to the
  *       theme dir); blank lines and {@code #} comments are skipped.</li>

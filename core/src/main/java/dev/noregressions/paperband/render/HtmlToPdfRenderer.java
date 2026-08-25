@@ -16,7 +16,7 @@ public interface HtmlToPdfRenderer {
 
     /**
      * Stable, lowercase identifier for this renderer (e.g. {@code "playwright"}).
-     * Used by the CLI's {@code --renderer} flag and by configuration files.
+     * Used by the Maven plugin's {@code <renderer>} parameter and by configuration files.
      */
     String name();
 

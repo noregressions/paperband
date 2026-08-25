@@ -10,15 +10,15 @@ import java.util.Map;
  * <p>Two factory entry points cover the common cases:
  * <ul>
  *   <li>{@link #withDefaults(String)} — bare text plus all defaults; the
- *       shape used by {@code --watermark "DRAFT"}.</li>
+ *       shape used by {@code <watermark>DRAFT</watermark>}.</li>
  *   <li>{@link #fromYaml(Object)} — accepts either a bare string or a yaml
  *       map; the shape used when {@code vars.watermark} is read from
  *       {@code paperband.yaml}.</li>
  * </ul>
  *
- * <p>All knobs have sensible defaults so the CLI / yaml only need to provide
- * what they want to change. The CLI's per-knob override flags
- * ({@code --watermark-color}, {@code --watermark-opacity}, etc.) layer on
+ * <p>All knobs have sensible defaults so the POM / yaml only need to provide
+ * what they want to change. The plugin's per-knob override parameters
+ * ({@code <watermarkColor>}, {@code <watermarkOpacity>}, etc.) layer on
  * top of whichever base spec was resolved.
  *
  * @param text     watermark text; required, non-blank

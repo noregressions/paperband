@@ -63,7 +63,7 @@ public final class ThemeResolver {
             throw new IllegalArgumentException(
                     "Theme not found: '" + name + "'. "
                             + "Expected classpath resource themes/" + n + "/manifest.txt "
-                            + "or filesystem dir " + (themeDir == null ? "(no --theme-dir set)" : themeDir.resolve(n)));
+                            + "or filesystem dir " + (themeDir == null ? "(no <themeDir> set)" : themeDir.resolve(n)));
         }
 
         List<String> stylePaths;

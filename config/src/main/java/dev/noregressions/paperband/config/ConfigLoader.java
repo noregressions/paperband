@@ -49,7 +49,7 @@ import java.util.Map;
  * don't cascade because they're book-level concepts. {@code parts} declares
  * titled groups of top-level folders (see {@link Part}) — the declared
  * counterpart to folder-discovered sections. The {@code theme} value is the default
- * theme name; the {@code --theme} CLI flag overrides it when supplied. The
+ * theme name; the plugin's {@code <theme>} parameter overrides it when supplied. The
  * {@code sections.landing.template} value is the book-wide default landing
  * page for folder-based "sections" (see {@link BookConfig#sectionLandingTemplate()});
  * an individual section folder's own {@code paperband.yaml} can override it
@@ -245,7 +245,7 @@ public final class ConfigLoader {
             }
         }
 
-        // Resolve final page geometry: CLI --page-size picks the base preset;
+        // Resolve final page geometry: the plugin's <pageSize> picks the base preset;
         // a `vars.page` yaml block (book root or any folder in the cascade,
         // last-wins per field — same shallow-override semantics as the rest
         // of `vars`) can override size/margins/orientation/fontScale on top.

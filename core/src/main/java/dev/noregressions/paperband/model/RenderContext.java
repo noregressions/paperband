@@ -16,10 +16,10 @@ import java.util.Map;
  * @param layout        Pebble template path; null if not specified anywhere
  * @param target        current build target, e.g. {@code "pdf-a4"}, {@code "pdf-6x9"}, {@code "web"}
  * @param size          current page size, e.g. {@code "A4"}, {@code "6x9"}
- * @param pageSpec      resolved page geometry: the CLI {@code --page-size} preset, with any
+ * @param pageSpec      resolved page geometry: the plugin's {@code <pageSize>} preset, with any
  *                      {@code vars.page} yaml override layered on top (see
  *                      {@code dev.noregressions.paperband.render.PageConfigResolver}). This is what
- *                      the CLI should pass to the renderer, in place of switching on {@code size}
+ *                      the build should pass to the renderer, in place of switching on {@code size}
  *                      itself, so a {@code page:} override always takes effect.
  * @param fontScale     multiplier for the theme's CSS type-scale dial, or null when nothing
  *                      should override it (a named preset with no explicit {@code page.fontScale}

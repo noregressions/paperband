@@ -18,8 +18,8 @@ import java.util.Map;
  * </pre>
  *
  * <p>Every field is optional and independently overridable; an unset field
- * falls back to whatever {@code base} (typically the CLI {@code --page-size}
- * flag's resolved preset) already supplies. {@code size} and {@code margins}
+ * falls back to whatever {@code base} (typically the plugin {@code <pageSize>}
+ * parameter's resolved preset) already supplies. {@code size} and {@code margins}
  * are each replaced wholesale when present — same shallow-override semantics
  * {@code vars:} already uses elsewhere in the cascade, not a deep per-edge
  * merge — so a {@code margins:} override should restate every edge it wants,
@@ -59,7 +59,7 @@ public final class PageConfigResolver {
     /**
      * @param raw  the parsed {@code vars.page} map, or null/empty if not declared
      * @param base the PageSpec to fall back to for any field {@code raw} doesn't set
-     *             (normally whatever the CLI {@code --page-size} preset resolved to)
+     *             (normally whatever the plugin {@code <pageSize>} preset resolved to)
      */
     public static Resolved resolve(Map<String, Object> raw, PageSpec base) {
         if (raw == null || raw.isEmpty()) {
