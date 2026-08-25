@@ -128,6 +128,47 @@
     .section-divider .tier-toc { display: inline-block; text-align: left; padding-left: 1.25rem; }
     .section-divider .tier-toc a { color: inherit; text-decoration: none; }
 
+    /* Printed TOC / back-of-book index scaffold. Each takes a page run of
+       its own (forced breaks both sides — adjacent forced breaks collapse,
+       so no blank sheets appear between them and their neighbours) but,
+       unlike .section-divider, is NOT height-locked to one sheet: a long
+       book's contents or index flows onto as many pages as it needs.
+       Colours inherit for the same reason the divider's do — these pages
+       sit on whatever ground the theme paints. Themes restyle via
+       .book-toc / .book-index. */
+    .book-toc, .book-index {
+      break-before: page;
+      break-after: page;
+      page-break-before: always;
+      page-break-after: always;
+      max-width: 34rem;
+      margin: 0 auto;
+    }
+    .book-toc ol.toc-entries { list-style: none; margin: 0; padding: 0; }
+    .toc-entry { break-inside: avoid; }
+    .toc-entry a {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5em;
+      color: inherit;
+      text-decoration: none;
+      padding-block: 0.15rem;
+    }
+    .toc-depth-1 a { padding-left: 1.5rem; }
+    .toc-kind-divider a { font-weight: 600; margin-top: 0.6rem; }
+    .toc-label { flex: 0 1 auto; }
+    /* Dotted leader between label and page number, dropped to the baseline. */
+    .toc-leader { flex: 1 0 1.5rem; border-bottom: 1px dotted; opacity: 0.45; }
+    .toc-page { flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+
+    .book-index .index-groups { column-count: 2; column-gap: 2rem; }
+    .index-group { break-inside: avoid-column; margin-bottom: 1rem; }
+    .index-letter { font-size: 1rem; margin: 0 0 0.25rem; border-bottom: 1px solid; opacity: 0.75; }
+    .book-index ul.index-terms { list-style: none; margin: 0; padding: 0; }
+    .index-term-row { padding-block: 0.1rem; }
+    .index-refs { float: right; font-variant-numeric: tabular-nums; }
+    .index-ref { color: inherit; text-decoration: none; }
+
     /* Book CSS chain (inlined) */
     {{ css | raw }}
   </style>
@@ -144,6 +185,8 @@
   <div class="pt-anchor-bait" aria-hidden="true"
        style="position:absolute;left:-9999px;top:-9999px;width:0;height:0;overflow:hidden">
     <a href="#book-cover">cover</a>
+    {% if toc is not empty %}<a href="#book-toc">contents</a>{% endif %}
+    {% if bookIndex is not empty %}<a href="#book-index">index</a>{% endif %}
     {% if book.back.present %}<a href="#book-back">back</a>{% endif %}
     {% for g in axisGroupings %}
     {% for v in g.values %}<a href="#axis-divider-{{ g.axis.name }}-{{ v.id }}">{{ v.label }}</a>{% endfor %}
@@ -179,6 +222,13 @@
      _block-section.html). #}
   {% include "_book-front" %}
 
+  {# Printed table of contents — vars.toc: true (or <toc>true</toc>). Page
+     numbers are pw-pageref placeholders here; the build's second render
+     pass fills them in from the first pass's named destinations. #}
+  {% if toc is not empty %}
+  {% include "_book-toc" %}
+  {% endif %}
+
   {% for card in cards %}
     {# A card can be "first of value" for more than one axis at once
        (e.g. first card of tier 1 AND first card of subsystem "core"); stack
@@ -200,6 +250,13 @@
     {% include "_card-body" with {"card": card} %}
     {% if not loop.last %}<div class="card-break"></div>{% endif %}
   {% endfor %}
+
+  {# Back-of-book index — vars.index: true (or <index>true</index>), built
+     from each card's index: frontmatter. Same two-pass page numbers as the
+     printed TOC. #}
+  {% if bookIndex is not empty %}
+  {% include "_book-index" %}
+  {% endif %}
 
   {# Back page — only when the book root yaml declares back: (image and/or
      template). Same override rule as the cover: a custom template replaces

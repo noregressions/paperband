@@ -56,6 +56,8 @@ import java.util.TreeMap;
  * <ul>
  *   <li>{@code book-cover}                    → cover row</li>
  *   <li>{@code book-back}                     → back-page row</li>
+ *   <li>{@code book-toc}                      → printed-contents row</li>
+ *   <li>{@code book-index}                    → back-of-book-index row</li>
  *   <li>{@code axis-divider-{axisName}-{id}}   → axis-divider row (one per declared
  *       book axis, independently — e.g. {@code axis-divider-tier-1},
  *       {@code axis-divider-subsystem-core})</li>
@@ -357,6 +359,8 @@ public final class PagesReport {
         if (name == null) return null;
         if (name.equals("book-cover")) return "cover";
         if (name.equals("book-back")) return "back";
+        if (name.equals("book-toc")) return "toc";
+        if (name.equals("book-index")) return "index";
         if (name.startsWith("card-")) return "card";
         if (name.startsWith(AXIS_DIVIDER_PREFIX)) return "axis-divider";
         if (name.startsWith(SECTION_DIVIDER_PREFIX)) return "section-divider";
@@ -370,6 +374,8 @@ public final class PagesReport {
             case "section-divider" -> formatHyphenatedLabel(name.substring(SECTION_DIVIDER_PREFIX.length()));
             case "cover" -> "(cover)";
             case "back" -> "(back)";
+            case "toc" -> "(contents)";
+            case "index" -> "(index)";
             default -> name;
         };
     }

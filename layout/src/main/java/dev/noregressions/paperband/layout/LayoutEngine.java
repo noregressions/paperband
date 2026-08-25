@@ -33,6 +33,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * Pebble-driven layout engine. Takes a {@link Card} and {@link RenderContext}
@@ -82,7 +83,7 @@ public final class LayoutEngine {
     private final Path bookRoot;
 
     /**
-     * Optional edition identity for publication builds (DESIGN-publications.md):
+     * Optional edition identity for publication builds:
      * a map of {id, classes, title, vars} exposed to book templates as
      * {@code edition} and stamped onto {@code <html>} as {@code edition-{id}}
      * classes. Null for plain builds — templates must guard with
@@ -1671,16 +1672,32 @@ public final class LayoutEngine {
         // in book.axes() declaration order. Axis-less cards instead get
         // sectionMeta + sectionFirst, driving the section-divider check.
         List<Map<String, Object>> cardModels = new ArrayList<>(cards.size());
+        // Printed table of contents — built alongside the divider bookkeeping
+        // below so its entries appear in the exact order the PDF assembles
+        // pages: each divider when it fires, then the cards under it. Anchors
+        // are the same named destinations the anchor-bait div links, which is
+        // what lets the build's second render pass fill in real page numbers
+        // (see PageRefs in the maven plugin).
+        boolean wantToc = truthyVar(bookCtx.vars().get("toc"));
+        List<Map<String, Object>> tocEntries = wantToc ? new ArrayList<>() : null;
         Map<String, String> prevValueKeyByAxis = new HashMap<>();
         String prevSectionId = null;
         for (int i = 0; i < cards.size(); i++) {
-            Map<String, Object> cm = cardModel(cards.get(i), cardAxesFromGroupings(i, groupings));
+            Map<String, Object> axesForCard = cardAxesFromGroupings(i, groupings);
+            Map<String, Object> cm = cardModel(cards.get(i), axesForCard);
             Map<String, Boolean> firstOf = new LinkedHashMap<>();
             for (AxisGrouping g : groupings) {
                 String key = normalizeAxisId(g.perCardValue().get(i));
                 boolean first = key != null && !key.equals(prevValueKeyByAxis.get(g.axis().name()));
                 firstOf.put(g.axis().name(), first);
                 if (key != null) prevValueKeyByAxis.put(g.axis().name(), key);
+                if (first && tocEntries != null
+                        && axesForCard.get(g.axis().name()) instanceof Map<?, ?> valueMeta) {
+                    tocEntries.add(tocEntry(
+                            String.valueOf(valueMeta.get("label")),
+                            "axis-divider-" + g.axis().name() + "-" + valueMeta.get("id"),
+                            "divider", 0));
+                }
             }
             cm.put("axesFirstOf", firstOf);
 
@@ -1692,14 +1709,28 @@ public final class LayoutEngine {
                     sectionMeta = findSectionMeta(sectionMetas, secId);
                     sectionFirst = !secId.equals(prevSectionId);
                     prevSectionId = secId;
+                    if (sectionFirst && tocEntries != null && sectionMeta != null
+                            && Boolean.TRUE.equals(sectionMeta.get("landingPage"))) {
+                        tocEntries.add(tocEntry(
+                                String.valueOf(sectionMeta.get("label")),
+                                "section-divider-" + secId, "divider", 0));
+                    }
                 }
             }
             cm.put("sectionMeta", sectionMeta);
             cm.put("sectionFirst", sectionFirst);
+            if (tocEntries != null) {
+                int depth = (sectionMeta != null || hasAnyAxisValue(i, groupings)) ? 1 : 0;
+                tocEntries.add(tocEntry(
+                        cards.get(i).title(), "card-" + cards.get(i).id(), "card", depth));
+            }
 
             cardModels.add(cm);
         }
 
+        model.put("toc", tocEntries);
+        model.put("bookIndex",
+                truthyVar(bookCtx.vars().get("index")) ? buildIndexModel(cards) : null);
         model.put("cards", cardModels);
         model.put("axisGroupings", axisGroupingsModel(groupings));
         model.put("sections", sectionMetas);
@@ -1728,6 +1759,94 @@ public final class LayoutEngine {
             out.add(m);
         }
         return out;
+    }
+
+    /**
+     * A book-level feature toggle read from the vars cascade ({@code toc},
+     * {@code index}). Vars arrive as yaml natives from {@code paperband.yaml}
+     * but as strings from {@code <book><vars>}, so both spellings of true
+     * count.
+     */
+    private static boolean truthyVar(Object v) {
+        if (v instanceof Boolean b) return b;
+        return v != null && "true".equalsIgnoreCase(String.valueOf(v).trim());
+    }
+
+    /** One printed-TOC line: what to say, where it points, and how deep it sits. */
+    private static Map<String, Object> tocEntry(String label, String anchor, String kind, int depth) {
+        Map<String, Object> e = new LinkedHashMap<>();
+        e.put("label", label);
+        e.put("anchor", anchor);
+        e.put("kind", kind);
+        e.put("depth", depth);
+        return e;
+    }
+
+    /**
+     * Back-of-book index model from each card's {@code index:} frontmatter —
+     * a list (or comma-separated string) of terms the card wants indexed.
+     * Terms group under their first letter (non-letters under {@code #}),
+     * sorted case-insensitively; each term points at the cards that declared
+     * it, in book order, via the same {@code card-<id>} anchors the TOC uses.
+     *
+     * @return letter groups: {letter, terms: [{term, refs: [{anchor, title}]}]},
+     *         empty when no card declares any terms
+     */
+    private static List<Map<String, Object>> buildIndexModel(List<Card> cards) {
+        Map<String, List<Map<String, Object>>> byTerm =
+                new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        for (Card card : cards) {
+            for (String term : indexTermsOf(card)) {
+                List<Map<String, Object>> refs =
+                        byTerm.computeIfAbsent(term, k -> new ArrayList<>());
+                String anchor = "card-" + card.id();
+                // A term repeated inside one card still gets one reference.
+                if (refs.stream().anyMatch(r -> anchor.equals(r.get("anchor")))) continue;
+                Map<String, Object> ref = new LinkedHashMap<>();
+                ref.put("anchor", anchor);
+                ref.put("title", card.title());
+                refs.add(ref);
+            }
+        }
+
+        List<Map<String, Object>> groups = new ArrayList<>();
+        Map<String, Object> current = null;
+        for (var e : byTerm.entrySet()) {
+            char first = Character.toUpperCase(e.getKey().charAt(0));
+            String letter = Character.isLetter(first) ? String.valueOf(first) : "#";
+            if (current == null || !letter.equals(current.get("letter"))) {
+                current = new LinkedHashMap<>();
+                current.put("letter", letter);
+                current.put("terms", new ArrayList<Map<String, Object>>());
+                groups.add(current);
+            }
+            Map<String, Object> term = new LinkedHashMap<>();
+            term.put("term", e.getKey());
+            term.put("refs", e.getValue());
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> terms = (List<Map<String, Object>>) current.get("terms");
+            terms.add(term);
+        }
+        return groups;
+    }
+
+    /** A card's declared index terms: {@code index:} as a yaml list or a comma-separated string. */
+    private static List<String> indexTermsOf(Card card) {
+        Object raw = card.frontmatter().values().get("index");
+        if (raw == null) return List.of();
+        List<String> out = new ArrayList<>();
+        if (raw instanceof List<?> list) {
+            for (Object o : list) addTerm(out, o);
+        } else {
+            for (String part : String.valueOf(raw).split(",")) addTerm(out, part);
+        }
+        return out;
+    }
+
+    private static void addTerm(List<String> out, Object o) {
+        if (o == null) return;
+        String s = String.valueOf(o).trim();
+        if (!s.isEmpty()) out.add(s);
     }
 
     private static Map<String, Object> cardModel(Card card, Map<String, Object> axes) {

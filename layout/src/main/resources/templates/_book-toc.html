@@ -1,0 +1,29 @@
+{# Printed table of contents — rendered between the front matter and the
+   first card when the book asks for one (vars.toc: true in the root yaml,
+   or <toc>true</toc> in a POM-declared book).
+
+   Entries arrive in `toc` in the exact order the PDF assembles pages
+   (dividers, then the cards under each), built by LayoutEngine alongside
+   the same first-of-value / first-of-section bookkeeping book.html
+   dispatches divider pages on. Each entry: {label, anchor, kind, depth}.
+
+   Page numbers can't be known at HTML time — Chromium decides pagination —
+   so every number renders as a `pw-pageref` span keyed by anchor, and the
+   build's second render pass replaces the placeholder text with the real
+   page read from the first pass's named destinations (see PageRefs in the
+   maven plugin). The `000` placeholder keeps entry widths realistic so
+   pagination doesn't shift between passes.
+
+   Anchor id "book-toc" matches the anchor-bait link in book.html, which is
+   what gives the contents page its own named destination (and its own row
+   in `paperband pages`). Themes restyle via .book-toc. #}
+<section class="book-toc" id="book-toc">
+  <h1 class="book-toc-title">{{ vars.tocTitle | default('Contents') }}</h1>
+  <ol class="toc-entries">
+    {% for e in toc %}
+    <li class="toc-entry toc-depth-{{ e.depth }} toc-kind-{{ e.kind }}">
+      <a href="#{{ e.anchor }}"><span class="toc-label">{{ e.label }}</span><span class="toc-leader"></span><span class="toc-page pw-pageref" data-pw-anchor="{{ e.anchor }}">000</span></a>
+    </li>
+    {% endfor %}
+  </ol>
+</section>

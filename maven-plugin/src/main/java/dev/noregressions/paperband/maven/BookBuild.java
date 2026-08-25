@@ -7,6 +7,7 @@ import dev.noregressions.paperband.config.ConfigLoader;
 import dev.noregressions.paperband.include.Includes;
 import dev.noregressions.paperband.layout.LayoutEngine;
 import dev.noregressions.paperband.layout.ThemeBundle;
+import dev.noregressions.paperband.maven.pdf.PageRefs;
 import dev.noregressions.paperband.maven.pdf.Watermark;
 import dev.noregressions.paperband.maven.pdf.WatermarkApplier;
 import dev.noregressions.paperband.model.Card;
@@ -268,11 +269,32 @@ final class BookBuild {
         HtmlToPdfRenderer renderer = Renderers.require(rendererName);
         String bookTitle = bookCtx.book().title();
         PdfMetadata metadata = bookTitle != null ? PdfMetadata.of(bookTitle) : PdfMetadata.empty();
-        HtmlInput htmlInput = new HtmlInput(html, baseUri, bookCtx.pageSpec(), metadata,
-                layout.renderFooter(bookCtx), layout.renderHeader(bookCtx));
+        String footer = layout.renderFooter(bookCtx);
+        String header = layout.renderHeader(bookCtx);
 
         ensureParentDir(output);
-        renderer.render(htmlInput, output);
+        renderer.render(new HtmlInput(html, baseUri, bookCtx.pageSpec(), metadata, footer, header),
+                output);
+
+        // Two-pass page numbering: a printed TOC or index renders its page
+        // numbers as placeholders (the layout can't know them — Chromium
+        // decides pagination), so read each anchor's real page from the PDF
+        // just written and render once more with the numbers filled in. The
+        // substitution changes only text inside the placeholder spans, so
+        // pagination holds between passes and the numbers are exact.
+        if (PageRefs.present(html)) {
+            PageRefs.Resolved refs = PageRefs.resolve(html, PageRefs.readAnchorPages(output));
+            for (String anchor : refs.unresolved()) {
+                log.warn("Page reference to #" + anchor + " matched no named destination"
+                        + " — rendered as '?'");
+            }
+            html = refs.html();
+            emitHtmlIfAsked(html, baseUri.toString());
+            renderer.render(new HtmlInput(html, baseUri, bookCtx.pageSpec(), metadata, footer, header),
+                    output);
+            log.info("Resolved " + refs.resolved() + " page reference(s) (toc/index)"
+                    + " in a second render pass");
+        }
         applyWatermark(bookCtx);
 
         log.info("Built book " + bookRoot + " -> " + output

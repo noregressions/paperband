@@ -1,6 +1,7 @@
 ---
 id: themes
 oneliner: "Themes are directories of CSS (and optional templates) that cascade over your book."
+index: [themes, CSS cascade]
 ---
 
 # Themes

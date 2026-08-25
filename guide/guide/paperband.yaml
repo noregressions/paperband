@@ -28,3 +28,7 @@ vars:
   subtitle: "A self-documenting reference built with Paperband itself"
   series: "Paperband Documentation"
   sidebar: true
+  # Printed table of contents and back-of-book index -- both live demos of
+  # the features documented in Book Configuration / TOC and Index.
+  toc: true
+  index: true

@@ -1,6 +1,7 @@
 ---
 id: includes
 oneliner: "Pull code fragments from any file with {% fragment \"path:anchor\" %}."
+index: [includes, fragments]
 ---
 
 # Includes

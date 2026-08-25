@@ -131,6 +131,22 @@ public class BookLayout {
      */
     private List<String> authors = new ArrayList<>();
 
+    /**
+     * Render a printed table of contents — a page after the cover listing
+     * every divider and card with its real page number. Equivalent to
+     * {@code vars: { toc: true }} in the root {@code paperband.yaml}.
+     * Page numbers come from a second render pass; see the guide's
+     * Maven Plugin page.
+     */
+    private Boolean toc;
+
+    /**
+     * Render a back-of-book index built from each card's {@code index:}
+     * frontmatter list, with real page numbers. Equivalent to
+     * {@code vars: { index: true }} in the root {@code paperband.yaml}.
+     */
+    private Boolean index;
+
     /** Full-page cover, as an image or a template. */
     private PageMatterConfig cover;
 
@@ -300,6 +316,10 @@ public class BookLayout {
             out.put("author", joinAuthors(declaredAuthors));
             out.put("authors", declaredAuthors);
         }
+        // TOC/index reach the layout the same way authorship does: through the
+        // vars cascade, where the book model already looks for them.
+        if (toc != null) out.put("toc", toc);
+        if (index != null) out.put("index", index);
         return out;
     }
 
@@ -312,7 +332,8 @@ public class BookLayout {
     boolean declaresBookConfig() {
         return title != null || cover != null || back != null || header != null
                 || footer != null || sectionLandingTemplate != null || !vars.isEmpty()
-                || !axes.isEmpty() || author != null || !authors.isEmpty();
+                || !axes.isEmpty() || author != null || !authors.isEmpty()
+                || toc != null || index != null;
     }
 
     /**
@@ -340,6 +361,8 @@ public class BookLayout {
             mergedVars.put("author", joinAuthors(declaredAuthors));
             mergedVars.put("authors", declaredAuthors);
         }
+        if (toc != null) mergedVars.put("toc", toc);
+        if (index != null) mergedVars.put("index", index);
         return new BookConfig(
                 base.bookRoot(),
                 title != null ? title : base.title(),

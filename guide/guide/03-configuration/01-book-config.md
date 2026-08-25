@@ -1,6 +1,7 @@
 ---
 id: book-config
 oneliner: "The root paperband.yaml declares the book: title, axes, CSS, vars, and targets."
+index: [paperband.yaml, axes, vars]
 ---
 
 # Book Configuration

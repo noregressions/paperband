@@ -1,0 +1,26 @@
+{# Back-of-book index — rendered after the last card (before any back page)
+   when the book asks for one (vars.index: true in the root yaml, or
+   <index>true</index> in a POM-declared book).
+
+   `bookIndex` groups the terms cards declared in their `index:` frontmatter
+   under first letters: {letter, terms: [{term, refs: [{anchor, title}]}]}.
+   Page numbers resolve exactly as the printed TOC's do — pw-pageref spans
+   filled in by the build's second render pass (see _book-toc.html).
+
+   Anchor id "book-index" matches the anchor-bait link in book.html.
+   Themes restyle via .book-index. #}
+<section class="book-index" id="book-index">
+  <h1 class="book-index-title">{{ vars.indexTitle | default('Index') }}</h1>
+  <div class="index-groups">
+    {% for group in bookIndex %}
+    <div class="index-group">
+      <h2 class="index-letter">{{ group.letter }}</h2>
+      <ul class="index-terms">
+        {% for t in group.terms %}
+        <li class="index-term-row"><span class="index-term">{{ t.term }}</span><span class="index-refs">{% for r in t.refs %}<a class="index-ref" href="#{{ r.anchor }}" title="{{ r.title }}"><span class="pw-pageref" data-pw-anchor="{{ r.anchor }}">000</span></a>{% if not loop.last %}, {% endif %}{% endfor %}</span></li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endfor %}
+  </div>
+</section>

@@ -1,6 +1,7 @@
 ---
 id: watermarks
 oneliner: "Stamp text like DRAFT or SAMPLE across every page after rendering."
+index: [watermarks, PDFBox]
 ---
 
 # Watermarks
