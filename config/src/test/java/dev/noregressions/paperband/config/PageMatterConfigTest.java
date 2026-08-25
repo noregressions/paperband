@@ -27,8 +27,15 @@ class PageMatterConfigTest {
         return new ConfigLoader().load(card, "pdf-a4", "A4");
     }
 
+    private void touch(String relative) throws IOException {
+        Path p = bookRoot.resolve(relative);
+        Files.createDirectories(p.getParent());
+        Files.writeString(p, "");
+    }
+
     @Test
     void mapFormParsesImageAndTemplate() throws IOException {
+        touch("images/front.png");
         RenderContext ctx = load("""
                 title: T
                 cover:
@@ -47,6 +54,7 @@ class PageMatterConfigTest {
 
     @Test
     void bareStringIsImageShorthand() throws IOException {
+        touch("images/front.png");
         RenderContext ctx = load("cover: images/front.png\n");
         assertEquals("images/front.png", ctx.book().cover().image());
         assertNull(ctx.book().back());
@@ -66,6 +74,7 @@ class PageMatterConfigTest {
 
     @Test
     void coverTextFieldsParse() throws IOException {
+        touch("images/front.png");
         RenderContext ctx = load("""
                 title: T
                 cover:
@@ -87,7 +96,22 @@ class PageMatterConfigTest {
     }
 
     @Test
+    void missingImageIsRejected() throws IOException {
+        // A missing image would otherwise render as a silent blank in the
+        // PDF — Chromium doesn't fail on a dead file: URI.
+        touch("images/front.png");
+        ConfigParseException e = assertThrows(ConfigParseException.class,
+                () -> load("cover: images/frnt.png\n"));
+        assertEquals(true, e.getMessage().contains("frnt.png"), e.getMessage());
+
+        ConfigParseException back = assertThrows(ConfigParseException.class,
+                () -> load("back:\n  image: images/rear.png\n"));
+        assertEquals(true, back.getMessage().contains("rear.png"), back.getMessage());
+    }
+
+    @Test
     void fullPageParsesOnCover() throws IOException {
+        touch("images/front.png");
         RenderContext ctx = load("""
                 title: T
                 cover:

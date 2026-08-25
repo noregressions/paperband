@@ -3,6 +3,7 @@ package dev.noregressions.paperband.maven;
 import dev.noregressions.paperband.model.NamedTemplates;
 import dev.noregressions.paperband.model.PageMatter;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
@@ -85,8 +86,15 @@ public class PageMatterConfig {
             throw new IllegalArgumentException("<" + element + "> cannot declare <fullPage> — "
                     + "only <cover> can fill the sheet (CSS has @page :first, but no :last)");
         }
+        String img = trimmed(image);
+        if (img != null && !Files.isRegularFile(bookRoot.resolve(img))) {
+            // A missing image would otherwise surface only as a blank spot in
+            // the PDF — Chromium renders a dead file: URI as nothing.
+            throw new IllegalArgumentException("<" + element + "> image '" + img
+                    + "' not found (looked at " + bookRoot.resolve(img) + ")");
+        }
         PageMatter matter = new PageMatter(
-                trimmed(image),
+                img,
                 template == null || template.isBlank()
                         ? null : NamedTemplates.templateName(template.trim()),
                 trimmed(title), trimmed(subtitle), trimmed(series), trimmed(author),
