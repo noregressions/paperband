@@ -1,16 +1,33 @@
-{# Book cover page. Expects: book {title, subtitle, series, author, cover {image}}.
-   When cover: declares an image, the image IS the cover (artwork usually
-   carries its own title) and the text block is suppressed; books wanting
-   text over an image supply a custom template via cover: { template: ... }. #}
-<section class="book-cover{% if book.cover.image is not null %} book-cover-has-image{% endif %}" id="book-cover">
+{# Book cover page. Expects: book {title, subtitle, series, author,
+   cover {image, hasText, title, subtitle, series, author}}.
+
+   Three shapes, decided by what cover: declares:
+   - text only (no image): the text block IS the cover — series, title,
+     subtitle, author.
+   - image only: the image renders full-page with no text block.
+   - image plus text (cover: { text: true }, or any cover-level text field):
+     the text block overlays the artwork (.book-cover-overlay positions it;
+     themes restyle from there).
+
+   Each text line prefers the cover's own value and falls back to the
+   book's (title:, vars.subtitle, vars.series, vars.author) — so text: true
+   alone shows the standard block over the image, and a declared field
+   overrides just that line. A custom template (cover: { template: ... })
+   replaces this file entirely and receives the same model. #}
+{% set coverText = book.cover.image is null or book.cover.hasText %}
+<section class="book-cover{% if book.cover.image is not null %} book-cover-has-image{% endif %}{% if book.cover.image is not null and coverText %} book-cover-overlay{% endif %}" id="book-cover">
   {% if book.cover.image is not null %}
-  <img class="book-cover-image" src="{{ book.cover.image }}" alt="{{ book.title | default('cover') }}">
-  {% else %}
+  <img class="book-cover-image" src="{{ book.cover.image }}" alt="{{ book.cover.title | default(book.title) | default('cover') }}">
+  {% endif %}
+  {% if coverText %}
   <div class="book-cover-inner">
-    {% if book.series %}<div class="series">{{ book.series }}</div>{% endif %}
-    <h1>{{ book.title | default('paperband book') }}</h1>
-    {% if book.subtitle %}<div class="subtitle">{{ book.subtitle }}</div>{% endif %}
-    {% if book.author %}<div class="author">{{ book.author }}</div>{% endif %}
+    {% set series = book.cover.series | default(book.series) %}
+    {% set subtitle = book.cover.subtitle | default(book.subtitle) %}
+    {% set author = book.cover.author | default(book.author) %}
+    {% if series %}<div class="series">{{ series }}</div>{% endif %}
+    <h1>{{ book.cover.title | default(book.title) | default('paperband book') }}</h1>
+    {% if subtitle %}<div class="subtitle">{{ subtitle }}</div>{% endif %}
+    {% if author %}<div class="author">{{ author }}</div>{% endif %}
   </div>
   {% endif %}
 </section>

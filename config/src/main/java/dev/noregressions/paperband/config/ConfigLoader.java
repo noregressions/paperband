@@ -442,18 +442,36 @@ public final class ConfigLoader {
      * loader name here (same convention as section landing templates), so
      * downstream consumers never re-derive it.
      */
+    /** The keys a {@code cover:}/{@code back:}/{@code header:}/{@code footer:} map may carry. */
+    private static final java.util.Set<String> PAGE_MATTER_KEYS = java.util.Set.of(
+            "image", "template", "title", "subtitle", "series", "author", "text");
+
     private static PageMatter parsePageMatter(Path bookRoot, Path bookYaml, String key, Object node) {
         if (node == null) return null;
         if (node instanceof Map<?, ?> m) {
+            // Unknown keys are an error, not a silent accept: a typo'd
+            // 'subtile:' would otherwise just not appear on the cover.
+            for (Object k : m.keySet()) {
+                if (!PAGE_MATTER_KEYS.contains(String.valueOf(k))) {
+                    throw new ConfigParseException(bookYaml + ": '" + key + "' has unknown key '"
+                            + k + "' — expected one of " + PAGE_MATTER_KEYS);
+                }
+            }
             Object image = m.get("image");
             Object template = m.get("template");
             PageMatter matter = new PageMatter(
                     image == null ? null : image.toString(),
                     template == null ? null
-                            : NamedTemplates.templateName(template.toString()));
+                            : NamedTemplates.templateName(template.toString()),
+                    string(m.get("title")),
+                    string(m.get("subtitle")),
+                    string(m.get("series")),
+                    string(m.get("author")),
+                    Boolean.TRUE.equals(m.get("text"))
+                            || "true".equalsIgnoreCase(String.valueOf(m.get("text"))));
             if (matter.isEmpty()) {
                 throw new ConfigParseException(bookYaml + ": '" + key
-                        + "' declares neither 'image' nor 'template'");
+                        + "' declares neither 'image', 'template' nor any text field");
             }
             return matter;
         }

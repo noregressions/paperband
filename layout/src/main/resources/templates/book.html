@@ -89,6 +89,21 @@
     .book-cover { page-break-after: always; }
     .book-back { page-break-before: always; }
     .book-cover-image, .book-back-image { display: block; width: 100%; }
+    /* Image-plus-text cover (cover: { text: true } or any cover text field):
+       the text block centres over the artwork. Deliberately no colour or
+       shadow forced here — legibility against a given image is a design
+       call, so themes/book CSS restyle via .book-cover-overlay. */
+    .book-cover-overlay { position: relative; }
+    .book-cover-overlay .book-cover-inner {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 2rem;
+    }
 
     /* Plain-section / part PDF divider — a page, not a rule between cards.
        It gets a sheet of its own (forced break on both sides; adjacent
@@ -203,8 +218,9 @@
 
   {# Cover page. A custom cover template (cover: { template: ... } in the
      book root yaml) replaces the built-in entirely; otherwise the built-in
-     _book-cover renders — full-page image when cover: declares one, the
-     text cover (title/subtitle/series/author) as before when not. #}
+     _book-cover renders — full-page image when cover: declares one (with
+     the text block overlaid when cover: also declares text: true or any
+     text field), the text cover (title/subtitle/series/author) when not. #}
   {% if book.cover.template is not null %}
   {% include book.cover.template with {"book": book} %}
   {% elseif book.title or book.cover.image is not null %}

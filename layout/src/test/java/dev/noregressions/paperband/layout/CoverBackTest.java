@@ -58,7 +58,7 @@ class CoverBackTest {
         assertTrue(html.contains("<img class=\"book-cover-image\""));
         assertTrue(html.contains(root.resolve("images/front.png").toUri().toString()),
                 "image resolved to an absolute file: URI against the book root");
-        assertFalse(html.contains("book-cover-inner"), "text block suppressed by image");
+        assertFalse(html.contains("<div class=\"book-cover-inner\""), "text block suppressed by image");
     }
 
     @Test
@@ -87,8 +87,44 @@ class CoverBackTest {
         assertTrue(html.contains("CUSTOM COVER"), "cover template override wins");
         assertTrue(html.contains(root.resolve("images/front.png").toUri().toString()),
                 "declared image still available to the custom template");
-        assertFalse(html.contains("book-cover-inner"), "built-in cover not also rendered");
+        assertFalse(html.contains("<div class=\"book-cover-inner\""), "built-in cover not also rendered");
         assertTrue(html.contains("CUSTOM BACK"), "back template override wins");
+    }
+
+    @Test
+    void coverTextTrueOverlaysTheStandardBlockOnTheImage(@TempDir Path root) {
+        String html = render(root,
+                new PageMatter("images/front.png", null, null, null, null, null, true), null);
+
+        assertTrue(html.contains("class=\"book-cover book-cover-has-image book-cover-overlay\""), "overlay class for themes to position");
+        assertTrue(html.contains("<img class=\"book-cover-image\""), "image still renders");
+        assertTrue(html.contains("<div class=\"book-cover-inner\""), "and so does the text block");
+        assertTrue(html.contains("Test Book"), "falling back to the book's own title");
+    }
+
+    @Test
+    void coverTextFieldsOverrideTheBooksOwn(@TempDir Path root) {
+        String html = render(root,
+                new PageMatter("images/front.png", null,
+                        "Cover Title", "2026 edition", null, "Cover Author", false), null);
+
+        assertTrue(html.contains("Cover Title"), "cover-level title wins");
+        assertTrue(html.contains("2026 edition"));
+        assertTrue(html.contains("Cover Author"));
+        assertTrue(html.contains("class=\"book-cover book-cover-has-image book-cover-overlay\""),
+                "declaring any text field implies the text block");
+    }
+
+    @Test
+    void textOnlyCoverDeclarationOverridesLinesWithoutAnImage(@TempDir Path root) {
+        String html = render(root,
+                new PageMatter(null, null, null, "A subtitle from cover:", null, null, false),
+                null);
+
+        assertTrue(html.contains("<div class=\"book-cover-inner\""));
+        assertTrue(html.contains("A subtitle from cover:"));
+        assertTrue(html.contains("Test Book"), "undeclared lines inherit the book's values");
+        assertFalse(html.contains("class=\"book-cover book-cover-overlay\"") || html.contains("book-cover-has-image"), "no image, no overlay positioning");
     }
 
     @Test

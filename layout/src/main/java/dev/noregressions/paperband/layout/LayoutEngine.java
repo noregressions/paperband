@@ -1156,6 +1156,11 @@ public final class LayoutEngine {
             m.put("image", null);
             m.put("template", null);
             m.put("present", false);
+            m.put("hasText", false);
+            m.put("title", null);
+            m.put("subtitle", null);
+            m.put("series", null);
+            m.put("author", null);
             return m;
         }
         String image = matter.image();
@@ -1165,6 +1170,15 @@ public final class LayoutEngine {
         m.put("image", image);
         m.put("template", matter.template());
         m.put("present", !matter.isEmpty());
+        // Cover-level text: hasText says whether the text block renders at
+        // all (true / any declared line); the four lines are this element's
+        // own overrides, null meaning "inherit the book's value" — the
+        // fallback happens in _book-cover.html where both are in scope.
+        m.put("hasText", matter.hasText());
+        m.put("title", matter.title());
+        m.put("subtitle", matter.subtitle());
+        m.put("series", matter.series());
+        m.put("author", matter.author());
         return m;
     }
 
