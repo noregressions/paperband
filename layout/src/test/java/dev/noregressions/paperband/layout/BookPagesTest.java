@@ -91,6 +91,49 @@ class BookPagesTest {
         assertEquals(-1, html.indexOf("book-page-"), "no wrapper, no anchor bait");
     }
 
+    @Test
+    void diagnosticsPage_canDumpVarsAndPerCardFrontmatter(@TempDir Path tmp) throws IOException {
+        // The recipe the docs recommend for a user-authored diagnostics page:
+        // iterate vars (a LenientMap IS a HashMap, so Pebble walks its
+        // entries) and walk every card's frontmatter. Pinned here so the
+        // recipe can't rot.
+        writeTemplate(tmp, "diagnostics.html", """
+                VARS:{% for e in vars %}[{{ e.key }}={{ e.value }}]{% endfor %}
+                {% for c in cards %}CARD:{{ c.id }}{% for f in c.frontmatter %}({{ f.key }}={{ f.value }}){% endfor %}
+                {% endfor %}""");
+
+        BookConfig book = new BookConfig(tmp, "Test Book", List.of(), List.of(), Map.of(),
+                List.of(), null, null);
+        RenderContext ctx = new RenderContext(book, List.of(),
+                Map.of("product_name", "Paperband"), null, "pdf", "A4");
+        LayoutEngine engine = new LayoutEngine(tmp);
+        engine.setPagesAt(List.of(new PlacedPage(0, "diagnostics")));
+        Card tiered = new Card("alpha", Path.of("alpha.md"),
+                new Frontmatter(Map.of("tier", 1)), "Alpha",
+                List.of(new Block(Block.Kind.HEADING_SECTION, null, Set.of("intro"), null, 0,
+                        "<p>Content</p>", List.of())));
+        String html = engine.renderBook(List.of(tiered), List.of(ctx), ctx);
+
+        assertTrue(html.contains("[product_name=Paperband]"), "vars entries iterate");
+        assertTrue(html.contains("CARD:alpha(tier=1)"), "per-card frontmatter iterates");
+    }
+
+    @Test
+    void bookOwnLayoutsCanOverrideTheBookFrontHook(@TempDir Path tmp) throws IOException {
+        // The route for a WALKED book (no <sections> in the POM, so no <page>
+        // marker to place): layouts/_book-front.html overrides the bundled
+        // empty hook — book layouts/ sits ahead of the classpath in the
+        // loader chain — and renders between the cover and the first card
+        // with the full model in scope.
+        writeTemplate(tmp, "_book-front.html", "FRONT-DIAGNOSTICS[{{ cards | length }}]");
+
+        String html = renderBook(tmp, List.of(), card("alpha", "Alpha"));
+
+        assertTrue(html.contains("FRONT-DIAGNOSTICS[1]"));
+        assertTrue(html.indexOf("FRONT-DIAGNOSTICS") < html.indexOf("id=\"card-alpha\""),
+                "front hook renders before the first card");
+    }
+
     // ---- helpers ----
 
     private static void writeTemplate(Path bookRoot, String name, String body) throws IOException {
