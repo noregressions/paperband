@@ -6,7 +6,11 @@ import dev.noregressions.paperband.pebble.LenientMapExtension;
 import dev.noregressions.paperband.pebble.MaskedRegions;
 
 import io.pebbletemplates.pebble.PebbleEngine;
+import io.pebbletemplates.pebble.error.LoaderException;
 import io.pebbletemplates.pebble.error.PebbleException;
+import io.pebbletemplates.pebble.loader.DelegatingLoader;
+import io.pebbletemplates.pebble.loader.FileLoader;
+import io.pebbletemplates.pebble.loader.Loader;
 import io.pebbletemplates.pebble.template.PebbleTemplate;
 
 import java.io.IOException;
@@ -17,17 +21,27 @@ import java.util.Map;
 
 /**
  * Pre-flexmark hook that runs a single real Pebble parse/render pass over a
- * card's raw markdown, handling two things at once:
+ * card's raw markdown, handling three things at once:
  * <ul>
  *   <li>{@code {% fragment %}} tags — resolved via {@link ContentProvider}/
  *       {@link FragmentProcessor}, exactly as before (only the outer syntax
  *       and parsing layer moved from a hand-rolled regex scanner to Pebble's
- *       own lexer/parser via {@link FragmentExtension}); and</li>
+ *       own lexer/parser via {@link FragmentExtension});</li>
  *   <li>{@code vars} — the book/folder-level {@code paperband.yaml} cascade
  *       (including {@code BuiltInVars} built-in
  *       vars) is exposed as a template variable, so {@code {{ vars.x }}}
  *       and real {@code {% if vars.x %}}/{@code {% for %}} conditionals work
- *       directly in card markdown.</li>
+ *       directly in card markdown; and</li>
+ *   <li>{@code {% include %}}/{@code {% import %}} — the engine's loader is
+ *       rooted at the book's {@code layouts/} directory (see
+ *       {@link #snippetLoader}), so a card can pull in a reusable Pebble
+ *       snippet or macro library, parameterised via {@code with {...}} and
+ *       with {@code vars} in scope. An included file is a live template — its
+ *       Pebble constructs evaluate — where a {@code {% fragment %}} splices
+ *       content verbatim; the two are complementary, not interchangeable.
+ *       Note the masking below covers only the card itself: a fenced example
+ *       of Pebble syntax <em>inside an included snippet</em> needs
+ *       {@code {% verbatim %}}.</li>
  * </ul>
  *
  * <h2>Why these can't be two separate passes</h2>
@@ -109,11 +123,13 @@ public final class PebbleIncludePreprocessor implements MarkdownPreprocessor {
 
         MaskedRegions.Masked masked = MaskedRegions.substitute(markdown);
 
+        Path layouts = layoutsDir(bookRoot, sourceFile);
         FragmentExtension fragmentExtension =
                 new FragmentExtension(providers, processors, sourceFile, bookRoot, providerConfigs);
         PebbleEngine engine = new PebbleEngine.Builder()
                 .extension(fragmentExtension)
                 .extension(new LenientMapExtension())
+                .loader(snippetLoader(layouts))
                 .strictVariables(false)
                 .autoEscaping(false)
                 .build();
@@ -126,6 +142,16 @@ public final class PebbleIncludePreprocessor implements MarkdownPreprocessor {
             rendered = out.toString();
         } catch (IncludeException e) {
             throw e; // already carries sourceFile + a clear message
+        } catch (LoaderException e) {
+            // An {% include %}/{% import %} named a template the loader can't
+            // find. Pebble's own message names the missing template; add where
+            // we looked and the resolution rule, since neither is guessable.
+            throw new IncludeException(
+                    sourceFile + ": " + e.getPebbleMessage()
+                            + " — {% include %} and {% import %} names resolve against the book's "
+                            + "layouts/ directory (" + layouts + "), with .html appended when the "
+                            + "name has no extension.",
+                    sourceFile, e);
         } catch (PebbleException e) {
             throw new IncludeException(
                     sourceFile + ": template syntax error while evaluating fragments/vars/conditionals"
@@ -137,9 +163,54 @@ public final class PebbleIncludePreprocessor implements MarkdownPreprocessor {
         } catch (IOException e) {
             // StringWriter never throws; keep the compiler happy without hiding a real bug.
             throw new IncludeException(sourceFile + ": unexpected I/O error rendering fragments", sourceFile, e);
+        } catch (StackOverflowError e) {
+            // Pebble has no cycle detection: a snippet that {% include %}s
+            // itself (directly or around a loop of snippets) recurses until
+            // the stack runs out. Name the card rather than letting a bare
+            // StackOverflowError with a thousand-frame trace speak for it.
+            throw new IncludeException(
+                    sourceFile + ": include recursion overflowed the stack — a layouts/ snippet "
+                            + "{% include %}s itself, directly or via a cycle.",
+                    sourceFile, null);
         }
 
         return masked.restore(rendered);
+    }
+
+    /**
+     * The directory {@code {% include %}}/{@code {% import %}} names resolve
+     * against: the book's {@code layouts/} directory — the same place every
+     * other declared template lives (see {@code NamedTemplates.LAYOUTS_DIR}).
+     * A single-card build with no book root falls back to a {@code layouts/}
+     * beside the card, so the mechanism still works outside a full book.
+     */
+    private static Path layoutsDir(Path bookRoot, Path sourceFile) {
+        Path base = bookRoot != null ? bookRoot
+                : sourceFile != null ? sourceFile.toAbsolutePath().getParent()
+                : Path.of("");
+        return base.resolve("layouts").toAbsolutePath().normalize();
+    }
+
+    /**
+     * Loader for {@code {% include %}}/{@code {% import %}} in card markdown,
+     * rooted at {@code layouts/}. Two spellings resolve: a bare name gets
+     * {@code .html} appended ({@code "snippets/warning"} →
+     * {@code snippets/warning.html}, matching how {@code LayoutEngine} loads
+     * declared templates), and a name with an extension is taken as the file
+     * on disk ({@code "snippets/note.md"}). Always set explicitly: the
+     * builder's default loader would resolve names against the classpath and
+     * the JVM's working directory, neither of which is the book.
+     *
+     * <p>Pebble 4.1+ requires the (absolute) prefix at construction time and
+     * rejects paths climbing out of it — part of the CVE-2025-1686 traversal
+     * fix, and exactly the containment wanted here.
+     */
+    private static Loader<?> snippetLoader(Path layouts) {
+        String prefix = layouts.toString() + "/";
+        FileLoader named = new FileLoader(prefix);
+        named.setSuffix(".html");
+        FileLoader exact = new FileLoader(prefix);
+        return new DelegatingLoader(List.of(named, exact));
     }
 
     /** Map a media type to the default processor name. */

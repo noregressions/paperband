@@ -1,7 +1,7 @@
 ---
 id: includes
-oneliner: "Pull code fragments from any file with {% fragment \"path:anchor\" %}."
-index: [includes, fragments]
+oneliner: "Embed content with {% fragment %}, and live Pebble snippets with {% include %}."
+index: [includes, fragments, snippets]
 ---
 
 # Includes
@@ -69,15 +69,53 @@ Includes expand in a single pre-pass before flexmark sees the source:
 3. The masked regions are restored, and the result is parsed by flexmark as ordinary
    Markdown.
 
-This means `{% fragment %}` inside an included `.md` file is also expanded — includes
-compose. It also means any *other* stray `{{ }}`/`{% %}`-looking text outside a code
-fence now has to be valid Pebble syntax — wrap a literal example in a fenced code block,
-an inline code span, or Pebble's own `{% verbatim %}` tag if it isn't already one.
+A fragment's content is spliced **verbatim** — Pebble syntax inside it, including another
+`{% fragment %}`, survives as literal text. When the included file should *evaluate*, use
+`{% include %}` (below). The single-pass evaluation also means any *other* stray
+`{{ }}`/`{% %}`-looking text outside a code fence has to be valid Pebble syntax — wrap a
+literal example in a fenced code block, an inline code span, or Pebble's own
+`{% verbatim %}` tag if it isn't already one.
+
+## `{% include %}` — live Pebble snippets
+
+Where `{% fragment %}` embeds *content*, `{% include %}` embeds a *template*: a reusable
+Pebble file that evaluates with the card's `vars` in scope and can take parameters.
+Names resolve against the book's `layouts/` directory — the same place every other
+declared template lives — with `.html` appended when the name has no extension, or the
+exact file when it has one (`snippets/note.md`):
+
+```
+{% include "snippets/warning" %}
+{% include "snippets/badge" with {"level": "danger", "text": "mind the gap"} %}
+```
+
+```html
+<!-- layouts/snippets/badge.html -->
+<span class="badge badge-{{ level }}">{{ text }}</span>
+```
+
+`{% import %}` brings in a macro library the same way:
+
+```
+{% import "macros/badges" %}
+{{ badge("info") }}
+```
+
+An included snippet is parsed by the same engine as the card, so it can use
+`{% fragment %}`, `vars`, and conditionals itself. Two things to keep straight:
+
+- **Masking does not extend into snippets.** A card's own fenced code blocks are
+  protected from evaluation; a snippet is a real template, so a fenced *example* of
+  Pebble syntax inside one needs `{% verbatim %}`. Rule of thumb: `{% include %}` for
+  live templates, `{% fragment %}` for verbatim content.
+- **No cycle detection.** A snippet that includes itself (directly or around a loop)
+  fails the build with a recursion error naming the card.
 
 ## Watch Out
 
-Path resolution is relative to the **card file's directory** first, then the book root.
-A missing file or a missing anchor hard-fails the build with the source location of the
-offending directive — there is no silent fallback.
+The two tags resolve paths differently. A `{% fragment %}` reference is relative to the
+**card file's directory** first, then the book root; an `{% include %}` name is always
+relative to **`layouts/`**. Either way, a missing file or a missing anchor hard-fails the
+build with the source location of the offending directive — there is no silent fallback.
 
 Absolute paths are used verbatim and bypass all resolution.

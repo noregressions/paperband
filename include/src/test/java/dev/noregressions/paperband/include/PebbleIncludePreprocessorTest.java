@@ -417,6 +417,159 @@ class PebbleIncludePreprocessorTest {
         assertFalse(out.contains("Should never appear"));
     }
 
+    // ---- {% include %} / {% import %}: live Pebble snippets from layouts/ ----
+    //
+    // Where {% fragment %} splices file content verbatim, {% include %} loads
+    // a real template through a loader rooted at <bookRoot>/layouts/ — so a
+    // snippet can read vars, take with-{...} parameters, and host macros.
+
+    @Test
+    void include_resolvesFromLayoutsWithHtmlAppended(@TempDir Path tmp) throws IOException {
+        Path source = writeFile(tmp, "card.md", "unused");
+        writeFile(tmp, "layouts/snippets/warning.html",
+                "<div class=\"warning\">{{ vars.product_name }} warning</div>\n");
+        MarkdownPreprocessor withVars = Includes.defaultPreprocessor(
+                tmp, Map.of(), Map.of("product_name", "Paperband"));
+
+        String out = withVars.process("{% include \"snippets/warning\" %}\n", source);
+
+        assertTrue(out.contains("<div class=\"warning\">Paperband warning</div>"),
+                "bare names get .html appended and vars flow into the snippet");
+    }
+
+    @Test
+    void include_extensionfulNameLoadsTheExactFile(@TempDir Path tmp) throws IOException {
+        Path source = writeFile(tmp, "card.md", "unused");
+        writeFile(tmp, "layouts/snippets/note.md", "> A **markdown** note\n");
+
+        String out = Includes.defaultPreprocessor(tmp, Map.of(), Map.of())
+                .process("{% include \"snippets/note.md\" %}\n", source);
+
+        assertTrue(out.contains("> A **markdown** note"));
+    }
+
+    @Test
+    void include_withMapParameterisesTheSnippet(@TempDir Path tmp) throws IOException {
+        Path source = writeFile(tmp, "card.md", "unused");
+        writeFile(tmp, "layouts/snippets/badge.html", "[{{ level }}] {{ text }}\n");
+
+        String md = "{% include \"snippets/badge\" with {\"level\": \"danger\", \"text\": \"mind the gap\"} %}\n";
+        String out = Includes.defaultPreprocessor(tmp, Map.of(), Map.of()).process(md, source);
+
+        assertTrue(out.contains("[danger] mind the gap"));
+    }
+
+    @Test
+    void import_macroLibraryIsCallable(@TempDir Path tmp) throws IOException {
+        Path source = writeFile(tmp, "card.md", "unused");
+        writeFile(tmp, "layouts/macros/badges.html",
+                "{% macro badge(level) %}<span class=\"badge-{{ level }}\"></span>{% endmacro %}\n");
+
+        String md = "{% import \"macros/badges\" %}{{ badge(\"info\") }}\n";
+        String out = Includes.defaultPreprocessor(tmp, Map.of(), Map.of()).process(md, source);
+
+        assertTrue(out.contains("<span class=\"badge-info\"></span>"));
+    }
+
+    @Test
+    void include_missingSnippet_saysWhereItLooked(@TempDir Path tmp) throws IOException {
+        Path source = writeFile(tmp, "card.md", "unused");
+        Files.createDirectories(tmp.resolve("layouts"));
+
+        IncludeException ex = assertThrows(IncludeException.class,
+                () -> Includes.defaultPreprocessor(tmp, Map.of(), Map.of())
+                        .process("{% include \"snippets/ghost\" %}\n", source));
+
+        assertTrue(ex.getMessage().contains("layouts"), ex.getMessage());
+        assertTrue(ex.getMessage().contains(".html appended"), ex.getMessage());
+    }
+
+    @Test
+    void include_neverResolvesAgainstTheWorkingDirectory(@TempDir Path tmp) throws IOException {
+        // The builder's DEFAULT loader falls back to classpath + working
+        // directory; an explicit layouts-rooted loader must be in its place,
+        // so a name that exists relative to the CWD but not under layouts/
+        // stays unresolvable.
+        Path source = writeFile(tmp, "card.md", "unused");
+        assertTrue(Files.isRegularFile(Path.of("pom.xml")),
+                "test assumes the build runs from the module directory");
+
+        assertThrows(IncludeException.class,
+                () -> Includes.defaultPreprocessor(tmp, Map.of(), Map.of())
+                        .process("{% include \"pom.xml\" %}\n", source));
+    }
+
+    @Test
+    void include_literalExampleInFencedBlock_notEvaluated(@TempDir Path tmp) throws IOException {
+        Path source = writeFile(tmp, "card.md", "unused");
+        String md = """
+                ```
+                {% include "snippets/ghost" %}
+                ```
+                """;
+        String out = Includes.defaultPreprocessor(tmp, Map.of(), Map.of()).process(md, source);
+
+        assertTrue(out.contains("{% include \"snippets/ghost\" %}"),
+                "a fenced example must survive verbatim, not try to resolve");
+    }
+
+    @Test
+    void include_selfIncludeCycle_failsWithACycleMessageNamingTheCard(@TempDir Path tmp) throws IOException {
+        Path source = writeFile(tmp, "card.md", "unused");
+        writeFile(tmp, "layouts/loop.html", "{% include \"loop\" %}\n");
+
+        IncludeException ex = assertThrows(IncludeException.class,
+                () -> Includes.defaultPreprocessor(tmp, Map.of(), Map.of())
+                        .process("{% include \"loop\" %}\n", source));
+
+        assertTrue(ex.getMessage().contains("cycle"), ex.getMessage());
+        assertTrue(ex.getMessage().contains("card.md"), ex.getMessage());
+    }
+
+    @Test
+    void include_snippetCanUseFragmentTags(@TempDir Path tmp) throws IOException {
+        // An included snippet is parsed by the same engine, extensions and
+        // all — so {% fragment %} works inside it. (The reverse is not true:
+        // a fragment's content is spliced verbatim, never re-evaluated.)
+        Path source = writeFile(tmp, "card.md", "unused");
+        writeFile(tmp, "Foo.java", "public class Foo {}\n");
+        writeFile(tmp, "layouts/with-code.html", "Before\n{% fragment \"Foo.java\" %}\nAfter\n");
+
+        String out = Includes.defaultPreprocessor(tmp, Map.of(), Map.of())
+                .process("{% include \"with-code\" %}\n", source);
+
+        assertTrue(out.contains("public class Foo {}"));
+        assertTrue(out.contains("```java"));
+    }
+
+    @Test
+    void fragment_contentIsSplicedVerbatim_notReEvaluated(@TempDir Path tmp) throws IOException {
+        // The documented contract: {% fragment %} is the verbatim-content
+        // tool. Pebble syntax inside a fragment survives as literal text —
+        // use {% include %} when the file should evaluate.
+        Path source = writeFile(tmp, "card.md", "unused");
+        writeFile(tmp, "snippet.md", "literal {{ vars.product_name }} and {% fragment \"other.md\" %}\n");
+        MarkdownPreprocessor withVars = Includes.defaultPreprocessor(
+                tmp, Map.of(), Map.of("product_name", "Paperband"));
+
+        String out = withVars.process("{% fragment \"snippet.md\" %}\n", source);
+
+        assertTrue(out.contains("literal {{ vars.product_name }}"));
+        assertTrue(out.contains("{% fragment \"other.md\" %}"));
+    }
+
+    @Test
+    void include_withNoBookRoot_fallsBackToLayoutsBesideTheCard(@TempDir Path tmp) throws IOException {
+        Path source = writeFile(tmp, "card.md", "unused");
+        writeFile(tmp, "layouts/aside.html", "standalone snippet\n");
+
+        // bookRoot null = single-card build; layouts/ next to the card serves.
+        String out = Includes.defaultPreprocessor(null, Map.of(), Map.of())
+                .process("{% include \"aside\" %}\n", source);
+
+        assertTrue(out.contains("standalone snippet"));
+    }
+
     // ---- helpers ----
 
     private static Path writeFile(Path dir, String name, String content) throws IOException {
