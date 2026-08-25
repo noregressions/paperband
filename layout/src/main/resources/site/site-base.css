@@ -22,7 +22,7 @@ body.has-sidebar { margin: 0; }
 .site-nav .nav-brand { font-weight: 700; text-decoration: none; color: inherit; }
 .site-nav .nav-link { text-decoration: none; color: inherit; opacity: 0.85; }
 .site-nav .nav-link:hover { opacity: 1; }
-/* A declared part with no page of its own (Part.landingPage false) still
+/* A declared section with no page of its own (Section.landingPage false) still
    labels its cards, but the label is text rather than a link — dimmer, and
    no hover affordance. Same treatment in the sidebar and on the index. */
 .site-nav .section-link-unlinked { opacity: 0.6; cursor: default; }
@@ -107,10 +107,10 @@ body.has-sidebar { margin: 0; }
 .sidebar-cards li a:hover { opacity: 1; background: rgba(0, 0, 0, 0.05); }
 .sidebar-cards li.active a { font-weight: 600; opacity: 1; background: rgba(0, 0, 0, 0.07); }
 
-/* ---- index: the part/axis-value grid ----
- * site-index.html emits .tier-grid holding one .tier-box per part, axis value
+/* ---- index: the section/axis-value grid ----
+ * site-index.html emits .tier-grid holding one .tier-box per section, axis value
  * or section. Nothing styled it — not this scaffold, not any bundled theme —
- * so every site's landing page ran its parts together as inline text. This is
+ * so every site's landing page ran its sections together as inline text. This is
  * the scaffold's job: a usable grid that themes then colour. */
 .tier-grid {
   display: grid;
@@ -132,7 +132,7 @@ body.has-sidebar { margin: 0; }
 a.tier-box:hover { background: rgba(0, 0, 0, 0.05); }
 .tier-box-label { font-weight: 600; }
 .tier-box-count { font-size: 0.85em; opacity: 0.7; }
-/* A part with no page of its own is listed but not linked (see Part.landingPage). */
+/* A section with no page of its own is listed but not linked (see Section.landingPage). */
 .tier-box.section-box-unlinked { opacity: 0.75; cursor: default; }
 
 /* ---- prev/next + breadcrumb strips ---- */

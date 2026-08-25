@@ -1,7 +1,7 @@
 package dev.noregressions.paperband.config;
 
 import dev.noregressions.paperband.model.NamedTemplates;
-import dev.noregressions.paperband.model.Part;
+import dev.noregressions.paperband.model.Section;
 import dev.noregressions.paperband.predicate.PredicateEvaluator;
 
 import java.io.IOException;
@@ -20,9 +20,9 @@ import java.util.stream.Stream;
 
 /**
  * Resolves a <em>declared</em> book structure — an ordered list of titled
- * parts, each selecting its cards by glob pattern — into the same flat,
+ * sections, each selecting its cards by glob pattern — into the same flat,
  * ordered card list {@link BookWalker} produces from a directory tree, plus
- * the {@link Part}s that group them.
+ * the {@link Section}s that group them.
  *
  * <p>This is the declaration-first counterpart to {@code BookWalker}. The
  * walker infers structure from the disk (folders become sections, filename
@@ -32,7 +32,7 @@ import java.util.stream.Stream;
  *
  * <pre>
  * BookPlan.resolve(root, List.of(
- *         new BookPlan.PartSpec("traces", "Execution Traces", null, null,
+ *         new BookPlan.SectionSpec("traces", "Execution Traces", null, null,
  *                 List.of("services/&#42;/TRACE.md"), List.of("services/wip/&#42;&#42;"),
  *                 List.of("tier", "-id"))),
  *         "pdf-a4");
@@ -45,8 +45,8 @@ import java.util.stream.Stream;
  * this; nothing stops another one existing.
  *
  * <h2>Ordering</h2>
- * <p>Emission order is fully determined by the declaration: parts in declared
- * order, then within a part each {@code include} pattern in declared order,
+ * <p>Emission order is fully determined by the declaration: sections in declared
+ * order, then within a section each {@code include} pattern in declared order,
  * then within one pattern by frontmatter {@code sort} fields (see
  * {@link FrontmatterSort}) or, with no sort declared, alphabetically by path
  * relative to the root. Paths sort by their <em>relative path</em>, not their
@@ -55,9 +55,9 @@ import java.util.stream.Stream;
  * distinguishing them.
  *
  * <h2>Claiming</h2>
- * <p>A file is emitted once: the first part (and within it, the first
+ * <p>A file is emitted once: the first section (and within it, the first
  * pattern) to match it claims it, and later patterns skip it. That mirrors
- * how a yaml {@code parts:} entry claims a folder, and makes overlapping
+ * how a yaml {@code sections:} entry claims a folder, and makes overlapping
  * patterns predictable rather than duplicating cards into the book.
  *
  * <h2>Pattern syntax</h2>
@@ -82,41 +82,41 @@ public final class BookPlan {
     private BookPlan() {}
 
     /**
-     * One declared part of a planned book: its identity, and the patterns
+     * One declared section of a planned book: its identity, and the patterns
      * that select its cards.
      *
      * <p>A spec with neither {@code id} nor {@code title} is
-     * <em>anonymous</em>: its cards are emitted in place but no {@link Part}
+     * <em>anonymous</em>: its cards are emitted in place but no {@link Section}
      * is produced for them, so they fall back to folder-derived sections
      * exactly as walked cards do. That's the "just glob me some files" case,
      * with no structural claim attached.
      *
-     * @param id              part id; when null or blank, derived from {@code title}
-     *                        via {@link Part#slug}. Must be filename-safe — it
+     * @param id              section id; when null or blank, derived from {@code title}
+     *                        via {@link Section#slug}. Must be filename-safe — it
      *                        becomes {@code <id>.html} on the static site.
-     * @param title           human-readable part title, shown on the divider and
+     * @param title           human-readable section title, shown on the divider and
      *                        landing page
-     * @param landingTemplate optional per-part landing/divider template — a
+     * @param landingTemplate optional per-section landing/divider template — a
      *                        built-in preset name or a template path, resolved
      *                        here via {@link NamedTemplates#resolveSectionTemplate}
      * @param where           optional Pebble predicate evaluated against the build
-     *                        target; when it evaluates false the whole part is
+     *                        target; when it evaluates false the whole section is
      *                        skipped, cards and all
-     * @param includes        glob patterns selecting this part's cards, relative to
+     * @param includes        glob patterns selecting this section's cards, relative to
      *                        the root, in emission order. {@code *} stops at a path
      *                        separator, {@code **} crosses it.
      * @param excludes        glob patterns removing files an {@code include} matched
      * @param sort            frontmatter field names to order matches by, most
      *                        significant first, each optionally {@code -}-prefixed
      *                        for descending; null or empty sorts by relative path
-     * @param landingPage     whether this part gets a page of its own — the PDF
+     * @param landingPage     whether this section gets a page of its own — the PDF
      *                        divider and the site {@code <id>.html} landing page.
      *                        On by default; false groups and orders the cards
      *                        without fronting them with a page (see
-     *                        {@link Part#landingPage()}). Meaningless on an
-     *                        anonymous spec, which produces no {@link Part} at all.
+     *                        {@link Section#landingPage()}). Meaningless on an
+     *                        anonymous spec, which produces no {@link Section} at all.
      */
-    public record PartSpec(
+    public record SectionSpec(
             String id,
             String title,
             String landingTemplate,
@@ -127,41 +127,51 @@ public final class BookPlan {
             boolean landingPage
     ) {
         /** Normalises the three pattern lists to immutable, non-null copies. */
-        public PartSpec {
+        public SectionSpec {
             includes = includes == null ? List.of() : List.copyOf(includes);
             excludes = excludes == null ? List.of() : List.copyOf(excludes);
             sort     = sort     == null ? List.of() : List.copyOf(sort);
         }
 
         /**
-         * Convenience constructor for a spec whose part gets its own page —
+         * Convenience constructor for a spec whose section gets its own page —
          * the default for a declaration that doesn't opt out.
          */
-        public PartSpec(String id, String title, String landingTemplate, String where,
+        public SectionSpec(String id, String title, String landingTemplate, String where,
                         List<String> includes, List<String> excludes, List<String> sort) {
             this(id, title, landingTemplate, where, includes, excludes, sort, true);
         }
 
-        /** True when this spec declares no identity, so it contributes cards but no {@link Part}. */
+        /** True when this spec declares no identity, so it contributes cards but no {@link Section}. */
         boolean anonymous() {
             return isBlank(id) && isBlank(title);
         }
     }
 
     /**
-     * A resolved plan: the flat card list to build, and the parts grouping it.
+     * A resolved plan: the flat card list to build, and the sections grouping it.
      *
-     * @param cards ordered card files, absolute and normalised
-     * @param parts the parts that claim them, in declared order — each carrying
-     *              its claimed cards in {@link Part#cards()}. Anonymous and
-     *              predicate-excluded specs contribute none.
+     * @param cards        ordered card files, absolute and normalised
+     * @param sections     the sections that claim them, in declared order — each
+     *                     carrying its claimed cards in {@link Section#cards()}.
+     *                     Anonymous and predicate-excluded specs contribute none.
+     * @param tocCardIndex index into {@code cards} before which the printed
+     *                     table of contents renders — {@code cards.size()}
+     *                     puts it after the last card — or null when the plan
+     *                     declared no TOC position
      */
-    public record Plan(List<Path> cards, List<Part> parts, List<String> warnings) {
+    public record Plan(List<Path> cards, List<Section> sections, List<String> warnings,
+                       Integer tocCardIndex) {
         /** Normalises the lists to immutable, non-null copies. */
         public Plan {
             cards    = cards    == null ? List.of() : List.copyOf(cards);
-            parts    = parts    == null ? List.of() : List.copyOf(parts);
+            sections = sections == null ? List.of() : List.copyOf(sections);
             warnings = warnings == null ? List.of() : List.copyOf(warnings);
+        }
+
+        /** A plan with no declared TOC position. */
+        public Plan(List<Path> cards, List<Section> sections, List<String> warnings) {
+            this(cards, sections, warnings, null);
         }
     }
 
@@ -172,19 +182,33 @@ public final class BookPlan {
      *               matched card must live under it (the config cascade resolves
      *               a card's book from its own parent chain, so a card outside
      *               this tree would silently belong to a different book)
-     * @param specs  the declared parts, in emission order
+     * @param specs  the declared sections, in emission order
      * @param target current build target, for {@code where} predicates; may be null
      * @return the resolved plan
      * @throws ConfigParseException if the root isn't a directory, or a spec is
      *         unusable (no patterns, no derivable id, or a duplicate id)
      */
-    public static Plan resolve(Path root, List<PartSpec> specs, String target) {
+    public static Plan resolve(Path root, List<SectionSpec> specs, String target) {
+        return resolve(root, specs, null, target);
+    }
+
+    /**
+     * Resolve {@code specs} against {@code root}, with a declared position for
+     * the printed table of contents.
+     *
+     * @param tocAfterSpec how many specs precede the TOC marker — 0 puts the
+     *        contents page before everything, {@code specs.size()} after
+     *        everything; null declares no position. The resolved
+     *        {@link Plan#tocCardIndex()} is the card count those preceding
+     *        specs actually claimed, so skipped and empty specs cost nothing.
+     */
+    public static Plan resolve(Path root, List<SectionSpec> specs, Integer tocAfterSpec, String target) {
         if (root == null || !Files.isDirectory(root)) {
             throw new ConfigParseException("Book root is not a directory: " + root);
         }
         Path base = root.toAbsolutePath().normalize();
         if (specs == null || specs.isEmpty()) {
-            throw new ConfigParseException("Book plan declares no parts");
+            throw new ConfigParseException("Book plan declares no sections");
         }
 
         boolean acceptYamlCards = CardFiles.declaresCardSchema(base);
@@ -193,7 +217,7 @@ public final class BookPlan {
         Map<String, Object> predicateContext = Map.of("target", target == null ? "" : target);
 
         List<Path> cards = new ArrayList<>();
-        List<Part> parts = new ArrayList<>();
+        List<Section> sections = new ArrayList<>();
         Set<Path> claimed = new LinkedHashSet<>();
         Set<String> ids = new LinkedHashSet<>();
         List<String> warnings = new ArrayList<>();
@@ -204,18 +228,25 @@ public final class BookPlan {
         // way to find out why.
         warnings.addAll(nearMissWarnings(base, specs, acceptYamlCards));
 
-        for (PartSpec spec : specs) {
+        Integer tocCardIndex = null;
+        for (int s = 0; s < specs.size(); s++) {
+            SectionSpec spec = specs.get(s);
+            // The marker sits BEFORE spec s: however many cards the specs
+            // ahead of it actually claimed is where the contents page goes.
+            if (tocAfterSpec != null && s == tocAfterSpec) {
+                tocCardIndex = cards.size();
+            }
             String id = idOf(spec);
             if (id != null && !ids.add(id)) {
-                throw new ConfigParseException("Duplicate part id in book plan: '" + id + "'");
+                throw new ConfigParseException("Duplicate section id in book plan: '" + id + "'");
             }
             if (spec.includes().isEmpty()) {
-                throw new ConfigParseException("Part '" + (id == null ? "(anonymous)" : id)
+                throw new ConfigParseException("Section '" + (id == null ? "(anonymous)" : id)
                         + "' in book plan declares no include patterns");
             }
-            // Claim nothing and emit nothing: an excluded part's cards are out
+            // Claim nothing and emit nothing: an excluded section's cards are out
             // of the book entirely, the same way a false `where:` on a yaml
-            // part skips every folder it claims.
+            // section skips every folder it claims.
             if (!isBlank(spec.where()) && !predicates.evaluate(spec.where(), predicateContext)) {
                 continue;
             }
@@ -228,12 +259,15 @@ public final class BookPlan {
             }
             cards.addAll(matched);
             if (!spec.anonymous()) {
-                parts.add(new Part(id, spec.title(), List.of(),
+                sections.add(new Section(id, spec.title(), List.of(),
                         resolveLandingTemplate(base, spec.landingTemplate()), matched,
                         spec.landingPage()));
             }
         }
-        return new Plan(cards, parts, warnings);
+        if (tocAfterSpec != null && tocCardIndex == null) {
+            tocCardIndex = cards.size();   // marker after the last spec
+        }
+        return new Plan(cards, sections, warnings, tocCardIndex);
     }
 
     /**
@@ -247,7 +281,7 @@ public final class BookPlan {
      * matches the whole tree, and that warning would be noise nobody reads.
      */
     private static List<String> nearMissWarnings(
-            Path base, List<PartSpec> specs, boolean acceptYamlCards) {
+            Path base, List<SectionSpec> specs, boolean acceptYamlCards) {
         List<Path> nearMisses;
         try (Stream<Path> stream = Files.walk(base)) {
             nearMisses = stream
@@ -263,7 +297,7 @@ public final class BookPlan {
         if (nearMisses.isEmpty()) return List.of();
 
         List<String> out = new ArrayList<>();
-        for (PartSpec spec : specs) {
+        for (SectionSpec spec : specs) {
             List<GlobSet> excludes = GlobSet.of(spec.excludes());
             List<String> hits = new ArrayList<>();
             for (String pattern : spec.includes()) {
@@ -339,7 +373,7 @@ public final class BookPlan {
      * files skipped. Claims are recorded into {@code claimed} as they're made,
      * so a later pattern in the same spec can't re-emit a file either.
      */
-    private static List<Path> match(Path base, PartSpec spec, List<Path> candidates,
+    private static List<Path> match(Path base, SectionSpec spec, List<Path> candidates,
                                     Set<Path> claimed, boolean acceptYamlCards) {
         List<GlobSet> excludes = GlobSet.of(spec.excludes());
         List<FrontmatterSort.SortKey> sort = FrontmatterSort.parse(
@@ -450,12 +484,12 @@ public final class BookPlan {
     }
 
     /** Explicit id, else a slug of the title, else null for an anonymous spec. */
-    private static String idOf(PartSpec spec) {
+    private static String idOf(SectionSpec spec) {
         if (!isBlank(spec.id())) return spec.id().trim();
-        String slug = Part.slug(spec.title());
+        String slug = Section.slug(spec.title());
         if (slug == null && !spec.anonymous()) {
             throw new ConfigParseException(
-                    "Part in book plan declares neither a usable 'title' nor an 'id'");
+                    "Section in book plan declares neither a usable 'title' nor an 'id'");
         }
         return slug;
     }
@@ -465,7 +499,7 @@ public final class BookPlan {
     }
 
     private static String describe(String id) {
-        return id == null ? "anonymous book-plan entry" : "book-plan part '" + id + "'";
+        return id == null ? "anonymous book-plan entry" : "book-plan section '" + id + "'";
     }
 
     private static boolean isBlank(String s) {

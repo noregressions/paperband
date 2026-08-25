@@ -26,11 +26,12 @@ import java.util.stream.Stream;
  * and in what order — exactly one applies per directory, in this precedence:
  *
  * <ol>
- *   <li>{@code parts:} — a list of titled groups of subfolders. Their folders
- *       are emitted in declared order, then anything unclaimed is discovered
- *       and appended alphabetically. The mixed case is the point, so no
- *       "unlisted entries" warning is printed. Book-level structure lives
- *       here; see {@code dev.noregressions.paperband.model.Part}.</li>
+ *   <li>{@code sections:} — a list of titled groups of subfolders (bare list,
+ *       or the {@code declare:} key of the {@code sections:} map form). Their
+ *       folders are emitted in declared order, then anything unclaimed is
+ *       discovered and appended alphabetically. The mixed case is the point,
+ *       so no "unlisted entries" warning is printed. Book-level structure
+ *       lives here; see {@code dev.noregressions.paperband.model.Section}.</li>
  *   <li>{@code include:} — an <em>exclusive</em> list: exactly these entries,
  *       in this order, and nothing else. There is no discovery pass, so a
  *       file added to the folder later stays out of the book until it's
@@ -48,7 +49,7 @@ import java.util.stream.Stream;
  * silently merging.
  *
  * <p>Each directory decides independently, so a book root can declare
- * {@code parts:} over its folders while one folder uses {@code include:} to
+ * {@code sections:} over its folders while one folder uses {@code include:} to
  * pin an exact card list and its sibling just lets its cards be discovered.
  *
  * <h2>{@code sort:} — frontmatter-driven ordering</h2>
@@ -83,7 +84,7 @@ import java.util.stream.Stream;
  * <h2>Entry resolution</h2>
  * <p>{@code order:} and {@code include:} entries are either basenames without
  * extension or maps of the form {@code { id: <name>, where: "<predicate>" }};
- * a {@code parts:} entry contributes its {@code folders:} names the same way.
+ * a {@code sections:} entry contributes its {@code folders:} names the same way.
  * All resolve relative to the directory that declared them, in this order:
  * subdirectory of that name, then {@code <name>.md}. Explicit {@code .md}
  * suffixes are also tolerated. Unresolved entries emit a warning and are
@@ -94,8 +95,8 @@ import java.util.stream.Stream;
  * predicate sees {@code target} as a string variable; if it evaluates false
  * the subtree (or .md file) is skipped entirely. Use this to declare
  * web-only or PDF-only sections, e.g. {@code { id: tech, where: "target == 'web'" }}.
- * A whole {@code parts:} entry may carry one too, skipping every folder that
- * part claims.
+ * A whole {@code sections:} entry may carry one too, skipping every folder
+ * that section claims.
  *
  * <h2>Filters</h2>
  * <p>{@code .md} files are always emitted as cards. {@code .yaml}/{@code .yml}
@@ -269,7 +270,7 @@ public final class BookWalker {
 
     /**
      * Resolve which sequencing directive applies to {@code dir}, in
-     * precedence order: {@code parts:}, then {@code include:}, then
+     * precedence order: {@code sections:}, then {@code include:}, then
      * {@code order:}, then plain discovery. The three keys answer the same
      * question — what does this directory emit, and in what order — so only
      * the winner applies; a losing key present alongside it is a config
@@ -280,18 +281,25 @@ public final class BookWalker {
         if (!Files.isRegularFile(yamlFile)) return Directive.DISCOVER;
         Map<String, Object> data = readYaml(yamlFile);
 
-        List<Entry> parts = readParts(dir, data.get("parts"));
+        if (data.get("parts") != null) {
+            // The old key. ConfigLoader rejects it outright; the walker can
+            // run first, so say the same thing here instead of silently
+            // emitting the book in discovery order.
+            System.err.println("warn: " + dir + " declares 'parts' — renamed to 'sections' "
+                    + "(a bare list, or the 'declare:' key of the sections map); ignoring it");
+        }
+        List<Entry> sections = readSections(dir, declaredSectionsNode(data.get("sections")));
         List<Entry> include = readEntries(dir, data.get("include"), "include");
         List<Entry> order = readEntries(dir, data.get("order"), "order");
 
-        if (parts != null) {
-            if (include != null) warnIgnored(dir, "include", "parts");
-            if (order != null) warnIgnored(dir, "order", "parts");
-            // Folders no part claims still get discovered and emitted after
-            // the declared ones -- that mix is the point of parts:, so an
-            // "unlisted entries" warning would just be noise (same reasoning
-            // as sort: suppressing it).
-            return new Directive("parts", parts, false, false);
+        if (sections != null) {
+            if (include != null) warnIgnored(dir, "include", "sections");
+            if (order != null) warnIgnored(dir, "order", "sections");
+            // Folders no declared section claims still get discovered and
+            // emitted after the declared ones -- that mix is the point of
+            // sections:, so an "unlisted entries" warning would just be noise
+            // (same reasoning as sort: suppressing it).
+            return new Directive("sections", sections, false, false);
         }
         if (include != null) {
             if (order != null) warnIgnored(dir, "order", "include");
@@ -343,26 +351,41 @@ public final class BookWalker {
     }
 
     /**
-     * Flatten a {@code parts:} declaration into the folder entries it claims,
-     * in declared order.
+     * The list of section declarations inside a {@code sections:} node, which
+     * takes two shapes: a bare list, or a map whose {@code declare:} key holds
+     * the list (the map form also carries the book-wide {@code landing:}
+     * default, which the walker doesn't care about).
      *
-     * <p>The walker only cares about the sequence a {@code parts:} block
-     * implies — the titles and ids that make a part a visible group in the
-     * output are parsed separately into
-     * {@code dev.noregressions.paperband.model.Part} by {@code ConfigLoader},
-     * which is also where structural validation lives. Here a part is just
-     * its {@code folders:} list, resolved relative to the directory that
-     * declared it exactly like an {@code order:} entry.
-     *
-     * <p>A part may carry a {@code where} predicate; when it evaluates false
-     * the whole part's folders are skipped. The predicate is attached to each
-     * flattened folder entry rather than evaluated here, so a skipped part's
-     * folders are still <em>claimed</em> and don't reappear in the discovery
-     * pass — matching how an excluded {@code order:} entry behaves.
-     *
-     * @return the flattened folder entries, or null when {@code parts:} is absent or empty
+     * @return the declaration list node, or null when there isn't one
      */
-    private List<Entry> readParts(Path dir, Object node) {
+    private static Object declaredSectionsNode(Object node) {
+        if (node instanceof Map<?, ?> m) return m.get("declare");
+        return node;
+    }
+
+    /**
+     * Flatten a {@code sections:} declaration into the folder entries it
+     * claims, in declared order.
+     *
+     * <p>The walker only cares about the sequence a {@code sections:} block
+     * implies — the titles and ids that make a declared section a visible
+     * group in the output are parsed separately into
+     * {@code dev.noregressions.paperband.model.Section} by {@code ConfigLoader},
+     * which is also where structural validation lives. Here a declared section
+     * is just its {@code folders:} list, resolved relative to the directory
+     * that declared it exactly like an {@code order:} entry.
+     *
+     * <p>A declared section may carry a {@code where} predicate; when it
+     * evaluates false the whole section's folders are skipped. The predicate
+     * is attached to each flattened folder entry rather than evaluated here,
+     * so a skipped section's folders are still <em>claimed</em> and don't
+     * reappear in the discovery pass — matching how an excluded {@code order:}
+     * entry behaves.
+     *
+     * @return the flattened folder entries, or null when {@code sections:}
+     *         declares none
+     */
+    private List<Entry> readSections(Path dir, Object node) {
         if (!(node instanceof List<?> list) || list.isEmpty()) return null;
         List<Entry> out = new ArrayList<>();
         Set<String> seen = new LinkedHashSet<>();
@@ -377,8 +400,8 @@ public final class BookWalker {
                 if (f == null || f.toString().isBlank()) continue;
                 String name = f.toString().trim();
                 if (!seen.add(name)) {
-                    System.err.println("warn: folder '" + name + "' listed by more than one part in "
-                            + dir + " — emitting it once, in its first part");
+                    System.err.println("warn: folder '" + name + "' listed by more than one section in "
+                            + dir + " — emitting it once, in its first section");
                     continue;
                 }
                 out.add(new Entry(name, predicate));
@@ -387,7 +410,7 @@ public final class BookWalker {
         return out.isEmpty() ? null : out;
     }
 
-    /** A parsed {@code order:}/{@code include:}/{@code parts:} entry: a name and an optional Pebble {@code where} predicate. */
+    /** A parsed {@code order:}/{@code include:}/{@code sections:} entry: a name and an optional Pebble {@code where} predicate. */
     private record Entry(String name, String where) {}
 
     private Map<String, Object> readYaml(Path file) {

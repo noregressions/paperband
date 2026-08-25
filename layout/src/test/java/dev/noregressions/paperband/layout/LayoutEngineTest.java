@@ -272,9 +272,9 @@ class LayoutEngineTest {
     @DisplayName("Declared part dividers")
     class DeclaredPartDividers {
 
-        /** A book whose parts: groups two folders under one title. */
+        /** A book whose sections: groups two folders under one title. */
         private BookConfig bookWithFoundationsPart(Path tempDir, String landingTemplate) {
-            Part foundations = new Part(
+            Section foundations = new Section(
                     "foundations", "Foundations", List.of("intro", "authoring"), landingTemplate);
             return new BookConfig(tempDir, "Test Book", List.of(), List.of(), Map.of(),
                     List.of(), null, null, null, null, null, null, null, List.of(foundations));
@@ -367,13 +367,13 @@ class LayoutEngineTest {
 
         /**
          * The shape {@code BookPlan} produces for a POM-declared
-         * {@code <book><parts>}: parts that claim individual card files rather
+         * {@code <book><sections>}: sections that claim individual card files rather
          * than whole folders, so two of them can draw different files out of
          * one directory.
          */
         private BookConfig bookWithCardClaimingParts(Path tempDir, List<Path> traces, List<Path> notes) {
-            Part tracesPart = new Part("traces", "Execution Traces", List.of(), null, traces);
-            Part notesPart = new Part("notes", "Notes", List.of(), null, notes);
+            Section tracesPart = new Section("traces", "Execution Traces", List.of(), null, traces);
+            Section notesPart = new Section("notes", "Notes", List.of(), null, notes);
             return new BookConfig(tempDir, "Test Book", List.of(), List.of(), Map.of(),
                     List.of(), null, null, null, null, null, null, null,
                     List.of(tracesPart, notesPart));
@@ -414,7 +414,7 @@ class LayoutEngineTest {
             int traces = result.indexOf("id=\"section-divider-traces\"");
             int notes = result.indexOf("id=\"section-divider-notes\"");
             int firstNotesCard = result.indexOf("id=\"card-auth-notes\"");
-            assertTrue(traces < notes, "parts divide in declared order");
+            assertTrue(traces < notes, "sections divide in declared order");
             assertTrue(notes < firstNotesCard, "each divider precedes its part's first card");
         }
 
@@ -561,13 +561,13 @@ class LayoutEngineTest {
     class PageLessParts {
 
         /**
-         * Two pattern-declared parts, the first of which opted out of a page
+         * Two pattern-declared sections, the first of which opted out of a page
          * of its own — the shape {@code BookPlan} produces for
-         * {@code <part><landingPage>false</landingPage></part>}.
+         * {@code <section><landingPage>false</landingPage></section>}.
          */
         private BookConfig bookWithPageLessFirstPart(Path tempDir, List<Path> setup, List<Path> traces) {
-            Part setupPart = new Part("setup", "Introduction and Setup", List.of(), null, setup, false);
-            Part tracesPart = new Part("traces", "Scenarios", List.of(), null, traces, true);
+            Section setupPart = new Section("setup", "Introduction and Setup", List.of(), null, setup, false);
+            Section tracesPart = new Section("traces", "Scenarios", List.of(), null, traces, true);
             return new BookConfig(tempDir, "Test Book", List.of(), List.of(), Map.of(),
                     List.of(), null, null, null, null, null, null, null,
                     List.of(setupPart, tracesPart));
@@ -631,7 +631,7 @@ class LayoutEngineTest {
         }
 
         @Test
-        void should_drop_the_section_back_link_on_a_page_less_parts_cards(@TempDir Path tempDir) {
+        void should_drop_the_section_back_link_on_a_page_less_sections_cards(@TempDir Path tempDir) {
             LayoutEngine engine = new LayoutEngine();
 
             Path install = tempDir.resolve("setup").resolve("install.md");
@@ -656,7 +656,7 @@ class LayoutEngineTest {
 
             Path install = tempDir.resolve("setup").resolve("install.md");
             // Same part, declared without saying anything about a page.
-            Part setupPart = new Part("setup", "Introduction and Setup", List.of(), null,
+            Section setupPart = new Section("setup", "Introduction and Setup", List.of(), null,
                     List.of(install));
             BookConfig book = new BookConfig(tempDir, "Test Book", List.of(), List.of(), Map.of(),
                     List.of(), null, null, null, null, null, null, null, List.of(setupPart));
@@ -669,6 +669,31 @@ class LayoutEngineTest {
                             .contains("id=\"section-divider-setup\""),
                     "generation is on unless a declaration opts out");
             assertTrue(engine.renderSite(cards, contexts, bookCtx).containsKey("setup.html"));
+        }
+
+        @Test
+        void should_honour_the_opt_out_on_a_folder_claiming_part_too(@TempDir Path tempDir) {
+            // The shape a yaml `sections:` entry with `landing: false` produces —
+            // membership by folder, not by card pattern.
+            LayoutEngine engine = new LayoutEngine();
+
+            Path install = tempDir.resolve("setup").resolve("install.md");
+            Section setupPart = new Section("setup", "Introduction and Setup",
+                    List.of("setup"), null, List.of(), false);
+            BookConfig book = new BookConfig(tempDir, "Test Book", List.of(), List.of(), Map.of(),
+                    List.of(), null, null, null, null, null, null, null, List.of(setupPart));
+
+            List<Card> cards = List.of(createCardAtPath("install", install));
+            List<RenderContext> contexts = List.of(createMinimalContext());
+            RenderContext bookCtx = new RenderContext(book, List.of(), Map.of(), null, "pdf", "A4");
+
+            assertFalse(engine.renderBook(cards, contexts, bookCtx)
+                            .contains("id=\"section-divider-setup\""),
+                    "a yaml part that declined its page gets no PDF divider");
+            Map<String, String> site = engine.renderSite(cards, contexts, bookCtx);
+            assertFalse(site.containsKey("setup.html"), "and no site landing page");
+            assertTrue(site.get("index.html").contains("Introduction and Setup"),
+                    "the group label survives on the index");
         }
     }
 

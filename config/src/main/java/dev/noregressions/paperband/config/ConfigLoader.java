@@ -6,7 +6,7 @@ import dev.noregressions.paperband.model.BookConfig;
 import dev.noregressions.paperband.model.CardSchema;
 import dev.noregressions.paperband.model.NamedTemplates;
 import dev.noregressions.paperband.model.PageMatter;
-import dev.noregressions.paperband.model.Part;
+import dev.noregressions.paperband.model.Section;
 import dev.noregressions.paperband.model.RenderContext;
 import dev.noregressions.paperband.render.Margins;
 import dev.noregressions.paperband.render.PageConfigResolver;
@@ -45,15 +45,18 @@ import java.util.Map;
  * </ul>
  *
  * <p>The book root may additionally declare {@code title}, {@code axes},
- * {@code theme}, {@code parts}, and {@code sections.landing.template}; these
- * don't cascade because they're book-level concepts. {@code parts} declares
- * titled groups of top-level folders (see {@link Part}) — the declared
- * counterpart to folder-discovered sections. The {@code theme} value is the default
- * theme name; the plugin's {@code <theme>} parameter overrides it when supplied. The
- * {@code sections.landing.template} value is the book-wide default landing
- * page for folder-based "sections" (see {@link BookConfig#sectionLandingTemplate()});
- * an individual section folder's own {@code paperband.yaml} can override it
- * per-folder with a {@code landing.template} key of the same shape.
+ * {@code theme}, and {@code sections}; these don't cascade because they're
+ * book-level concepts. {@code sections} declares titled groups of top-level
+ * folders (see {@link Section}) — the declared counterpart to
+ * folder-discovered sections — and takes two shapes: a bare list of section
+ * declarations, or a map whose {@code declare:} key holds that list and whose
+ * {@code landing.template} key sets the book-wide default landing page for
+ * every section, declared or discovered (see
+ * {@link BookConfig#sectionLandingTemplate()}); an individual section folder's
+ * own {@code paperband.yaml} can override the landing template per-folder with
+ * a {@code landing.template} key of the same shape. The {@code theme} value is
+ * the default theme name; the plugin's {@code <theme>} parameter overrides it
+ * when supplied.
  */
 public final class ConfigLoader {
     /** Creates a new config loader. */
@@ -303,17 +306,25 @@ public final class ConfigLoader {
                 : List.of();
         String theme = data.get("theme") == null ? null : data.get("theme").toString();
 
-        // Book-wide default landing template for "sections" (folders of cards
-        // with no value on any declared axis). A section's own folder
-        // paperband.yaml can override this per-folder with the same
-        // `landing: { template: <name-or-path> }` shape (see LayoutEngine,
-        // which reads that file directly since section grouping happens after
-        // the whole book's cards are loaded, not during this per-card cascade
-        // walk). Either value can be a built-in preset name (e.g. "minimal")
-        // or a custom template file path -- NamedTemplates tells them apart.
+        // The root `sections:` key takes two shapes. A bare list declares
+        // sections — titled groups of top-level folders, the declared
+        // counterpart to folder-discovered sections. The map form carries
+        // `landing: { template: <name-or-path> }`, the book-wide default
+        // landing template for every section (a section's own folder
+        // paperband.yaml can override it per-folder with the same shape — see
+        // LayoutEngine, which reads that file directly since section grouping
+        // happens after the whole book's cards are loaded, not during this
+        // per-card cascade walk), and a `declare:` key holding the same list
+        // the bare form takes, for books that need both at once. The landing
+        // template can be a built-in preset name (e.g. "minimal") or a custom
+        // template file path -- NamedTemplates tells them apart.
         String sectionLandingTemplate = null;
+        Object declaredSectionsNode = null;
         Object sectionsNode = data.get("sections");
-        if (sectionsNode instanceof Map<?, ?> sm) {
+        if (sectionsNode instanceof List<?>) {
+            declaredSectionsNode = sectionsNode;
+        } else if (sectionsNode instanceof Map<?, ?> sm) {
+            declaredSectionsNode = sm.get("declare");
             Object landingNode = sm.get("landing");
             if (landingNode instanceof Map<?, ?> lm) {
                 Object t = lm.get("template");
@@ -321,6 +332,14 @@ public final class ConfigLoader {
                     sectionLandingTemplate = NamedTemplates.resolveSectionTemplate(bookRoot, t.toString());
                 }
             }
+        } else if (sectionsNode != null) {
+            throw new ConfigParseException(bookYaml + ": 'sections' must be a list of section "
+                    + "declarations, or a map with 'landing' and/or 'declare' keys");
+        }
+        if (data.containsKey("parts")) {
+            throw new ConfigParseException(bookYaml
+                    + ": 'parts' has been renamed — declare the groups under 'sections:' "
+                    + "(a bare list, or the 'declare:' key of the sections map)");
         }
 
         // Optional YAML-card schema: lets *.yaml files in the book be
@@ -346,58 +365,60 @@ public final class ConfigLoader {
         PageMatter footer = parsePageMatter(bookRoot, bookYaml, "footer", data.get("footer"));
         PageMatter header = parsePageMatter(bookRoot, bookYaml, "header", data.get("header"));
 
-        // Optional declared parts: titled groups of top-level folders. Book-level
-        // only -- a part describes the shape of the whole book, and the folders
-        // it names are resolved relative to the book root.
-        List<Part> parts = parseParts(bookRoot, bookYaml, data.get("parts"));
+        // Optional declared sections: titled groups of top-level folders.
+        // Book-level only -- a declared section describes the shape of the
+        // whole book, and the folders it names are resolved relative to the
+        // book root.
+        List<Section> sections = parseSections(bookRoot, bookYaml, declaredSectionsNode);
 
         return new BookConfig(bookRoot, title, axes, globalCss, vars, targets, theme,
-                sectionLandingTemplate, cardSchema, cover, back, footer, header, parts);
+                sectionLandingTemplate, cardSchema, cover, back, footer, header, sections);
     }
 
     /**
-     * Parse the book root {@code parts:} list into {@link Part} records.
+     * Parse the book root {@code sections:} list into {@link Section} records.
      *
      * <p>Shape — a list of maps, each with a {@code title}, a {@code folders}
      * list (a bare string is tolerated as a one-folder list), an optional
      * explicit {@code id}, and an optional {@code landing: { template: ... }}
      * of the same shape as a section folder's own override:
      * <pre>
-     * parts:
+     * sections:
      *   - title: "Foundations"
      *     folders: [01-getting-started, 02-authoring]
      * </pre>
      *
      * <p>The id defaults to a slug of the title. Validation is structural and
-     * strict, because a mistake here silently reshapes the whole book: a part
-     * must have a title (or explicit id) and at least one folder, ids must be
-     * unique, and no two parts may claim the same folder — an ambiguous
-     * folder has no single correct group to report.
+     * strict, because a mistake here silently reshapes the whole book: a
+     * declared section must have a title (or explicit id) and at least one
+     * folder, ids must be unique, and no two declarations may claim the same
+     * folder — an ambiguous folder has no single correct group to report.
      */
-    private static List<Part> parseParts(Path bookRoot, Path bookYaml, Object node) {
+    private static List<Section> parseSections(Path bookRoot, Path bookYaml, Object node) {
         if (node == null) return List.of();
         if (!(node instanceof List<?> list)) {
-            throw new ConfigParseException(bookYaml + ": 'parts' must be a list of parts");
+            throw new ConfigParseException(bookYaml
+                    + ": 'sections' must declare a list of sections");
         }
-        List<Part> parts = new ArrayList<>();
+        List<Section> sections = new ArrayList<>();
         Map<String, String> folderOwner = new LinkedHashMap<>();
         List<String> ids = new ArrayList<>();
         for (Object item : list) {
             if (item == null) continue;
             if (!(item instanceof Map<?, ?> m)) {
                 throw new ConfigParseException(bookYaml
-                        + ": each 'parts' entry must be a mapping, got: " + item);
+                        + ": each 'sections' entry must be a mapping, got: " + item);
             }
-            String partTitle = string(m.get("title"));
+            String sectionTitle = string(m.get("title"));
             String rawId = string(m.get("id"));
-            String id = rawId != null && !rawId.isBlank() ? rawId.trim() : Part.slug(partTitle);
+            String id = rawId != null && !rawId.isBlank() ? rawId.trim() : Section.slug(sectionTitle);
             if (id == null) {
                 throw new ConfigParseException(bookYaml
-                        + ": part declares neither a usable 'title' nor an 'id': " + m);
+                        + ": section declares neither a usable 'title' nor an 'id': " + m);
             }
             if (ids.contains(id)) {
                 throw new ConfigParseException(bookYaml
-                        + ": duplicate part id '" + id + "'");
+                        + ": duplicate section id '" + id + "'");
             }
             ids.add(id);
 
@@ -412,27 +433,41 @@ public final class ConfigLoader {
             }
             if (folders.isEmpty()) {
                 throw new ConfigParseException(bookYaml
-                        + ": part '" + id + "' declares no 'folders'");
+                        + ": section '" + id + "' declares no 'folders'");
             }
             for (String f : folders) {
                 String owner = folderOwner.putIfAbsent(f, id);
                 if (owner != null) {
                     throw new ConfigParseException(bookYaml + ": folder '" + f
-                            + "' is claimed by both part '" + owner + "' and part '" + id + "'");
+                            + "' is claimed by both section '" + owner + "' and section '" + id + "'");
                 }
             }
 
             String landing = null;
+            boolean landingPage = true;
             Object landingNode = m.get("landing");
             if (landingNode instanceof Map<?, ?> lm) {
                 Object t = lm.get("template");
                 if (t != null) {
                     landing = NamedTemplates.resolveSectionTemplate(bookRoot, t.toString());
                 }
+            } else if (landingNode instanceof Boolean b) {
+                // `landing: false` opts the section out of its page entirely —
+                // no PDF divider, no site landing page — while keeping the
+                // grouping, the ordering, and the nav/sidebar label. Mirrors
+                // the Maven plugin's <section><landingPage>false</landingPage>.
+                landingPage = b;
+            } else if (landingNode != null) {
+                // A bare scalar was silently ignored before; say what the two
+                // valid shapes are instead of dropping a probable template.
+                throw new ConfigParseException(bookYaml + ": section '" + id
+                        + "' has landing: " + landingNode + " — use 'landing: false' to skip "
+                        + "the section's divider/landing page, or 'landing: { template: ... }' "
+                        + "to restyle it");
             }
-            parts.add(new Part(id, partTitle, folders, landing));
+            sections.add(new Section(id, sectionTitle, folders, landing, List.of(), landingPage));
         }
-        return List.copyOf(parts);
+        return List.copyOf(sections);
     }
 
     /**
@@ -470,7 +505,7 @@ public final class ConfigLoader {
                         + " (CSS has @page :first, but no :last)");
             }
             PageMatter matter = new PageMatter(
-                    image == null ? null : image.toString(),
+                    requireImage(bookRoot, bookYaml, key, image == null ? null : image.toString()),
                     template == null ? null
                             : NamedTemplates.templateName(template.toString()),
                     string(m.get("title")),
@@ -487,7 +522,22 @@ public final class ConfigLoader {
         }
         String image = node.toString();
         if (image.isBlank()) return null;
-        return new PageMatter(image, null);
+        return new PageMatter(requireImage(bookRoot, bookYaml, key, image), null);
+    }
+
+    /**
+     * A declared image that isn't on disk would otherwise surface only as a
+     * blank spot in the PDF — Chromium renders a missing {@code file:} URI
+     * as nothing, without failing the build.
+     */
+    private static String requireImage(Path bookRoot, Path bookYaml, String key, String image) {
+        if (image == null) return null;
+        Path resolved = bookRoot.resolve(image);
+        if (!Files.isRegularFile(resolved)) {
+            throw new ConfigParseException(bookYaml + ": '" + key + "' image '" + image
+                    + "' not found (looked at " + resolved + ")");
+        }
+        return image;
     }
 
     @SuppressWarnings("unchecked")

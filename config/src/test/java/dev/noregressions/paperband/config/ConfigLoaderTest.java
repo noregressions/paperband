@@ -1,7 +1,7 @@
 package dev.noregressions.paperband.config;
 
 import dev.noregressions.paperband.model.BookConfig;
-import dev.noregressions.paperband.model.Part;
+import dev.noregressions.paperband.model.Section;
 import dev.noregressions.paperband.model.RenderContext;
 import dev.noregressions.paperband.render.Margins;
 import org.junit.jupiter.api.Test;
@@ -674,14 +674,14 @@ class ConfigLoaderTest {
     }
 
     @Nested
-    @DisplayName("Declared parts")
-    class DeclaredParts {
+    @DisplayName("Declared sections")
+    class DeclaredSections {
 
         @Test
-        void should_parse_parts_with_titles_and_folders(@TempDir Path tempDir) throws IOException {
+        void should_parse_sections_with_titles_and_folders(@TempDir Path tempDir) throws IOException {
             createYamlFile(tempDir.resolve("paperband.yaml"), """
                 title: "Test Book"
-                parts:
+                sections:
                   - title: "Foundations"
                     folders:
                       - 01-getting-started
@@ -693,33 +693,33 @@ class ConfigLoaderTest {
             Path mdFile = tempDir.resolve("test.md");
             Files.createFile(mdFile);
 
-            List<Part> parts = new ConfigLoader().load(mdFile, "pdf", "A4").book().parts();
+            List<Section> sections = new ConfigLoader().load(mdFile, "pdf", "A4").book().sections();
 
-            assertEquals(2, parts.size());
-            assertEquals("Foundations", parts.get(0).title());
-            assertEquals(List.of("01-getting-started", "02-authoring"), parts.get(0).folders());
-            assertEquals("Reference", parts.get(1).title());
-            assertEquals(List.of("03-configuration"), parts.get(1).folders());
+            assertEquals(2, sections.size());
+            assertEquals("Foundations", sections.get(0).title());
+            assertEquals(List.of("01-getting-started", "02-authoring"), sections.get(0).folders());
+            assertEquals("Reference", sections.get(1).title());
+            assertEquals(List.of("03-configuration"), sections.get(1).folders());
         }
 
         @Test
-        void should_default_part_id_to_a_slug_of_the_title(@TempDir Path tempDir) throws IOException {
+        void should_default_section_id_to_a_slug_of_the_title(@TempDir Path tempDir) throws IOException {
             createYamlFile(tempDir.resolve("paperband.yaml"), """
-                parts:
+                sections:
                   - title: "Getting Started & Beyond"
                     folders: [intro]
                 """);
             Path mdFile = tempDir.resolve("test.md");
             Files.createFile(mdFile);
 
-            List<Part> parts = new ConfigLoader().load(mdFile, "pdf", "A4").book().parts();
-            assertEquals("getting-started-beyond", parts.get(0).id());
+            List<Section> sections = new ConfigLoader().load(mdFile, "pdf", "A4").book().sections();
+            assertEquals("getting-started-beyond", sections.get(0).id());
         }
 
         @Test
-        void should_honour_an_explicit_part_id(@TempDir Path tempDir) throws IOException {
+        void should_honour_an_explicit_section_id(@TempDir Path tempDir) throws IOException {
             createYamlFile(tempDir.resolve("paperband.yaml"), """
-                parts:
+                sections:
                   - id: ref
                     title: "Reference Material"
                     folders: [config]
@@ -727,14 +727,14 @@ class ConfigLoaderTest {
             Path mdFile = tempDir.resolve("test.md");
             Files.createFile(mdFile);
 
-            List<Part> parts = new ConfigLoader().load(mdFile, "pdf", "A4").book().parts();
-            assertEquals("ref", parts.get(0).id());
+            List<Section> sections = new ConfigLoader().load(mdFile, "pdf", "A4").book().sections();
+            assertEquals("ref", sections.get(0).id());
         }
 
         @Test
-        void should_resolve_a_part_landing_template_preset(@TempDir Path tempDir) throws IOException {
+        void should_resolve_a_section_landing_template_preset(@TempDir Path tempDir) throws IOException {
             createYamlFile(tempDir.resolve("paperband.yaml"), """
-                parts:
+                sections:
                   - title: "Quiet Part"
                     folders: [quiet]
                     landing:
@@ -745,25 +745,68 @@ class ConfigLoaderTest {
             Path mdFile = tempDir.resolve("test.md");
             Files.createFile(mdFile);
 
-            List<Part> parts = new ConfigLoader().load(mdFile, "pdf", "A4").book().parts();
-            assertEquals("site-section-minimal", parts.get(0).landingTemplate());
-            assertNull(parts.get(1).landingTemplate(),
+            List<Section> sections = new ConfigLoader().load(mdFile, "pdf", "A4").book().sections();
+            assertEquals("site-section-minimal", sections.get(0).landingTemplate());
+            assertNull(sections.get(1).landingTemplate(),
                     "no landing key falls through to the book-wide default later");
         }
 
         @Test
-        void should_default_to_no_parts_when_the_key_is_absent(@TempDir Path tempDir) throws IOException {
+        void should_let_a_section_opt_out_of_its_landing_page(@TempDir Path tempDir) throws IOException {
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
+                sections:
+                  - title: "Fronted"
+                    folders: [fronted]
+                  - title: "Quiet"
+                    folders: [quiet]
+                    landing: false
+                  - title: "Explicit"
+                    folders: [explicit]
+                    landing: true
+                """);
+            Path mdFile = tempDir.resolve("test.md");
+            Files.createFile(mdFile);
+
+            List<Section> sections = new ConfigLoader().load(mdFile, "pdf", "A4").book().sections();
+            assertTrue(sections.get(0).landingPage(), "on by default");
+            assertFalse(sections.get(1).landingPage(),
+                    "landing: false keeps the grouping but skips the section's page");
+            assertTrue(sections.get(2).landingPage(), "landing: true is the explicit default");
+        }
+
+        @Test
+        void should_reject_a_bare_scalar_landing_value(@TempDir Path tempDir) throws IOException {
+            // `landing: minimal` was silently ignored before — almost certainly
+            // a template the author meant to declare.
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
+                sections:
+                  - title: "Oops"
+                    folders: [oops]
+                    landing: minimal
+                """);
+            Path mdFile = tempDir.resolve("test.md");
+            Files.createFile(mdFile);
+
+            ConfigParseException e = assertThrows(ConfigParseException.class,
+                    () -> new ConfigLoader().load(mdFile, "pdf", "A4"));
+            assertTrue(e.getMessage().contains("landing"), e.getMessage());
+            assertTrue(e.getMessage().contains("template"),
+                    "the message shows the shape the author probably wanted: " + e.getMessage());
+        }
+
+        @Test
+        void should_default_to_no_sections_when_the_key_is_absent(@TempDir Path tempDir) throws IOException {
             createYamlFile(tempDir.resolve("paperband.yaml"), "title: \"Plain Book\"\n");
             Path mdFile = tempDir.resolve("test.md");
             Files.createFile(mdFile);
 
-            assertEquals(List.of(), new ConfigLoader().load(mdFile, "pdf", "A4").book().parts());
+            assertEquals(List.of(), new ConfigLoader().load(mdFile, "pdf", "A4").book().sections());
         }
 
         @Test
-        void should_reject_duplicate_part_ids(@TempDir Path tempDir) throws IOException {
+        void should_reject_duplicate_section_ids(@TempDir Path tempDir) throws IOException {
             createYamlFile(tempDir.resolve("paperband.yaml"), """
-                parts:
+                sections:
                   - title: "Same Name"
                     folders: [a]
                   - title: "Same Name"
@@ -774,14 +817,14 @@ class ConfigLoaderTest {
 
             ConfigParseException e = assertThrows(ConfigParseException.class,
                     () -> new ConfigLoader().load(mdFile, "pdf", "A4"));
-            assertTrue(e.getMessage().contains("duplicate part id"), e.getMessage());
+            assertTrue(e.getMessage().contains("duplicate section id"), e.getMessage());
         }
 
         @Test
-        void should_reject_a_folder_claimed_by_two_parts(@TempDir Path tempDir) throws IOException {
+        void should_reject_a_folder_claimed_by_two_sections(@TempDir Path tempDir) throws IOException {
             // Ambiguous: the folder's cards would have no single group to report.
             createYamlFile(tempDir.resolve("paperband.yaml"), """
-                parts:
+                sections:
                   - title: "One"
                     folders: [shared]
                   - title: "Two"
@@ -792,13 +835,13 @@ class ConfigLoaderTest {
 
             ConfigParseException e = assertThrows(ConfigParseException.class,
                     () -> new ConfigLoader().load(mdFile, "pdf", "A4"));
-            assertTrue(e.getMessage().contains("claimed by both part"), e.getMessage());
+            assertTrue(e.getMessage().contains("claimed by both section"), e.getMessage());
         }
 
         @Test
-        void should_reject_a_part_with_no_folders(@TempDir Path tempDir) throws IOException {
+        void should_reject_a_section_with_no_folders(@TempDir Path tempDir) throws IOException {
             createYamlFile(tempDir.resolve("paperband.yaml"), """
-                parts:
+                sections:
                   - title: "Empty"
                 """);
             Path mdFile = tempDir.resolve("test.md");
@@ -810,9 +853,9 @@ class ConfigLoaderTest {
         }
 
         @Test
-        void should_reject_a_part_with_neither_title_nor_id(@TempDir Path tempDir) throws IOException {
+        void should_reject_a_section_with_neither_title_nor_id(@TempDir Path tempDir) throws IOException {
             createYamlFile(tempDir.resolve("paperband.yaml"), """
-                parts:
+                sections:
                   - folders: [orphan]
                 """);
             Path mdFile = tempDir.resolve("test.md");
@@ -825,14 +868,67 @@ class ConfigLoaderTest {
         }
 
         @Test
-        void should_reject_a_non_list_parts_key(@TempDir Path tempDir) throws IOException {
-            createYamlFile(tempDir.resolve("paperband.yaml"), "parts: nonsense\n");
+        void should_reject_a_scalar_sections_key(@TempDir Path tempDir) throws IOException {
+            createYamlFile(tempDir.resolve("paperband.yaml"), "sections: nonsense\n");
             Path mdFile = tempDir.resolve("test.md");
             Files.createFile(mdFile);
 
             ConfigParseException e = assertThrows(ConfigParseException.class,
                     () -> new ConfigLoader().load(mdFile, "pdf", "A4"));
-            assertTrue(e.getMessage().contains("'parts' must be a list"), e.getMessage());
+            assertTrue(e.getMessage().contains("'sections' must be a list"), e.getMessage());
+        }
+
+        @Test
+        void should_reject_a_non_list_declare_key(@TempDir Path tempDir) throws IOException {
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
+                sections:
+                  declare: nonsense
+                """);
+            Path mdFile = tempDir.resolve("test.md");
+            Files.createFile(mdFile);
+
+            ConfigParseException e = assertThrows(ConfigParseException.class,
+                    () -> new ConfigLoader().load(mdFile, "pdf", "A4"));
+            assertTrue(e.getMessage().contains("'sections' must declare a list"), e.getMessage());
+        }
+
+        @Test
+        void should_parse_the_map_form_with_landing_default_and_declared_sections(
+                @TempDir Path tempDir) throws IOException {
+            // The map form is for books that need both at once: the book-wide
+            // landing default AND declared sections.
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
+                sections:
+                  landing:
+                    template: minimal
+                  declare:
+                    - title: "Foundations"
+                      folders: [intro]
+                """);
+            Path mdFile = tempDir.resolve("test.md");
+            Files.createFile(mdFile);
+
+            var book = new ConfigLoader().load(mdFile, "pdf", "A4").book();
+            assertEquals("site-section-minimal", book.sectionLandingTemplate());
+            assertEquals(1, book.sections().size());
+            assertEquals("foundations", book.sections().get(0).id());
+        }
+
+        @Test
+        void should_reject_the_old_parts_key_by_naming_the_rename(@TempDir Path tempDir)
+                throws IOException {
+            createYamlFile(tempDir.resolve("paperband.yaml"), """
+                parts:
+                  - title: "Foundations"
+                    folders: [intro]
+                """);
+            Path mdFile = tempDir.resolve("test.md");
+            Files.createFile(mdFile);
+
+            ConfigParseException e = assertThrows(ConfigParseException.class,
+                    () -> new ConfigLoader().load(mdFile, "pdf", "A4"));
+            assertTrue(e.getMessage().contains("renamed"), e.getMessage());
+            assertTrue(e.getMessage().contains("sections"), e.getMessage());
         }
     }
 

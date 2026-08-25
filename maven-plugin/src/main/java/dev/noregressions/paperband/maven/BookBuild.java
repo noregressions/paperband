@@ -12,7 +12,7 @@ import dev.noregressions.paperband.maven.pdf.PageRefs;
 import dev.noregressions.paperband.maven.pdf.Watermark;
 import dev.noregressions.paperband.maven.pdf.WatermarkApplier;
 import dev.noregressions.paperband.model.Card;
-import dev.noregressions.paperband.model.Part;
+import dev.noregressions.paperband.model.Section;
 import dev.noregressions.paperband.model.RenderContext;
 import dev.noregressions.paperband.predicate.PredicateEvaluator;
 import dev.noregressions.paperband.render.HtmlInput;
@@ -61,7 +61,7 @@ final class BookBuild {
     /** Single card file, or a book directory to walk. Mutually exclusive with {@link #plan}. */
     Path input;
 
-    /** A POM-declared book: root plus the part specs selecting its cards. */
+    /** A POM-declared book: root plus the section specs selecting its cards. */
     PlannedBook plan;
 
     /** Output PDF. */
@@ -70,10 +70,13 @@ final class BookBuild {
     /**
      * A book whose card list was decided by pattern rather than by walking.
      *
-     * @param root  the book root every pattern resolves against
-     * @param specs the declared parts, in emission order
+     * @param root         the book root every pattern resolves against
+     * @param specs        the declared sections, in emission order
+     * @param tocAfterSpec how many specs precede the {@code <toc/>} marker
+     *                     placing the printed table of contents, or null when
+     *                     the declaration carries no marker
      */
-    record PlannedBook(Path root, List<BookPlan.PartSpec> specs) {}
+    record PlannedBook(Path root, List<BookPlan.SectionSpec> specs, Integer tocAfterSpec) {}
 
     // ---- how to build it ----
 
@@ -187,7 +190,7 @@ final class BookBuild {
 
     private void buildBook() throws Exception {
         BookSource.Resolved source = BookSource.of(input, plan, target, log);
-        renderBook(source.root(), source.cardFiles(), source.parts());
+        renderBook(source.root(), source.cardFiles(), source.sections(), source.tocCardIndex());
     }
 
     /**
@@ -197,12 +200,16 @@ final class BookBuild {
      * @param bookRoot      directory the build was rooted at — the PDF's base URI
      *                      for relative asset references
      * @param cardFiles     ordered card files, however they were selected
-     * @param declaredParts parts to declare on the book, replacing anything the
+     * @param declaredSections sections to declare on the book, replacing anything the
      *                      root {@code paperband.yaml} declared; empty to leave
-     *                      the yaml's own {@code parts:} alone
+     *                      the yaml's own {@code sections:} alone
+     * @param tocCardIndex  index into {@code cardFiles} before which the printed
+     *                      table of contents renders, or null when the build
+     *                      declares no position (yaml {@code vars.toc} then
+     *                      decides whether one renders at all, up front)
      */
-    private void renderBook(Path bookRoot, List<Path> cardFiles, List<Part> declaredParts)
-            throws Exception {
+    private void renderBook(Path bookRoot, List<Path> cardFiles, List<Section> declaredSections,
+            Integer tocCardIndex) throws Exception {
         ConfigLoader configLoader = new ConfigLoader();
         // Constructed once the book root is known, on the first card: ids for
         // cards that declare none are derived from their path relative to it.
@@ -234,9 +241,10 @@ final class BookBuild {
 
         CardLoading.requireUniqueIds(cards, bookRoot);
 
-        Selection selected = applySelection(cards, contexts);
+        Selection selected = applySelection(cards, contexts, tocCardIndex);
         cards = selected.cards();
         contexts = selected.contexts();
+        tocCardIndex = selected.tocCardIndex();
 
         // Book-level config declared in the POM layers over the root yaml's,
         // field by field. A declaration wins over a default: the POM is the
@@ -246,20 +254,21 @@ final class BookBuild {
                     bookDeclaration.mergeInto(bookCtx.book(), bookCtx.book().bookRoot()));
         }
 
-        // Declared parts replace whatever the root yaml said: two sources for
+        // Declared sections replace whatever the root yaml said: two sources for
         // one book's top-level structure can only disagree.
-        if (!declaredParts.isEmpty()) {
-            if (!bookCtx.book().parts().isEmpty()) {
-                log.warn("<book><parts> overrides the 'parts:' declared in "
+        if (!declaredSections.isEmpty()) {
+            if (!bookCtx.book().sections().isEmpty()) {
+                log.warn("<book><sections> overrides the 'sections:' declared in "
                         + bookCtx.book().bookRoot().resolve("paperband.yaml"));
             }
-            bookCtx = bookCtx.withBook(bookCtx.book().withParts(declaredParts));
+            bookCtx = bookCtx.withBook(bookCtx.book().withSections(declaredSections));
         }
 
         ThemeBundle theme = Themes.resolve(themeName, bookCtx.book().theme(), themeDir);
         LayoutEngine layout = new LayoutEngine(bookCtx.book().bookRoot(), theme);
         layout.setExtraCss(stylesheets);
         if (editionModel != null) layout.setEdition(editionModel);
+        layout.setTocAt(tocCardIndex);
         String html = layoutOverride != null
                 ? layout.renderBook(cards, contexts, bookCtx, layoutOverride)
                 : layout.renderBook(cards, contexts, bookCtx);
@@ -325,7 +334,8 @@ final class BookBuild {
 
     // ---- selection ----
 
-    private record Selection(List<Card> cards, List<RenderContext> contexts) {}
+    private record Selection(List<Card> cards, List<RenderContext> contexts,
+                             Integer tocCardIndex) {}
 
     /**
      * Narrow the book to the cards a selection asks for. Union semantics: the
@@ -337,18 +347,19 @@ final class BookBuild {
      * fallback — and compares as strings so a numeric yaml value ({@code tier: 1})
      * matches its config spelling.
      */
-    private Selection applySelection(List<Card> cards, List<RenderContext> contexts)
-            throws MojoFailureException {
+    private Selection applySelection(List<Card> cards, List<RenderContext> contexts,
+            Integer tocCardIndex) throws MojoFailureException {
         List<String> inclusion = selectCards == null ? List.of() : selectCards;
         boolean hasWhere = selectWhere != null && !selectWhere.isBlank();
         boolean hasQuery = (selectClauses != null && !selectClauses.isEmpty()) || hasWhere;
         if (!hasQuery && inclusion.isEmpty()) {
-            return new Selection(cards, contexts);
+            return new Selection(cards, contexts, tocCardIndex);
         }
 
         PredicateEvaluator predicate = hasWhere ? new PredicateEvaluator() : null;
         List<Card> keptCards = new ArrayList<>();
         List<RenderContext> keptContexts = new ArrayList<>();
+        int keptBeforeToc = 0;
         for (int i = 0; i < cards.size(); i++) {
             boolean keep = inclusion.contains(cards.get(i).id());
             if (!keep && hasQuery) {
@@ -377,6 +388,10 @@ final class BookBuild {
             if (keep) {
                 keptCards.add(cards.get(i));
                 keptContexts.add(contexts.get(i));
+                // The TOC position survives selection as "before the first
+                // kept card that followed the marker": kept cards ahead of
+                // the marker are all that still precede the contents page.
+                if (tocCardIndex != null && i < tocCardIndex) keptBeforeToc++;
             }
         }
 
@@ -385,7 +400,8 @@ final class BookBuild {
             throw new MojoFailureException("select " + description + " matched no cards");
         }
         log.info("Selected " + keptCards.size() + " of " + cards.size() + " cards " + description);
-        return new Selection(keptCards, keptContexts);
+        return new Selection(keptCards, keptContexts,
+                tocCardIndex == null ? null : keptBeforeToc);
     }
 
     private String describeSelection(List<String> inclusion) {

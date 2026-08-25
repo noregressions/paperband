@@ -79,7 +79,9 @@ class BookDeclarationTest {
         }
 
         @Test
-        void should_declare_pages_as_an_image_or_a_template(@TempDir Path root) {
+        void should_declare_pages_as_an_image_or_a_template(@TempDir Path root) throws java.io.IOException {
+            java.nio.file.Files.createDirectories(root.resolve("covers"));
+            java.nio.file.Files.writeString(root.resolve("covers/front.png"), "");
             BookLayout book = new BookLayout();
             set(book, "cover", pageMatter("covers/front.png", null));
             set(book, "footer", pageMatter(null, "layouts/footer.html"));
@@ -129,12 +131,12 @@ class BookDeclarationTest {
             assertFalse(configOnly.declaresCardSelection(),
                     "config without patterns means: walk the root for cards");
 
-            BookLayout withParts = new BookLayout();
-            PartConfig part = new PartConfig();
-            set(part, "title", "Setup");
-            set(part, "includes", List.of("setup/**/*.md"));
-            set(withParts, "parts", List.of(part));
-            assertTrue(withParts.declaresCardSelection());
+            BookLayout withSections = new BookLayout();
+            SectionConfig section = new SectionConfig();
+            set(section, "title", "Setup");
+            set(section, "includes", List.of("setup/**/*.md"));
+            set(withSections, "sections", List.of(section));
+            assertTrue(withSections.declaresCardSelection());
         }
     }
 
@@ -187,17 +189,30 @@ class BookDeclarationTest {
         }
 
         @Test
-        void should_reject_fullPage_on_anything_but_the_cover() {
+        void should_reject_fullPage_on_anything_but_the_cover(@TempDir Path root) throws java.io.IOException {
+            java.nio.file.Files.writeString(root.resolve("x.png"), "");
+
             PageMatterConfig back = pageMatter("x.png", null);
             set(back, "fullPage", Boolean.TRUE);
 
             IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
-                    () -> back.toPageMatter(Path.of("."), "back"));
+                    () -> back.toPageMatter(root, "back"));
             assertTrue(e.getMessage().contains("fullPage"), e.getMessage());
 
             PageMatterConfig cover = pageMatter("x.png", null);
             set(cover, "fullPage", Boolean.TRUE);
-            assertTrue(cover.toPageMatter(Path.of("."), "cover").fullPage());
+            assertTrue(cover.toPageMatter(root, "cover").fullPage());
+        }
+
+        @Test
+        void should_reject_an_image_that_is_not_on_disk(@TempDir Path root) {
+            // A missing image would otherwise render as a silent blank in the
+            // PDF — Chromium doesn't fail on a dead file: URI.
+            PageMatterConfig cover = pageMatter("covers/frnt.png", null);
+
+            IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                    () -> cover.toPageMatter(root, "cover"));
+            assertTrue(e.getMessage().contains("frnt.png"), e.getMessage());
         }
 
         @Test

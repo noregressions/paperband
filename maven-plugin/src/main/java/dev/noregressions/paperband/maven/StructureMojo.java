@@ -22,12 +22,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Dumps the document structure — cover, dividers, sections and parts, cards in
+ * Dumps the document structure — cover, dividers, sections, cards in
  * order, and each card's block tree — as an indented outline, without
  * rendering anything.
  *
  * <p>The way to check what a declaration actually produced: which cards a
- * {@code <book><parts>} pattern claimed, what order they come in, where the
+ * {@code <book><sections>} pattern claimed, what order they come in, where the
  * dividers land. Because the model is a flat ordered walk with dividers
  * <em>derived</em> from it, interleaved axis values produce repeated DIVIDER
  * lines here — matching the repeated divider pages the PDF would get.
@@ -50,7 +50,7 @@ public class StructureMojo extends AbstractPaperbandMojo {
     /**
      * Describe a POM-declared book instead of a directory tree — the same
      * {@code <book>} element {@code build} takes, so the outline shows exactly
-     * which cards the patterns claimed, in which part, in what order.
+     * which cards the patterns claimed, in which section, in what order.
      */
     @Parameter
     private BookLayout book;
@@ -129,16 +129,16 @@ public class StructureMojo extends AbstractPaperbandMojo {
         return LayoutEngine.describeCard(card);
     }
 
-    /** The {@code <book>} element as a resolved card list plus its parts. */
+    /** The {@code <book>} element as a resolved card list plus its sections. */
     private BookSource.Resolved plannedBook() throws MojoExecutionException, MojoFailureException {
-        List<dev.noregressions.paperband.config.BookPlan.PartSpec> specs;
+        List<dev.noregressions.paperband.config.BookPlan.SectionSpec> specs;
         try {
             specs = book.toSpecs();
         } catch (IllegalArgumentException e) {
             throw new MojoExecutionException(e.getMessage(), e);
         }
         Path root = book.getRoot() != null ? resolve(book.getRoot()) : basedir();
-        return BookSource.plan(root, specs, target, getLog());
+        return BookSource.plan(root, specs, book.tocAfterSpec(), target, getLog());
     }
 
     /**
@@ -168,14 +168,14 @@ public class StructureMojo extends AbstractPaperbandMojo {
         }
         CardLoading.requireUniqueIds(cards, bookCtx.book().bookRoot());
 
-        // Book-level config and parts declared in the POM, exactly as in a
+        // Book-level config and sections declared in the POM, exactly as in a
         // build — otherwise the outline would describe a different book from
         // the one the PDF gets.
         if (book != null && book.declaresBookConfig()) {
             bookCtx = bookCtx.withBook(book.mergeInto(bookCtx.book(), bookCtx.book().bookRoot()));
         }
-        if (!source.parts().isEmpty()) {
-            bookCtx = bookCtx.withBook(bookCtx.book().withParts(source.parts()));
+        if (!source.sections().isEmpty()) {
+            bookCtx = bookCtx.withBook(bookCtx.book().withSections(source.sections()));
         }
         return LayoutEngine.describeBook(cards, contexts, bookCtx);
     }

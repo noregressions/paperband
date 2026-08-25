@@ -44,9 +44,9 @@ public record RenderContext(
     /**
      * A copy of this context carrying a different {@link BookConfig}, leaving
      * every per-card field alone. Used where the book-level config is
-     * amended after the cascade has already run — e.g. injecting parts
+     * amended after the cascade has already run — e.g. injecting sections
      * declared outside the root {@code paperband.yaml} (see
-     * {@link BookConfig#withParts}).
+     * {@link BookConfig#withSections}).
      *
      * @param newBook the replacement book config
      * @return a copy carrying {@code newBook}

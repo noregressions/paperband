@@ -15,7 +15,7 @@ oneliner: "Nine goals: build, site, publish, and the inspection goals around the
 | `build` | PDF from a card, a book directory, or a POM-declared book | `process-resources` |
 | `site` | Multi-file static HTML site from the same book | `process-resources` |
 | `publish` | Every edition declared in the book's `publication:` block | `process-resources` |
-| `structure` | Dump the resolved structure — parts, cards, blocks — without rendering | `process-resources` |
+| `structure` | Dump the resolved structure — sections, cards, blocks — without rendering | `process-resources` |
 | `pages` | Page-span report read from a rendered PDF | `verify` |
 | `scan` | One card's parsed frontmatter, blocks and resolved config | *(invoke directly)* |
 | `render` | One HTML file straight to PDF, no card pipeline in the way | *(invoke directly)* |
@@ -97,7 +97,7 @@ so a bound execution can be overridden from the command line without editing the
 
 `<input>` hands a directory to the book walker and lets the folder layout decide the rest —
 see Organising Content for the `paperband.yaml` keys that steer it. `<book>` is the other
-end of that dial: the parts, their titles and their card lists are stated in the POM, and
+end of that dial: the sections, their titles and their card lists are stated in the POM, and
 the cards are selected by glob rather than by where they sit.
 
 ```xml
@@ -105,15 +105,15 @@ the cards are selected by glob rather than by where they sit.
   <output>${project.build.directory}/traces.pdf</output>
   <book>
     <root>${project.basedir}</root>
-    <parts>
-      <part>
+    <sections>
+      <section>
         <title>Execution Traces</title>
         <includes>
           <include>services/*/TRACE.md</include>
         </includes>
         <sort>tier,-id</sort>
-      </part>
-      <part>
+      </section>
+      <section>
         <id>reference</id>
         <title>Reference</title>
         <landingTemplate>minimal</landingTemplate>
@@ -123,45 +123,45 @@ the cards are selected by glob rather than by where they sit.
         <excludes>
           <exclude>docs/draft/**</exclude>
         </excludes>
-      </part>
-      <part>
+      </section>
+      <section>
         <title>Appendix</title>
         <includes>
           <include>appendix/*.md</include>
         </includes>
         <landingPage>false</landingPage>
-      </part>
-    </parts>
+      </section>
+    </sections>
   </book>
 </configuration>
 ```
 
-That builds a three-part book: one card pulled out of each service directory under a single
+That builds a three-section book: one card pulled out of each service directory under a single
 "Execution Traces" divider, then everything under `docs/` (minus drafts) under "Reference",
 then the appendix cards as a group with no divider of their own. No directory layout
-expresses that first part — the trace cards' own folders say nothing about the grouping.
+expresses that first section — the trace cards' own folders say nothing about the grouping.
 
 | Element | Notes |
 |---|---|
 | `root` | Book root. Patterns resolve against it, and its `paperband.yaml` still supplies the title, css, theme, vars, cover and footer. Defaults to the module basedir. |
-| `parts` | Ordered list of `part` elements. |
-| `part/id` | Part id — becomes `<id>.html` on the static site. Defaults to a slug of `title`. |
-| `part/title` | Shown on the divider and landing page. |
-| `part/landingTemplate` | Preset name or template path, exactly as a section folder's own `landing.template`. |
-| `part/where` | Pebble predicate over `target`; false skips the whole part. |
-| `part/includes` | Glob patterns selecting the part's cards, in emission order. |
-| `part/excludes` | Glob patterns removing what an include matched. |
-| `part/sort` | Comma-separated frontmatter fields, `-` for descending — the `sort:` key's semantics. |
-| `part/landingPage` | Whether the part gets a page of its own — `true` by default. See below. |
+| `sections` | Ordered list of `section` elements. |
+| `section/id` | Section id — becomes `<id>.html` on the static site. Defaults to a slug of `title`. |
+| `section/title` | Shown on the divider and landing page. |
+| `section/landingTemplate` | Preset name or template path, exactly as a section folder's own `landing.template`. |
+| `section/where` | Pebble predicate over `target`; false skips the whole section. |
+| `section/includes` | Glob patterns selecting the section's cards, in emission order. |
+| `section/excludes` | Glob patterns removing what an include matched. |
+| `section/sort` | Comma-separated frontmatter fields, `-` for descending — the `sort:` key's semantics. |
+| `section/landingPage` | Whether the section gets a page of its own — `true` by default. See below. |
 
-Order is entirely declared: parts in order, then each part's `include` patterns in order,
+Order is entirely declared: sections in order, then each section's `include` patterns in order,
 then matches within one pattern by `sort` or, with no `sort`, by path. A file is emitted
-once — the first part to match it claims it — so overlapping patterns narrow rather than
+once — the first section to match it claims it — so overlapping patterns narrow rather than
 duplicate.
 
-Two parts may draw *different* files out of the *same* folder, which is the thing
-`parts:` in a `paperband.yaml` can't express: a yaml part claims whole folders, while a
-POM-declared part claims the individual cards its patterns matched.
+Two sections may draw *different* files out of the *same* folder, which is the thing
+`sections:` in a `paperband.yaml` can't express: a yaml declaration claims whole folders, while a
+POM-declared section claims the individual cards its patterns matched.
 
 ## Declaring the whole book
 
@@ -198,12 +198,12 @@ appearance in CSS**:
         </values>
       </axis>
     </axes>
-    <parts>
-      <part>
+    <sections>
+      <section>
         <title>Scenarios</title>
         <includes><include>scenarios/**/TRACE.md</include></includes>
-      </part>
-    </parts>
+      </section>
+    </sections>
   </book>
 </configuration>
 ```
@@ -217,10 +217,10 @@ sensible owner for a config file sitting among the output.
 | `book/title` | Book title, for the cover and the PDF metadata. |
 | `book/cover`, `book/back` | A full-page `<image>`, a `<template>`, and/or the cover's own text: `<text>true</text>` overlays the standard title/subtitle/series/author block on the image, and `<title>`, `<subtitle>`, `<series>`, `<author>` elements override individual lines (each inherits the book's value when unset). `<fullPage>true</fullPage>` (cover only) fills the sheet trim edge to trim edge — the first page loses its margins, the image scales to cover it, and any running header/footer is suppressed on that page. Templates live in the book's `layouts/` — see below. |
 | `book/header`, `book/footer` | Running fixtures, same `<image>`/`<template>` shape. |
-| `book/sectionLandingTemplate` | Default landing/divider template for parts and sections that name none — a preset (`minimal`) or a path. |
+| `book/sectionLandingTemplate` | Default landing/divider template for sections that name none — a preset (`minimal`) or a path. |
 | `book/author` | The book's author, for the cover. |
 | `book/authors` | Several authors: `<authors><author>A</author><author>B</author></authors>`. Templates get `book.authors` as a list and `book.author` rendered as "A and B", so a theme written for one author still shows both. Declaring both `<author>` and `<authors>` is an error. |
-| `book/toc` | `true` renders a printed table of contents after the cover, with real page numbers from a second render pass. See TOC and Index. |
+| `book/sections/toc` | An empty `<toc/>` between `<section>` elements renders the printed table of contents at that point in the book — first for the traditional spot up front, last for contents-at-the-back. It always lists the whole book, with real page numbers from a second render pass, and at most one is allowed (two markers fail the build). See TOC and Index. |
 | `book/index` | `true` renders a back-of-book index from each card's `index:` frontmatter terms; `auto` additionally extracts each card's distinctive terms from its text. Anything else is an error. See TOC and Index. |
 | `book/vars` | Book-level template vars (`subtitle`, `series`, …). Flat strings only — see Watch Out. |
 | `book/axes` | Declared axes: `name` (the frontmatter key cards use), `title`, and `values` of `id`/`label`/`color`. Declared axes replace a yaml `axes:` wholesale. |
@@ -229,7 +229,7 @@ An axis value's `<id>` is a string, where a yaml one keeps its native type. That
 nothing: every comparison between an axis value and a card's frontmatter runs both sides
 through `String.valueOf` first, so `<id>1</id>` matches a card declaring `tier: 1`.
 
-`<book>` doesn't have to select cards. Declare config with no `<parts>` or `<includes>` and
+`<book>` doesn't have to select cards. Declare config with no `<sections>` or `<includes>` and
 the cards come from walking `<root>`, exactly as `<input>` would — so a book can take its
 title and cover from the POM while keeping its structure in the directory tree.
 
@@ -250,7 +250,7 @@ So with no theme, drop a file in `layouts/` named after whatever you want to rep
 | `book.html` | the whole book shell — `<html>`, scaffold CSS, the card loop |
 | `_card-body.html` | how one card renders |
 | `_block-section.html` | how one block renders, at every nesting depth |
-| `_section-divider.html` | the part/section divider page |
+| `_section-divider.html` | the section divider page |
 | `_book-cover.html`, `_book-back.html` | cover and back matter |
 | `_tier-divider.html` | axis-value divider pages |
 | anything else | any bundled template, by its own name |
@@ -300,7 +300,7 @@ corrections".
 Two rules, and they deliberately differ:
 
 - **Anything inside `<book>` wins over the yaml.** It's a declaration, not a default, and
-  the POM is the file you just edited. Declared `<parts>` also replace a yaml `parts:`,
+  the POM is the file you just edited. Declared `<sections>` also replace a yaml `sections:`,
   with a warning.
 - **Build geometry outside `<book>` seeds the base.** `<margins>` and `<pageSize>` set the
   starting point and a `vars.page` block in the yaml can still tune it, matching how
@@ -325,14 +325,14 @@ by nature:
   naming a yaml file matches nothing — and the build now says so rather than leaving you to
   wonder, naming the files and the reason.
 
-## Part pages
+## Section pages
 
-Every named part gets a page of its own, generated for you: a full-page divider before its
+Every named section gets a page of its own, generated for you: a full-page divider before its
 first card in the PDF, and an `<id>.html` landing page on the static site — the same
 treatment a discovered section folder gets, titled from `<title>` and rendered by
 `<landingTemplate>`. That's the default; nothing needs declaring to get it.
 
-The divider takes a sheet to itself — forced page break on both sides, the part title and
+The divider takes a sheet to itself — forced page break on both sides, the section title and
 its table of contents centred on the page — and stands to the full printable height, which
 it reads from `--pw-content-height` rather than any fixed page size, so it stays one sheet
 at every page size and margin setting. Themes restyle it through the `.section-divider`
@@ -340,34 +340,34 @@ class (the built-in look is deliberately plain: sections have no colour concept 
 axis values do). For a divider showing the title alone, dead centre with no card count or
 contents list, use `<landingTemplate>minimal</landingTemplate>`.
 
-Set `<landingPage>false</landingPage>` on a part to suppress it:
+Set `<landingPage>false</landingPage>` on a section to suppress it:
 
 ```xml
-<part>
+<section>
   <title>Appendix</title>
   <includes>
     <include>appendix/*.md</include>
   </includes>
   <landingPage>false</landingPage>
-</part>
+</section>
 ```
 
-The part still exists — it claims its cards, orders them, and labels the group in the
+The section still exists — it claims its cards, orders them, and labels the group in the
 site's nav, sidebar and index. What goes away is the page itself and every link into it:
-no divider in the PDF (the part's first card follows straight on from the previous part's
+no divider in the PDF (the section's first card follows straight on from the previous section's
 last), no `<id>.html` on the site, and the group's label renders as plain text rather than
 a dead link. The cards keep their own pages either way.
 
 Use it for a run of cards that belongs together for ordering and labelling but doesn't
-warrant a page break — a short appendix, a single-card part, or a part whose first card
+warrant a page break — a short appendix, a single-card section, or a section whose first card
 is already its own title page. For a page that's present but plainer, reach for
 `<landingTemplate>minimal</landingTemplate>` instead: title only, no card count or
 table of contents.
 
-Only a declared part can decline a page. Discovered section folders always get one.
+Only a declared section can decline a page. Discovered section folders always get one.
 
 For the plain "just glob me these files" case, put the patterns straight on `<book>` and
-skip `<parts>`. The cards are emitted in pattern order and grouped by their own folders,
+skip `<sections>`. The cards are emitted in pattern order and grouped by their own folders,
 exactly as walked cards are:
 
 ```xml
@@ -423,13 +423,13 @@ in the plugin alongside the goals that use it.
 fields, so two `<author>` elements set one field twice and the second wins — the build
 succeeds with one of two authors on the cover and nothing said. Any `<book>` element that
 can only be declared once (`<title>`, `<author>`, `<root>`, …) now fails the build when it
-appears twice, naming it. Elements meant to repeat — `<part>`, `<axis>`, `<author>` inside
+appears twice, naming it. Elements meant to repeat — `<section>`, `<axis>`, `<author>` inside
 `<authors>` — are unaffected.
 
-**Axes and parts compete for the divider slot.** A card is never in both an axis group and
-a section, so declaring an axis over cards that also belong to parts replaces the part
+**Axes and declared sections compete for the divider slot.** A card is never in both an axis group and
+a section, so declaring an axis over cards that also belong to declared sections replaces the section
 divider pages with axis dividers — the cards regroup by axis value. Declare axes when the
-axis *is* the structure you want; leave them out when the parts are. Check which you got
+axis *is* the structure you want; leave them out when the sections are. Check which you got
 with `mvn paperband:structure` before rendering.
 
 `<book><vars>` takes **flat string values only**. Maven's configurator maps
@@ -449,7 +449,7 @@ Chromium pre-cached before the goal runs.
 
 ## The site goal
 
-The same book, as a browsable static site — an index, a landing page per part or axis
+The same book, as a browsable static site — an index, a landing page per section or axis
 value, and a page per card with prev/next navigation:
 
 ```xml
@@ -483,7 +483,7 @@ and the site — put it in the plugin's own `<configuration>` and both goals rea
     <book>
       <root>${project.basedir}</root>
       <title>…</title>
-      <parts>…</parts>
+      <sections>…</sections>
     </book>
   </configuration>
 
@@ -555,7 +555,7 @@ mvn paperband:themes -Dpaperband.themeDir=mythemes
 ```
 
 `structure` takes the same `<book>` element `build` does, which is the point of it: the
-outline lists exactly which cards each pattern claimed, in which part, in what order — the
+outline lists exactly which cards each pattern claimed, in which section, in what order — the
 cheapest way to check a declaration without waiting for a render.
 
 `render` is the odd one out: it takes an HTML file and a renderer and nothing else, which

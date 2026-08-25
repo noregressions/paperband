@@ -1,6 +1,6 @@
 ---
 id: organising-content
-oneliner: "Discovery, `order:`, `include:`, and `parts:` — how much of the book's shape you declare."
+oneliner: "Discovery, `order:`, `include:`, and `sections:` — how much of the book's shape you declare."
 ---
 
 # Organising Content
@@ -16,16 +16,16 @@ dial from discovery towards declaration, and because they all answer the same qu
 
 | Key | Meaning | Unlisted files |
 |---|---|---|
-| `parts:` | Titled groups of subfolders | Discovered and appended after the declared ones |
+| `sections:` | Titled groups of subfolders | Discovered and appended after the declared ones |
 | `include:` | **Exclusive** list — only these, in this order | **Excluded** |
 | `order:` | **Additive** list — these first, then the rest | Appended (alphabetically, or per `sort:`) |
 | `sort:` | Order by frontmatter field instead of filename | Sorted, not dropped |
 
-Precedence runs top to bottom: `parts:` wins over `include:`, which wins over `order:`.
+Precedence runs top to bottom: `sections:` wins over `include:`, which wins over `order:`.
 Declaring a losing key alongside a winning one is a mistake rather than a merge, and warns
 on stderr.
 
-Each folder decides independently, so a book root can declare `parts:` over its folders
+Each folder decides independently, so a book root can declare `sections:` over its folders
 while one folder pins an exact card list and its sibling just lets its cards be found.
 
 ## `order:` — declare the front, discover the rest
@@ -61,17 +61,17 @@ list is a decision, not a consequence of what's on disk.
 
 `sort:` has nothing left to order under `include:` and is ignored.
 
-## `parts:` — declare the book's top-level structure
+## `sections:` — declare the book's top-level structure
 
-Without `parts:`, top-level grouping is discovered too: each top-level folder becomes its
-own "section", labelled from that folder's own `title:`. `parts:` instead names several
+Without `sections:`, top-level grouping is discovered too: each top-level folder becomes its
+own section, labelled from that folder's own `title:`. `sections:` instead names several
 folders and gives the group one title, so a single divider page fronts a run of folders
 that belong together:
 
 ```yaml
 # book root paperband.yaml
 title: "My Book"
-parts:
+sections:
   - title: "Foundations"
     folders:
       - 01-getting-started
@@ -84,17 +84,29 @@ parts:
       template: minimal
 ```
 
-A part behaves as one group everywhere a discovered section would: one PDF divider page,
+A declared section behaves as one group everywhere a discovered one would: one PDF divider page,
 one site landing page (`<id>.html`), one nav and sidebar entry. `id` defaults to a slug of
 the title (`"Foundations"` → `foundations`); declare it explicitly when you want a stabler
 URL than the title gives. `landing.template` accepts the same presets and paths a section
 folder's own override does (see Book Configuration).
 
-Part order also drives folder order, ahead of any unclaimed content. A `where:` on a part
+A declared section can also opt out of having a page at all with `landing: false` — it still
+groups and orders its folders, and still labels its cards in the nav and sidebar, but no
+PDF divider fronts its first card and no `<id>.html` is written (the Maven plugin's
+equivalent is `<section><landingPage>false</landingPage></section>`):
+
+```yaml
+sections:
+  - title: "Appendix"
+    folders: [99-appendix]
+    landing: false
+```
+
+Declaration order also drives folder order, ahead of any unclaimed content. A `where:` on a section
 skips every folder it claims, the same way it works on an `order:` entry:
 
 ```yaml
-parts:
+sections:
   - title: "Interactive"
     where: "target == 'web'"
     folders: [demos]
@@ -107,7 +119,7 @@ cards — the root says which folders group together, each folder decides how mu
 own content it spells out:
 
 ```
-paperband.yaml            parts: → Foundations [01-getting-started, 02-authoring]
+paperband.yaml            sections: → Foundations [01-getting-started, 02-authoring]
                                    Reference   [03-configuration]
 01-getting-started/
   paperband.yaml          include: → exactly two cards, quickstart first
@@ -117,31 +129,31 @@ paperband.yaml            parts: → Foundations [01-getting-started, 02-authori
 02-authoring/             ← no yaml: cards discovered alphabetically
   01-cards.md
   02-frontmatter.md
-99-appendix/              ← claimed by no part: still its own discovered section
+99-appendix/              ← claimed by no declaration: still its own discovered section
   01-glossary.md
 ```
 
-Folders no part claims keep behaving as discovered sections, so adding `parts:` doesn't
+Folders no declaration claims keep behaving as discovered sections, so adding `sections:` doesn't
 force you to enumerate the whole book — declare the grouping that matters and leave the
 rest alone.
 
 ## Declaring it outside the book
 
 Every key above lives in a `paperband.yaml`, so the declaration travels with the content.
-The Maven plugin can instead declare the whole structure in the POM and select each part's
+The Maven plugin can instead declare the whole structure in the POM and select each section's
 cards by glob — `services/*/TRACE.md` and friends — which reaches shapes no directory
-layout expresses, like two parts drawing different files out of one folder. See the Maven
+layout expresses, like two sections drawing different files out of one folder. See the Maven
 Plugin page in the Advanced section.
 
 ## Watch Out
 
-Parts and discovered sections share one id namespace, because a part id is used exactly
-where a section id would be. Two parts can't claim the same folder (its cards would have no
-single group to report), and duplicate part ids are rejected — both fail the build at config
+Declared and discovered sections share one id namespace, because a declared id is used exactly
+where a discovered one's would be. Two declarations can't claim the same folder (its cards would have no
+single group to report), and duplicate section ids are rejected — both fail the build at config
 parse time rather than silently reshaping the book.
 
-Part `folders:` are resolved relative to the folder that declares `parts:`, like any
-`order:` entry. In a book that keeps its cards under a `content/` wrapper, put `parts:` in
+A declared section's `folders:` are resolved relative to the folder that declares `sections:`, like any
+`order:` entry. In a book that keeps its cards under a `content/` wrapper, put `sections:` in
 `content/paperband.yaml`.
 
 ## Check

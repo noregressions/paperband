@@ -32,23 +32,23 @@ class BookLayoutTest {
         }
     }
 
-    private static PartConfig part(String title, String include) {
-        PartConfig p = new PartConfig();
+    private static SectionConfig section(String title, String include) {
+        SectionConfig p = new SectionConfig();
         set(p, "title", title);
         set(p, "includes", List.of(include));
         return p;
     }
 
     @Test
-    void everyPartGetsItsOwnPageUnlessTheDeclarationOptsOut() {
-        PartConfig setup = part("Introduction and Setup", "setup/**/*.md");
-        PartConfig appendix = part("Appendix", "appendix/*.md");
+    void everySectionGetsItsOwnPageUnlessTheDeclarationOptsOut() {
+        SectionConfig setup = section("Introduction and Setup", "setup/**/*.md");
+        SectionConfig appendix = section("Appendix", "appendix/*.md");
         set(appendix, "landingPage", false);
 
         BookLayout book = new BookLayout();
-        set(book, "parts", List.of(setup, appendix));
+        set(book, "sections", List.of(setup, appendix));
 
-        List<BookPlan.PartSpec> specs = book.toSpecs();
+        List<BookPlan.SectionSpec> specs = book.toSpecs();
 
         assertEquals(2, specs.size());
         assertTrue(specs.get(0).landingPage(), "generation is on by default");
@@ -64,21 +64,21 @@ class BookLayoutTest {
         set(book, "excludes", List.of("scenarios/wip/**"));
         set(book, "sort", "tier, -id");
 
-        List<BookPlan.PartSpec> specs = book.toSpecs();
+        List<BookPlan.SectionSpec> specs = book.toSpecs();
 
         assertEquals(1, specs.size());
-        BookPlan.PartSpec spec = specs.get(0);
+        BookPlan.SectionSpec spec = specs.get(0);
         assertEquals(List.of("scenarios/**/TRACE.md"), spec.includes());
         assertEquals(List.of("scenarios/wip/**"), spec.excludes());
         assertEquals(List.of("tier", "-id"), spec.sort(), "sort fields split and trimmed");
-        assertNull(spec.id(), "the shorthand is one untitled, anonymous part");
+        assertNull(spec.id(), "the shorthand is one untitled, anonymous section");
         assertNull(spec.title());
     }
 
     @Test
     void bothFormsAtOnceOrNeitherIsRejected() {
         BookLayout both = new BookLayout();
-        set(both, "parts", List.of(part("A", "a/*.md")));
+        set(both, "sections", List.of(section("A", "a/*.md")));
         set(both, "includes", List.of("b/*.md"));
         assertThrows(IllegalArgumentException.class, both::toSpecs);
 
@@ -86,11 +86,11 @@ class BookLayoutTest {
     }
 
     @Test
-    void aPartWithNoIncludesIsRejected() {
-        PartConfig empty = new PartConfig();
+    void aSectionWithNoIncludesIsRejected() {
+        SectionConfig empty = new SectionConfig();
         set(empty, "title", "Nothing");
         BookLayout book = new BookLayout();
-        set(book, "parts", List.of(empty));
+        set(book, "sections", List.of(empty));
 
         assertThrows(IllegalArgumentException.class, book::toSpecs);
     }

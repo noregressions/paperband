@@ -113,7 +113,7 @@ function paperbandToggleSection(btn) {
   {% elseif e.url is not null %}
   <a class="nav-link section-link" href="{{ urlPrefix }}{{ e.url }}">{{ e.label }}</a>
   {% else %}
-  {# Page-less declared part — label only, no link target. #}
+  {# Page-less declared section — label only, no link target. #}
   <span class="nav-link section-link section-link-unlinked">{{ e.label }}</span>
   {% endif %}
   {% endfor %}

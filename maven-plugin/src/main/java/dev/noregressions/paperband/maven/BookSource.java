@@ -2,7 +2,7 @@ package dev.noregressions.paperband.maven;
 
 import dev.noregressions.paperband.config.BookPlan;
 import dev.noregressions.paperband.config.BookWalker;
-import dev.noregressions.paperband.model.Part;
+import dev.noregressions.paperband.model.Section;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -19,7 +19,7 @@ import java.util.List;
  *
  * <p>Two sources, one result: walking a directory tree (folder layout and the
  * {@code order:} keys decide), or resolving a POM-declared {@code <book>} (glob
- * patterns and declared parts decide). Sharing this is what lets
+ * patterns and declared sections decide). Sharing this is what lets
  * {@code structure} describe exactly the book {@code build} would render,
  * declaration and all, instead of only ever describing the walk.
  */
@@ -30,13 +30,17 @@ final class BookSource {
     /**
      * A resolved book.
      *
-     * @param root      the directory the build is rooted at — base URI for
-     *                  relative assets, and the book whose config cascade applies
-     * @param cardFiles the ordered card files
-     * @param parts     declared parts grouping them, empty for a walked book
-     *                  (whose grouping comes from the folder layout instead)
+     * @param root         the directory the build is rooted at — base URI for
+     *                     relative assets, and the book whose config cascade applies
+     * @param cardFiles    the ordered card files
+     * @param sections     declared sections grouping them, empty for a walked book
+     *                     (whose grouping comes from the folder layout instead)
+     * @param tocCardIndex index into {@code cardFiles} before which the printed
+     *                     table of contents renders (a {@code <toc/>} marker in
+     *                     {@code <sections>}), or null when none was declared —
+     *                     always null for a walked book
      */
-    record Resolved(Path root, List<Path> cardFiles, List<Part> parts) {}
+    record Resolved(Path root, List<Path> cardFiles, List<Section> sections, Integer tocCardIndex) {}
 
     /** Walk {@code input}'s directory tree. */
     static Resolved walk(Path input, String target, Log log) throws MojoFailureException {
@@ -45,16 +49,22 @@ final class BookSource {
             throw new MojoFailureException("No cards found under " + input);
         }
         log.info("Found " + cardFiles.size() + " cards under " + input);
-        return new Resolved(input, cardFiles, List.of());
+        return new Resolved(input, cardFiles, List.of(), null);
     }
 
-    /** Resolve a POM-declared {@code <book>} into its card list and parts. */
-    static Resolved plan(Path root, List<BookPlan.PartSpec> specs, String target, Log log)
+    /**
+     * Resolve a POM-declared {@code <book>} into its card list and sections.
+     *
+     * @param tocAfterSpec position of the {@code <toc/>} marker among the
+     *        specs (see {@code BookLayout.tocAfterSpec()}), or null
+     */
+    static Resolved plan(Path root, List<BookPlan.SectionSpec> specs, Integer tocAfterSpec,
+            String target, Log log)
             throws MojoExecutionException, MojoFailureException {
         if (!Files.isDirectory(root)) {
             throw new MojoExecutionException("<book><root> is not a directory: " + root);
         }
-        BookPlan.Plan resolved = BookPlan.resolve(root, specs, target);
+        BookPlan.Plan resolved = BookPlan.resolve(root, specs, tocAfterSpec, target);
         if (resolved.cards().isEmpty()) {
             throw new MojoFailureException("No cards matched the <book> patterns under " + root);
         }
@@ -63,12 +73,12 @@ final class BookSource {
         for (String warning : resolved.warnings()) {
             log.warn(warning);
         }
-        log.info("Planned " + resolved.cards().size() + " cards in " + resolved.parts().size()
-                + (resolved.parts().size() == 1 ? " part under " : " parts under ") + root);
-        for (Part part : resolved.parts()) {
-            log.debug("  part " + part.id() + " (" + part.title() + "): " + part.cards().size() + " cards");
+        log.info("Planned " + resolved.cards().size() + " cards in " + resolved.sections().size()
+                + (resolved.sections().size() == 1 ? " section under " : " sections under ") + root);
+        for (Section section : resolved.sections()) {
+            log.debug("  section " + section.id() + " (" + section.title() + "): " + section.cards().size() + " cards");
         }
-        return new Resolved(root, resolved.cards(), resolved.parts());
+        return new Resolved(root, resolved.cards(), resolved.sections(), resolved.tocCardIndex());
     }
 
     /**
@@ -79,7 +89,7 @@ final class BookSource {
      */
     static Resolved of(Path input, BookBuild.PlannedBook plan, String target, Log log)
             throws MojoExecutionException, MojoFailureException {
-        if (plan != null) return plan(plan.root(), plan.specs(), target, log);
+        if (plan != null) return plan(plan.root(), plan.specs(), plan.tocAfterSpec(), target, log);
         if (input == null) throw new MojoExecutionException("No <input> and no <book> — nothing to build.");
         if (!Files.isDirectory(input)) {
             throw new MojoExecutionException("<input> must be a book directory: " + input);

@@ -140,7 +140,7 @@ public abstract class AbstractPaperbandMojo extends AbstractMojo {
      * "the author didn't realise", it's an error — and the raw configuration
      * DOM is the one place both elements still exist to be counted.
      *
-     * <p>Collections are exempt, obviously: {@code <part>} and {@code <author>}
+     * <p>Collections are exempt, obviously: {@code <section>} and {@code <author>}
      * inside {@code <authors>} are meant to repeat.
      *
      * @param book the declaration, or null when the goal has no {@code <book>}

@@ -26,7 +26,7 @@ import java.util.Map;
 
 /**
  * Builds a multi-file static HTML site from a book directory: an index, a
- * landing page per axis value and per section (or declared part), and a page
+ * landing page per axis value and per section (declared or discovered), and a page
  * per card with prev/next navigation.
  *
  * <p>The site shares the book's css chain and theme with the PDF target, so
@@ -116,7 +116,7 @@ public class SiteMojo extends AbstractPaperbandMojo {
             declaredRoot = book.getRoot() != null ? resolve(book.getRoot()) : basedir();
             if (book.declaresCardSelection()) {
                 try {
-                    plan = new BookBuild.PlannedBook(declaredRoot, book.toSpecs());
+                    plan = new BookBuild.PlannedBook(declaredRoot, book.toSpecs(), book.tocAfterSpec());
                 } catch (IllegalArgumentException e) {
                     throw new MojoExecutionException(e.getMessage(), e);
                 }
@@ -149,14 +149,14 @@ public class SiteMojo extends AbstractPaperbandMojo {
 
         CardLoading.requireUniqueIds(cards, bookDir);
 
-        // Book-level config and parts declared in the POM, applied exactly as
+        // Book-level config and sections declared in the POM, applied exactly as
         // in a build: the site's title, landing pages and nav then match the
         // PDF's cover and dividers.
         if (book != null && book.declaresBookConfig()) {
             bookCtx = bookCtx.withBook(book.mergeInto(bookCtx.book(), bookCtx.book().bookRoot()));
         }
-        if (!source.parts().isEmpty()) {
-            bookCtx = bookCtx.withBook(bookCtx.book().withParts(source.parts()));
+        if (!source.sections().isEmpty()) {
+            bookCtx = bookCtx.withBook(bookCtx.book().withSections(source.sections()));
         }
 
         ThemeBundle theme = Themes.resolve(themeName, bookCtx.book().theme(), themeDirPath());

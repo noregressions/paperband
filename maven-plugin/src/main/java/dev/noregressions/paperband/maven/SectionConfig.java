@@ -4,11 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * One {@code <part>} of a {@code <book>} layout: a titled group of cards
+ * One {@code <section>} of a {@code <book>} layout: a titled group of cards
  * selected by glob pattern.
  *
  * <pre>
- * &lt;part&gt;
+ * &lt;section&gt;
  *   &lt;id&gt;traces&lt;/id&gt;
  *   &lt;title&gt;Execution Traces&lt;/title&gt;
  *   &lt;includes&gt;
@@ -19,30 +19,30 @@ import java.util.List;
  *   &lt;/excludes&gt;
  *   &lt;sort&gt;tier,-id&lt;/sort&gt;
  *   &lt;landingPage&gt;false&lt;/landingPage&gt;
- * &lt;/part&gt;
+ * &lt;/section&gt;
  * </pre>
  *
  * <p>A plain data holder: Maven's configurator populates the fields by
  * element name, and {@link BookLayout} turns them into
- * {@code BookPlan.PartSpec}s. Every field is optional except
+ * {@code BookPlan.SectionSpec}s. Every field is optional except
  * {@code includes}, and {@code id}/{@code title} are only optional together —
- * a part with neither is an anonymous selector that contributes cards but no
- * group (see {@code BookPlan.PartSpec}).
+ * a section with neither is an anonymous selector that contributes cards but no
+ * group (see {@code BookPlan.SectionSpec}).
  */
-public class PartConfig {
+public class SectionConfig {
 
     /**
-     * Part id, used wherever a section id would be — the PDF divider, the
+     * Section id, used wherever a section id appears — the PDF divider, the
      * site landing page ({@code <id>.html}), nav and sidebar entries. Derived
      * from {@link #title} as a slug when omitted.
      */
     private String id;
 
-    /** Human-readable part title, shown on the divider and landing page. */
+    /** Human-readable section title, shown on the divider and landing page. */
     private String title;
 
     /**
-     * Optional landing/divider template for this part — a built-in preset
+     * Optional landing/divider template for this section — a built-in preset
      * name (e.g. {@code minimal}) or a path to a template, exactly as a
      * section folder's own {@code landing.template} accepts.
      */
@@ -50,13 +50,13 @@ public class PartConfig {
 
     /**
      * Optional Pebble predicate over the build target, e.g.
-     * {@code target == 'web'}. When it evaluates false the whole part is
+     * {@code target == 'web'}. When it evaluates false the whole section is
      * skipped and its cards stay out of the book.
      */
     private String where;
 
     /**
-     * Glob patterns selecting this part's cards, relative to the book root,
+     * Glob patterns selecting this section's cards, relative to the book root,
      * in emission order. {@code *} stops at a path separator, {@code **}
      * crosses it.
      */
@@ -66,7 +66,7 @@ public class PartConfig {
     private List<String> excludes = new ArrayList<>();
 
     /**
-     * Comma-separated frontmatter field names to order this part's cards by,
+     * Comma-separated frontmatter field names to order this section's cards by,
      * most significant first, each optionally {@code -}-prefixed for
      * descending — e.g. {@code tier,-id}. Omitted, matches sort by their path
      * relative to the book root.
@@ -74,21 +74,21 @@ public class PartConfig {
     private String sort;
 
     /**
-     * Whether this part gets a page of its own — the divider page before its
+     * Whether this section gets a page of its own — the divider page before its
      * first card in the PDF, and the {@code <id>.html} landing page on the
-     * static site. Generated for every named part by default; set
+     * static site. Generated for every named section by default; set
      * {@code false} to keep the grouping and the ordering but skip the page,
-     * so the part's first card follows straight on from the previous part's
+     * so the section's first card follows straight on from the previous section's
      * last one.
      */
     private boolean landingPage = true;
 
-    /** @return the part id, or null to derive it from the title */
+    /** @return the section id, or null to derive it from the title */
     public String getId() {
         return id;
     }
 
-    /** @return the part title */
+    /** @return the section title */
     public String getTitle() {
         return title;
     }
@@ -98,7 +98,7 @@ public class PartConfig {
         return landingTemplate;
     }
 
-    /** @return the target predicate, or null to always include this part */
+    /** @return the target predicate, or null to always include this section */
     public String getWhere() {
         return where;
     }
@@ -118,7 +118,7 @@ public class PartConfig {
         return sort;
     }
 
-    /** @return whether this part gets its own divider/landing page; true unless declared false */
+    /** @return whether this section gets its own divider/landing page; true unless declared false */
     public boolean isLandingPage() {
         return landingPage;
     }
@@ -130,7 +130,7 @@ public class PartConfig {
 
     /**
      * Split a comma-separated field list, dropping blanks — the form both
-     * {@code <part><sort>} and {@code <book><sort>} take.
+     * {@code <section><sort>} and {@code <book><sort>} take.
      *
      * @param value the comma-separated value; may be null
      * @return the field names, never null
@@ -147,7 +147,7 @@ public class PartConfig {
 
     @Override
     public String toString() {
-        return "part[" + (id != null ? id : title != null ? title : "(anonymous)")
+        return "section[" + (id != null ? id : title != null ? title : "(anonymous)")
                 + " includes=" + includes + "]";
     }
 }

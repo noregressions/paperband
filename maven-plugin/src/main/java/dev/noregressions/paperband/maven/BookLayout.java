@@ -24,25 +24,25 @@ import java.util.Map;
  * <pre>
  * &lt;book&gt;
  *   &lt;root&gt;${project.basedir}&lt;/root&gt;
- *   &lt;parts&gt;
- *     &lt;part&gt;
+ *   &lt;sections&gt;
+ *     &lt;section&gt;
  *       &lt;title&gt;Execution Traces&lt;/title&gt;
  *       &lt;includes&gt;
  *         &lt;include&gt;services/&#42;/TRACE.md&lt;/include&gt;
  *       &lt;/includes&gt;
- *     &lt;/part&gt;
- *     &lt;part&gt;
+ *     &lt;/section&gt;
+ *     &lt;section&gt;
  *       &lt;title&gt;Reference&lt;/title&gt;
  *       &lt;includes&gt;
  *         &lt;include&gt;docs/&#42;&#42;/&#42;.md&lt;/include&gt;
  *       &lt;/includes&gt;
- *     &lt;/part&gt;
- *   &lt;/parts&gt;
+ *     &lt;/section&gt;
+ *   &lt;/sections&gt;
  * &lt;/book&gt;
  * </pre>
  *
  * <p>For the plain "just glob me these files" case, declare the patterns
- * directly on {@code <book>} and skip {@code <parts>} altogether — the cards
+ * directly on {@code <book>} and skip {@code <sections>} altogether — the cards
  * are emitted in pattern order and grouped by their own folders, exactly as
  * walked cards are:
  *
@@ -71,12 +71,17 @@ public class BookLayout {
      */
     private File root;
 
-    /** Declared parts, in emission order. Mutually exclusive with {@link #includes}. */
-    private List<PartConfig> parts = new ArrayList<>();
+    /**
+     * Declared sections, in emission order. Mutually exclusive with
+     * {@link #includes}. May also carry one {@code <toc/>} marker (a
+     * {@link Toc}) between the sections, placing the printed table of contents
+     * at that point in the book.
+     */
+    private List<SectionConfig> sections = new ArrayList<>();
 
     /**
-     * Glob patterns for a book with no declared parts — shorthand for a
-     * single untitled part. Mutually exclusive with {@link #parts}.
+     * Glob patterns for a book with no declared sections — shorthand for a
+     * single untitled section. Mutually exclusive with {@link #sections}.
      */
     private List<String> includes = new ArrayList<>();
 
@@ -85,8 +90,8 @@ public class BookLayout {
 
     /**
      * Comma-separated frontmatter sort fields for the {@link #includes}
-     * shorthand, e.g. {@code tier,-id}. Ignored when {@link #parts} is used —
-     * each part declares its own.
+     * shorthand, e.g. {@code tier,-id}. Ignored when {@link #sections} is used —
+     * each section declares its own.
      */
     private String sort;
 
@@ -132,15 +137,6 @@ public class BookLayout {
     private List<String> authors = new ArrayList<>();
 
     /**
-     * Render a printed table of contents — a page after the cover listing
-     * every divider and card with its real page number. Equivalent to
-     * {@code vars: { toc: true }} in the root {@code paperband.yaml}.
-     * Page numbers come from a second render pass; see the guide's
-     * Maven Plugin page.
-     */
-    private Boolean toc;
-
-    /**
      * Render a back-of-book index, with real page numbers. {@code true}
      * builds it from each card's {@code index:} frontmatter list alone;
      * {@code auto} additionally extracts each card's distinctive terms from
@@ -162,7 +158,7 @@ public class BookLayout {
     private PageMatterConfig footer;
 
     /**
-     * Default landing/divider template for every section and part that doesn't
+     * Default landing/divider template for every section that doesn't
      * name its own — a built-in preset ({@code minimal}) or a template path.
      */
     private String sectionLandingTemplate;
@@ -192,22 +188,22 @@ public class BookLayout {
         return root;
     }
 
-    /** @return the declared parts, never null */
-    public List<PartConfig> getParts() {
-        return parts;
+    /** @return the declared sections, never null */
+    public List<SectionConfig> getSections() {
+        return sections;
     }
 
-    /** @return the part-less include patterns, never null */
+    /** @return the section-less include patterns, never null */
     public List<String> getIncludes() {
         return includes;
     }
 
-    /** @return the part-less exclude patterns, never null */
+    /** @return the section-less exclude patterns, never null */
     public List<String> getExcludes() {
         return excludes;
     }
 
-    /** @return the comma-separated sort fields for the part-less form, or null */
+    /** @return the comma-separated sort fields for the section-less form, or null */
     public String getSort() {
         return sort;
     }
@@ -250,6 +246,12 @@ public class BookLayout {
                                 + "true indexes each card's index: frontmatter terms; auto also "
                                 + "extracts each card's distinctive terms from its text.");
             }
+        }
+        long tocMarkers = sections.stream().filter(p -> p instanceof Toc).count();
+        if (tocMarkers > 1) {
+            throw new IllegalArgumentException(
+                    "<sections> declares <toc/> " + tocMarkers + " times — there is one table of "
+                            + "contents, so it can only sit in one place. Keep one.");
         }
     }
 
@@ -328,9 +330,10 @@ public class BookLayout {
             out.put("author", joinAuthors(declaredAuthors));
             out.put("authors", declaredAuthors);
         }
-        // TOC/index reach the layout the same way authorship does: through the
-        // vars cascade, where the book model already looks for them.
-        if (toc != null) out.put("toc", toc);
+        // The index reaches the layout the same way authorship does: through
+        // the vars cascade, where the book model already looks for it. (The
+        // printed TOC is positional — a <toc/> marker inside <sections> — and
+        // travels through the book plan instead; see tocAfterSpec().)
         if (index != null) out.put("index", index);
         return out;
     }
@@ -345,7 +348,7 @@ public class BookLayout {
         return title != null || cover != null || back != null || header != null
                 || footer != null || sectionLandingTemplate != null || !vars.isEmpty()
                 || !axes.isEmpty() || author != null || !authors.isEmpty()
-                || toc != null || index != null;
+                || index != null;
     }
 
     /**
@@ -353,7 +356,7 @@ public class BookLayout {
      * root yaml supplied, or an empty one when the book has no yaml.
      *
      * <p>Each field is independent: declaring a {@code <title>} doesn't clear a
-     * yaml-declared cover. Parts are handled separately, since they're resolved
+     * yaml-declared cover. Sections are handled separately, since they're resolved
      * from patterns rather than copied across.
      *
      * @param base     the yaml-derived (or empty) book config
@@ -373,7 +376,6 @@ public class BookLayout {
             mergedVars.put("author", joinAuthors(declaredAuthors));
             mergedVars.put("authors", declaredAuthors);
         }
-        if (toc != null) mergedVars.put("toc", toc);
         if (index != null) mergedVars.put("index", index);
         return new BookConfig(
                 base.bookRoot(),
@@ -391,7 +393,7 @@ public class BookLayout {
                 back != null ? back.toPageMatter(bookRoot, "back") : base.back(),
                 footer != null ? footer.toPageMatter(bookRoot, "footer") : base.footer(),
                 header != null ? header.toPageMatter(bookRoot, "header") : base.header(),
-                base.parts());
+                base.sections());
     }
 
     /** The declared axes as model {@link Axis} objects, in declaration order. */
@@ -404,14 +406,14 @@ public class BookLayout {
     }
 
     /**
-     * Translate this element into the ordered part specs {@code BookPlan}
+     * Translate this element into the ordered section specs {@code BookPlan}
      * resolves. Validation that needs no filesystem happens here so a
      * malformed POM fails before the tree is walked; everything about what
      * the patterns actually match is {@code BookPlan}'s business.
      *
      * @return the specs, in declared order
      * @throws IllegalArgumentException if the element declares both forms,
-     *         neither form, or a part with no include patterns
+     *         neither form, or a section with no include patterns
      */
     /**
      * True when this element says which cards the book contains. False for a
@@ -421,43 +423,68 @@ public class BookLayout {
      * structure from the directory tree.
      */
     boolean declaresCardSelection() {
-        return !parts.isEmpty() || !includes.isEmpty();
+        return !sections.isEmpty() || !includes.isEmpty();
     }
 
-    List<BookPlan.PartSpec> toSpecs() {
-        boolean hasParts = !parts.isEmpty();
+    List<BookPlan.SectionSpec> toSpecs() {
+        validate();
+        List<SectionConfig> realSections = sections.stream().filter(p -> !(p instanceof Toc)).toList();
+        boolean hasSections = !realSections.isEmpty();
         boolean hasPatterns = !includes.isEmpty();
-        if (hasParts && hasPatterns) {
+        if (realSections.size() < sections.size() && !hasSections) {
+            // <toc/> means "the contents page goes between these sections" — with
+            // no sections around it there is no between.
             throw new IllegalArgumentException(
-                    "<book> declares both <parts> and top-level <includes> — use one or the other "
-                            + "(<includes> is shorthand for a single untitled part)");
+                    "<sections> declares a <toc/> but no <section> — the marker places the table of "
+                            + "contents between sections, so declare the sections it sits among");
         }
-        if (!hasParts && !hasPatterns) {
+        if (hasSections && hasPatterns) {
             throw new IllegalArgumentException(
-                    "<book> declares no <parts> and no <includes> — nothing to select");
+                    "<book> declares both <sections> and top-level <includes> — use one or the other "
+                            + "(<includes> is shorthand for a single untitled section)");
+        }
+        if (!hasSections && !hasPatterns) {
+            throw new IllegalArgumentException(
+                    "<book> declares no <sections> and no <includes> — nothing to select");
         }
 
         if (hasPatterns) {
-            return List.of(new BookPlan.PartSpec(null, null, null, null,
-                    includes, excludes, PartConfig.splitFields(sort)));
+            return List.of(new BookPlan.SectionSpec(null, null, null, null,
+                    includes, excludes, SectionConfig.splitFields(sort)));
         }
 
-        List<BookPlan.PartSpec> specs = new ArrayList<>(parts.size());
-        for (PartConfig part : parts) {
-            if (part.getIncludes().isEmpty()) {
+        List<BookPlan.SectionSpec> specs = new ArrayList<>(realSections.size());
+        for (SectionConfig section : realSections) {
+            if (section.getIncludes().isEmpty()) {
                 throw new IllegalArgumentException(
-                        "<book> " + part + " declares no <includes>");
+                        "<book> " + section + " declares no <includes>");
             }
-            specs.add(new BookPlan.PartSpec(
-                    part.getId(),
-                    part.getTitle(),
-                    part.getLandingTemplate(),
-                    part.getWhere(),
-                    part.getIncludes(),
-                    part.getExcludes(),
-                    part.sortFields(),
-                    part.isLandingPage()));
+            specs.add(new BookPlan.SectionSpec(
+                    section.getId(),
+                    section.getTitle(),
+                    section.getLandingTemplate(),
+                    section.getWhere(),
+                    section.getIncludes(),
+                    section.getExcludes(),
+                    section.sortFields(),
+                    section.isLandingPage()));
         }
         return specs;
+    }
+
+    /**
+     * Where the {@code <toc/>} marker sits among the declared sections: the
+     * number of {@code <section>} elements before it — 0 places the contents
+     * page before everything, {@code section count} after everything — or null
+     * when no marker is declared. Indexes the specs {@link #toSpecs} returns,
+     * which is what {@code BookPlan} turns into a card position.
+     */
+    Integer tocAfterSpec() {
+        int before = 0;
+        for (SectionConfig section : sections) {
+            if (section instanceof Toc) return before;
+            before++;
+        }
+        return null;
     }
 }

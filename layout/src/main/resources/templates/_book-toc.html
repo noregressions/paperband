@@ -1,6 +1,8 @@
-{# Printed table of contents — rendered between the front matter and the
-   first card when the book asks for one (vars.toc: true in the root yaml,
-   or <toc>true</toc> in a POM-declared book).
+{# Printed table of contents — rendered where the book asks for it:
+   vars.toc: true in the root yaml puts it up front, between the front
+   matter and the first card; a <toc/> marker inside a POM-declared <sections>
+   places it between the sections around the marker (book.html's tocAt).
+   Wherever it sits, it lists the whole book.
 
    Entries arrive in `toc` in the exact order the PDF assembles pages
    (dividers, then the cards under each), built by LayoutEngine alongside

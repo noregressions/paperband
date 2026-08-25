@@ -41,12 +41,12 @@ import java.util.Map;
  * &lt;configuration&gt;
  *   &lt;output&gt;${project.build.directory}/traces.pdf&lt;/output&gt;
  *   &lt;book&gt;
- *     &lt;parts&gt;
- *       &lt;part&gt;
+ *     &lt;sections&gt;
+ *       &lt;section&gt;
  *         &lt;title&gt;Execution Traces&lt;/title&gt;
  *         &lt;includes&gt;&lt;include&gt;services/&#42;/TRACE.md&lt;/include&gt;&lt;/includes&gt;
- *       &lt;/part&gt;
- *     &lt;/parts&gt;
+ *       &lt;/section&gt;
+ *     &lt;/sections&gt;
  *   &lt;/book&gt;
  * &lt;/configuration&gt;
  * </pre>
@@ -183,7 +183,7 @@ public class BuildMojo extends AbstractPaperbandMojo {
             build.bookDeclaration = book;
             if (book.declaresCardSelection()) {
                 try {
-                    build.plan = new BookBuild.PlannedBook(root, book.toSpecs());
+                    build.plan = new BookBuild.PlannedBook(root, book.toSpecs(), book.tocAfterSpec());
                 } catch (IllegalArgumentException e) {
                     throw new MojoExecutionException(e.getMessage(), e);
                 }

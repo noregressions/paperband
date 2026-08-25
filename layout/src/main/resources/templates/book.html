@@ -131,7 +131,7 @@
       padding: 2rem;
     }
 
-    /* Plain-section / part PDF divider — a page, not a rule between cards.
+    /* Section PDF divider — a page, not a rule between cards.
        It gets a sheet of its own (forced break on both sides; adjacent
        forced breaks collapse, so the .card-break before it doesn't leave a
        blank page) and stands up to the full printable height so its content
@@ -221,7 +221,7 @@
      anchor per declared value, for every axis independently, plus one
      section-divider-{sectionId} anchor per plain section — distinct prefixes
      are what let PagesReport recognise each kind of divider generically.
-     A declared part that opted out of a divider page (landingPage false) has
+     A declared section that opted out of a divider page (landingPage false) has
      no anchor to bait, so it's skipped here as well as below. #}
   <div class="pt-anchor-bait" aria-hidden="true"
        style="position:absolute;left:-9999px;top:-9999px;width:0;height:0;overflow:hidden">
@@ -235,7 +235,7 @@
     {% for s in sections %}{% if s.landingPage %}<a href="#section-divider-{{ s.id }}">{{ s.label }}</a>{% endif %}{% endfor %}
     {# Every card, so each one is addressable in the PDF and shows up in
        `paperband pages`. Card anchors are otherwise only linked from a
-       divider's table of contents, which leaves the cards of a part that
+       divider's table of contents, which leaves the cards of a section that
        declined its divider page (landingPage false) with no named
        destination at all — present in the book, invisible to any tool
        reading it. #}
@@ -264,14 +264,18 @@
      _block-section.html). #}
   {% include "_book-front" %}
 
-  {# Printed table of contents — vars.toc: true (or <toc>true</toc>). Page
-     numbers are pw-pageref placeholders here; the build's second render
-     pass fills them in from the first pass's named destinations. #}
-  {% if toc is not empty %}
-  {% include "_book-toc" %}
-  {% endif %}
-
+  {# Printed table of contents — vars.toc: true, or a <toc/> marker inside a
+     POM-declared <sections>. The marker decides tocAt, the card index the
+     contents page renders in front of (0 = the traditional spot up front,
+     just after any front matter; cards|length = after the last card). It
+     lists the whole book wherever it sits. Page numbers are pw-pageref
+     placeholders here; the build's second render pass fills them in from
+     the first pass's named destinations. #}
   {% for card in cards %}
+    {# Pebble's loop.index is zero-based. #}
+    {% if toc is not empty and loop.index == tocAt %}
+    {% include "_book-toc" %}
+    {% endif %}
     {# A card can be "first of value" for more than one axis at once
        (e.g. first card of tier 1 AND first card of subsystem "core"); stack
        one divider per axis, in book.axes() declaration order, before that
@@ -292,6 +296,12 @@
     {% include "_card-body" with {"card": card} %}
     {% if not loop.last %}<div class="card-break"></div>{% endif %}
   {% endfor %}
+
+  {# A <toc/> marker after the last section: the contents page lands here,
+     after every card and before the index / back page. #}
+  {% if toc is not empty and tocAt >= (cards | length) %}
+  {% include "_book-toc" %}
+  {% endif %}
 
   {# Back-of-book index — vars.index: true (or <index>true</index>), built
      from each card's index: frontmatter. Same two-pass page numbers as the

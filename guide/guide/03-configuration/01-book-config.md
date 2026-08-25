@@ -8,7 +8,7 @@ index: [paperband.yaml, axes, vars]
 
 The `paperband.yaml` at the book root holds global configuration that applies to every
 card: the book `title`, categorical `axes`, the base `css` chain, free-form `vars`, the
-default `theme`, the declared build `targets`, and the book's `parts`.
+default `theme`, the declared build `targets`, and the book's declared `sections`.
 
 ## `axes`
 
@@ -74,22 +74,35 @@ is finalized in the yaml.
 Cards with no value on any declared axis are grouped by their top-level folder name
 instead ("sections") and get their own landing pages alongside the axis-value pages.
 
-## `parts`
+## `sections`
 
-Folder-derived sections are discovered — one group per top-level folder. `parts:` declares
-those groups instead, giving one title to a run of folders:
+Folder-derived sections are discovered — one group per top-level folder. `sections:`
+declares those groups instead, giving one title to a run of folders:
 
 ```yaml
-parts:
+sections:
   - title: "Foundations"
     folders:
       - 01-getting-started
       - 02-authoring
 ```
 
-A part is one group wherever a section would be: one divider, one landing page, one nav
-entry. Folders no part claims stay discovered sections. See Organising Content for the full
-treatment, alongside the folder-level `order:`, `include:`, and `sort:` keys.
+A declared section is one group wherever a discovered one would be: one divider, one
+landing page, one nav entry. Folders no declaration claims stay discovered sections. See
+Organising Content for the full treatment, alongside the folder-level `order:`,
+`include:`, and `sort:` keys.
+
+`sections:` also has a map form, for books that need the declared list *and* the
+book-wide landing default below at once — the list moves under `declare:`:
+
+```yaml
+sections:
+  landing:
+    template: minimal
+  declare:
+    - title: "Foundations"
+      folders: [01-getting-started, 02-authoring]
+```
 
 ## `sections.landing.template`
 

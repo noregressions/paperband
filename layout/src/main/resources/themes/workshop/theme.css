@@ -347,8 +347,8 @@ thead th {
 tbody tr:last-child td { border-bottom: none; }
 td[align="right"], th[align="right"] { text-align: right; font-variant-numeric: tabular-nums; }
 
-/* ── Part divider pages ──────────────────────────────────────────────────
- * One sheet per part, the title centred with rules above and below. Sections
+/* ─ Section divider pages ─────────────────────────────────────────────────
+ * One sheet per section, the title centred with rules above and below. Sections
  * carry no colour of their own, so these take the ink. */
 .section-divider { color: var(--ws-ink); }
 .section-divider .tier-divider-inner {
@@ -409,14 +409,14 @@ td[align="right"], th[align="right"] { text-align: right; font-variant-numeric: 
 
 /* ── Site chrome ─────────────────────────────────────────────────────────
  * The site is the same content read at a laptop rather than printed, so the
- * navigator carries the part structure the PDF gets from divider pages. */
+ * navigator carries the section structure the PDF gets from divider pages. */
 .site-nav { background: var(--ws-ink); border-bottom: 3px solid var(--ws-do); }
 .site-nav .nav-brand { color: var(--ws-paper); font-weight: 700; }
 .site-nav a.nav-link { color: #c9cfd7; }
 .site-nav a.nav-link:hover { color: #ffffff; }
 .site-nav .nav-sidebar-toggle { color: var(--ws-paper); font-size: 1.15rem; }
 
-/* Navigator: parts as headings, their cards listed beneath. */
+/* Navigator: sections as headings, their cards listed beneath. */
 .site-sidebar {
   background: #f4f2ec;
   border-right: 1px solid var(--ws-rule);
@@ -454,7 +454,7 @@ td[align="right"], th[align="right"] { text-align: right; font-variant-numeric: 
 }
 .sidebar-section-toggle { color: var(--ws-ink-soft); }
 
-/* Index: one box per part, in the theme's ink and accent. */
+/* Index: one box per section, in the theme's ink and accent. */
 .tier-box, .tier-box.section-box {
   background: #ffffff;
   border: 1px solid var(--ws-rule);

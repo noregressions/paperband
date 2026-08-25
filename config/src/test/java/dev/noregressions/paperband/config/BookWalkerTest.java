@@ -254,12 +254,12 @@ class BookWalkerTest {
         assertEquals(List.of("keep.md", "x.md", "y.md"), walkNames(root));
     }
 
-    // ---- parts: declared groups of folders ----
+    // ---- sections: declared groups of folders ----
 
     @Test
-    void partsEmitTheirFoldersInDeclaredOrder(@TempDir Path root) throws IOException {
+    void sectionsEmitTheirFoldersInDeclaredOrder(@TempDir Path root) throws IOException {
         Files.writeString(root.resolve("paperband.yaml"), """
-                parts:
+                sections:
                   - title: "Second Part"
                     folders: [beta]
                   - title: "First Part"
@@ -275,11 +275,11 @@ class BookWalkerTest {
     }
 
     @Test
-    void partsAppendUnclaimedContentAfterDeclaredFolders(@TempDir Path root) throws IOException {
+    void sectionsAppendUnclaimedContentAfterDeclaredFolders(@TempDir Path root) throws IOException {
         // Declaration and discovery mixed at one level: the part is declared,
         // the leftover folder is discovered.
         Files.writeString(root.resolve("paperband.yaml"), """
-                parts:
+                sections:
                   - title: "Main"
                     folders: [zzz-declared]
                 """);
@@ -293,9 +293,9 @@ class BookWalkerTest {
     }
 
     @Test
-    void partsSpanSeveralFoldersInOneGroup(@TempDir Path root) throws IOException {
+    void sectionsSpanSeveralFoldersInOneGroup(@TempDir Path root) throws IOException {
         Files.writeString(root.resolve("paperband.yaml"), """
-                parts:
+                sections:
                   - title: "Foundations"
                     folders: [intro, authoring]
                 """);
@@ -308,9 +308,9 @@ class BookWalkerTest {
     }
 
     @Test
-    void partsWinOverOrderAtTheSameLevel(@TempDir Path root) throws IOException {
+    void sectionsWinOverOrderAtTheSameLevel(@TempDir Path root) throws IOException {
         Files.writeString(root.resolve("paperband.yaml"), """
-                parts:
+                sections:
                   - title: "Only"
                     folders: [beta]
                 order: [alpha]
@@ -320,17 +320,17 @@ class BookWalkerTest {
         Path beta = Files.createDirectory(root.resolve("beta"));
         Files.writeString(beta.resolve("b.md"), "# B\n");
 
-        // parts: sequences the declared folder first; alpha is still emitted,
+        // sections: sequences the declared folder first; alpha is still emitted,
         // but as discovered content rather than by the ignored order: key.
         assertEquals(List.of("b.md", "a.md"), walkNames(root));
     }
 
     @Test
     void partFoldersCombineWithPerFolderInclude(@TempDir Path root) throws IOException {
-        // The shape this feature exists for: the root declares the parts, each
+        // The shape this feature exists for: the root declares the sections, each
         // folder declares exactly which cards it contributes.
         Files.writeString(root.resolve("paperband.yaml"), """
-                parts:
+                sections:
                   - title: "Foundations"
                     folders: [getting-started]
                 """);
@@ -351,7 +351,7 @@ class BookWalkerTest {
     @Test
     void partWherePredicateSkipsEveryFolderItClaims(@TempDir Path root) throws IOException {
         Files.writeString(root.resolve("paperband.yaml"), """
-                parts:
+                sections:
                   - title: "Web Only"
                     where: "target == 'web'"
                     folders: [extras]

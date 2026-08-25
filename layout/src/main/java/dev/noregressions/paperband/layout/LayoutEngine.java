@@ -13,7 +13,7 @@ import dev.noregressions.paperband.model.AxisValue;
 import dev.noregressions.paperband.model.Block;
 import dev.noregressions.paperband.model.Card;
 import dev.noregressions.paperband.model.NamedTemplates;
-import dev.noregressions.paperband.model.Part;
+import dev.noregressions.paperband.model.Section;
 import dev.noregressions.paperband.model.RenderContext;
 import dev.noregressions.paperband.pebble.LenientMap;
 import dev.noregressions.paperband.pebble.LenientMapExtension;
@@ -100,6 +100,25 @@ public final class LayoutEngine {
      */
     public void setEdition(Map<String, Object> edition) {
         this.edition = edition;
+    }
+
+    /**
+     * Declared position of the printed table of contents: the index of the
+     * card the contents page renders in front of ({@code cards.size()} puts
+     * it after the last card). Setting a position also turns the TOC on, the
+     * way {@code vars.toc: true} does; null (the default) leaves placement to
+     * the vars toggle alone — up front, before the first card. Same mutable-
+     * field-not-parameter reasoning as {@link #setEdition}.
+     */
+    private Integer tocAt;
+
+    /**
+     * Place the printed table of contents for subsequent book renders
+     * (a {@code <toc/>} marker inside a POM-declared {@code <sections>}).
+     * @param cardIndex the card the contents page precedes, or null for none
+     */
+    public void setTocAt(Integer cardIndex) {
+        this.tocAt = cardIndex;
     }
 
     /** Construct an engine that resolves templates from the classpath only, no theme. */
@@ -343,19 +362,19 @@ public final class LayoutEngine {
 
         List<AxisGrouping> groupings = computeAxisGroupings(bookCtx, cards, contexts);
         Path bookRoot = book.bookRoot();
-        List<Part> bookParts = book.parts();
+        List<Section> declaredSections = book.sections();
 
         // Same section discovery as buildBookModel: axis-less cards grouped
         // by top-level folder.
         Map<String, List<Integer>> bySection = new LinkedHashMap<>();
         for (int i = 0; i < cards.size(); i++) {
             if (hasAnyAxisValue(i, groupings)) continue;
-            String secId = sectionIdFor(bookRoot, bookParts, cards.get(i).source());
+            String secId = sectionIdFor(bookRoot, declaredSections, cards.get(i).source());
             if (secId == null) continue;
             bySection.computeIfAbsent(secId, k -> new ArrayList<>()).add(i);
         }
         List<Map<String, Object>> sectionMetas = buildSectionMetas(
-                bySection, bookRoot, bookParts, book.sectionLandingTemplate(), new HashMap<>());
+                bySection, bookRoot, declaredSections, book.sectionLandingTemplate(), new HashMap<>());
 
         // The same index-term resolution the PDF's index page uses, so this
         // outline is the cheap way to review what `index: auto` picked —
@@ -388,7 +407,7 @@ public final class LayoutEngine {
 
             // Section divider — the axis-less fallback (mirrors sectionFirst).
             if (!hasAnyAxisValue(i, groupings)) {
-                String secId = sectionIdFor(bookRoot, bookParts, card.source());
+                String secId = sectionIdFor(bookRoot, declaredSections, card.source());
                 if (secId != null) {
                     grouped = true;
                     if (!secId.equals(prevSectionId)) {
@@ -526,17 +545,17 @@ public final class LayoutEngine {
         // the axis value pages. Front matter, back matter, delaying-tactics,
         // etc. live here.
         Path bookRoot = bookCtx.book().bookRoot();
-        List<Part> bookParts = bookCtx.book().parts();
+        List<Section> declaredSections = bookCtx.book().sections();
         Map<String, List<Integer>> bySection = new LinkedHashMap<>();
         Map<String, FolderYamlInfo> sectionFolderYamlCache = new HashMap<>();
         for (int i = 0; i < cards.size(); i++) {
             if (hasAnyAxisValue(i, groupings)) continue;
-            String secId = sectionIdFor(bookRoot, bookParts, cards.get(i).source());
+            String secId = sectionIdFor(bookRoot, declaredSections, cards.get(i).source());
             if (secId == null) continue;
             bySection.computeIfAbsent(secId, k -> new ArrayList<>()).add(i);
         }
         List<Map<String, Object>> sectionMetas = buildSectionMetas(
-                bySection, bookRoot, bookParts, bookCtx.book().sectionLandingTemplate(), sectionFolderYamlCache);
+                bySection, bookRoot, declaredSections, bookCtx.book().sectionLandingTemplate(), sectionFolderYamlCache);
 
         // Sidebar opt-in lives in bookCtx.vars() so it cascades through the
         // standard yaml chain. Boolean / string-truthy both accepted.
@@ -565,7 +584,7 @@ public final class LayoutEngine {
         // this single list so every axis value and section entry appears in
         // the order cards were walked (driven by the book's paperband.yaml
         // `order:` chain) rather than always "axes first, sections last".
-        List<Map<String, Object>> navEntries = buildNavEntries(cards, groupings, bookRoot, bookParts, sectionMetas);
+        List<Map<String, Object>> navEntries = buildNavEntries(cards, groupings, bookRoot, declaredSections, sectionMetas);
 
         Map<String, String> out = new LinkedHashMap<>();
 
@@ -618,7 +637,7 @@ public final class LayoutEngine {
         }
 
         // <section-id>.html — one per section (front, back, ...), except a
-        // declared part that opted out of having a page of its own. Its cards
+        // declared section that opted out of having a page of its own. Its cards
         // are already in the book and still listed under its label in the
         // nav; there's just no page to land on (buildNavEntries drops the
         // link to match).
@@ -654,7 +673,7 @@ public final class LayoutEngine {
             // a back-link to its containing section in nav.
             Map<String, Object> sectionMeta = null;
             if (!hasAnyAxisValue(i, groupings)) {
-                String secId = sectionIdFor(bookRoot, bookParts, card.source());
+                String secId = sectionIdFor(bookRoot, declaredSections, card.source());
                 if (secId != null) sectionMeta = findSectionMeta(sectionMetas, secId);
             }
             Map<String, Object> prev = (i > 0) ? siteCardLink(cards.get(i - 1), groupings, i - 1) : null;
@@ -781,7 +800,7 @@ public final class LayoutEngine {
      *   <li>{@code color} — present for axis entries, absent for sections</li>
      *   <li>{@code url} — relative URL of the landing page
      *       ({@code "tier-1.html"} or {@code "front.html"}); absent for a
-     *       declared part that has no page of its own</li>
+     *       declared section that has no page of its own</li>
      * </ul>
      *
      * <p>Templates iterate this single list so the index, sidebar and top
@@ -793,7 +812,7 @@ public final class LayoutEngine {
             List<Card> cards,
             List<AxisGrouping> groupings,
             Path bookRoot,
-            List<Part> bookParts,
+            List<Section> declaredSections,
             List<Map<String, Object>> sectionMetas) {
         Map<String, Map<String, Object>> seen = new LinkedHashMap<>();
         for (int i = 0; i < cards.size(); i++) {
@@ -812,7 +831,7 @@ public final class LayoutEngine {
                 seen.put(key, entry);
             }
             if (any) continue;
-            String secId = sectionIdFor(bookRoot, bookParts, cards.get(i).source());
+            String secId = sectionIdFor(bookRoot, declaredSections, cards.get(i).source());
             if (secId == null) continue;
             String key = "section:" + secId;
             if (seen.containsKey(key)) continue;
@@ -820,7 +839,7 @@ public final class LayoutEngine {
             if (section == null) continue;
             Map<String, Object> entry = new LinkedHashMap<>(section);
             entry.put("kind", "section");
-            // A part with no page of its own has nothing to link to, so its
+            // A declared section with no page of its own has nothing to link to: its
             // url is null and the templates render the label as plain text
             // (its cards still link to their own pages). The key is always
             // present, null or not — Pebble raises on a missing attribute,
@@ -839,28 +858,29 @@ public final class LayoutEngine {
      * Returns {@code null} when the card lies directly in the book root or
      * directly in {@code content/} (those cards have no enclosing section).
      *
-     * <p>A part that claims this card <em>by path</em> ({@link Part#cards()},
-     * how the Maven plugin's pattern-declared parts express membership) wins
-     * outright, before the folder is even looked at: such a part exists
-     * precisely to group cards the directory layout doesn't group, and two of
-     * them may draw different files out of the same folder.
+     * <p>A declared section that claims this card <em>by path</em>
+     * ({@link Section#cards()}, how the Maven plugin's pattern-declared
+     * sections express membership) wins outright, before the folder is even
+     * looked at: such a declaration exists precisely to group cards the
+     * directory layout doesn't group, and two of them may draw different files
+     * out of the same folder.
      */
-    private static String sectionIdFor(Path bookRoot, List<Part> parts, Path source) {
-        String claimed = partIdForCard(parts, source);
+    private static String sectionIdFor(Path bookRoot, List<Section> declared, Path source) {
+        String claimed = declaredSectionIdForCard(declared, source);
         if (claimed != null) return claimed;
         String folder = folderIdFor(bookRoot, source);
         if (folder == null) return null;
-        // A declared part speaks for every folder it claims, so those cards
-        // report the part's id and land in one group; unclaimed folders keep
+        // A declared section speaks for every folder it claims, so those cards
+        // report the declared id and land in one group; unclaimed folders keep
         // reporting their own name and stay discovered sections.
-        String partId = partIdForFolder(parts, folder);
-        return partId != null ? partId : folder;
+        String declaredId = declaredSectionIdForFolder(declared, folder);
+        return declaredId != null ? declaredId : folder;
     }
 
     /**
      * The raw top-level folder a card sits in, relative to the book root (or
      * to a {@code content/} wrapper) — the discovered section id, before any
-     * {@code parts:} declaration gets a say.
+     * {@code sections:} declaration gets a say.
      */
     private static String folderIdFor(Path bookRoot, Path source) {
         if (bookRoot == null || source == null) return null;
@@ -876,32 +896,32 @@ public final class LayoutEngine {
     }
 
     /**
-     * The id of the declared part claiming this exact card file, or null when
-     * no part does. Only pattern-declared parts claim individual cards; a
-     * yaml {@code parts:} entry claims folders and is skipped here.
+     * The id of the declared section claiming this exact card file, or null
+     * when none does. Only pattern-declared sections claim individual cards; a
+     * yaml {@code sections:} entry claims folders and is skipped here.
      */
-    private static String partIdForCard(List<Part> parts, Path source) {
-        if (parts == null || source == null) return null;
-        for (Part part : parts) {
-            if (part.claims(source)) return part.id();
+    private static String declaredSectionIdForCard(List<Section> declared, Path source) {
+        if (declared == null || source == null) return null;
+        for (Section section : declared) {
+            if (section.claims(source)) return section.id();
         }
         return null;
     }
 
-    /** The id of the declared part claiming {@code folder}, or null when no part does. */
-    private static String partIdForFolder(List<Part> parts, String folder) {
-        if (parts == null || folder == null) return null;
-        for (Part part : parts) {
-            if (part.folders().contains(folder)) return part.id();
+    /** The id of the declared section claiming {@code folder}, or null when none does. */
+    private static String declaredSectionIdForFolder(List<Section> declared, String folder) {
+        if (declared == null || folder == null) return null;
+        for (Section section : declared) {
+            if (section.folders().contains(folder)) return section.id();
         }
         return null;
     }
 
-    /** The declared part with this id, or null — {@code id} may equally be a discovered folder's. */
-    private static Part partById(List<Part> parts, String id) {
-        if (parts == null || id == null) return null;
-        for (Part part : parts) {
-            if (id.equals(part.id())) return part;
+    /** The declared section with this id, or null — {@code id} may equally be a discovered folder's. */
+    private static Section declaredSectionById(List<Section> declared, String id) {
+        if (declared == null || id == null) return null;
+        for (Section section : declared) {
+            if (id.equals(section.id())) return section;
         }
         return null;
     }
@@ -923,7 +943,7 @@ public final class LayoutEngine {
      * {@link Axis#landingTemplate()} override.
      *
      * <p>Each entry also carries {@code landingPage} — false only for a
-     * declared {@link Part} that opted out (see {@link Part#landingPage()}).
+     * declared {@link Section} that opted out (see {@link Section#landingPage()}).
      * The entry itself still exists, so the group keeps its label, count and
      * card list in the nav, sidebar and index; what's dropped is its own page
      * and every link to one.
@@ -931,19 +951,19 @@ public final class LayoutEngine {
     private static List<Map<String, Object>> buildSectionMetas(
             Map<String, List<Integer>> bySection,
             Path bookRoot,
-            List<Part> parts,
+            List<Section> declaredSections,
             String bookDefaultSectionTemplate,
             Map<String, FolderYamlInfo> folderYamlCache) {
         List<Map<String, Object>> out = new ArrayList<>(bySection.size());
         for (var e : bySection.entrySet()) {
             String id = e.getKey();
-            // A declared part carries its own title and landing template, so
-            // it needs no folder yaml lookup -- it spans several folders and
-            // no single one of them could speak for the group. Discovered
+            // A declared section carries its own title and landing template,
+            // so it needs no folder yaml lookup -- it spans several folders
+            // and no single one of them could speak for the group. Discovered
             // sections resolve from their folder's yaml exactly as before.
-            Part part = partById(parts, id);
-            FolderYamlInfo info = part != null
-                    ? new FolderYamlInfo(part.title(), part.landingTemplate())
+            Section declared = declaredSectionById(declaredSections, id);
+            FolderYamlInfo info = declared != null
+                    ? new FolderYamlInfo(declared.title(), declared.landingTemplate())
                     : lookupSectionFolderYaml(bookRoot, id, folderYamlCache);
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id", id);
@@ -960,9 +980,9 @@ public final class LayoutEngine {
             m.put("minimal", NamedTemplates.MINIMAL_SECTION_TEMPLATE.equals(template));
             // Whether this group fronts its cards with a page of its own: the
             // PDF divider (book.html) and the site's <id>.html landing page.
-            // Only a declared part can opt out — a discovered folder has
+            // Only a declared section can opt out — a discovered folder has
             // nowhere to say so, so it always gets one.
-            m.put("landingPage", part == null || part.landingPage());
+            m.put("landingPage", declared == null || declared.landingPage());
             out.add(m);
         }
         return out;
@@ -1660,11 +1680,11 @@ public final class LayoutEngine {
         // section, so this and the axis dividers above are mutually exclusive
         // per card.
         Path bookRoot = bookCtx.book().bookRoot();
-        List<Part> bookParts = bookCtx.book().parts();
+        List<Section> declaredSections = bookCtx.book().sections();
         Map<String, List<Integer>> bookBySection = new LinkedHashMap<>();
         for (int i = 0; i < cards.size(); i++) {
             if (hasAnyAxisValue(i, groupings)) continue;
-            String secId = sectionIdFor(bookRoot, bookParts, cards.get(i).source());
+            String secId = sectionIdFor(bookRoot, declaredSections, cards.get(i).source());
             if (secId == null) continue;
             bookBySection.computeIfAbsent(secId, k -> new ArrayList<>()).add(i);
         }
@@ -1673,7 +1693,7 @@ public final class LayoutEngine {
         // resolved to the minimal preset gets a minimal PDF divider too —
         // _section-divider-base.html reads the "minimal" flag this sets.
         List<Map<String, Object>> sectionMetas = buildSectionMetas(
-                bookBySection, bookRoot, bookParts, bookCtx.book().sectionLandingTemplate(), new HashMap<>());
+                bookBySection, bookRoot, declaredSections, bookCtx.book().sectionLandingTemplate(), new HashMap<>());
         for (Map<String, Object> section : sectionMetas) {
             String id = (String) section.get("id");
             List<Integer> indices = bookBySection.getOrDefault(id, List.of());
@@ -1703,7 +1723,7 @@ public final class LayoutEngine {
         // are the same named destinations the anchor-bait div links, which is
         // what lets the build's second render pass fill in real page numbers
         // (see PageRefs in the maven plugin).
-        boolean wantToc = truthyVar(bookCtx.vars().get("toc"));
+        boolean wantToc = tocAt != null || truthyVar(bookCtx.vars().get("toc"));
         List<Map<String, Object>> tocEntries = wantToc ? new ArrayList<>() : null;
         Map<String, String> prevValueKeyByAxis = new HashMap<>();
         String prevSectionId = null;
@@ -1729,7 +1749,7 @@ public final class LayoutEngine {
             Map<String, Object> sectionMeta = null;
             boolean sectionFirst = false;
             if (!hasAnyAxisValue(i, groupings)) {
-                String secId = sectionIdFor(bookRoot, bookParts, cards.get(i).source());
+                String secId = sectionIdFor(bookRoot, declaredSections, cards.get(i).source());
                 if (secId != null) {
                     sectionMeta = findSectionMeta(sectionMetas, secId);
                     sectionFirst = !secId.equals(prevSectionId);
@@ -1754,6 +1774,10 @@ public final class LayoutEngine {
         }
 
         model.put("toc", tocEntries);
+        // Where book.html drops the contents page: in front of this card
+        // index, cards.size() meaning after the last card. A vars-toggled TOC
+        // with no declared position keeps its traditional spot up front.
+        model.put("tocAt", tocAt == null ? 0 : Math.min(tocAt, cards.size()));
         Map<String, List<String>> indexTerms = resolvedIndexTerms(cards, bookCtx.vars());
         model.put("bookIndex",
                 indexTerms.isEmpty() ? null : buildIndexModel(cards, indexTerms));

@@ -29,7 +29,7 @@ from each other: `css` accumulates outward-in, `targets` replaces wholesale.
 ## Book-root-only keys
 
 Some keys are read only from the root `paperband.yaml` and deliberately do not cascade:
-`title`, `axes`, `theme`, `parts`, `cardSchema`, `cover`, `back`, and the book-wide
+`title`, `axes`, `theme`, `sections`, `cardSchema`, `cover`, `back`, and the book-wide
 `sections.landing.template` default. They describe the book as a whole, not a subtree.
 
 Folder-level `order:`, `include:`, `sort:`, and `where:` are also not part of this value

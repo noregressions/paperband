@@ -92,6 +92,59 @@ class BookTocIndexTest {
     }
 
     @Nested
+    @DisplayName("Declared TOC position (a <toc/> marker in <sections>)")
+    class TocPlacement {
+
+        private static final String TOC_SECTION = "<section class=\"book-toc\" id=\"book-toc\">";
+
+        @Test
+        void should_render_up_front_when_only_the_var_asks() {
+            String html = renderBook(Map.of("toc", true),
+                    card("alpha", "Alpha", Map.of()), card("beta", "Beta", Map.of()));
+
+            assertTrue(html.indexOf(TOC_SECTION) < html.indexOf("id=\"card-alpha\""),
+                    "no declared position: the traditional spot before the first card");
+        }
+
+        @Test
+        void should_render_between_the_cards_the_marker_sits_between() {
+            String html = renderBook(Map.of(), 1,
+                    card("alpha", "Alpha", Map.of()), card("beta", "Beta", Map.of()));
+
+            int toc = html.indexOf(TOC_SECTION);
+            assertTrue(toc > html.indexOf("id=\"card-alpha\""), "after the part before the marker");
+            assertTrue(toc < html.indexOf("id=\"card-beta\""), "before the part after it");
+            assertEquals(toc, html.lastIndexOf(TOC_SECTION), "and only there");
+        }
+
+        @Test
+        void should_render_after_the_last_card_for_a_trailing_marker() {
+            String html = renderBook(Map.of(), 2,
+                    card("alpha", "Alpha", Map.of()), card("beta", "Beta", Map.of()));
+
+            assertTrue(html.indexOf(TOC_SECTION) > html.indexOf("id=\"card-beta\""));
+        }
+
+        @Test
+        void should_switch_the_toc_on_without_any_var() {
+            String html = renderBook(Map.of(), 0, card("alpha", "Alpha", Map.of()));
+
+            assertTrue(html.contains(TOC_SECTION), "the marker is the declaration");
+            assertTrue(html.indexOf(TOC_SECTION) < html.indexOf("id=\"card-alpha\""));
+        }
+
+        @Test
+        void should_still_list_the_whole_book_wherever_it_sits() {
+            String html = renderBook(Map.of(), 1,
+                    card("alpha", "Alpha", Map.of()), card("beta", "Beta", Map.of()));
+
+            assertTrue(html.contains("data-pw-anchor=\"card-alpha\">000<"));
+            assertTrue(html.contains("data-pw-anchor=\"card-beta\">000<"),
+                    "cards before the contents page still appear in it");
+        }
+    }
+
+    @Nested
     @DisplayName("Back-of-book index")
     class Index {
 
@@ -185,14 +238,24 @@ class BookTocIndexTest {
     // ---- helpers ----
 
     private static String renderBook(Map<String, Object> vars, Card... cards) {
-        return renderBook(vars, List.of(), cards);
+        return renderBook(vars, List.of(), null, cards);
+    }
+
+    private static String renderBook(Map<String, Object> vars, Integer tocAt, Card... cards) {
+        return renderBook(vars, List.of(), tocAt, cards);
     }
 
     private static String renderBook(Map<String, Object> vars, List<Axis> axes, Card... cards) {
+        return renderBook(vars, axes, null, cards);
+    }
+
+    private static String renderBook(
+            Map<String, Object> vars, List<Axis> axes, Integer tocAt, Card... cards) {
         BookConfig book = new BookConfig(null, "Test Book", axes, List.of(), Map.of(),
                 List.of(), null, null);
         RenderContext ctx = new RenderContext(book, List.of(), vars, null, "pdf", "A4");
         LayoutEngine engine = new LayoutEngine();
+        engine.setTocAt(tocAt);
         List<RenderContext> contexts = List.of(cards).stream().map(c -> ctx).toList();
         return engine.renderBook(List.of(cards), contexts, ctx);
     }

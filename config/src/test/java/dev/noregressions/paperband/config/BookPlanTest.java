@@ -1,6 +1,6 @@
 package dev.noregressions.paperband.config;
 
-import dev.noregressions.paperband.model.Part;
+import dev.noregressions.paperband.model.Section;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -22,8 +22,8 @@ class BookPlanTest {
 
     // ---- helpers ----
 
-    private static BookPlan.PartSpec part(String title, String... includes) {
-        return new BookPlan.PartSpec(null, title, null, null, List.of(includes), List.of(), List.of());
+    private static BookPlan.SectionSpec part(String title, String... includes) {
+        return new BookPlan.SectionSpec(null, title, null, null, List.of(includes), List.of(), List.of());
     }
 
     private List<String> relative(List<Path> cards) {
@@ -43,6 +43,39 @@ class BookPlanTest {
             card("services/" + service + "/TRACE.md", "# Trace " + service + "\n");
             card("services/" + service + "/NOTES.md", "# Notes " + service + "\n");
         }
+    }
+
+    // ---- toc position ----
+
+    @Test
+    void tocPositionResolvesToTheCardCountTheEarlierSpecsClaimed() throws IOException {
+        servicesTree();
+        List<BookPlan.SectionSpec> specs = List.of(
+                part("Traces", "services/*/TRACE.md"),
+                part("Notes", "services/*/NOTES.md"));
+
+        assertEquals(0, BookPlan.resolve(bookRoot, specs, 0, "pdf-a4").tocCardIndex(),
+                "marker before everything: contents page up front");
+        assertEquals(3, BookPlan.resolve(bookRoot, specs, 1, "pdf-a4").tocCardIndex(),
+                "marker between the sections: after the three traces");
+        assertEquals(6, BookPlan.resolve(bookRoot, specs, 2, "pdf-a4").tocCardIndex(),
+                "marker after everything: after the last card");
+        assertEquals(null, BookPlan.resolve(bookRoot, specs, "pdf-a4").tocCardIndex(),
+                "no marker, no declared position");
+    }
+
+    @Test
+    void tocPositionSkipsNothingForASkippedOrEmptySpec() throws IOException {
+        servicesTree();
+        List<BookPlan.SectionSpec> specs = List.of(
+                new BookPlan.SectionSpec(null, "Web only", null, "target == 'web'",
+                        List.of("services/*/TRACE.md"), List.of(), List.of()),
+                part("Nothing", "missing/**/*.md"),
+                part("Notes", "services/*/NOTES.md"));
+
+        assertEquals(0, BookPlan.resolve(bookRoot, specs, 2, "pdf-a4").tocCardIndex(),
+                "a where-skipped part and an empty part claim no cards, so the "
+                        + "marker after them still lands before the first real card");
     }
 
     // ---- selection ----
@@ -93,7 +126,7 @@ class BookPlanTest {
         servicesTree();
 
         BookPlan.Plan plan = BookPlan.resolve(bookRoot, List.of(
-                new BookPlan.PartSpec(null, "Traces", null, null,
+                new BookPlan.SectionSpec(null, "Traces", null, null,
                         List.of("services/*/TRACE.md"), List.of("services/search/**"), List.of())), "pdf-a4");
 
         assertEquals(List.of(
@@ -180,13 +213,13 @@ class BookPlanTest {
         card("c/TRACE.md", "---\ntier: 2\n---\n# C\n");
 
         BookPlan.Plan plan = BookPlan.resolve(bookRoot, List.of(
-                new BookPlan.PartSpec(null, "Traces", null, null,
+                new BookPlan.SectionSpec(null, "Traces", null, null,
                         List.of("*/TRACE.md"), List.of(), List.of("tier"))), "pdf-a4");
 
         assertEquals(List.of("b/TRACE.md", "c/TRACE.md", "a/TRACE.md"), relative(plan.cards()));
 
         BookPlan.Plan descending = BookPlan.resolve(bookRoot, List.of(
-                new BookPlan.PartSpec(null, "Traces", null, null,
+                new BookPlan.SectionSpec(null, "Traces", null, null,
                         List.of("*/TRACE.md"), List.of(), List.of("-tier"))), "pdf-a4");
 
         assertEquals(List.of("a/TRACE.md", "c/TRACE.md", "b/TRACE.md"), relative(descending.cards()));
@@ -202,8 +235,8 @@ class BookPlanTest {
                 part("Auth", "services/auth/*"),
                 part("Everything", "services/**")), "pdf-a4");
 
-        assertEquals(2, plan.parts().get(0).cards().size());
-        assertEquals(4, plan.parts().get(1).cards().size(), "auth's two cards are already claimed");
+        assertEquals(2, plan.sections().get(0).cards().size());
+        assertEquals(4, plan.sections().get(1).cards().size(), "auth's two cards are already claimed");
         assertEquals(6, plan.cards().size(), "and no card is emitted twice");
     }
 
@@ -215,28 +248,28 @@ class BookPlanTest {
                 part("Traces", "services/*/TRACE.md"),
                 part("Notes", "services/*/NOTES.md")), "pdf-a4");
 
-        Part traces = plan.parts().get(0);
-        Part notes = plan.parts().get(1);
+        Section traces = plan.sections().get(0);
+        Section notes = plan.sections().get(1);
         assertEquals("traces", traces.id());
         assertEquals("notes", notes.id());
-        assertTrue(traces.folders().isEmpty(), "pattern-declared parts claim cards, not folders");
+        assertTrue(traces.folders().isEmpty(), "pattern-declared sections claim cards, not folders");
         assertTrue(traces.claims(bookRoot.resolve("services/auth/TRACE.md")));
         assertFalse(traces.claims(bookRoot.resolve("services/auth/NOTES.md")));
         assertTrue(notes.claims(bookRoot.resolve("services/auth/NOTES.md")));
     }
 
-    // ---- parts ----
+    // ---- sections ----
 
     @Test
     void anonymousSpecEmitsCardsButNoPart() throws IOException {
         servicesTree();
 
         BookPlan.Plan plan = BookPlan.resolve(bookRoot, List.of(
-                new BookPlan.PartSpec(null, null, null, null,
+                new BookPlan.SectionSpec(null, null, null, null,
                         List.of("services/*/TRACE.md"), List.of(), List.of())), "pdf-a4");
 
         assertEquals(3, plan.cards().size());
-        assertTrue(plan.parts().isEmpty(), "no identity declared, so no group is claimed");
+        assertTrue(plan.sections().isEmpty(), "no identity declared, so no group is claimed");
     }
 
     @Test
@@ -245,11 +278,11 @@ class BookPlanTest {
 
         BookPlan.Plan plan = BookPlan.resolve(bookRoot, List.of(
                 part("Execution Traces!", "services/*/TRACE.md"),
-                new BookPlan.PartSpec("notes-x", "Notes", null, null,
+                new BookPlan.SectionSpec("notes-x", "Notes", null, null,
                         List.of("services/*/NOTES.md"), List.of(), List.of())), "pdf-a4");
 
-        assertEquals("execution-traces", plan.parts().get(0).id());
-        assertEquals("notes-x", plan.parts().get(1).id());
+        assertEquals("execution-traces", plan.sections().get(0).id());
+        assertEquals("notes-x", plan.sections().get(1).id());
     }
 
     @Test
@@ -257,10 +290,10 @@ class BookPlanTest {
         servicesTree();
 
         BookPlan.Plan plan = BookPlan.resolve(bookRoot, List.of(
-                new BookPlan.PartSpec(null, "Traces", "minimal", null,
+                new BookPlan.SectionSpec(null, "Traces", "minimal", null,
                         List.of("services/*/TRACE.md"), List.of(), List.of())), "pdf-a4");
 
-        assertEquals("site-section-minimal", plan.parts().get(0).landingTemplate());
+        assertEquals("site-section-minimal", plan.sections().get(0).landingTemplate());
     }
 
     @Test
@@ -269,12 +302,12 @@ class BookPlanTest {
 
         BookPlan.Plan plan = BookPlan.resolve(bookRoot, List.of(
                 part("Traces", "services/*/TRACE.md"),
-                new BookPlan.PartSpec(null, "Notes", null, null,
+                new BookPlan.SectionSpec(null, "Notes", null, null,
                         List.of("services/*/NOTES.md"), List.of(), List.of(), false)), "pdf-a4");
 
-        assertTrue(plan.parts().get(0).landingPage(),
+        assertTrue(plan.sections().get(0).landingPage(),
                 "a spec that says nothing about a page gets one");
-        assertFalse(plan.parts().get(1).landingPage(),
+        assertFalse(plan.sections().get(1).landingPage(),
                 "and one that declares landingPage false does not");
         assertEquals(6, plan.cards().size(),
                 "declining a page changes nothing about which cards the part claims");
@@ -284,18 +317,18 @@ class BookPlanTest {
     void whereSkipsThePartAndItsCardsEntirely() throws IOException {
         servicesTree();
 
-        List<BookPlan.PartSpec> specs = List.of(
-                new BookPlan.PartSpec(null, "Web Only", null, "target == 'web'",
+        List<BookPlan.SectionSpec> specs = List.of(
+                new BookPlan.SectionSpec(null, "Web Only", null, "target == 'web'",
                         List.of("services/*/NOTES.md"), List.of(), List.of()),
                 part("Traces", "services/*/TRACE.md"));
 
         BookPlan.Plan pdf = BookPlan.resolve(bookRoot, specs, "pdf-a4");
         assertEquals(3, pdf.cards().size());
-        assertEquals(1, pdf.parts().size());
+        assertEquals(1, pdf.sections().size());
 
         BookPlan.Plan web = BookPlan.resolve(bookRoot, specs, "web");
         assertEquals(6, web.cards().size());
-        assertEquals(2, web.parts().size());
+        assertEquals(2, web.sections().size());
     }
 
     @Test
@@ -303,13 +336,13 @@ class BookPlanTest {
         servicesTree();
 
         BookPlan.Plan plan = BookPlan.resolve(bookRoot, List.of(
-                new BookPlan.PartSpec(null, "Web Only", null, "target == 'web'",
+                new BookPlan.SectionSpec(null, "Web Only", null, "target == 'web'",
                         List.of("services/*/TRACE.md"), List.of(), List.of()),
                 part("Traces", "services/**")), "pdf-a4");
 
         assertEquals(6, plan.cards().size(),
                 "the skipped part claims nothing, so the fallback part still sees every card");
-        assertEquals(List.of("traces"), plan.parts().stream().map(Part::id).toList());
+        assertEquals(List.of("traces"), plan.sections().stream().map(Section::id).toList());
     }
 
     // ---- validation ----
@@ -322,7 +355,7 @@ class BookPlanTest {
                 part("Missing", "services/*/ABSENT.md"),
                 part("Traces", "services/*/TRACE.md")), "pdf-a4");
 
-        assertEquals(List.of("traces"), plan.parts().stream().map(Part::id).toList());
+        assertEquals(List.of("traces"), plan.sections().stream().map(Section::id).toList());
         assertEquals(3, plan.cards().size());
     }
 

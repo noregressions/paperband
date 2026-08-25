@@ -22,10 +22,24 @@ vars:
   index: auto    # index page after the last card; `true` for frontmatter-only
 ```
 
-A POM-declared book says the same with `<toc>true</toc>` and
-`<index>auto</index>` inside `<book>`, or through `<book><vars>`. The
-headings default to *Contents* and *Index*; override them with
-`vars.tocTitle` and `vars.indexTitle`.
+A POM-declared book says it positionally: an empty `<toc/>` marker between
+the `<section>` elements places the contents page exactly there —
+
+```xml
+<sections>
+  <toc/>                     <!-- contents up front... -->
+  <section>...</section>
+  <section>...</section>
+  <!-- ...or move <toc/> between sections, or after the last one -->
+</sections>
+```
+
+Wherever the marker sits, the page still lists the whole book; only its
+position moves. At most one `<toc/>` is allowed — a second one fails the
+build. (`vars: { toc: true }`, in yaml or through `<book><vars>`, keeps
+meaning the traditional spot up front.) The index is `<index>auto</index>`
+inside `<book>`. The headings default to *Contents* and *Index*; override
+them with `vars.tocTitle` and `vars.indexTitle`.
 
 The contents page lists every divider and card in the exact order the PDF
 assembles them — axis or section dividers first, their cards indented one
