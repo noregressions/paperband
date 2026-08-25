@@ -33,6 +33,13 @@
             <artifactId>snakeyaml</artifactId>
         </dependency>
         <dependency>
+            <!-- Analyzers only (tokenisation, stopwords, stemming) for the
+                 auto-generated index — see IndexTermExtractor. No Lucene
+                 index is ever built or queried. -->
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-analysis-common</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
         </dependency>

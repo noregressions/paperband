@@ -145,6 +145,41 @@ class BookTocIndexTest {
                     card("a", "A", Map.of("index", List.of("6x9"))));
             assertTrue(html.contains("<h2 class=\"index-letter\">#</h2>"));
         }
+
+        @Test
+        void should_extract_terms_from_text_in_auto_mode() {
+            String html = renderBook(Map.of("index", "auto"),
+                    textCard("a", "Rendering", "Playwright drives Chromium. Playwright renders."),
+                    textCard("b", "Authoring", "Cards are markdown files with blocks."),
+                    textCard("c", "Config", "Configuration cascades through folders."));
+
+            assertTrue(html.contains("id=\"book-index\""), "auto mode renders an index");
+            assertTrue(html.toLowerCase().contains(">playwright<"),
+                    "distinctive term extracted from text: " + html.substring(
+                            html.indexOf("book-index"), Math.min(html.length(),
+                                    html.indexOf("book-index") + 1500)));
+        }
+
+        @Test
+        void should_not_extract_in_plain_true_mode() {
+            String html = renderBook(Map.of("index", true),
+                    textCard("a", "Rendering", "Playwright drives Chromium. Playwright renders."),
+                    textCard("b", "Authoring", "Cards are markdown files."));
+
+            assertFalse(html.contains("id=\"book-index\""),
+                    "true mode indexes frontmatter terms only — none here, so no page");
+        }
+
+        @Test
+        void should_veto_auto_terms_via_indexStop() {
+            String html = renderBook(Map.of("index", "auto", "indexStop", "Playwright"),
+                    textCard("a", "Rendering", "Playwright drives Chromium. Playwright renders."),
+                    textCard("b", "Authoring", "Cards are markdown files with blocks."),
+                    textCard("c", "Config", "Configuration cascades through folders."));
+
+            assertFalse(html.toLowerCase().contains(">playwright<"),
+                    "vetoed term must not reach the index page");
+        }
     }
 
     // ---- helpers ----
@@ -166,6 +201,13 @@ class BookTocIndexTest {
         Block block = new Block(Block.Kind.HEADING_SECTION, null, Set.of("intro"), null, 0,
                 "<p>Content</p>", List.of());
         return new Card(id, Path.of(id + ".md"), new Frontmatter(frontmatter),
+                title, List.of(block));
+    }
+
+    private static Card textCard(String id, String title, String bodyHtml) {
+        Block block = new Block(Block.Kind.HEADING_SECTION, null, Set.of("intro"), title, 2,
+                "<p>" + bodyHtml + "</p>", List.of());
+        return new Card(id, Path.of(id + ".md"), new Frontmatter(Map.of()),
                 title, List.of(block));
     }
 }

@@ -41,6 +41,7 @@
         <slf4j.version>2.0.13</slf4j.version>
         <junit.version>5.10.2</junit.version>
          <pdfbox.version>2.0.24</pdfbox.version>
+        <lucene.version>9.12.0</lucene.version>
 
         <!-- Maven Plugin API: latest Maven-3 line release (3.9.16) rather than
              the in-progress Maven 4 line (4.0.0-*), since the plugin needs to
@@ -110,6 +111,16 @@
                 <groupId>dev.noregressions.paperband</groupId>
                 <artifactId>include</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+
+            <!-- Lucene analyzers only - tokenisation, stopwords and stemming
+                 for the auto-generated back-of-book index (layout's
+                 IndexTermExtractor). Deliberately not lucene-core-as-search:
+                 no index is ever built or queried. -->
+            <dependency>
+                <groupId>org.apache.lucene</groupId>
+                <artifactId>lucene-analysis-common</artifactId>
+                <version>${lucene.version}</version>
             </dependency>
 
             <!-- Maven Plugin API - provided scope everywhere it's used: the

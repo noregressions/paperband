@@ -187,6 +187,18 @@ class BookDeclarationTest {
         }
 
         @Test
+        void should_pass_index_modes_through_vars_and_reject_junk() {
+            BookLayout book = new BookLayout();
+            set(book, "index", "auto");
+            assertEquals("auto", book.declaredVars().get("index"));
+
+            BookLayout bad = new BookLayout();
+            set(bad, "index", "yes please");
+            IllegalArgumentException e = assertThrows(IllegalArgumentException.class, bad::validate);
+            assertTrue(e.getMessage().contains("<index>"), e.getMessage());
+        }
+
+        @Test
         void should_leave_vars_alone_when_no_author_is_declared() {
             BookLayout book = new BookLayout();
             set(book, "vars", new java.util.LinkedHashMap<>(Map.of("author", "From Vars")));

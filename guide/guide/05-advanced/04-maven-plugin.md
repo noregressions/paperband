@@ -221,7 +221,7 @@ sensible owner for a config file sitting among the output.
 | `book/author` | The book's author, for the cover. |
 | `book/authors` | Several authors: `<authors><author>A</author><author>B</author></authors>`. Templates get `book.authors` as a list and `book.author` rendered as "A and B", so a theme written for one author still shows both. Declaring both `<author>` and `<authors>` is an error. |
 | `book/toc` | `true` renders a printed table of contents after the cover, with real page numbers from a second render pass. See TOC and Index. |
-| `book/index` | `true` renders a back-of-book index from each card's `index:` frontmatter terms. See TOC and Index. |
+| `book/index` | `true` renders a back-of-book index from each card's `index:` frontmatter terms; `auto` additionally extracts each card's distinctive terms from its text. Anything else is an error. See TOC and Index. |
 | `book/vars` | Book-level template vars (`subtitle`, `series`, …). Flat strings only — see Watch Out. |
 | `book/axes` | Declared axes: `name` (the frontmatter key cards use), `title`, and `values` of `id`/`label`/`color`. Declared axes replace a yaml `axes:` wholesale. |
 

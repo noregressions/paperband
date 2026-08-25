@@ -19,11 +19,11 @@ Both are off by default and switch on in the root `paperband.yaml`:
 ```yaml
 vars:
   toc: true      # contents page after the cover / front matter
-  index: true    # index page after the last card
+  index: auto    # index page after the last card; `true` for frontmatter-only
 ```
 
 A POM-declared book says the same with `<toc>true</toc>` and
-`<index>true</index>` inside `<book>`, or through `<book><vars>`. The
+`<index>auto</index>` inside `<book>`, or through `<book><vars>`. The
 headings default to *Contents* and *Index*; override them with
 `vars.tocTitle` and `vars.indexTitle`.
 
@@ -43,6 +43,44 @@ Each `index:` term (a yaml list, or one comma-separated string) points at
 the page of every card that declares it, grouped under first letters and
 sorted case-insensitively. A book that enables `index: true` but declares no
 terms renders no index page at all rather than an empty one.
+
+## Automatic terms
+
+`index: auto` keeps the frontmatter terms and **also extracts each card's
+distinctive terms from its own text**. The question an index answers is
+"where do I read about X", so the terms worth printing are the ones frequent
+in one card and rare across the rest of the book — that's TF-IDF, computed
+over stemmed, stopword-filtered tokens (Lucene's analyzers), so *theme* and
+*themes* count as one term and print as whichever spelling the card actually
+used. Headings weigh more than body text, and short single-token `code`
+identifiers (`paperband.yaml`, `<margins>`) are kept verbatim with a boost
+of their own — in technical writing those are the entries readers look up.
+
+Extraction is deterministic — same book, same index — and guarded: a term
+appearing in more than a third of the cards is the book's subject rather
+than an index entry and is dropped, at most five auto terms win per card,
+and anything shorter than three characters or purely numeric never
+qualifies.
+
+The author curates by exception rather than by writing everything. Review
+what auto picked without rendering:
+
+```bash
+mvn paperband:structure -Dpaperband.input=book
+```
+
+Every card line grows an `index:` line showing its resolved terms — exactly
+what the index page will print. Veto a bad pick by name:
+
+```yaml
+vars:
+  index: auto
+  indexStop: [running, snippet]   # never index these
+```
+
+`indexStop` (a list or comma-separated string) suppresses auto picks only;
+a term you wrote in a card's own `index:` frontmatter always stays, and a
+frontmatter spelling wins over an auto-pick of the same term.
 
 ## How the page numbers work
 

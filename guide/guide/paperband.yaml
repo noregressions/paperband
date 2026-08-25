@@ -31,4 +31,9 @@ vars:
   # Printed table of contents and back-of-book index -- both live demos of
   # the features documented in Book Configuration / TOC and Index.
   toc: true
-  index: true
+  index: auto
+  # Vetoes for auto picks that are frequent-but-generic in this guide.
+  # Review the picks with `mvn paperband:structure -Dpaperband.input=guide`.
+  indexStop: [model, static, open, nested, group, front, new, file, goal,
+              pattern, Add, Changed, downloads, innermost, terms, numbers,
+              margin, limit, guide]

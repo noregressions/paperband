@@ -357,6 +357,11 @@ public final class LayoutEngine {
         List<Map<String, Object>> sectionMetas = buildSectionMetas(
                 bySection, bookRoot, bookParts, book.sectionLandingTemplate(), new HashMap<>());
 
+        // The same index-term resolution the PDF's index page uses, so this
+        // outline is the cheap way to review what `index: auto` picked —
+        // veto a bad term with vars.indexStop and re-run, no render needed.
+        Map<String, List<String>> indexTerms = resolvedIndexTerms(cards, bookCtx.vars());
+
         Map<String, String> prevValueKeyByAxis = new HashMap<>();
         String prevSectionId = null;
         for (int i = 0; i < cards.size(); i++) {
@@ -411,6 +416,10 @@ public final class LayoutEngine {
             }
             if (ax.length() > 0) sb.append("  {").append(ax).append('}');
             sb.append("  (").append(relativeSource(bookRoot, card.source())).append(')').append('\n');
+            List<String> terms = indexTerms.getOrDefault(card.id(), List.of());
+            if (!terms.isEmpty()) {
+                sb.append(indent).append("  index: ").append(String.join(", ", terms)).append('\n');
+            }
             appendBlockOutline(sb, card.blocks(), indent + "  ");
         }
 
@@ -1729,8 +1738,9 @@ public final class LayoutEngine {
         }
 
         model.put("toc", tocEntries);
+        Map<String, List<String>> indexTerms = resolvedIndexTerms(cards, bookCtx.vars());
         model.put("bookIndex",
-                truthyVar(bookCtx.vars().get("index")) ? buildIndexModel(cards) : null);
+                indexTerms.isEmpty() ? null : buildIndexModel(cards, indexTerms));
         model.put("cards", cardModels);
         model.put("axisGroupings", axisGroupingsModel(groupings));
         model.put("sections", sectionMetas);
@@ -1782,21 +1792,76 @@ public final class LayoutEngine {
         return e;
     }
 
+    /** Whether {@code vars.index} asked for automatic term extraction. */
+    private static boolean isAutoIndex(Object v) {
+        return v != null && "auto".equalsIgnoreCase(String.valueOf(v).trim());
+    }
+
     /**
-     * Back-of-book index model from each card's {@code index:} frontmatter —
-     * a list (or comma-separated string) of terms the card wants indexed.
-     * Terms group under their first letter (non-letters under {@code #}),
-     * sorted case-insensitively; each term points at the cards that declared
-     * it, in book order, via the same {@code card-<id>} anchors the TOC uses.
+     * Each card's final index terms, in card order — the resolution both the
+     * index page and the {@code structure} outline print, so what the outline
+     * shows is exactly what the PDF will index.
+     *
+     * <p>{@code vars.index: true} takes terms from each card's {@code index:}
+     * frontmatter alone; {@code vars.index: auto} adds the terms
+     * {@link IndexTermExtractor} judges distinctive of the card, minus any
+     * the book vetoed via {@code vars.indexStop} (a list or comma-separated
+     * string). A frontmatter spelling wins over an auto-pick of the same term.
+     *
+     * @return card id → terms; an empty map when indexing is off entirely
+     */
+    static Map<String, List<String>> resolvedIndexTerms(List<Card> cards, Map<String, Object> vars) {
+        Object mode = vars == null ? null : vars.get("index");
+        boolean auto = isAutoIndex(mode);
+        if (!truthyVar(mode) && !auto) return Map.of();
+        Map<String, List<String>> autoTerms = auto
+                ? IndexTermExtractor.extract(cards, stopTerms(vars))
+                : Map.of();
+        Map<String, List<String>> out = new LinkedHashMap<>();
+        for (Card card : cards) {
+            List<String> terms = new ArrayList<>(indexTermsOf(card));
+            for (String t : autoTerms.getOrDefault(card.id(), List.of())) {
+                if (terms.stream().noneMatch(x -> x.equalsIgnoreCase(t))) terms.add(t);
+            }
+            out.put(card.id(), terms);
+        }
+        return out;
+    }
+
+    /** The {@code vars.indexStop} veto list — terms auto-extraction must never pick. */
+    private static Set<String> stopTerms(Map<String, Object> vars) {
+        Object raw = vars.get("indexStop");
+        if (raw == null) return Set.of();
+        Set<String> out = new LinkedHashSet<>();
+        if (raw instanceof List<?> list) {
+            for (Object o : list) { if (o != null) addStop(out, String.valueOf(o)); }
+        } else {
+            for (String part : String.valueOf(raw).split(",")) addStop(out, part);
+        }
+        return out;
+    }
+
+    private static void addStop(Set<String> out, String s) {
+        s = s.trim();
+        if (!s.isEmpty()) out.add(s);
+    }
+
+    /**
+     * Back-of-book index model from each card's resolved terms (see
+     * {@link #resolvedIndexTerms}). Terms group under their first letter
+     * (non-letters under {@code #}), sorted case-insensitively; each term
+     * points at the cards that carry it, in book order, via the same
+     * {@code card-<id>} anchors the TOC uses.
      *
      * @return letter groups: {letter, terms: [{term, refs: [{anchor, title}]}]},
-     *         empty when no card declares any terms
+     *         empty when no card carries any terms
      */
-    private static List<Map<String, Object>> buildIndexModel(List<Card> cards) {
+    private static List<Map<String, Object>> buildIndexModel(
+            List<Card> cards, Map<String, List<String>> termsByCard) {
         Map<String, List<Map<String, Object>>> byTerm =
                 new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
         for (Card card : cards) {
-            for (String term : indexTermsOf(card)) {
+            for (String term : termsByCard.getOrDefault(card.id(), List.of())) {
                 List<Map<String, Object>> refs =
                         byTerm.computeIfAbsent(term, k -> new ArrayList<>());
                 String anchor = "card-" + card.id();

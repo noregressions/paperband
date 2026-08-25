@@ -141,11 +141,13 @@ public class BookLayout {
     private Boolean toc;
 
     /**
-     * Render a back-of-book index built from each card's {@code index:}
-     * frontmatter list, with real page numbers. Equivalent to
-     * {@code vars: { index: true }} in the root {@code paperband.yaml}.
+     * Render a back-of-book index, with real page numbers. {@code true}
+     * builds it from each card's {@code index:} frontmatter list alone;
+     * {@code auto} additionally extracts each card's distinctive terms from
+     * its text (veto bad picks via {@code <vars><indexStop>}). Equivalent to
+     * {@code vars: { index: true|auto }} in the root {@code paperband.yaml}.
      */
-    private Boolean index;
+    private String index;
 
     /** Full-page cover, as an image or a template. */
     private PageMatterConfig cover;
@@ -231,13 +233,23 @@ public class BookLayout {
      * @throws IllegalArgumentException when it declares authorship two ways at
      *         once — one of them would have to be dropped, and dropping half of
      *         a declaration silently is how a book ends up with the wrong name
-     *         on the cover
+     *         on the cover — or an {@code <index>} mode that doesn't exist,
+     *         which would otherwise silently mean "no index"
      */
     void validate() {
         if (author != null && !author.isBlank() && !authors.isEmpty()) {
             throw new IllegalArgumentException(
                     "<book> declares both <author> and <authors> — use one: <author> for a "
                             + "single name, <authors> for several.");
+        }
+        if (index != null) {
+            String mode = index.trim().toLowerCase(java.util.Locale.ROOT);
+            if (!mode.equals("true") && !mode.equals("false") && !mode.equals("auto")) {
+                throw new IllegalArgumentException(
+                        "<book><index> must be true, false or auto — got '" + index + "'. "
+                                + "true indexes each card's index: frontmatter terms; auto also "
+                                + "extracts each card's distinctive terms from its text.");
+            }
         }
     }
 
