@@ -50,7 +50,17 @@
     section.block > h1 { font-size: 1.35rem; margin-block: 1.5rem 0.75rem; }
     pre, code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
     pre { background: #f5f5f5; padding: 1rem; overflow-x: auto; }
-    .card-break { page-break-after: always; height: 0; }
+    /* Every card starts a fresh sheet. The break lives on the card ITSELF,
+       not on a spacer div between cards: a zero-height div carrying a
+       forced break gets stranded alone on a page whenever its neighbour
+       ends flush at a page boundary (break-after stranded it after a
+       flush card; break-before stranded it before every divider) — a
+       fully blank sheet either way. On real content elements, adjacent
+       forced breaks at the same boundary collapse (a divider's break-after
+       meeting the next card's break-before is one break), and a forced
+       break at the very start of the document is ignored, so the first
+       card adds no leading blank. */
+    article.card { break-before: page; page-break-before: always; }
 
     /* Fenced-code font-size step-down. Long lines get clipped at the page
        edge in print/PDF targets — the overflow-x: auto above has no
@@ -152,7 +162,7 @@
 
     /* Section PDF divider — a page, not a rule between cards.
        It gets a sheet of its own (forced break on both sides; adjacent
-       forced breaks collapse, so the .card-break before it doesn't leave a
+       forced breaks collapse, so a preceding card's boundary doesn't leave a
        blank page) and stands up to the full printable height so its content
        centres on the sheet. That height comes from --pw-content-height,
        stamped on <html> from the build's PageSpec — never a hardcoded page
@@ -342,7 +352,6 @@
     {% endif %}
 
     {% include "_card-body" with {"card": card} %}
-    {% if not loop.last %}<div class="card-break"></div>{% endif %}
   {% endfor %}
 
   {# Markers after the last section land here, after every card and before
