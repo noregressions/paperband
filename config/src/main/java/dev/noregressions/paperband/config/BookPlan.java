@@ -331,29 +331,48 @@ public final class BookPlan {
     private static List<String> nearMissWarnings(
             Path base, List<SectionSpec> specs, boolean acceptYamlCards) {
         List<Path> nearMisses;
+        List<Path> htmlFiles;
         try (Stream<Path> stream = Files.walk(base)) {
-            nearMisses = stream
+            List<Path> files = stream
                     .filter(Files::isRegularFile)
                     .filter(p -> !isHidden(base, p))
-                    .filter(p -> !CardFiles.isCard(p, acceptYamlCards, true))
-                    .filter(p -> isNearMiss(p, acceptYamlCards))
                     .map(p -> p.toAbsolutePath().normalize())
                     .toList();
+            nearMisses = files.stream()
+                    .filter(p -> !CardFiles.isCard(p, acceptYamlCards, true))
+                    .filter(p -> isNearMiss(p, acceptYamlCards))
+                    .toList();
+            htmlFiles = files.stream().filter(CardFiles::isHtmlCard).toList();
         } catch (IOException e) {
             return List.of();
         }
-        if (nearMisses.isEmpty()) return List.of();
+        if (nearMisses.isEmpty() && htmlFiles.isEmpty()) return List.of();
 
         List<String> out = new ArrayList<>();
         for (SectionSpec spec : specs) {
             List<GlobSet> excludes = GlobSet.of(spec.excludes());
             List<String> hits = new ArrayList<>();
+            // HTML swept by a pattern that doesn't say .html would be
+            // silently absent (match() refuses it) — say so, unless some
+            // .html-naming pattern in the same spec claims the file anyway.
+            List<String> htmlHits = new ArrayList<>();
             for (String pattern : spec.includes()) {
                 GlobSet include = GlobSet.of(pattern);
+                boolean namesHtml = patternNamesHtml(pattern);
                 for (Path miss : nearMisses) {
                     Path rel = base.relativize(miss);
                     if (include.matches(rel) && excludes.stream().noneMatch(x -> x.matches(rel))) {
                         hits.add(rel.toString());
+                    }
+                }
+                if (!namesHtml) {
+                    for (Path html : htmlFiles) {
+                        Path rel = base.relativize(html);
+                        if (include.matches(rel)
+                                && excludes.stream().noneMatch(x -> x.matches(rel))
+                                && !matchedByHtmlPattern(spec, base, html)) {
+                            htmlHits.add(rel.toString());
+                        }
                     }
                 }
             }
@@ -366,8 +385,27 @@ public final class BookPlan {
                         + " — a .yaml card needs the book root to declare a cardSchema:. "
                         + "Declare one, rename the file, or narrow the pattern.");
             }
+            if (!htmlHits.isEmpty()) {
+                List<String> shown = htmlHits.size() > 5 ? htmlHits.subList(0, 5) : htmlHits;
+                out.add(describe(idOf(spec)) + " matched " + htmlHits.size()
+                        + " .html file" + (htmlHits.size() == 1 ? "" : "s")
+                        + " with a pattern that doesn't end in .html: " + shown
+                        + (htmlHits.size() > shown.size()
+                                ? " and " + (htmlHits.size() - shown.size()) + " more" : "")
+                        + " — an .html becomes a card only when the pattern itself says so "
+                        + "(e.g. pages/*.html). Name it, or ignore this if the files aren't cards.");
+            }
         }
         return out;
+    }
+
+    /** True when any of {@code spec}'s .html-naming patterns matches {@code html}. */
+    private static boolean matchedByHtmlPattern(SectionSpec spec, Path base, Path html) {
+        Path rel = base.relativize(html);
+        for (String pattern : spec.includes()) {
+            if (patternNamesHtml(pattern) && GlobSet.of(pattern).matches(rel)) return true;
+        }
+        return false;
     }
 
     /** A file close enough to a card that a pattern matching it is probably a mistake. */
@@ -398,7 +436,12 @@ public final class BookPlan {
                     .filter(p -> !isHidden(base, p))
                     // Readmes included: for a planned book the pattern decides,
                     // and one naming README.md means it. See CardFiles.isCard.
-                    .filter(p -> CardFiles.isCard(p, acceptYamlCards, true))
+                    // HTML files are candidates too, but match() lets them
+                    // through only for a pattern that itself ends in .html —
+                    // a planned root may sit over generated HTML (a previous
+                    // site build), so a bare ** must never sweep it up.
+                    .filter(p -> CardFiles.isCard(p, acceptYamlCards, true)
+                            || CardFiles.isHtmlCard(p))
                     .map(p -> p.toAbsolutePath().normalize())
                     .toList();
         } catch (IOException e) {
@@ -431,18 +474,25 @@ public final class BookPlan {
         for (String pattern : spec.includes()) {
             GlobSet include = GlobSet.of(pattern);
             boolean namesAFile = namesAFile(pattern);
+            boolean namesHtml = patternNamesHtml(pattern);
             List<Path> hits = new ArrayList<>();
             for (Path candidate : candidates) {
                 if (claimed.contains(candidate)) continue;
                 Path rel = base.relativize(candidate);
                 if (!include.matches(rel)) continue;
                 if (excludes.stream().anyMatch(x -> x.matches(rel))) continue;
+                // An .html becomes a card only for a pattern that itself ends
+                // in .html — deliberate by spelling, so a sweep over a root
+                // that contains generated HTML can't quietly reshape the book.
+                if (CardFiles.isHtmlCard(candidate)) {
+                    if (!namesHtml) continue;
+                }
                 // A file the discovery rules skip -- README.md -- is claimed
                 // only by a pattern that NAMES it. `scenarios/*/README.md` means
                 // those files; `**` is a sweep, and there the readme rule earns
                 // its keep: it's what stops a book swallowing every readme in
                 // node_modules.
-                if (!CardFiles.isCard(candidate, acceptYamlCards) && !namesAFile) continue;
+                else if (!CardFiles.isCard(candidate, acceptYamlCards) && !namesAFile) continue;
                 hits.add(candidate);
             }
             Comparator<Path> byRelativePath = Comparator.comparing(p -> base.relativize(p).toString());
@@ -453,6 +503,19 @@ public final class BookPlan {
             out.addAll(hits);
         }
         return out;
+    }
+
+    /**
+     * Does {@code pattern}'s last segment end in {@code .html}? The spelling
+     * that opts a planned pattern into HTML cards — {@code pages/*.html} and
+     * {@code intro.html} mean HTML deliberately, {@code **} is a sweep and
+     * must not (see {@link #match}).
+     */
+    private static boolean patternNamesHtml(String pattern) {
+        String trimmed = pattern.trim().replace('\\', '/');
+        int slash = trimmed.lastIndexOf('/');
+        String last = slash < 0 ? trimmed : trimmed.substring(slash + 1);
+        return last.toLowerCase(Locale.ROOT).endsWith(".html");
     }
 
     /**

@@ -77,7 +77,39 @@ public final class MaskedRegions {
      * here so the sentinel format only needs to be gotten right once.
      */
     public static Masked substitute(String markdown) {
-        boolean[] masked = mask(markdown);
+        return substituteFrom(markdown, mask(markdown));
+    }
+
+    /**
+     * Mark the regions of an <em>HTML</em> source where template syntax must
+     * not be evaluated — the HTML-shaped equivalents of markdown's escape
+     * hatches: comments ({@code <!-- -->}), {@code <pre>} blocks, and
+     * {@code <code>} spans. Used when the card being preprocessed is an
+     * {@code .html} source rather than markdown, where fences and backticks
+     * don't exist.
+     */
+    public static boolean[] maskHtml(String html) {
+        boolean[] mask = new boolean[html.length()];
+        java.util.regex.Matcher m = HTML_PROTECTED.matcher(html);
+        while (m.find()) {
+            fill(mask, m.start(), m.end());
+        }
+        return mask;
+    }
+
+    /** {@link #substitute}, with {@link #maskHtml}'s regions. */
+    public static Masked substituteHtml(String html) {
+        return substituteFrom(html, maskHtml(html));
+    }
+
+    // Non-greedy so adjacent regions stay separate; DOTALL because pre blocks
+    // span lines; a <code> inside a <pre> is swallowed by the pre match.
+    private static final java.util.regex.Pattern HTML_PROTECTED =
+            java.util.regex.Pattern.compile(
+                    "<!--.*?-->|<pre\\b.*?</pre\\s*>|<code\\b.*?</code\\s*>",
+                    java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE);
+
+    private static Masked substituteFrom(String markdown, boolean[] masked) {
         StringBuilder out = new StringBuilder(markdown.length());
         List<String> originals = new ArrayList<>();
         int n = markdown.length();

@@ -473,4 +473,39 @@ class BookWalkerTest {
         assertEquals(List.of("a.md"), walkNames(root),
                 "the contradiction resolves in ignore's favour, loudly on stderr");
     }
+
+    // ---- HTML cards: opted in by the content/ wrapper ----
+
+    @Test
+    void htmlFilesAreCardsUnderAContentWrapper(@TempDir Path root) throws IOException {
+        Files.writeString(root.resolve("paperband.yaml"), "title: T\n");
+        Path content = Files.createDirectory(root.resolve("content"));
+        Files.writeString(content.resolve("a.md"), "# A\n");
+        Files.writeString(content.resolve("b.html"), "<h1>B</h1>\n");
+
+        assertEquals(List.of("a.md", "b.html"), walkNames(root),
+                "everything under content/ is authored, so .html there is a card");
+    }
+
+    @Test
+    void htmlFilesAreNotCardsWithoutTheWrapper(@TempDir Path root) throws IOException {
+        Files.writeString(root.resolve("a.md"), "# A\n");
+        Files.writeString(root.resolve("stray.html"), "<h1>generated?</h1>\n");
+
+        assertEquals(List.of("a.md"), walkNames(root),
+                "a legacy unwrapped book may have generated HTML lying around — not cards");
+    }
+
+    @Test
+    void htmlCardsSortByTheirMetaFields(@TempDir Path root) throws IOException {
+        Files.writeString(root.resolve("paperband.yaml"), "title: T\n");
+        Path content = Files.createDirectory(root.resolve("content"));
+        Files.writeString(content.resolve("paperband.yaml"), "sort: [tier]\n");
+        Files.writeString(content.resolve("a.html"),
+                "<html><head><title>A</title><meta name=\"tier\" content=\"2\"></head><body><p>x</p></body></html>\n");
+        Files.writeString(content.resolve("b.md"), "---\ntier: 1\n---\n# B\n");
+
+        assertEquals(List.of("b.md", "a.html"), walkNames(root),
+                "an .html card's <meta> fields sort alongside markdown frontmatter");
+    }
 }

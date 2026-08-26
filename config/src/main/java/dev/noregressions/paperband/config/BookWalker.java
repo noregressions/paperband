@@ -186,13 +186,21 @@ public final class BookWalker {
         if (start == null) return List.of();
         this.acceptYamlCards = CardFiles.declaresCardSchema(start);
         if (Files.isRegularFile(start)) {
-            return isCard(start) ? List.of(start.toAbsolutePath()) : List.of();
+            // Named directly, a file means itself — including an .html card.
+            return isCard(start) || CardFiles.isHtmlCard(start)
+                    ? List.of(start.toAbsolutePath()) : List.of();
         }
         if (!Files.isDirectory(start)) return List.of();
 
         Path root = start.toAbsolutePath();
         Path content = root.resolve("content");
-        if (Files.isDirectory(content)) root = content;
+        // The content/ wrapper is also the opt-in for HTML cards: everything
+        // under content/ is authored by definition, so an .html there is a
+        // card. An unwrapped root keeps today's md/yaml-only discovery — a
+        // legacy book may have generated HTML lying around, and sweeping it
+        // up silently would reshape the book.
+        this.htmlCards = Files.isDirectory(content);
+        if (this.htmlCards) root = content;
 
         List<Path> out = new ArrayList<>();
         this.walkRoot = root;
@@ -200,6 +208,9 @@ public final class BookWalker {
         walkDir(root, out);
         return out;
     }
+
+    /** Whether {@code .html} files count as cards this walk — see {@link #walk}. */
+    private boolean htmlCards;
 
     // ---- internals ----
 
@@ -352,13 +363,14 @@ public final class BookWalker {
         if (Files.isDirectory(subdir)) return subdir;
 
         // Then as a card file: explicit suffix as-is, else try each card
-        // extension in precedence order (.md first, then yaml when enabled).
-        if (name.endsWith(".md") || name.endsWith(".yaml") || name.endsWith(".yml")) {
+        // extension in precedence order (.md first, then yaml/html when enabled).
+        if (name.endsWith(".md") || name.endsWith(".yaml") || name.endsWith(".yml")
+                || name.endsWith(".html")) {
             return Files.isRegularFile(subdir) && isCard(subdir) ? subdir : null;
         }
-        List<String> extensions = acceptYamlCards
-                ? List.of(".md", ".yaml", ".yml")
-                : List.of(".md");
+        List<String> extensions = new ArrayList<>(List.of(".md"));
+        if (acceptYamlCards) { extensions.add(".yaml"); extensions.add(".yml"); }
+        if (htmlCards) extensions.add(".html");
         for (String ext : extensions) {
             Path candidate = dir.resolve(name + ext);
             if (Files.isRegularFile(candidate) && isCard(candidate)) return candidate;
@@ -539,6 +551,7 @@ public final class BookWalker {
     }
 
     private boolean isCard(Path p) {
-        return CardFiles.isCard(p, acceptYamlCards);
+        return CardFiles.isCard(p, acceptYamlCards)
+                || (htmlCards && CardFiles.isHtmlCard(p));
     }
 }

@@ -414,4 +414,40 @@ class BookPlanTest {
         assertThrows(ConfigParseException.class,
                 () -> BookPlan.resolve(bookRoot, List.of(part("Same", "**"), part("Same", "**")), "pdf-a4"));
     }
+
+    // ---- HTML cards: opted in by the pattern's spelling ----
+
+    @Test
+    void htmlMatchesOnlyAPatternThatSaysHtml() throws IOException {
+        servicesTree();
+        card("pages/interstitial.html", "<h1>Between</h1>\n");
+
+        BookPlan.Plan htmlPlan = BookPlan.resolve(bookRoot,
+                List.of(part("Pages", "pages/*.html")), "pdf-a4");
+        assertEquals(List.of("pages/interstitial.html"), relative(htmlPlan.cards()),
+                "a pattern ending .html claims html cards");
+
+        BookPlan.Plan sweep = BookPlan.resolve(bookRoot,
+                List.of(part("Everything", "**")), "pdf-a4");
+        assertFalse(relative(sweep.cards()).contains("pages/interstitial.html"),
+                "a bare sweep never claims html");
+        assertTrue(sweep.warnings().stream().anyMatch(w ->
+                        w.contains("interstitial.html") && w.contains(".html")),
+                "and says so instead of staying silent: " + sweep.warnings());
+    }
+
+    @Test
+    void htmlClaimedByAnHtmlPatternDoesNotWarnOnTheSweep() throws IOException {
+        servicesTree();
+        card("pages/interstitial.html", "<h1>Between</h1>\n");
+
+        BookPlan.Plan plan = BookPlan.resolve(bookRoot, List.of(
+                new BookPlan.SectionSpec("all", "All", null, null,
+                        List.of("pages/*.html", "**"), List.of(), List.of())), "pdf-a4");
+
+        assertTrue(relative(plan.cards()).contains("pages/interstitial.html"));
+        assertTrue(plan.warnings().stream().noneMatch(w -> w.contains("interstitial")),
+                "claimed by the html pattern, so the sweep has nothing to warn about: "
+                        + plan.warnings());
+    }
 }

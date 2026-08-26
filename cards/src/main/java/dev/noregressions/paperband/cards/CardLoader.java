@@ -23,6 +23,7 @@ import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -210,6 +211,13 @@ public final class CardLoader {
      * @throws CardParseException if the frontmatter or body is malformed
      */
     public Card parse(Path source, String markdown) {
+        // An .html source is a card in HTML's own idiom: <head> metadata is
+        // its frontmatter, <body> its content — see parseHtmlCard.
+        if (source != null && source.getFileName().toString()
+                .toLowerCase(java.util.Locale.ROOT).endsWith(".html")) {
+            return parseHtmlCard(source, markdown);
+        }
+
         // 1. Frontmatter / body split
         Frontmatter fm = Frontmatter.empty();
         String body = markdown;
@@ -224,9 +232,66 @@ public final class CardLoader {
         String html = renderer.render(doc);
 
         // 3. Walk via jsoup
-        org.jsoup.nodes.Document jdoc = Jsoup.parseBodyFragment(html);
-        Element bodyEl = jdoc.body();
+        return buildCard(source, fm, Jsoup.parseBodyFragment(html).body());
+    }
 
+    /**
+     * Parse an {@code .html} source into a {@link Card}: same card concept,
+     * HTML's own idiom for the metadata. The {@code <head>} <em>is</em> the
+     * frontmatter — {@code <title>} maps to {@code title:} and each
+     * {@code <meta name="..." content="...">} to a frontmatter field (so axis
+     * values, {@code index:} terms and {@code sort:} fields all work), with
+     * numeric and boolean content refined to real types the way yaml would
+     * have typed them. The {@code <body>} then goes down exactly the pipeline
+     * a markdown card's rendered body does: diff-card rewriting, inline-code
+     * classification, the content policy, and the heading walk that splits it
+     * into blocks — one card concept, two source syntaxes.
+     *
+     * <p>A headless fragment works too: jsoup's parser gives it an empty
+     * synthetic head, the title falls back to the first {@code <h1>} exactly
+     * as markdown's does, and the id derives from the filename as always.
+     */
+    private Card parseHtmlCard(Path source, String html) {
+        org.jsoup.nodes.Document jdoc = Jsoup.parse(html == null ? "" : html);
+        Map<String, Object> meta = new LinkedHashMap<>();
+        String docTitle = jdoc.title();
+        if (docTitle != null && !docTitle.isBlank()) meta.put("title", docTitle.trim());
+        // Selected document-wide, not head-only: a fragment pasted without a
+        // real <head> can carry its <meta> mid-body and still mean it.
+        for (Element metaEl : jdoc.select("meta[name]")) {
+            String name = metaEl.attr("name").trim();
+            String content = metaEl.attr("content");
+            if (!name.isEmpty() && !meta.containsKey(name)) {
+                meta.put(name, refineMetaValue(content));
+            }
+        }
+        return buildCard(source, new Frontmatter(meta), jdoc.body());
+    }
+
+    /**
+     * Give a {@code <meta content="...">} string the type yaml would have
+     * given the same spelling — integers, decimals and booleans as
+     * themselves — so an HTML card's {@code tier} sorts and groups exactly
+     * like a markdown card's.
+     */
+    private static Object refineMetaValue(String value) {
+        String s = value == null ? "" : value.trim();
+        try {
+            if (s.matches("-?\\d+")) return Integer.valueOf(s);
+            if (s.matches("-?\\d+\\.\\d+")) return Double.valueOf(s);
+        } catch (NumberFormatException e) {
+            return s;   // out of range: keep the spelling
+        }
+        if (s.equalsIgnoreCase("true")) return Boolean.TRUE;
+        if (s.equalsIgnoreCase("false")) return Boolean.FALSE;
+        return s;
+    }
+
+    /**
+     * The shared back half of card parsing: everything after a body element
+     * exists, whatever syntax it came from.
+     */
+    private Card buildCard(Path source, Frontmatter fm, Element bodyEl) {
         // 3a. Rewrite custom fenced-code conventions (diff-card, error-output)
         //     into structured HTML before block-walking. Real-language fences
         //     pass through untouched for Prism to highlight downstream.

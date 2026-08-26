@@ -149,7 +149,7 @@ expresses that first section — the trace cards' own folders say nothing about 
 | `section/title` | Shown on the divider and landing page. |
 | `section/landingTemplate` | Preset name or template path, exactly as a section folder's own `landing.template`. |
 | `section/where` | Pebble predicate over `target`; false skips the whole section. |
-| `section/includes` | Glob patterns selecting the section's cards, in emission order. |
+| `section/includes` | Glob patterns selecting the section's cards, in emission order. An `.html` file becomes a card only for a pattern that itself ends in `.html` (`pages/*.html`) — a bare sweep never claims one, and warns when it would have. |
 | `section/excludes` | Glob patterns removing what an include matched. |
 | `section/sort` | Comma-separated frontmatter fields, `-` for descending — the `sort:` key's semantics. |
 | `section/landingPage` | Whether the section gets a page of its own — `true` by default. See below. |

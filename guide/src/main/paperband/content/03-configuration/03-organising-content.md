@@ -22,7 +22,7 @@ src/main/paperband/
   styles/            ← the css chain's files
 ```
 
-When the book root contains a `content/` directory, only `content/` is walked for cards —
+When the book root contains a `content/` directory, only `content/` is walked for cards, and `.html` files there are cards too (see HTML Cards in Authoring) —
 `layouts/` and `styles/` sit beside it as non-content. A book without the wrapper keeps
 working: the whole root is walked as before, except that root-level `layouts/` and
 `styles/` directories are always skipped (a markdown snippet in `layouts/` is a template

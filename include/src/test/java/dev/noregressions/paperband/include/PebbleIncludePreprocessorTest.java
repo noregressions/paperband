@@ -570,6 +570,60 @@ class PebbleIncludePreprocessorTest {
         assertTrue(out.contains("standalone snippet"));
     }
 
+    // ---- HTML cards: the masking profile follows the source syntax ----
+
+    @Test
+    void htmlSource_varsAndIncludesEvaluate(@TempDir Path tmp) throws IOException {
+        Path source = writeFile(tmp, "card.html", "unused");
+        writeFile(tmp, "layouts/aside.html", "from a snippet\n");
+        MarkdownPreprocessor withVars = Includes.defaultPreprocessor(
+                tmp, Map.of(), Map.of("product_name", "Paperband"));
+
+        String out = withVars.process(
+                "<h1>{{ vars.product_name }}</h1>\n{% include \"aside\" %}\n", source);
+
+        assertTrue(out.contains("<h1>Paperband</h1>"));
+        assertTrue(out.contains("from a snippet"));
+    }
+
+    @Test
+    void htmlSource_preCodeAndCommentsAreProtected(@TempDir Path tmp) throws IOException {
+        Path source = writeFile(tmp, "card.html", "unused");
+        MarkdownPreprocessor withVars = Includes.defaultPreprocessor(
+                tmp, Map.of(), Map.of("product_name", "Paperband"));
+
+        String out = withVars.process("""
+                <p>real: {{ vars.product_name }}</p>
+                <pre>{% fragment "ghost.txt" %}</pre>
+                <p>inline <code>{{ vars.product_name }}</code> example</p>
+                <!-- {% not even valid pebble %} -->
+                """, source);
+
+        assertTrue(out.contains("real: Paperband"));
+        assertTrue(out.contains("<pre>{% fragment \"ghost.txt\" %}</pre>"),
+                "a <pre> example survives verbatim — HTML's code fence");
+        assertTrue(out.contains("<code>{{ vars.product_name }}</code>"));
+        assertTrue(out.contains("<!-- {% not even valid pebble %} -->"));
+    }
+
+    @Test
+    void markdownSource_stillUsesTheMarkdownProfile(@TempDir Path tmp) throws IOException {
+        // An html-looking <pre> in MARKDOWN is not a protected region (markdown's
+        // fences are); the fenced block is. Guards against the profile switch
+        // leaking across syntaxes.
+        Path source = writeFile(tmp, "card.md", "unused");
+        MarkdownPreprocessor withVars = Includes.defaultPreprocessor(
+                tmp, Map.of(), Map.of("product_name", "Paperband"));
+
+        String out = withVars.process("""
+                ```
+                {{ vars.product_name }}
+                ```
+                """, source);
+
+        assertTrue(out.contains("{{ vars.product_name }}"), "the fence protects, as before");
+    }
+
     // ---- helpers ----
 
     private static Path writeFile(Path dir, String name, String content) throws IOException {

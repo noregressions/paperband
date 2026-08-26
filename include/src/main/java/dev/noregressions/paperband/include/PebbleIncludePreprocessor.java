@@ -121,7 +121,15 @@ public final class PebbleIncludePreprocessor implements MarkdownPreprocessor {
     public String process(String markdown, Path sourceFile) {
         if (markdown == null || markdown.isEmpty()) return markdown;
 
-        MaskedRegions.Masked masked = MaskedRegions.substitute(markdown);
+        // The masking profile follows the source syntax: markdown protects
+        // frontmatter/fences/backticks, an .html card protects comments,
+        // <pre> blocks and <code> spans — each format's own escape hatches.
+        boolean htmlSource = sourceFile != null
+                && sourceFile.getFileName().toString().toLowerCase(java.util.Locale.ROOT)
+                        .endsWith(".html");
+        MaskedRegions.Masked masked = htmlSource
+                ? MaskedRegions.substituteHtml(markdown)
+                : MaskedRegions.substitute(markdown);
 
         Path layouts = layoutsDir(bookRoot, sourceFile);
         FragmentExtension fragmentExtension =

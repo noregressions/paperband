@@ -113,7 +113,21 @@ final class FrontmatterSort {
      * properly later by the card loader, not here.
      */
     private static Map<String, Object> readFields(Yaml yaml, Path p, boolean acceptYamlCards) {
-        if (!Files.isRegularFile(p) || !CardFiles.isCard(p, acceptYamlCards)) return Map.of();
+        if (!Files.isRegularFile(p)) return Map.of();
+        // An .html card's frontmatter is its <meta> tags — harvested here
+        // with a lightweight scan (heads are authored, not adversarial;
+        // CardLoader does the real parse), typed the same way it types them
+        // so a mixed md/html folder sorts consistently.
+        if (CardFiles.isHtmlCard(p)) {
+            try {
+                return htmlMetaFields(Files.readString(p));
+            } catch (IOException | RuntimeException e) {
+                System.err.println("warn: sort: could not read <meta> fields of " + p
+                        + " (" + e.getMessage() + ") — sorting it last");
+                return Map.of();
+            }
+        }
+        if (!CardFiles.isCard(p, acceptYamlCards)) return Map.of();
         String name = p.getFileName().toString();
         try {
             String text = Files.readString(p);
@@ -136,5 +150,40 @@ final class FrontmatterSort {
                     + " (" + e.getMessage() + ") — sorting it last");
             return Map.of();
         }
+    }
+
+    /**
+     * Attribute order varies, so both spellings of a {@code <meta>} tag are
+     * matched: {@code name= ... content=} and {@code content= ... name=}.
+     */
+    private static final Pattern META_NAME_FIRST = Pattern.compile(
+            "<meta\\s+name\\s*=\\s*[\"']([^\"']+)[\"']\\s+content\\s*=\\s*[\"']([^\"']*)[\"']",
+            Pattern.CASE_INSENSITIVE);
+    private static final Pattern META_CONTENT_FIRST = Pattern.compile(
+            "<meta\\s+content\\s*=\\s*[\"']([^\"']*)[\"']\\s+name\\s*=\\s*[\"']([^\"']+)[\"']",
+            Pattern.CASE_INSENSITIVE);
+
+    /** {@code <meta name= content=>} pairs of an HTML card, typed like yaml would type them. */
+    private static Map<String, Object> htmlMetaFields(String html) {
+        Map<String, Object> out = new java.util.LinkedHashMap<>();
+        Matcher m = META_NAME_FIRST.matcher(html);
+        while (m.find()) out.putIfAbsent(m.group(1).trim(), refine(m.group(2)));
+        m = META_CONTENT_FIRST.matcher(html);
+        while (m.find()) out.putIfAbsent(m.group(2).trim(), refine(m.group(1)));
+        return out;
+    }
+
+    /** Mirror of {@code CardLoader.refineMetaValue}: int/decimal/boolean, else the string. */
+    private static Object refine(String value) {
+        String s = value == null ? "" : value.trim();
+        try {
+            if (s.matches("-?\\d+")) return Integer.valueOf(s);
+            if (s.matches("-?\\d+\\.\\d+")) return Double.valueOf(s);
+        } catch (NumberFormatException e) {
+            return s;
+        }
+        if (s.equalsIgnoreCase("true")) return Boolean.TRUE;
+        if (s.equalsIgnoreCase("false")) return Boolean.FALSE;
+        return s;
     }
 }

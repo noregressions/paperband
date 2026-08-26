@@ -66,6 +66,23 @@ final class CardFiles {
     }
 
     /**
+     * Is {@code p} an HTML card <em>candidate</em>? Deliberately not part of
+     * {@link #isCard}: whether an {@code .html} file actually becomes a card
+     * is decided by <em>where it was found</em>, not by its extension alone —
+     * books sit inside projects full of generated HTML (a previous site
+     * build, emitted debug pages), so the callers gate it: {@link BookWalker}
+     * accepts HTML cards only when walking a {@code content/}-scoped root
+     * (authored by definition), and {@link BookPlan} only when the include
+     * pattern itself ends in {@code .html} (deliberate by spelling).
+     *
+     * @param p the candidate file
+     * @return true when the file is an {@code .html} file
+     */
+    static boolean isHtmlCard(Path p) {
+        return p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".html");
+    }
+
+    /**
      * Find the book root the same way {@code ConfigLoader} does — the topmost
      * {@code paperband.yaml} walking parents up from {@code start} — and
      * report whether it declares a {@code cardSchema:}. That's the opt-in for
