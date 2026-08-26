@@ -2,6 +2,7 @@ package dev.noregressions.paperband.maven;
 
 import dev.noregressions.paperband.cards.CardLoader;
 import dev.noregressions.paperband.cards.CardParseException;
+import dev.noregressions.paperband.cards.ContentPolicy;
 import dev.noregressions.paperband.cards.MarkdownPreprocessor;
 import dev.noregressions.paperband.cards.YamlCardTranspiler;
 import dev.noregressions.paperband.model.Card;
@@ -120,5 +121,37 @@ final class CardLoading {
             source = preprocessor.process(source, cardFile);
         }
         return cardLoader.parse(cardFile, source);
+    }
+
+    /**
+     * Load one card under the content policy its {@code vars} cascade
+     * declares ({@code vars: { contentPolicy: allow | clean | strict }},
+     * default {@code clean}) — set per card, since a folder can override the
+     * book-wide value through the cascade. CLEAN-mode removals go to the
+     * build log as warnings, each naming the card and what went.
+     *
+     * @param cardLoader   the shared loader
+     * @param preprocessor pre-flexmark pass, or null
+     * @param cardFile     the card file
+     * @param cardSchema   yaml-card schema, or null
+     * @param vars         the card's resolved vars, for {@code contentPolicy}
+     * @param log          where removals are reported
+     * @return the loaded card
+     * @throws CardParseException on an unknown policy value, naming the valid ones
+     */
+    static Card load(CardLoader cardLoader,
+                     MarkdownPreprocessor preprocessor,
+                     Path cardFile,
+                     CardSchema cardSchema,
+                     Map<String, Object> vars,
+                     org.apache.maven.plugin.logging.Log log) {
+        ContentPolicy policy;
+        try {
+            policy = ContentPolicy.parse(vars == null ? null : vars.get("contentPolicy"));
+        } catch (IllegalArgumentException e) {
+            throw new CardParseException(cardFile + ": " + e.getMessage());
+        }
+        cardLoader.setContentPolicy(policy, log == null ? null : log::warn);
+        return load(cardLoader, preprocessor, cardFile, cardSchema);
     }
 }

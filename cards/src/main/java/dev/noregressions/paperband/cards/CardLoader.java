@@ -118,6 +118,30 @@ public final class CardLoader {
     private final HtmlRenderer renderer;
     private final MarkdownPreprocessor preprocessor;
 
+    /**
+     * What happens to presentation markup in content — see
+     * {@link ContentPolicy}. CLEAN by default: the tool's contract is that
+     * content carries structure and the theme owns appearance. Mutable rather
+     * than constructed-in because the policy rides the {@code vars} cascade,
+     * so one loader serving a whole book can be re-pointed per card.
+     */
+    private ContentPolicy contentPolicy = ContentPolicy.CLEAN;
+
+    /** Where CLEAN-mode removals are reported; null drops them silently. */
+    private java.util.function.Consumer<String> onRemoval;
+
+    /**
+     * Set the content policy for subsequent parses, and where CLEAN-mode
+     * removals are reported (each message already names the card file).
+     *
+     * @param policy    the policy; null resets to {@link ContentPolicy#CLEAN}
+     * @param onRemoval removal sink, e.g. a build log's warn; null drops them
+     */
+    public void setContentPolicy(ContentPolicy policy, java.util.function.Consumer<String> onRemoval) {
+        this.contentPolicy = policy == null ? ContentPolicy.CLEAN : policy;
+        this.onRemoval = onRemoval;
+    }
+
     /** Construct a loader with no markdown preprocessor. */
     public CardLoader() {
         this((MarkdownPreprocessor) null, null);
@@ -216,6 +240,29 @@ public final class CardLoader {
         //     property, etc.) so themes can colour them semantically. Code
         //     inside <pre> is left alone — Prism handles those.
         InlineCodeClassifier.process(bodyEl);
+
+        // 3c. Content policy: strip presentation smuggled in through raw HTML
+        //     (inline style=, <style>/<script>, presentational tags/attrs) so
+        //     the output stays theme-owned — see ContentSanitizer for the
+        //     list and the reasoning. Classes and ids survive: they're the
+        //     sanctioned styling route. Fenced/inline code is untouched by
+        //     construction (its contents are escaped text, not elements).
+        if (contentPolicy != ContentPolicy.ALLOW) {
+            List<String> removedByPolicy = ContentSanitizer.strip(bodyEl);
+            if (!removedByPolicy.isEmpty()) {
+                if (contentPolicy == ContentPolicy.STRICT) {
+                    throw new CardParseException(source + ": content policy 'strict' — "
+                            + "presentation found in content: "
+                            + String.join("; ", removedByPolicy)
+                            + ". Move styling to classes ({.name} in markdown) plus the book "
+                            + "css chain or theme, or declare vars: { contentPolicy: clean } "
+                            + "to strip it, or allow to keep it.");
+                }
+                if (onRemoval != null) {
+                    for (String r : removedByPolicy) onRemoval.accept(source + ": " + r);
+                }
+            }
+        }
 
         String title = fm.getString("title").orElse(null);
         // An h1 fills the title slot only when the frontmatter hasn't. With a

@@ -145,7 +145,8 @@ public class SiteMojo extends AbstractPaperbandMojo {
             contexts.add(ctx);
             MarkdownPreprocessor preprocessor = Includes.defaultPreprocessor(
                     bookCtx.book().bookRoot(), providerConfig, ctx.vars());
-            cards.add(CardLoading.load(cardLoader, preprocessor, cardFile, ctx.book().cardSchema()));
+            cards.add(CardLoading.load(cardLoader, preprocessor, cardFile, ctx.book().cardSchema(),
+                    ctx.vars(), getLog()));
         }
 
         CardLoading.requireUniqueIds(cards, bookDir);

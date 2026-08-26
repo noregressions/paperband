@@ -101,6 +101,44 @@ attaches to *that* paragraph instead of the code block. `fs--1` shaves roughly 1
 the rendered code size, `fs--2` about 20%; going further than `fs--2` hurts legibility in
 print.
 
+## Raw HTML and the content policy
+
+Raw HTML in a card is a legitimate *structural* escape hatch — a table with rowspans,
+`<kbd>Ctrl</kbd>`, a `<details>` block. What it is **not** is a styling channel: content
+carries structure, and the theme owns appearance — that separation is what lets a reader
+pick a theme and have it actually apply.
+
+The build enforces this with a content policy, declared through the `vars` cascade
+(book-wide in the root yaml, overridable per folder, or via the POM's `<vars>`):
+
+```yaml
+vars:
+  contentPolicy: clean    # the default — allow | clean | strict
+```
+
+- **`clean`** (default) — presentation found in content is stripped and each removal is
+  logged, naming the card and what went. Stripped: inline `style=`, `<style>` and
+  `<script>` blocks, head-metadata elements (`<link>`, `<meta>`, `<title>`, `<base>`),
+  presentational tags (`<font>`, `<center>` — unwrapped, their content kept) and
+  attributes (`align`, `bgcolor`, `width`, `border`, …), and `on*` event handlers.
+  Classes and ids survive — they're the sanctioned route.
+- **`strict`** — the same findings fail the build instead, for teams that want the
+  source fixed rather than laundered.
+- **`allow`** — content HTML passes verbatim, today's escape hatch.
+
+Fenced and inline code are never touched: a literal `<div style="…">` inside an example
+is escaped text by the time the policy runs, so this page can show the syntax it strips.
+
+To style content, name the *meaning* with a class and let CSS own the look:
+
+```markdown
+> Deletes the working directory. {.warning}
+```
+
+with a `.warning` rule in the book's `css:` chain, a theme, or the POM's
+`<stylesheets>`. That's the styling that survives a theme switch — and the reason
+`style="color: red"` doesn't.
+
 ## Check
 
 ```bash

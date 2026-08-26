@@ -125,7 +125,8 @@ public class StructureMojo extends AbstractPaperbandMojo {
         RenderContext ctx = new ConfigLoader().load(cardFile, target, pageSize, resolveMargins());
         MarkdownPreprocessor preprocessor = Includes.defaultPreprocessor(
                 ctx.book().bookRoot(), includeProviderConfig(), ctx.vars());
-        Card card = CardLoading.load(new CardLoader(), preprocessor, cardFile, ctx.book().cardSchema());
+        Card card = CardLoading.load(new CardLoader(), preprocessor, cardFile, ctx.book().cardSchema(),
+                ctx.vars(), getLog());
         return LayoutEngine.describeCard(card);
     }
 
@@ -164,7 +165,8 @@ public class StructureMojo extends AbstractPaperbandMojo {
             contexts.add(ctx);
             MarkdownPreprocessor preprocessor = Includes.defaultPreprocessor(
                     bookCtx.book().bookRoot(), providerConfig, ctx.vars());
-            cards.add(CardLoading.load(cardLoader, preprocessor, cardFile, ctx.book().cardSchema()));
+            cards.add(CardLoading.load(cardLoader, preprocessor, cardFile, ctx.book().cardSchema(),
+                    ctx.vars(), getLog()));
         }
         CardLoading.requireUniqueIds(cards, bookCtx.book().bookRoot());
 

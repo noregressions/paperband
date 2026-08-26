@@ -167,7 +167,8 @@ final class BookBuild {
                 input, target, pageSize, margins, declaredRoot, declaredVars());
         MarkdownPreprocessor preprocessor = Includes.defaultPreprocessor(
                 ctx.book().bookRoot(), includeProviderConfig, ctx.vars());
-        Card card = CardLoading.load(new CardLoader(), preprocessor, input, ctx.book().cardSchema());
+        Card card = CardLoading.load(new CardLoader(), preprocessor, input, ctx.book().cardSchema(),
+                ctx.vars(), log);
 
         ThemeBundle theme = Themes.resolve(themeName, ctx.book().theme(), themeDir);
         LayoutEngine layout = new LayoutEngine(ctx.book().bookRoot(), theme);
@@ -243,7 +244,8 @@ final class BookBuild {
             }
             MarkdownPreprocessor preprocessor = Includes.defaultPreprocessor(
                     bookCtx.book().bookRoot(), includeProviderConfig, vars);
-            Card card = CardLoading.load(cardLoader, preprocessor, cardFile, ctx.book().cardSchema());
+            Card card = CardLoading.load(cardLoader, preprocessor, cardFile, ctx.book().cardSchema(),
+                    vars, log);
             cards.add(card);
             totalBlocks += card.blocks().size();
         }
