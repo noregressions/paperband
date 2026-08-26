@@ -112,6 +112,13 @@ public class SiteMojo extends AbstractPaperbandMojo {
         BookBuild.PlannedBook plan = null;
         Path declaredRoot = null;
         Path walkFrom = input == null ? null : resolve(input);
+        if (walkFrom == null && book == null) {
+            // Convention over configuration — see conventionalBookRoot().
+            walkFrom = conventionalBookRoot();
+            if (walkFrom != null) {
+                getLog().info("No <input> configured — using the conventional book root " + walkFrom);
+            }
+        }
         if (book != null) {
             declaredRoot = book.getRoot() != null ? resolve(book.getRoot()) : basedir();
             if (book.declaresCardSelection()) {

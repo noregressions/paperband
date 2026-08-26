@@ -12,6 +12,7 @@ import org.codehaus.plexus.util.xml.Xpp3Dom;
 
 import java.io.File;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -206,6 +207,23 @@ public abstract class AbstractPaperbandMojo extends AbstractMojo {
     /** The module basedir, or the working directory outside a project. */
     protected Path basedir() {
         return project == null ? Path.of("") : project.getBasedir().toPath();
+    }
+
+    /**
+     * The conventional book root — {@code src/main/paperband} under the
+     * module, when it exists. The goals that take an {@code <input>} fall
+     * back to it when neither {@code <input>} nor {@code <book>} is
+     * configured, the way {@code src/main/java} needs no declaring: a book
+     * laid out conventionally builds with no {@code <configuration>} at all.
+     * Inside it, cards live in {@code content/}, templates in
+     * {@code layouts/}, css in {@code styles/}, and the root
+     * {@code paperband.yaml} carries the book config (see BookWalker).
+     *
+     * @return the conventional root, or null when the module doesn't have one
+     */
+    protected Path conventionalBookRoot() {
+        Path conventional = basedir().resolve("src").resolve("main").resolve("paperband");
+        return Files.isDirectory(conventional) ? conventional : null;
     }
 
     /** Resolve a configured file against the module basedir when it's relative. */

@@ -36,7 +36,7 @@ Paperband builds books from Maven. Declare the plugin in the project that holds 
 
 The plugin shares the parent's version. The parent POM version:
 
-{% fragment "../../../pom.xml:version-declaration" %}
+{% fragment "../../../../../../pom.xml:version-declaration" %}
 
 `mvn package` now builds the book as part of the build. Every goal can also be invoked
 directly, without an execution, which is how the examples throughout this guide are

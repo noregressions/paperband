@@ -24,7 +24,7 @@ source file. The comment style (`//`, `#`, `<!-- -->`) is ignored by the pattern
 
 Here is the tag's own grammar, pulled live from the source:
 
-{% fragment "../../../include/src/main/java/dev/noregressions/paperband/include/FragmentTokenParser.java:fragment-tag-grammar" %}
+{% fragment "../../../../../../include/src/main/java/dev/noregressions/paperband/include/FragmentTokenParser.java:fragment-tag-grammar" %}
 
 The first argument is the reference — any Pebble expression, not just a quoted literal.
 Everything after a comma is a `name=value` pair: `as="<type>"` sets the return type,

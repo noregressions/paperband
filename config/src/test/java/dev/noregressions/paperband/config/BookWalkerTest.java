@@ -372,4 +372,105 @@ class BookWalkerTest {
                 .map(q -> q.getFileName().toString()).toList();
         assertEquals(List.of("x.md", "c.md"), web);
     }
+
+    // ---- conventional layout: content/ wrapper, reserved dirs ----
+
+    @Test
+    void contentWrapperRedirectsTheWalk(@TempDir Path root) throws IOException {
+        Files.writeString(root.resolve("paperband.yaml"), "title: T\n");
+        Path content = Files.createDirectory(root.resolve("content"));
+        Files.writeString(content.resolve("a.md"), "# A\n");
+        Path layouts = Files.createDirectory(root.resolve("layouts"));
+        Files.writeString(layouts.resolve("snippet.md"), "# not a card\n");
+        Files.writeString(root.resolve("loose.md"), "# beside the wrapper\n");
+
+        assertEquals(List.of("a.md"), walkNames(root),
+                "with a content/ wrapper only content/ is walked — layouts/ and root-level"
+                        + " strays are not cards");
+    }
+
+    @Test
+    void reservedRootDirsAreSkippedWithoutAContentWrapper(@TempDir Path root) throws IOException {
+        Files.writeString(root.resolve("a.md"), "# A\n");
+        Path layouts = Files.createDirectory(root.resolve("layouts"));
+        Files.writeString(layouts.resolve("snippet.md"), "# not a card\n");
+        Path styles = Files.createDirectory(root.resolve("styles"));
+        Files.writeString(styles.resolve("note.md"), "# not a card either\n");
+
+        assertEquals(List.of("a.md"), walkNames(root),
+                "layouts/ and styles/ at the walk root hold templates and css, not content");
+    }
+
+    @Test
+    void reservedNamesDeeperInTheTreeAreStillContent(@TempDir Path root) throws IOException {
+        Path section = Files.createDirectory(root.resolve("guide"));
+        Path nested = Files.createDirectory(section.resolve("layouts"));
+        Files.writeString(nested.resolve("designing.md"), "# a chapter about layouts\n");
+
+        assertEquals(List.of("designing.md"), walkNames(root),
+                "only the root-level layouts/ is reserved; a section may be named layouts");
+    }
+
+    // ---- ignore: ----
+
+    @Test
+    void ignoreBasenamePatternMatchesAtAnyDepth(@TempDir Path root) throws IOException {
+        Files.writeString(root.resolve("paperband.yaml"), "ignore: ['*.tmp.md']\n");
+        Files.writeString(root.resolve("a.md"), "# A\n");
+        Files.writeString(root.resolve("b.tmp.md"), "# scratch\n");
+        Path deep = Files.createDirectory(root.resolve("deep"));
+        Files.writeString(deep.resolve("c.tmp.md"), "# deep scratch\n");
+        Files.writeString(deep.resolve("d.md"), "# D\n");
+
+        assertEquals(List.of("a.md", "d.md"), walkNames(root),
+                "a slashless pattern matches basenames anywhere beneath the declaration");
+    }
+
+    @Test
+    void ignorePathPatternSkipsTheSubtree(@TempDir Path root) throws IOException {
+        Files.writeString(root.resolve("paperband.yaml"), "ignore: [drafts/**]\n");
+        Files.writeString(root.resolve("a.md"), "# A\n");
+        Path drafts = Files.createDirectory(root.resolve("drafts"));
+        Files.writeString(drafts.resolve("wip.md"), "# WIP\n");
+
+        assertEquals(List.of("a.md"), walkNames(root));
+    }
+
+    @Test
+    void ignoreOfABareDirectoryNameSkipsItEntirely(@TempDir Path root) throws IOException {
+        Files.writeString(root.resolve("paperband.yaml"), "ignore: [scratch]\n");
+        Files.writeString(root.resolve("a.md"), "# A\n");
+        Path scratch = Files.createDirectory(root.resolve("scratch"));
+        Files.writeString(scratch.resolve("x.md"), "# X\n");
+
+        assertEquals(List.of("a.md"), walkNames(root));
+    }
+
+    @Test
+    void ignoreScopesToTheDeclaringDirectorysSubtree(@TempDir Path root) throws IOException {
+        Path one = Files.createDirectory(root.resolve("one"));
+        Files.writeString(one.resolve("paperband.yaml"), "ignore: [notes.md]\n");
+        Files.writeString(one.resolve("notes.md"), "# ignored here\n");
+        Files.writeString(one.resolve("a.md"), "# A\n");
+        Path two = Files.createDirectory(root.resolve("two"));
+        Files.writeString(two.resolve("notes.md"), "# a real card here\n");
+
+        assertEquals(List.of("a.md", "notes.md"), walkNames(root),
+                "one/'s ignore does not reach its sibling two/");
+    }
+
+    @Test
+    void declaredEntryMatchedByIgnoreIsSkippedWithAWarning(@TempDir Path root) throws IOException {
+        Files.writeString(root.resolve("paperband.yaml"), """
+                ignore: [b.md]
+                order:
+                  - b
+                  - a
+                """);
+        Files.writeString(root.resolve("a.md"), "# A\n");
+        Files.writeString(root.resolve("b.md"), "# B\n");
+
+        assertEquals(List.of("a.md"), walkNames(root),
+                "the contradiction resolves in ignore's favour, loudly on stderr");
+    }
 }

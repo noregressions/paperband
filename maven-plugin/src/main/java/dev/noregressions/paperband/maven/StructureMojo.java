@@ -88,8 +88,15 @@ public class StructureMojo extends AbstractPaperbandMojo {
         if (input != null && book != null) {
             throw new MojoExecutionException("Configure either <input> or <book>, not both.");
         }
+        Path conventional = null;
         if (input == null && book == null) {
-            throw new MojoExecutionException("Configure <input> (or <book>) — nothing to describe.");
+            // Convention over configuration — see conventionalBookRoot().
+            conventional = conventionalBookRoot();
+            if (conventional == null) {
+                throw new MojoExecutionException("Configure <input> (or <book>) — nothing to "
+                        + "describe. (Or lay the book out at src/main/paperband, which needs "
+                        + "neither.)");
+            }
         }
         String text;
         if (book != null) {
@@ -98,7 +105,7 @@ public class StructureMojo extends AbstractPaperbandMojo {
                     ? plannedBook()
                     : BookSource.walk(root, target, getLog()), root);
         } else {
-            Path in = resolve(input);
+            Path in = conventional != null ? conventional : resolve(input);
             if (Files.isRegularFile(in)) {
                 text = describeSingle(in);
             } else if (Files.isDirectory(in)) {

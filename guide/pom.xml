@@ -22,8 +22,10 @@
 
     <name>Paperband :: Guide</name>
     <description>
-        Self-documenting guide. The guide source lives in guide/; the PDF and
-        static site produced at package time ARE the documentation.
+        Self-documenting guide. The book lives at the conventional
+        src/main/paperband (content/ for cards, layouts/ for templates,
+        styles/ for css); the PDF and static site produced at package time ARE
+        the documentation.
     </description>
     <url>https://github.com/noregressions/paperband</url>
 
@@ -42,12 +44,13 @@
                 <artifactId>paperband-maven-plugin</artifactId>
                 <version>${project.version}</version>
                 <executions>
+                    <!-- No <input>: the book sits at src/main/paperband, the
+                         conventional root every goal defaults to. -->
                     <execution>
                         <id>build-guide-pdf</id>
                         <phase>package</phase>
                         <goals><goal>build</goal></goals>
                         <configuration>
-                            <input>${project.basedir}/guide</input>
                             <output>${project.build.directory}/guide.pdf</output>
                         </configuration>
                     </execution>
@@ -56,7 +59,6 @@
                         <phase>package</phase>
                         <goals><goal>site</goal></goals>
                         <configuration>
-                            <input>${project.basedir}/guide</input>
                             <outputDirectory>${project.build.directory}/guide-site</outputDirectory>
                             <clean>true</clean>
                         </configuration>

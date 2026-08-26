@@ -9,6 +9,42 @@ By default a book's shape is **discovered**: every folder under the book root is
 every `.md` file becomes a card, alphabetically. Filename prefixes (`01-`, `02-`) are the
 whole ordering mechanism, and a file dropped into a folder appears in the next build.
 
+## The conventional layout
+
+A book laid out at `src/main/paperband` needs no `<input>` at all — every goal defaults
+to it, the way `src/main/java` never needs declaring:
+
+```
+src/main/paperband/
+  paperband.yaml     ← book config (title, theme, axes, vars, css, sections)
+  content/           ← the cards; the walk descends here
+  layouts/           ← Pebble templates and snippets
+  styles/            ← the css chain's files
+```
+
+When the book root contains a `content/` directory, only `content/` is walked for cards —
+`layouts/` and `styles/` sit beside it as non-content. A book without the wrapper keeps
+working: the whole root is walked as before, except that root-level `layouts/` and
+`styles/` directories are always skipped (a markdown snippet in `layouts/` is a template
+asset, not a card). This guide is itself laid out this way.
+
+## `ignore:` — keep files out of the book
+
+Any folder's `paperband.yaml` can declare files the walk should skip, gitignore-style:
+
+```yaml
+ignore:
+  - "*.tmp.md"      # no slash: matches the basename at any depth below here
+  - drafts/**       # with a slash: a path glob relative to this folder
+  - scratch         # a bare name: that file or folder (and its subtree)
+```
+
+An `ignore:` applies to the subtree beneath the yaml that declares it, so a folder can
+hide its own drafts without the book root knowing. It filters discovery *and* declared
+lists — an `order:`/`include:` entry that an `ignore:` also matches is skipped with a
+warning naming the contradiction. (POM-declared books have `<excludes>` for the same
+job.)
+
 That's the right default for a book whose folders are already in reading order, and the
 wrong one as soon as you want a card list that doesn't match the disk. Four keys move the
 dial from discovery towards declaration, and because they all answer the same question —

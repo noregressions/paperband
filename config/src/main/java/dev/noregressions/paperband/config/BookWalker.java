@@ -7,7 +7,9 @@ import org.yaml.snakeyaml.Yaml;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -145,7 +147,36 @@ public final class BookWalker {
     }
 
     /**
+     * Directories beside {@code content/} that hold the book's non-content:
+     * templates and stylesheets. Never walked for cards at the book root —
+     * without this, an {@code .md} snippet in {@code layouts/} would be swept
+     * into the book as a card.
+     */
+    private static final Set<String> RESERVED_ROOT_DIRS = Set.of("layouts", "styles");
+
+    /** The walk root, for the reserved-directory check. Set per walk. */
+    private Path walkRoot;
+
+    /**
+     * Active {@code ignore:} scopes, innermost last. Each is pushed when its
+     * directory is entered and popped on the way out, so a declaration
+     * applies to the subtree beneath the {@code paperband.yaml} that made it
+     * — gitignore's scoping rule.
+     */
+    private final Deque<IgnoreScope> ignoreScopes = new ArrayDeque<>();
+
+    /** One directory's {@code ignore:} declaration: globs relative to it. */
+    private record IgnoreScope(Path dir, List<GlobSet> globs, List<GlobSet> basenames) {}
+
+    /**
      * Flatten {@code start} into an ordered list of card files.
+     *
+     * <p>When {@code start} contains a {@code content/} directory, the walk
+     * descends into that instead — the conventional layout keeps cards in
+     * {@code content/} with {@code layouts/} and {@code styles/} beside it,
+     * and those siblings are not content. Without the wrapper, the root's
+     * {@code layouts/} and {@code styles/} directories are skipped for the
+     * same reason.
      *
      * @param start either a single {@code .md} file (returned as a singleton list)
      *              or a directory to walk recursively
@@ -159,8 +190,14 @@ public final class BookWalker {
         }
         if (!Files.isDirectory(start)) return List.of();
 
+        Path root = start.toAbsolutePath();
+        Path content = root.resolve("content");
+        if (Files.isDirectory(content)) root = content;
+
         List<Path> out = new ArrayList<>();
-        walkDir(start.toAbsolutePath(), out);
+        this.walkRoot = root;
+        this.ignoreScopes.clear();
+        walkDir(root, out);
         return out;
     }
 
@@ -170,6 +207,17 @@ public final class BookWalker {
         Directive directive = readDirective(dir);
         List<FrontmatterSort.SortKey> sort = readSort(dir);
         Set<String> claimed = new LinkedHashSet<>();
+        IgnoreScope ignoreScope = readIgnore(dir);
+        if (ignoreScope != null) ignoreScopes.addLast(ignoreScope);
+        try {
+            walkDirEntries(dir, directive, sort, claimed, out);
+        } finally {
+            if (ignoreScope != null) ignoreScopes.removeLast();
+        }
+    }
+
+    private void walkDirEntries(Path dir, Directive directive,
+            List<FrontmatterSort.SortKey> sort, Set<String> claimed, List<Path> out) {
 
         for (Entry e : directive.entries()) {
             Path entry = resolveEntry(dir, e.name());
@@ -185,6 +233,13 @@ public final class BookWalker {
             if (e.where() != null && !predicates.evaluate(e.where(), predicateContext)) {
                 continue;
             }
+            if (ignored(entry)) {
+                // A declared entry an ignore: also matches is a contradiction
+                // worth hearing about — one of the two declarations is stale.
+                System.err.println("warn: " + directive.key() + " entry '" + e.name() + "' in "
+                        + dir + " is matched by an ignore: — skipping it; remove one declaration");
+                continue;
+            }
             visit(entry, out);
         }
 
@@ -197,6 +252,8 @@ public final class BookWalker {
         try (Stream<Path> stream = Files.list(dir)) {
             List<Path> remaining = stream
                     .filter(this::isContent)
+                    .filter(p -> !isReservedRootDir(p))
+                    .filter(p -> !ignored(p))
                     .filter(p -> !claimed.contains(p.getFileName().toString()))
                     .sorted(sort != null
                             ? FrontmatterSort.comparator(sort, acceptYamlCards)
@@ -231,6 +288,62 @@ public final class BookWalker {
         } else if (isCard(p)) {
             out.add(p);
         }
+    }
+
+    // ---- ignore: support ----
+
+    /**
+     * Parse {@code dir}'s {@code ignore:} list into a scope, or null when it
+     * declares none. Two pattern spellings, gitignore's reading:
+     * <ul>
+     *   <li>with a {@code /} — a path glob relative to {@code dir}
+     *       ({@code drafts/**}, {@code notes/scratch.md});</li>
+     *   <li>without one — a basename matched at any depth beneath {@code dir}
+     *       ({@code *.tmp.md}, {@code scratch}).</li>
+     * </ul>
+     * An ignored directory's whole subtree stays out of the book.
+     */
+    private IgnoreScope readIgnore(Path dir) {
+        Path yamlFile = dir.resolve(CONFIG_FILENAME);
+        if (!Files.isRegularFile(yamlFile)) return null;
+        Object node = readYaml(yamlFile).get("ignore");
+        if (node == null) return null;
+        List<?> list = node instanceof List<?> l ? l : List.of(node);
+        List<GlobSet> paths = new ArrayList<>();
+        List<GlobSet> basenames = new ArrayList<>();
+        for (Object item : list) {
+            if (item == null || item.toString().isBlank()) continue;
+            String pattern = item.toString().trim().replace('\\', '/');
+            (pattern.indexOf('/') >= 0 ? paths : basenames).add(GlobSet.of(pattern));
+        }
+        if (paths.isEmpty() && basenames.isEmpty()) return null;
+        return new IgnoreScope(dir.toAbsolutePath(), paths, basenames);
+    }
+
+    /** True when any active {@code ignore:} scope matches {@code p}. */
+    private boolean ignored(Path p) {
+        if (ignoreScopes.isEmpty()) return false;
+        Path abs = p.toAbsolutePath();
+        Path name = abs.getFileName();
+        for (IgnoreScope scope : ignoreScopes) {
+            for (GlobSet g : scope.basenames()) {
+                if (g.matches(name)) return true;
+            }
+            if (!scope.globs().isEmpty() && abs.startsWith(scope.dir())) {
+                Path rel = scope.dir().relativize(abs);
+                for (GlobSet g : scope.globs()) {
+                    if (g.matches(rel)) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** True for {@code layouts/}/{@code styles/} directly under the walk root — templates and css, not content. */
+    private boolean isReservedRootDir(Path p) {
+        return Files.isDirectory(p)
+                && p.toAbsolutePath().getParent().equals(walkRoot)
+                && RESERVED_ROOT_DIRS.contains(p.getFileName().toString());
     }
 
     private Path resolveEntry(Path dir, String name) {

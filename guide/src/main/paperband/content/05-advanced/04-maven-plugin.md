@@ -30,7 +30,7 @@ bound execution can be overridden from the command line.
 
 The plugin shares the parent's version. The parent POM version:
 
-{% fragment "../../../pom.xml:version-declaration" %}
+{% fragment "../../../../../../pom.xml:version-declaration" %}
 
 ```xml
 <plugin>
@@ -41,7 +41,7 @@ The plugin shares the parent's version. The parent POM version:
     <execution>
       <goals><goal>build</goal></goals>
       <configuration>
-        <input>${project.basedir}/guide</input>
+        <!-- no <input>: the book sits at the conventional src/main/paperband -->
         <output>${project.build.directory}/guide.pdf</output>
       </configuration>
     </execution>
@@ -56,7 +56,7 @@ The `build` goal's default phase is `process-resources`; override `<phase>` in t
 
 | Parameter | Property | Default | Notes |
 |---|---|---|---|
-| `input` | `paperband.input` | — | Markdown file (single card) or directory (book). Relative paths resolve against the module's basedir. |
+| `input` | `paperband.input` | src/main/paperband | Markdown file (single card) or directory (book). Relative paths resolve against the module's basedir. Unset (and with no `<book>`), the conventional root `src/main/paperband` is used when it exists — see Organising Content. |
 | `book` | — | — | A book whose structure is declared in the POM and whose cards are selected by glob. Mutually exclusive with `input`; see below. |
 | `output` | `paperband.output` | *(required)* | Output PDF file. |
 | `renderer` | `paperband.renderer` | `playwright` | See Renderers in the Rendering section. |
@@ -497,7 +497,6 @@ value, and a page per card with prev/next navigation:
   <id>site</id>
   <goals><goal>site</goal></goals>
   <configuration>
-    <input>${project.basedir}/guide</input>
     <outputDirectory>${project.build.directory}/site</outputDirectory>
     <clean>true</clean>
   </configuration>

@@ -149,8 +149,18 @@ public class BuildMojo extends AbstractPaperbandMojo {
                     "Configure either <input> or <book>, not both — <book> declares the structure "
                             + "the walker would otherwise infer from <input>'s directory tree.");
         }
+        Path conventional = null;
         if (!hasInput && !hasBook) {
-            throw new MojoExecutionException("Configure <input> (or <book>) — nothing to build.");
+            // Convention over configuration: a book laid out at
+            // src/main/paperband needs no <input> at all.
+            conventional = conventionalBookRoot();
+            if (conventional == null) {
+                throw new MojoExecutionException("Configure <input> (or <book>) — nothing to "
+                        + "build. (Or lay the book out at src/main/paperband, which needs "
+                        + "neither.)");
+            }
+            getLog().info("No <input> configured — using the conventional book root "
+                    + conventional);
         }
 
         BookBuild build = new BookBuild(getLog());
@@ -193,7 +203,7 @@ public class BuildMojo extends AbstractPaperbandMojo {
                 build.input = root;
             }
         } else {
-            build.input = resolve(input);
+            build.input = conventional != null ? conventional : resolve(input);
         }
 
         run(build);
