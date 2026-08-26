@@ -181,6 +181,11 @@ public final class CardLoader {
         MutableDataSet options = new MutableDataSet();
         options.set(Parser.EXTENSIONS,
                 List.<Extension>of(AttributesExtension.create(), TablesExtension.create()));
+        // Attributes in the fence's own info line — ```bash {.command} — as
+        // well as the trailing-line form ({.class} after the closing fence).
+        // The info-line spelling keeps the tag with the block it describes
+        // instead of dangling after it.
+        options.set(AttributesExtension.FENCED_CODE_INFO_ATTRIBUTES, true);
         this.parser   = Parser.builder(options).build();
         this.renderer = HtmlRenderer.builder(options).build();
     }

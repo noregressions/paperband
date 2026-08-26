@@ -242,4 +242,31 @@ class ContentSanitizerTest {
                 () -> ContentPolicy.parse("cleanse"));
         assertTrue(e.getMessage().contains("allow, clean or strict"), e.getMessage());
     }
+
+    // ---- fence info-line attributes ----
+
+    @Test
+    void fenceInfoLineAttributes_landOnTheBlock_languageKept() {
+        // ```text {.output} — the tag rides the opening fence instead of
+        // dangling on a line after the closing one. Both spellings work.
+        Card card = parse(ContentPolicy.CLEAN, """
+                # T
+
+                ```text {.output}
+                [INFO] tool output here
+                ```
+
+                ```bash
+                mvn --version
+                ```
+                {.command}
+                """);
+
+        String html = html(card);
+        assertTrue(html.contains("class=\"output") || html.contains("output language-text")
+                        || html.contains("language-text output"),
+                "info-line class attaches to the block: " + html);
+        assertTrue(html.contains("language-text"), "the language survives for Prism: " + html);
+        assertTrue(html.contains("command"), "the trailing-line form still works: " + html);
+    }
 }

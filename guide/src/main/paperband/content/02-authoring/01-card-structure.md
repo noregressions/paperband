@@ -101,6 +101,20 @@ attaches to *that* paragraph instead of the code block. `fs--1` shaves roughly 1
 the rendered code size, `fs--2` about 20%; going further than `fs--2` hurts legibility in
 print.
 
+Attributes can also ride the opening fence's info line, which keeps the tag with the
+block it describes instead of dangling after it:
+
+````markdown
+```text {.output}
+[INFO] tool output here
+```
+````
+
+Both spellings do the same thing, and the language survives for syntax highlighting.
+This reads best for semantic tags (`{.command}`, `{.output}` — themes label these);
+the trailing form stays useful when an attribute is an afterthought, like a size
+step-down on an already-written block.
+
 ## Raw HTML and the content policy
 
 Raw HTML in a card is a legitimate *structural* escape hatch — a table with rowspans,
