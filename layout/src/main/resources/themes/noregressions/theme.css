@@ -52,19 +52,18 @@
   --nr-danger: #dc2626;       /* severe harm only — exceptionally rare */
   --nr-danger-soft: #fff1f1;
 
-  /* Comfortable prose measure; technical material may run wider. */
+  /* One measure for everything: the card column IS the reading measure,
+   * and prose, code and tables all share its right edge. The design
+   * system's original prose-narrower-than-technical split kept reading as
+   * a mistake ("why does the text stop early?") rather than a design —
+   * a single flush column doesn't need explaining. */
   --nr-measure: 72ch;
   --nr-radius-sm: 0.25rem;
   --nr-radius: 0.4rem;
 
-  /* The card sits just over the prose measure, so paragraphs nearly fill
-   * the column and the page gap splits evenly around a centred column —
-   * a capped-but-left-aligned paragraph inside a full-width card reads as
-   * "big right margin", not as a designed measure. Print tightens further:
-   * paper is wider than any comfortable line. */
-  --card-max-width: 48rem;
+  --card-max-width: 46rem;
 }
-@media print { :root { --card-max-width: 44rem; } }
+@media print { :root { --card-max-width: 42rem; } }
 
 /* ── Type scale root — paperband conventions ─────────────────────────────── */
 html                { font-size: calc(10.5pt * var(--pw-font-scale, 1)); }
@@ -126,7 +125,6 @@ article.card > .card-meta .oneliner {
   font-size: 1.14rem;
   line-height: 1.5;
   color: var(--nr-text);
-  max-width: 58ch;
   border: none;
   padding: 0;
 }
@@ -181,12 +179,9 @@ section.block > h4 { font-size: 0.9rem; font-weight: 700; margin: 1.4rem 0 0.5re
 /* The intro block reads as the chapter's opening prose — no marker. */
 section.block.intro > h2 { display: none; }
 
-/* Keep ordinary prose at a comfortable measure even when tables and code run
- * wider — the difference between a designed publication and a web page. */
 section.block p, section.block li {
   font-size: 0.95rem;
   line-height: 1.6;
-  max-width: var(--nr-measure);
 }
 
 /* ── Inline code: distinguishable, never shouting ────────────────────────── */
