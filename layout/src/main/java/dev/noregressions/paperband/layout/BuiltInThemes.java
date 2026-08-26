@@ -24,7 +24,8 @@ public final class BuiltInThemes {
             "carded",
             "herodevs",
             "editorial-gold",
-            "workshop"
+            "workshop",
+            "noregressions"
     );
 
     private BuiltInThemes() {}

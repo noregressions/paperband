@@ -1,0 +1,5 @@
+# NoRegressions technical-guide design system — IBM Plex, editorial-first,
+# semantic colour only (brand blue = navigation/reference, green = tips,
+# amber = warnings, red = danger). Derived from the commented design-system
+# stylesheet; the DO/DO NOT guidance there governs how components are used.
+theme.css

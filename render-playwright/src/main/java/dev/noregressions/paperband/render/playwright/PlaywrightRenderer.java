@@ -113,6 +113,18 @@ public final class PlaywrightRenderer implements HtmlToPdfRenderer {
                                             .setWaitUntil(WaitUntilState.NETWORKIDLE));
                         }
 
+                        // NETWORKIDLE alone races web fonts: an @import'd font
+                        // stylesheet resolves late, and the individual font
+                        // files it references can still be in flight (or not
+                        // yet requested — a weight is only fetched once text
+                        // using it lays out) when the network goes quiet.
+                        // document.fonts.ready settles only after every face
+                        // the document actually uses has loaded or failed, so
+                        // the PDF snapshots real fonts instead of mid-swap
+                        // fallbacks (seen as Arial standing in for a themed
+                        // sans at one weight while the others embedded fine).
+                        page.evaluate("() => document.fonts.ready");
+
                         PageSize size = input.pageSpec().size();
                         Margins m   = input.pageSpec().margins();
 

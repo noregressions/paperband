@@ -571,7 +571,9 @@ public final class LayoutEngine {
         // built-in scaffold stylesheet first (weakest), then the user chain, then
         // the theme (strongest) — themes restyle colours without re-implementing
         // the sidebar/column layout.
-        String css = siteBaseCss() + composeCss(bookCtx.cssChain());
+        String composedSiteCss = siteBaseCss() + composeCss(bookCtx.cssChain());
+        String cssImports = extractCssImports(composedSiteCss);
+        String css = stripCssImports(composedSiteCss);
         Map<String, Object> bookModel = bookSiteModel(bookCtx);
 
         // Sections: any top-level folder under the book root (or under a
@@ -631,6 +633,7 @@ public final class LayoutEngine {
         indexModel.put("axisGroupings", axisGroupingsModel(groupings));
         indexModel.put("stats", stats);
         indexModel.put("css", css);
+        indexModel.put("cssImports", cssImports);
         indexModel.put("urlPrefix", "");
         indexModel.put("page", Map.of("kind", "index"));
         indexModel.put("sidebar", sidebar);
@@ -661,6 +664,7 @@ public final class LayoutEngine {
                 valueModel.put("cards", valueCards);
                 valueModel.put("stats", stats);
                 valueModel.put("css", css);
+            valueModel.put("cssImports", cssImports);
                 valueModel.put("urlPrefix", "");
                 valueModel.put("page", Map.of("kind", "axis", "axis", g.axis().name(), "id", value.get("id")));
                 valueModel.put("sidebar", sidebar);
@@ -692,6 +696,7 @@ public final class LayoutEngine {
             sectionModel.put("cards", sectionCards);
             sectionModel.put("stats", stats);
             sectionModel.put("css", css);
+            sectionModel.put("cssImports", cssImports);
             sectionModel.put("urlPrefix", "");
             sectionModel.put("page", Map.of("kind", "section", "id", id));
             sectionModel.put("sidebar", sidebar);
@@ -747,6 +752,7 @@ public final class LayoutEngine {
             model.put("next", next);
             model.put("stats", stats);
             model.put("css", css);
+            model.put("cssImports", cssImports);
             model.put("urlPrefix", "../");
             model.put("page", Map.of("kind", "card", "id", card.id()));
             model.put("sidebar", sidebar);
@@ -1672,7 +1678,9 @@ public final class LayoutEngine {
         model.put("contentHeightMm", ctx.pageSpec().contentHeightMm());
         model.put("pageMarginsMm", pageMarginsModel(ctx.pageSpec()));
         model.put("measure", resolveMeasure(ctx.vars()));
-        model.put("css", composeCss(ctx.cssChain()));
+        String composedCardCss = composeCss(ctx.cssChain());
+        model.put("cssImports", extractCssImports(composedCardCss));
+        model.put("css", stripCssImports(composedCardCss));
         return model;
     }
 
@@ -1843,7 +1851,9 @@ public final class LayoutEngine {
         model.put("contentHeightMm", bookCtx.pageSpec().contentHeightMm());
         model.put("pageMarginsMm", pageMarginsModel(bookCtx.pageSpec()));
         model.put("measure", resolveMeasure(bookCtx.vars()));
-        model.put("css", composeCss(bookCtx.cssChain()));
+        String composedBookCss = composeCss(bookCtx.cssChain());
+        model.put("cssImports", extractCssImports(composedBookCss));
+        model.put("css", stripCssImports(composedBookCss));
         return model;
     }
 
@@ -2228,5 +2238,37 @@ public final class LayoutEngine {
         }
         sb.append(inlineCss(extraCss));
         return sb.toString();
+    }
+
+    /**
+     * {@code @import} rules are only valid at the very top of a stylesheet,
+     * and the composed chain is embedded mid-{@code <style>} after each
+     * template's own rules — so a theme's font {@code @import} was silently
+     * ignored and every themed font quietly fell back. The templates emit
+     * {@code cssImports} in a separate {@code <style>} ahead of everything
+     * (its own stylesheet, so top-of-sheet rules apply), and {@code css}
+     * carries the rest.
+     */
+    // The URL itself may contain semicolons (Google Fonts weight lists:
+    // "wght@0,400;0,500"), so the terminating ';' must be sought only OUTSIDE
+    // the quoted string / url(...) — a naive [^;]*; truncates the import
+    // mid-string and leaves garbage that breaks the whole stylesheet.
+    private static final java.util.regex.Pattern CSS_IMPORT =
+            java.util.regex.Pattern.compile(
+                    "@import\\s+(?:url\\(\\s*(?:\"[^\"]*\"|'[^']*'|[^)]*)\\s*\\)|\"[^\"]*\"|'[^']*')[^;]*;");
+
+    /** Every {@code @import} rule in {@code css}, newline-joined; empty when none. */
+    static String extractCssImports(String css) {
+        StringBuilder out = new StringBuilder();
+        java.util.regex.Matcher m = CSS_IMPORT.matcher(css);
+        while (m.find()) {
+            out.append(m.group()).append('\n');
+        }
+        return out.toString();
+    }
+
+    /** {@code css} with its {@code @import} rules removed. */
+    static String stripCssImports(String css) {
+        return CSS_IMPORT.matcher(css).replaceAll("");
     }
 }

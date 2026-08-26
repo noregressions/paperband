@@ -1,0 +1,455 @@
+/* =============================================================================
+ * Theme: noregressions
+ *
+ * The NoRegressions technical-guide design system: editorial first, technical
+ * system underneath. IBM Plex throughout — Serif for long-form prose, Sans
+ * for structure (headings, labels, tables, furniture), Mono only for what the
+ * machine sees. Predominantly ink/grey/white; colour is semantic, never
+ * decorative: brand blue for navigation and reference, green for tips, amber
+ * for warnings, red only for danger.
+ *
+ * The page is quiet by default. A reader should learn the grammar after a few
+ * pages: prose = explanation, mono = machine, note = context, warning = risk,
+ * worked example = do this, reference table = lookup. Do not add colour to
+ * make a page interesting; do not box every important sentence.
+ *
+ * Layered over book.css / site.css via cascade order, so this file overrides
+ * only what changes. Derived from the commented design-system stylesheet
+ * (noregressions-guide-design-system) — the DO/DO NOT guidance there governs
+ * how these components should be used in content.
+ * ===========================================================================*/
+
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;1,400&display=swap");
+
+/* ── Tokens ──────────────────────────────────────────────────────────────── */
+:root {
+  --font-body: "IBM Plex Serif", Georgia, serif;
+  --font-sans: "IBM Plex Sans", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+
+  /* Neutral palette: the guide stays black, grey and white. */
+  --nr-ink: #161616;
+  --nr-text: #333333;
+  --nr-muted: #687280;
+  --nr-line: #d8dde4;
+  --nr-line-strong: #aeb7c2;
+  --nr-surface: #f6f8fa;
+  --nr-surface-strong: #edf1f5;
+  --nr-page: #ffffff;
+
+  /* Semantic colour: each hue means one thing. */
+  --nr-brand: #1d4ed8;        /* navigation, chapter identity, links, reference */
+  --nr-brand-dark: #123a96;
+  --nr-brand-soft: #eef4ff;
+  --nr-info: #0e8ea9;         /* supplemental context */
+  --nr-info-soft: #eefafd;
+  --nr-success: #059669;      /* tips, verified checks */
+  --nr-success-soft: #edfdf6;
+  --nr-warning: #d97706;      /* likely failure, caveat */
+  --nr-warning-soft: #fff8eb;
+  --nr-caution: #b45309;      /* hard-to-reverse actions */
+  --nr-caution-soft: #fff6e8;
+  --nr-danger: #dc2626;       /* severe harm only — exceptionally rare */
+  --nr-danger-soft: #fff1f1;
+
+  /* Comfortable prose measure; technical material may run wider. */
+  --nr-measure: 68ch;
+  --nr-radius-sm: 0.25rem;
+  --nr-radius: 0.4rem;
+
+  --card-max-width: 52rem;
+}
+
+/* ── Type scale root — paperband conventions ─────────────────────────────── */
+html                { font-size: calc(10.5pt * var(--pw-font-scale, 1)); }
+html.target-web     { font-size: 16px; }
+html.size-a4        { font-size: 10.5pt; }
+html.size-letter    { font-size: 10.5pt; }
+html.size-6x9       { font-size: 11.5pt; }
+
+body {
+  font-family: var(--font-body);
+  color: var(--nr-text);
+  background: var(--nr-page);
+  line-height: 1.55;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  orphans: 3;
+  widows: 3;
+}
+
+strong { font-weight: 600; color: var(--nr-ink); }
+
+a {
+  color: var(--nr-brand);
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.15em;
+}
+a:hover { color: var(--nr-brand-dark); }
+
+/* Rules sparingly: whitespace and hierarchy do the separating. */
+hr { border: 0; border-top: 1px solid var(--nr-line); margin: 2rem 0; }
+
+/* ── Card = chapter: the opener carries the identity ─────────────────────── */
+article.card {
+  border: none;
+  background: transparent;
+  padding: 2.25rem 1rem 1.5rem;
+  max-width: var(--card-max-width);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+article.card > h1.card-title {
+  font-family: var(--font-sans);
+  font-size: 2.1rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+  color: var(--nr-ink);
+  border-bottom: 1px solid var(--nr-line-strong);
+  padding-bottom: 0.9rem;
+  margin-bottom: 0.8rem;
+}
+
+/* Standfirst: the oneliner states why the chapter matters. It belongs to the
+ * opener, not to a callout. */
+article.card > .card-meta { margin-bottom: 1.6rem; }
+article.card > .card-meta .oneliner {
+  font-family: var(--font-body);
+  font-size: 1.14rem;
+  line-height: 1.5;
+  color: var(--nr-text);
+  max-width: 58ch;
+  border: none;
+  padding: 0;
+}
+
+/* Badges are structural labels: sans, uppercase, quiet. */
+.tier-badge, .axis-badge, .effort-badge, .openrewrite-badge {
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--nr-brand);
+  background: var(--nr-brand-soft);
+  border: 1px solid color-mix(in srgb, var(--nr-brand) 30%, white);
+  border-radius: var(--nr-radius-sm);
+  padding: 0.14rem 0.5rem;
+}
+
+/* ── Headings: hierarchy from role, weight and spacing ───────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-sans);
+  color: var(--nr-ink);
+  line-height: 1.15;
+}
+
+/* Recurring section headings ("What it finds", "Key flags", "Watch Out"):
+ * a small teal marker establishes the pattern; no heavy rule beneath. */
+section.block > h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--nr-ink);
+  border: none;
+  margin-top: 2.4rem;
+  margin-bottom: 0.7rem;
+}
+section.block > h2::before {
+  content: "";
+  width: 0.25rem;
+  height: 1.05em;
+  background: var(--nr-info);
+  flex: 0 0 auto;
+}
+
+section.block > h3 { font-size: 0.98rem; font-weight: 600; margin: 1.4rem 0 0.5rem; }
+section.block > h4 { font-size: 0.9rem; font-weight: 700; margin: 1.4rem 0 0.5rem; }
+
+/* The intro block reads as the chapter's opening prose — no marker. */
+section.block.intro > h2 { display: none; }
+
+/* Keep ordinary prose at a comfortable measure even when tables and code run
+ * wider — the difference between a designed publication and a web page. */
+section.block p, section.block li {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  max-width: var(--nr-measure);
+}
+
+/* ── Inline code: distinguishable, never shouting ────────────────────────── */
+code, kbd, samp { font-family: var(--font-mono); }
+
+:not(pre) > code {
+  padding: 0.06em 0.28em;
+  border: 1px solid var(--nr-line);
+  border-radius: var(--nr-radius-sm);
+  background: var(--nr-surface);
+  color: var(--nr-brand-dark);
+  font-size: 0.9em;
+  font-weight: 400;
+}
+
+/* ── Code blocks, commands and output ────────────────────────────────────── */
+pre {
+  overflow-x: auto;
+  margin: 1rem 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--nr-line);
+  border-radius: var(--nr-radius);
+  background: var(--nr-surface);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--nr-ink);
+  tab-size: 2;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  break-inside: avoid;
+}
+pre code { padding: 0; border: 0; background: transparent; color: inherit; font-size: inherit; }
+
+/* Input and output are different editorial objects. Tag fences with
+ * {.command} / {.output} to say which one the reader is looking at. */
+pre.command { border-left: 3px solid var(--nr-brand); }
+pre.output  { border-left: 3px solid var(--nr-muted); background: #fafbfc; }
+pre.command::before, pre.output::before {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-family: var(--font-sans);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+pre.command::before { content: "Command"; color: var(--nr-brand); }
+pre.output::before  { content: "Output";  color: var(--nr-muted); }
+
+/* ── Callout system: fixed vocabulary, one reading mode each ─────────────
+ * note/info = context · tip = better way · important = must know ·
+ * warning = likely failure · caution = hard to reverse · danger = severe.
+ * Tag a blockquote or paragraph with {.note} … {.danger}. Do not put every
+ * second paragraph in a callout; colours are meaning, not decoration. */
+section.block .note, section.block .info, section.block .tip,
+section.block .important, section.block .warning, section.block .caution,
+section.block .danger,
+blockquote.note, blockquote.info, blockquote.tip, blockquote.important,
+blockquote.warning, blockquote.caution, blockquote.danger {
+  --callout-color: var(--nr-brand);
+  --callout-bg: var(--nr-brand-soft);
+  margin: 1.4rem 0;
+  padding: 0.85rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--callout-color) 40%, white);
+  border-left: 4px solid var(--callout-color);
+  border-radius: var(--nr-radius);
+  background: var(--callout-bg);
+  font-style: normal;
+  break-inside: avoid;
+}
+.info     { --callout-color: var(--nr-info);    --callout-bg: var(--nr-info-soft); }
+.tip      { --callout-color: var(--nr-success); --callout-bg: var(--nr-success-soft); }
+.warning  { --callout-color: var(--nr-warning); --callout-bg: var(--nr-warning-soft); }
+.caution  { --callout-color: var(--nr-caution); --callout-bg: var(--nr-caution-soft); }
+.danger   { --callout-color: var(--nr-danger);  --callout-bg: var(--nr-danger-soft); }
+
+/* Paperband's recurring block types, mapped into the same grammar. */
+section.block.watch-out {
+  border: 1px solid color-mix(in srgb, var(--nr-warning) 40%, white);
+  border-left: 4px solid var(--nr-warning);
+  border-radius: var(--nr-radius);
+  background: var(--nr-warning-soft);
+  padding: 0.9rem 1.1rem;
+  margin: 1.6rem 0;
+  break-inside: avoid;
+}
+section.block.watch-out > h2 { margin-top: 0; color: var(--nr-warning); }
+section.block.watch-out > h2::before { background: var(--nr-warning); }
+
+section.block.check {
+  border: 1px solid color-mix(in srgb, var(--nr-success) 35%, white);
+  border-left: 4px solid var(--nr-success);
+  border-radius: var(--nr-radius);
+  background: var(--nr-success-soft);
+  padding: 0.9rem 1.1rem;
+  margin: 1.6rem 0;
+  break-inside: avoid;
+}
+section.block.check > h2 { margin-top: 0; color: var(--nr-success); }
+section.block.check > h2::before { background: var(--nr-success); }
+
+/* Supplementary but not a warning or tip: grey and quiet, keeps the semantic
+ * palette from overloading. */
+section.block.further-info,
+.aside, .inset {
+  border: none;
+  border-left: 3px solid var(--nr-line-strong);
+  border-radius: 0;
+  background: var(--nr-surface);
+  padding: 0.75rem 1rem;
+  margin: 1.4rem 0;
+}
+section.block.further-info > h2 { margin-top: 0; color: var(--nr-muted); }
+section.block.further-info > h2::before { background: var(--nr-line-strong); }
+
+/* ── Block quotes: a rule worth remembering, not a generic box ───────────── */
+blockquote:not([class]) {
+  margin: 1.6rem 0;
+  padding: 0.85rem 1.2rem;
+  border-left: 3px solid var(--nr-brand);
+  background: var(--nr-surface);
+  font-family: var(--font-body);
+  font-size: 1.02rem;
+  line-height: 1.5;
+  color: var(--nr-ink);
+}
+blockquote > :last-child { margin-bottom: 0; }
+
+/* ── Tables: lookup, not narrative ───────────────────────────────────────── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  margin: 1.2rem 0;
+  break-inside: avoid;
+}
+th, td {
+  padding: 0.45rem 0.7rem;
+  border-bottom: 1px solid var(--nr-line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  border-top: 1px solid var(--nr-line-strong);
+  border-bottom-color: var(--nr-line-strong);
+  background: var(--nr-surface-strong);
+  font-weight: 700;
+  color: var(--nr-ink);
+}
+tbody tr:nth-child(even) td { background: #fbfcfd; }
+td code { white-space: nowrap; }
+
+/* Reference tables ({.reference-table}): mono first column — machine tokens,
+ * not prose. */
+.reference-table th:first-child, .reference-table td:first-child {
+  width: 30%;
+  font-family: var(--font-mono);
+  color: var(--nr-brand-dark);
+}
+
+/* Paperband's frontmatter definition table, in the same quiet voice. */
+table.definition-table { font-size: 0.85rem; }
+table.definition-table td:first-child { width: 8rem; color: var(--nr-muted); }
+
+/* ── Figures ─────────────────────────────────────────────────────────────── */
+figure { margin: 1.8rem 0; break-inside: avoid; }
+figure img, figure svg { display: block; max-width: 100%; height: auto; margin-inline: auto; }
+figcaption {
+  max-width: var(--nr-measure);
+  margin-top: 0.5rem;
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--nr-muted);
+}
+figcaption::before { content: "Figure · "; font-weight: 700; color: var(--nr-brand); }
+
+/* ── Checklists ({.checklist} on a list): things the reader can verify ───── */
+ul.checklist { padding: 0; list-style: none; }
+ul.checklist li { position: relative; margin: 0.5rem 0; padding-left: 1.75rem; }
+ul.checklist li::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0.38em;
+  width: 0.8rem; height: 0.8rem;
+  border: 1.5px solid var(--nr-line-strong);
+  border-radius: 0.12rem;
+  background: white;
+}
+ul.checklist li.done::before { border-color: var(--nr-success); background: var(--nr-success); }
+
+/* ── Eyebrow / structural labels ({.eyebrow}) — never for prose ──────────── */
+.eyebrow, .kicker, .label {
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--nr-brand);
+}
+
+/* ── Dividers: chapter furniture, restrained ─────────────────────────────── */
+.section-divider { color: var(--nr-ink); background: var(--nr-page); }
+.section-divider .tier-divider-inner h1 {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  border-top: 2px solid var(--nr-brand);
+  border-bottom: 1px solid var(--nr-line-strong);
+  padding: 1.2rem 0;
+}
+.section-divider .tier-count {
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--nr-muted);
+  margin-top: 0.8rem;
+}
+.section-divider ol.tier-toc {
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  line-height: 1.9;
+}
+.section-divider ol.tier-toc a { color: var(--nr-text); text-decoration: none; }
+
+.tier-divider .tier-divider-inner h1 { font-family: var(--font-sans); letter-spacing: -0.03em; }
+
+/* ── Printed TOC and index: navigation in the furniture voice ────────────── */
+.book-toc h1.book-toc-title, .book-index h1 {
+  font-family: var(--font-sans);
+  letter-spacing: -0.03em;
+}
+.book-toc .toc-entries { font-family: var(--font-sans); font-size: 0.9rem; }
+.book-toc .toc-kind-divider .toc-label { font-weight: 700; color: var(--nr-ink); }
+.book-toc .toc-page { color: var(--nr-brand); font-weight: 700; }
+.book-toc a { color: var(--nr-text); text-decoration: none; }
+.book-index { font-family: var(--font-sans); font-size: 0.85rem; }
+.book-index .index-refs { color: var(--nr-brand); }
+
+/* ── Running header/footer templates (book-declared) ─────────────────────── */
+.running-header, .running-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-family: var(--font-sans);
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  color: var(--nr-muted);
+  text-transform: uppercase;
+}
+.running-header strong, .running-footer strong { color: var(--nr-ink); }
+.page-number { font-variant-numeric: tabular-nums; color: var(--nr-brand); font-weight: 700; }
+
+/* ── Site: same voice on screen ──────────────────────────────────────────── */
+html.target-web body { background: var(--nr-page); }
+html.target-web .site-nav, html.target-web .sidebar { font-family: var(--font-sans); }
+
+/* ── Print: stable pagination, restrained colour ─────────────────────────── */
+@media print {
+  h1, h2, h3, h4 { break-after: avoid; }
+  figure, table, pre, blockquote { break-inside: avoid; }
+  .callout, pre, th, td, .watch-out, .check {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

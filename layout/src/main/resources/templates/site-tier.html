@@ -9,6 +9,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ value.label }} — {{ book.title | default('paperband') }}</title>
   <meta name="generator" content="paperband">
+  {% if cssImports is not empty %}<style>{{ cssImports | raw }}</style>{% endif %}
   <style>
     {{ css | raw }}
   </style>

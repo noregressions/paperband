@@ -6,6 +6,7 @@
   <title>{{ card.title | default(card.id) }} — {{ book.title | default('paperband') }}</title>
   <meta name="generator" content="paperband">
   {% if book.title %}<meta name="book" content="{{ book.title }}">{% endif %}
+  {% if cssImports is not empty %}<style>{{ cssImports | raw }}</style>{% endif %}
   <style>
     /* CSS chain (book + site) inlined */
     {{ css | raw }}
