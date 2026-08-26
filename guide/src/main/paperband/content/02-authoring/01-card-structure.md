@@ -111,9 +111,33 @@ block it describes instead of dangling after it:
 ````
 
 Both spellings do the same thing, and the language survives for syntax highlighting.
-This reads best for semantic tags (`{.command}`, `{.output}` — themes label these);
-the trailing form stays useful when an attribute is an afterthought, like a size
+The trailing form stays useful when an attribute is an afterthought, like a size
 step-down on an already-written block.
+
+For the three recurring editorial roles there's a shorthand: the fence language
+*is* the block type, no attribute syntax at all —
+
+````markdown
+```command
+mvn dependency:tree
+```
+
+```output
+[INFO] com.example:app:jar:1.0.0
+```
+
+```console
+$ ls target
+book.pdf
+```
+````
+
+`command` renders highlighted as bash with a "Command" label — the reader types this.
+`output` is unhighlighted with an "Output" label — a tool produced this. `console` is a
+mixed session ($-prefixed commands with their output), highlighted as `shell-session`.
+Every theme gets a neutral treatment for all three; themes may restyle them. Real
+languages (` ```java `, ` ```xml `) pass through untouched, and the attribute spellings
+(` ```bash {.command} `) keep working for cases the shorthand doesn't cover.
 
 ## Raw HTML and the content policy
 

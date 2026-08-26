@@ -96,6 +96,49 @@ final class DiffCardProcessor {
                 rewriteDiffCard(code, lang);
             } else if (hasClass(cls, ERROR_OUTPUT_CLASS)) {
                 rewriteErrorOutput(code);
+            } else {
+                rewriteSemanticFence(code, cls);
+            }
+        }
+    }
+
+    /**
+     * Semantic fence languages: the fence's language tag <em>is</em> the
+     * editorial role, no attribute syntax needed.
+     *
+     * <pre>
+     * ```command        → pre.command, highlighted as bash — the reader types this
+     * ```output         → pre.output, unhighlighted — a tool produced this
+     * ```console        → pre.console, highlighted as shell-session — a mixed
+     *                     session ($-prefixed commands with their output)
+     * </pre>
+     *
+     * <p>The semantic class lands on the {@code <pre>} where themes label it
+     * ("Command" / "Output" flags); the {@code <code>} keeps or gains a
+     * <em>real</em> Prism language so highlighting works and the autoloader
+     * never 404s on a made-up one — the same class swap
+     * {@code ```error-output} pioneered. The attribute spellings
+     * ({@code ```bash {.command}}) keep working; this is the shorthand.
+     */
+    private static void rewriteSemanticFence(Element code, String classAttr) {
+        for (String token : classAttr.split("\\s+")) {
+            switch (token) {
+                case "language-command" -> {
+                    code.removeClass(token).addClass("language-bash");
+                    code.parent().addClass("command");
+                    return;
+                }
+                case "language-output" -> {
+                    code.removeClass(token).addClass("output");
+                    code.parent().addClass("output");
+                    return;
+                }
+                case "language-console" -> {
+                    code.removeClass(token).addClass("language-shell-session");
+                    code.parent().addClass("console");
+                    return;
+                }
+                default -> { }
             }
         }
     }

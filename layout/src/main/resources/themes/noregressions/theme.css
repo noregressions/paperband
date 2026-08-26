@@ -231,6 +231,21 @@ pre.command::before, pre.output::before {
 pre.command::before { content: "Command"; color: var(--nr-brand); }
 pre.output::before  { content: "Output";  color: var(--nr-muted); }
 
+/* A mixed session: $-prefixed commands with their output (```console,
+ * highlighted as shell-session). */
+pre.console { border-left: 3px solid var(--nr-info); }
+pre.console::before {
+  content: "Console";
+  color: var(--nr-info);
+  display: block;
+  margin-bottom: 0.5rem;
+  font-family: var(--font-sans);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
 /* ── Callout system: fixed vocabulary, one reading mode each ─────────────
  * note/info = context · tip = better way · important = must know ·
  * warning = likely failure · caution = hard to reverse · danger = severe.

@@ -75,6 +75,24 @@
     .fs--1 { font-size: 0.85em; }
     .fs--2 { font-size: 0.8em; }
 
+    /* Semantic fences (```command / ```output / ```console — see
+       DiffCardProcessor.rewriteSemanticFence) — a neutral scaffold treatment
+       so the vocabulary reads under every theme; themes restyle freely. */
+    pre.command, pre.output, pre.console { border-left: 3px solid #8a94a0; }
+    pre.command::before, pre.output::before, pre.console::before {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      opacity: 0.65;
+    }
+    pre.command::before { content: "Command"; }
+    pre.output::before  { content: "Output"; }
+    pre.console::before { content: "Console"; }
+
     /* card.slots.takeWithLayout/requireWithLayout break-preference classes —
        bundled here (not per-theme) so every theme gets them regardless of
        whether it opts into slot-based layout. break-inside/break-before are

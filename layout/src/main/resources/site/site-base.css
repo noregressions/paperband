@@ -173,3 +173,15 @@ body.sidebar-collapsed .site-sidebar { display: none; }
   body.menu-open .site-sidebar { transform: translateX(0); }
   .site-content { padding: 1.25rem; }
 }
+
+/* Semantic fences (```command / ```output / ```console) — neutral scaffold,
+ * themes restyle. Mirrors the book scaffold in book.html. */
+pre.command, pre.output, pre.console { border-left: 3px solid #8a94a0; }
+pre.command::before, pre.output::before, pre.console::before {
+  display: block; margin-bottom: 0.5rem;
+  font: 700 0.65rem/1 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.07em; text-transform: uppercase; opacity: 0.65;
+}
+pre.command::before { content: "Command"; }
+pre.output::before  { content: "Output"; }
+pre.console::before { content: "Console"; }

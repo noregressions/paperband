@@ -269,4 +269,38 @@ class ContentSanitizerTest {
         assertTrue(html.contains("language-text"), "the language survives for Prism: " + html);
         assertTrue(html.contains("command"), "the trailing-line form still works: " + html);
     }
+
+    @Test
+    void semanticFenceLanguages_becomeBlockTypes() {
+        // The language tag IS the editorial role: no attribute syntax needed.
+        Card card = parse(ContentPolicy.CLEAN, """
+                # T
+
+                ```command
+                mvn dependency:tree
+                ```
+
+                ```output
+                [INFO] com.example:app:jar:1.0.0
+                ```
+
+                ```console
+                $ ls
+                a.txt
+                ```
+
+                ```java
+                int x = 1;
+                ```
+                """);
+
+        String html = html(card);
+        assertTrue(html.contains("class=\"command\""), "command class on the pre: " + html);
+        assertTrue(html.contains("language-bash"), "command highlights as bash: " + html);
+        assertTrue(html.contains("class=\"output\""), "output class on the pre: " + html);
+        assertFalse(html.contains("language-output"), "no made-up language for Prism to 404 on");
+        assertTrue(html.contains("class=\"console\""), "console class on the pre: " + html);
+        assertTrue(html.contains("language-shell-session"), "console highlights as a session");
+        assertTrue(html.contains("language-java"), "real languages pass through untouched");
+    }
 }
