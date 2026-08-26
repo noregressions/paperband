@@ -53,12 +53,18 @@
   --nr-danger-soft: #fff1f1;
 
   /* Comfortable prose measure; technical material may run wider. */
-  --nr-measure: 68ch;
+  --nr-measure: 72ch;
   --nr-radius-sm: 0.25rem;
   --nr-radius: 0.4rem;
 
-  --card-max-width: 52rem;
+  /* The card sits just over the prose measure, so paragraphs nearly fill
+   * the column and the page gap splits evenly around a centred column —
+   * a capped-but-left-aligned paragraph inside a full-width card reads as
+   * "big right margin", not as a designed measure. Print tightens further:
+   * paper is wider than any comfortable line. */
+  --card-max-width: 48rem;
 }
+@media print { :root { --card-max-width: 44rem; } }
 
 /* ── Type scale root — paperband conventions ─────────────────────────────── */
 html                { font-size: calc(10.5pt * var(--pw-font-scale, 1)); }
