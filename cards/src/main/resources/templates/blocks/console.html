@@ -1,0 +1,3 @@
+{# ```console — a mixed session: $-prefixed commands with their output.
+   shell-session is a real Prism language that colours the two apart. #}
+<pre class="console{% for c in classes %} {{ c }}{% endfor %}"{% if id %} id="{{ id }}"{% endif %}><code class="language-shell-session">{{ content }}</code></pre>

@@ -15,7 +15,7 @@ The POM is the sole authority on *where* the book's pieces are; `paperband.yaml`
 declares *what* the book is (title, theme, axes, vars, sections) and never moves a
 root. Explicit parameters win, and the convention fills whatever the POM doesn't say:
 
-```
+```filetree
 src/main/paperband/        ← <home>: the default for everything below
   paperband.yaml           ← book config (title, theme, axes, vars, css, sections)
   content/                 ← <content>: the cards — .md, .html, .yaml-with-schema

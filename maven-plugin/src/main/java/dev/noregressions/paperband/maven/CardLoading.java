@@ -1,5 +1,6 @@
 package dev.noregressions.paperband.maven;
 
+import dev.noregressions.paperband.cards.BlockTemplates;
 import dev.noregressions.paperband.cards.CardLoader;
 import dev.noregressions.paperband.cards.CardParseException;
 import dev.noregressions.paperband.cards.ContentPolicy;
@@ -145,6 +146,23 @@ final class CardLoading {
                      CardSchema cardSchema,
                      Map<String, Object> vars,
                      org.apache.maven.plugin.logging.Log log) {
+        return load(cardLoader, preprocessor, cardFile, cardSchema, vars, log, null);
+    }
+
+    /**
+     * {@link #load(CardLoader, MarkdownPreprocessor, Path, CardSchema, Map,
+     * org.apache.maven.plugin.logging.Log)} with a book-aware block-template
+     * resolver, so {@code ```type} blocks render through the theme's and the
+     * book's {@code blocks/<type>.html} templates as well as the bundled
+     * ones. Null keeps the bundled-only default.
+     */
+    static Card load(CardLoader cardLoader,
+                     MarkdownPreprocessor preprocessor,
+                     Path cardFile,
+                     CardSchema cardSchema,
+                     Map<String, Object> vars,
+                     org.apache.maven.plugin.logging.Log log,
+                     BlockTemplates blockTemplates) {
         ContentPolicy policy;
         try {
             policy = ContentPolicy.parse(vars == null ? null : vars.get("contentPolicy"));
@@ -152,6 +170,7 @@ final class CardLoading {
             throw new CardParseException(cardFile + ": " + e.getMessage());
         }
         cardLoader.setContentPolicy(policy, log == null ? null : log::warn);
+        cardLoader.setBlockTemplates(blockTemplates, vars);
         return load(cardLoader, preprocessor, cardFile, cardSchema);
     }
 }

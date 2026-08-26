@@ -1,0 +1,5 @@
+{# The guide's own block type: ```filetree renders a directory tree as a
+   quiet figure instead of a code listing. Also the living demo for the
+   "define your own block type" section in Card Structure — the mechanism is
+   just this file existing at layouts/blocks/<type>.html. #}
+<figure class="filetree{% for c in classes %} {{ c }}{% endfor %}"{% if id %} id="{{ id }}"{% endif %}><pre><code>{{ content }}</code></pre></figure>

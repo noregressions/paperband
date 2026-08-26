@@ -1,0 +1,4 @@
+{# ```command — something the reader should type. Highlighted as bash; the
+   "Command" label comes from theme/scaffold CSS on pre.command. Extra
+   info-line classes ride along. Single line: <pre> is whitespace-sensitive. #}
+<pre class="command{% for c in classes %} {{ c }}{% endfor %}"{% if id %} id="{{ id }}"{% endif %}><code class="language-bash">{{ content }}</code></pre>

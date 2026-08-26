@@ -1,0 +1,3 @@
+{# ```output — a tool produced this. Unhighlighted: the code class is a real
+   word, not a language-, so Prism's autoloader never 404s on it. #}
+<pre class="output{% for c in classes %} {{ c }}{% endfor %}"{% if id %} id="{{ id }}"{% endif %}><code class="output">{{ content }}</code></pre>

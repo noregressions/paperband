@@ -63,3 +63,14 @@ code {
     page-break-after: always;
   }
 }
+
+/* ```filetree — the guide's own block type (layouts/blocks/filetree.html):
+ * directory trees as quiet figures rather than code listings. */
+figure.filetree { margin: 1.2rem 0; break-inside: avoid; }
+figure.filetree pre {
+  background: transparent;
+  border: none;
+  border-left: 3px solid #aeb7c2;
+  border-radius: 0;
+  padding: 0.4rem 0 0.4rem 1rem;
+}

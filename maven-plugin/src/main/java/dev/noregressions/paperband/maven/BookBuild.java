@@ -1,5 +1,6 @@
 package dev.noregressions.paperband.maven;
 
+import dev.noregressions.paperband.cards.BlockTemplates;
 import dev.noregressions.paperband.cards.CardLoader;
 import dev.noregressions.paperband.cards.MarkdownPreprocessor;
 import dev.noregressions.paperband.config.BookPlan;
@@ -184,12 +185,14 @@ final class BookBuild {
     private void buildSingle() throws Exception {
         RenderContext ctx = new ConfigLoader().load(
                 input, target, pageSize, margins, declaredRoot, home, declaredVars());
+        ThemeBundle theme = Themes.resolve(themeName, ctx.book().theme(), themeDir);
+        BlockTemplates blockTemplates = new BlockTemplates(theme.templateLoader(),
+                layoutsDir != null ? layoutsDir : ctx.book().bookRoot().resolve("layouts"));
         MarkdownPreprocessor preprocessor = Includes.defaultPreprocessor(
                 ctx.book().bookRoot(), layoutsDir, includeProviderConfig, ctx.vars());
         Card card = CardLoading.load(new CardLoader(), preprocessor, input, ctx.book().cardSchema(),
-                ctx.vars(), log);
+                ctx.vars(), log, blockTemplates);
 
-        ThemeBundle theme = Themes.resolve(themeName, ctx.book().theme(), themeDir);
         LayoutEngine layout = layoutsDir != null
                 ? new LayoutEngine(ctx.book().bookRoot(), layoutsDir, theme)
                 : new LayoutEngine(ctx.book().bookRoot(), theme);
@@ -247,6 +250,8 @@ final class BookBuild {
         // Constructed once the book root is known, on the first card: ids for
         // cards that declare none are derived from their path relative to it.
         CardLoader cardLoader = null;
+        ThemeBundle theme = null;
+        BlockTemplates blockTemplates = null;
         List<Card> cards = new ArrayList<>(cardFiles.size());
         List<RenderContext> contexts = new ArrayList<>(cardFiles.size());
         RenderContext bookCtx = null;
@@ -258,6 +263,16 @@ final class BookBuild {
                 bookCtx = ctx;                 // book-root css/title captured once
             }
             if (cardLoader == null) cardLoader = new CardLoader(bookCtx.book().bookRoot());
+            if (theme == null) {
+                // Resolved on the first card (the yaml theme is only known
+                // once the book config is): block templates walk the same
+                // chain as every other template — theme, book layouts/,
+                // bundled — so ```type blocks are theme- and book-overridable.
+                theme = Themes.resolve(themeName, bookCtx.book().theme(), themeDir);
+                blockTemplates = new BlockTemplates(theme.templateLoader(),
+                        layoutsDir != null ? layoutsDir
+                                : bookCtx.book().bookRoot().resolve("layouts"));
+            }
             contexts.add(ctx);
             Map<String, Object> vars = ctx.vars();
             if (editionVars != null && !editionVars.isEmpty()) {
@@ -268,7 +283,7 @@ final class BookBuild {
             MarkdownPreprocessor preprocessor = Includes.defaultPreprocessor(
                     bookCtx.book().bookRoot(), layoutsDir, includeProviderConfig, vars);
             Card card = CardLoading.load(cardLoader, preprocessor, cardFile, ctx.book().cardSchema(),
-                    vars, log);
+                    vars, log, blockTemplates);
             cards.add(card);
             totalBlocks += card.blocks().size();
         }
@@ -299,7 +314,7 @@ final class BookBuild {
             bookCtx = bookCtx.withBook(bookCtx.book().withSections(declaredSections));
         }
 
-        ThemeBundle theme = Themes.resolve(themeName, bookCtx.book().theme(), themeDir);
+        if (theme == null) theme = Themes.resolve(themeName, bookCtx.book().theme(), themeDir);
         LayoutEngine layout = layoutsDir != null
                 ? new LayoutEngine(bookCtx.book().bookRoot(), layoutsDir, theme)
                 : new LayoutEngine(bookCtx.book().bookRoot(), theme);

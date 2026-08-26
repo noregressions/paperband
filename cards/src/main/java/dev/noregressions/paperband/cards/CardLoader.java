@@ -132,6 +132,30 @@ public final class CardLoader {
     private java.util.function.Consumer<String> onRemoval;
 
     /**
+     * Renders {@code ```type} blocks through {@code blocks/<type>.html}
+     * templates — see {@link BlockTemplates}. Defaults to the bundled types
+     * (command, output, console); the build wires a book-aware chain so a
+     * book's {@code layouts/blocks/} and the theme participate.
+     */
+    private BlockTemplates blockTemplates = BlockTemplates.bundled();
+
+    /** The card's vars, exposed to block templates as {@code vars}. */
+    private Map<String, Object> blockVars = Map.of();
+
+    /**
+     * Set the block-template resolver and the vars it exposes for subsequent
+     * parses. Vars vary per card via the cascade, so callers re-point this
+     * per card the way they do {@link #setContentPolicy}.
+     *
+     * @param templates the resolver; null resets to the bundled types
+     * @param vars      the card's resolved vars; null is treated as empty
+     */
+    public void setBlockTemplates(BlockTemplates templates, Map<String, Object> vars) {
+        this.blockTemplates = templates == null ? BlockTemplates.bundled() : templates;
+        this.blockVars = vars == null ? Map.of() : vars;
+    }
+
+    /**
      * Set the content policy for subsequent parses, and where CLEAN-mode
      * removals are reported (each message already names the card file).
      *
@@ -297,6 +321,13 @@ public final class CardLoader {
      * exists, whatever syntax it came from.
      */
     private Card buildCard(Path source, Frontmatter fm, Element bodyEl) {
+        // 3a-pre. Block templates: a ```type block whose type has a
+        //     blocks/<type>.html template (book layouts/, theme, or bundled)
+        //     renders through it — the pluggable half of what a fence means.
+        //     Types with no template fall through untouched, which is also
+        //     what keeps diff-card/error-output on their Java path below.
+        applyBlockTemplates(source, bodyEl);
+
         // 3a. Rewrite custom fenced-code conventions (diff-card, error-output)
         //     into structured HTML before block-walking. Real-language fences
         //     pass through untouched for Prism to highlight downstream.
@@ -407,6 +438,44 @@ public final class CardLoader {
         String id = fm.getString("id").orElseGet(() -> deriveIdFromFile(source));
         validateId(id, source);
         return new Card(id, source, fm, title, topLevel);
+    }
+
+    /** Apply {@link BlockTemplates} to every typed code block in {@code bodyEl}. */
+    private void applyBlockTemplates(Path source, Element bodyEl) {
+        for (Element code : new ArrayList<>(bodyEl.select("pre > code"))) {
+            String type = null;
+            List<String> extraClasses = new ArrayList<>();
+            for (String token : code.className().split("\\s+")) {
+                if (token.startsWith("language-")) {
+                    if (type == null) type = token.substring("language-".length());
+                } else if (!token.isBlank()) {
+                    extraClasses.add(token);
+                }
+            }
+            if (type == null || type.isBlank()) continue;
+            Element pre = code.parent();
+            // Info-line attributes land on the <pre> as well; carry them once.
+            for (String token : pre.className().split("\\s+")) {
+                if (!token.isBlank() && !token.startsWith("language-")
+                        && !extraClasses.contains(token)) {
+                    extraClasses.add(token);
+                }
+            }
+            String id = !pre.id().isEmpty() ? pre.id()
+                    : (code.id().isEmpty() ? null : code.id());
+            String rendered;
+            try {
+                rendered = blockTemplates.render(type, code.wholeText(), extraClasses, id, blockVars);
+            } catch (BlockTemplates.BlockTemplateException e) {
+                throw new CardParseException(source + ": ```" + type + " — " + e.getMessage(), e);
+            }
+            if (rendered == null) continue;      // not a block type: ordinary code
+            Element frag = Jsoup.parseBodyFragment(rendered).body();
+            for (Node n : new ArrayList<>(frag.childNodes())) {
+                pre.before(n);
+            }
+            pre.remove();
+        }
     }
 
     /**

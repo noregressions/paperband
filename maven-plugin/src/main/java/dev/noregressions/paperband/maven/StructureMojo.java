@@ -1,5 +1,6 @@
 package dev.noregressions.paperband.maven;
 
+import dev.noregressions.paperband.cards.BlockTemplates;
 import dev.noregressions.paperband.cards.CardLoader;
 import dev.noregressions.paperband.cards.MarkdownPreprocessor;
 import dev.noregressions.paperband.config.ConfigLoader;
@@ -169,7 +170,8 @@ public class StructureMojo extends AbstractPaperbandMojo {
             throws MojoExecutionException, MojoFailureException {
         List<Path> cardFiles = source.cardFiles();
         ConfigLoader configLoader = new ConfigLoader();
-        CardLoader cardLoader = null;      // see BookBuild: needs the book root
+        CardLoader cardLoader = null;
+        BlockTemplates blockTemplates = null;      // see BookBuild: needs the book root
         Map<String, Map<String, Object>> providerConfig = includeProviderConfig();
         List<Card> cards = new ArrayList<>(cardFiles.size());
         List<RenderContext> contexts = new ArrayList<>(cardFiles.size());
@@ -183,8 +185,13 @@ public class StructureMojo extends AbstractPaperbandMojo {
             contexts.add(ctx);
             MarkdownPreprocessor preprocessor = Includes.defaultPreprocessor(
                     bookCtx.book().bookRoot(), providerConfig, ctx.vars());
+            if (blockTemplates == null) {
+                blockTemplates = new BlockTemplates(null,
+                        geography().layouts() != null ? geography().layouts()
+                                : bookCtx.book().bookRoot().resolve("layouts"));
+            }
             cards.add(CardLoading.load(cardLoader, preprocessor, cardFile, ctx.book().cardSchema(),
-                    ctx.vars(), getLog()));
+                    ctx.vars(), getLog(), blockTemplates));
         }
         CardLoading.requireUniqueIds(cards, bookCtx.book().bookRoot());
 

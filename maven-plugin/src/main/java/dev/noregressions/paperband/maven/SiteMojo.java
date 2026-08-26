@@ -1,5 +1,6 @@
 package dev.noregressions.paperband.maven;
 
+import dev.noregressions.paperband.cards.BlockTemplates;
 import dev.noregressions.paperband.cards.CardLoader;
 import dev.noregressions.paperband.cards.MarkdownPreprocessor;
 import dev.noregressions.paperband.config.ConfigLoader;
@@ -156,6 +157,8 @@ public class SiteMojo extends AbstractPaperbandMojo {
         // rebuilt per card since it binds that card's vars at construction.
         ConfigLoader configLoader = new ConfigLoader();
         CardLoader cardLoader = null;      // see BookBuild: needs the book root
+        ThemeBundle theme = null;
+        BlockTemplates blockTemplates = null;
         Map<String, Map<String, Object>> providerConfig = includeProviderConfig();
         List<Card> cards = new ArrayList<>(cardFiles.size());
         List<RenderContext> contexts = new ArrayList<>(cardFiles.size());
@@ -166,11 +169,17 @@ public class SiteMojo extends AbstractPaperbandMojo {
                     declaredVars());
             if (bookCtx == null) bookCtx = ctx;
             if (cardLoader == null) cardLoader = new CardLoader(bookCtx.book().bookRoot());
+            if (theme == null) {
+                theme = Themes.resolve(themeName, bookCtx.book().theme(), themeDirPath());
+                blockTemplates = new BlockTemplates(theme.templateLoader(),
+                        geo.layouts() != null ? geo.layouts()
+                                : bookCtx.book().bookRoot().resolve("layouts"));
+            }
             contexts.add(ctx);
             MarkdownPreprocessor preprocessor = Includes.defaultPreprocessor(
                     bookCtx.book().bookRoot(), geo.layouts(), providerConfig, ctx.vars());
             cards.add(CardLoading.load(cardLoader, preprocessor, cardFile, ctx.book().cardSchema(),
-                    ctx.vars(), getLog()));
+                    ctx.vars(), getLog(), blockTemplates));
         }
 
         CardLoading.requireUniqueIds(cards, bookDir);
@@ -186,7 +195,7 @@ public class SiteMojo extends AbstractPaperbandMojo {
             bookCtx = bookCtx.withBook(bookCtx.book().withSections(source.sections()));
         }
 
-        ThemeBundle theme = Themes.resolve(themeName, bookCtx.book().theme(), themeDirPath());
+        if (theme == null) theme = Themes.resolve(themeName, bookCtx.book().theme(), themeDirPath());
         LayoutEngine layout = geo.layouts() != null
                 ? new LayoutEngine(bookCtx.book().bookRoot(), geo.layouts(), theme)
                 : new LayoutEngine(bookCtx.book().bookRoot(), theme);

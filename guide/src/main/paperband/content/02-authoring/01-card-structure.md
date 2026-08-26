@@ -139,6 +139,38 @@ Every theme gets a neutral treatment for all three; themes may restyle them. Rea
 languages (` ```java `, ` ```xml `) pass through untouched, and the attribute spellings
 (` ```bash {.command} `) keep working for cases the shorthand doesn't cover.
 
+### Define your own block type
+
+A fenced block does two things: it captures text verbatim, and it selects how that text
+renders. The second half is a **block template** — put a Pebble fragment at
+`layouts/blocks/<type>.html` and ` ```<type> ` renders through it:
+
+````markdown
+```filetree
+src/
+  main/
+```
+````
+
+```html
+<!-- layouts/blocks/filetree.html -->
+<figure class="filetree"><pre><code>{{ content }}</code></pre></figure>
+```
+
+The fragment's model: `content` (the verbatim block text — `{{ content }}` is escaped,
+`| raw` is a deliberate choice), `type`, `classes` and `id` (from info-line attributes),
+and `vars`. Resolution walks the usual chain — theme templates, then the book's
+`layouts/blocks/`, then the bundled ones — so a book can override `output`, and a theme
+can restyle a block type structurally, not just with CSS. The built-in `command`,
+`output` and `console` are themselves bundled block templates on this mechanism. (The
+guide's directory trees, like the one in Organising Content, are a `filetree` block —
+see this book's own `layouts/blocks/`.)
+
+Two things to hold on to: a template for a *real* language (`layouts/blocks/java.html`)
+captures every ` ```java ` block in the book — powerful, and worth doing only on
+purpose. And a broken template fails the build naming the card, the type, and the
+template file.
+
 ## Raw HTML and the content policy
 
 Raw HTML in a card is a legitimate *structural* escape hatch — a table with rowspans,
