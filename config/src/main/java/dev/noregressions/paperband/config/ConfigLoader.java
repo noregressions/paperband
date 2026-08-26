@@ -592,7 +592,12 @@ public final class ConfigLoader {
             throw new ConfigParseException(bookYaml + ": '" + key + "' image '" + image
                     + "' not found (looked at " + resolved + ")");
         }
-        return image;
+        // Stored resolved, not as written: the rendered HTML's base URI is the
+        // CONTENT root, and under a split geography the image lives under the
+        // book home — a relative src would silently resolve to nothing there
+        // (Chromium renders a dead file: URI as a blank), which is exactly the
+        // failure the existence check above exists to prevent.
+        return resolved.toAbsolutePath().normalize().toString();
     }
 
     @SuppressWarnings("unchecked")

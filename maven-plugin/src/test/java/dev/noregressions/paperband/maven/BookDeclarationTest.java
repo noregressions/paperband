@@ -88,7 +88,13 @@ class BookDeclarationTest {
 
             BookConfig merged = book.mergeInto(BookConfig.empty(root), root);
 
-            assertEquals("covers/front.png", merged.cover().image());
+            // Stored resolved: the render's base URI is the content root and
+            // the declared path resolves against the book home, so a relative
+            // src would silently break under a split geography.
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    merged.cover().image().endsWith("front.png")
+                            && Path.of(merged.cover().image()).isAbsolute(),
+                    merged.cover().image());
             assertNull(merged.cover().template());
             assertEquals("footer", merged.footer().template(),
                     "a template path resolves to the bare loader name, as a yaml one does");

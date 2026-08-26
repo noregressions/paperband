@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -44,7 +45,12 @@ class PageMatterConfigTest {
                   template: layouts/cta.html
                 """);
         PageMatter cover = ctx.book().cover();
-        assertEquals("images/front.png", cover.image());
+        // Stored resolved: the render's base URI is the content root, and
+        // under a split geography the image lives under the book home, so a
+        // relative src would silently break. See ConfigLoader.requireImage.
+        assertTrue(cover.image().endsWith("images/front.png")
+                        && Path.of(cover.image()).isAbsolute(),
+                "image stored as the resolved absolute path: " + cover.image());
         assertNull(cover.template());
 
         PageMatter back = ctx.book().back();
@@ -56,7 +62,8 @@ class PageMatterConfigTest {
     void bareStringIsImageShorthand() throws IOException {
         touch("images/front.png");
         RenderContext ctx = load("cover: images/front.png\n");
-        assertEquals("images/front.png", ctx.book().cover().image());
+        assertTrue(ctx.book().cover().image().endsWith("images/front.png")
+                && Path.of(ctx.book().cover().image()).isAbsolute());
         assertNull(ctx.book().back());
     }
 

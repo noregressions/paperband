@@ -93,8 +93,13 @@ public class PageMatterConfig {
             throw new IllegalArgumentException("<" + element + "> image '" + img
                     + "' not found (looked at " + bookRoot.resolve(img) + ")");
         }
+        // Stored resolved: the render's base URI is the content root, but the
+        // declared path resolves against the book home — see ConfigLoader's
+        // requireImage for the same rule on yaml-declared images.
+        String resolvedImg = img == null
+                ? null : bookRoot.resolve(img).toAbsolutePath().normalize().toString();
         PageMatter matter = new PageMatter(
-                img,
+                resolvedImg,
                 template == null || template.isBlank()
                         ? null : NamedTemplates.templateName(template.trim()),
                 trimmed(title), trimmed(subtitle), trimmed(series), trimmed(author),

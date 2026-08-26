@@ -108,8 +108,9 @@ class ContentSanitizerTest {
         Card card = parse(ContentPolicy.CLEAN, """
                 # T
 
-                <table border="1" cellpadding="4"><tr><td align="right" width="200"
+                <table border="1" cellpadding="4"><tr><td width="200"
                 onclick="alert(1)" colspan="2">cell</td></tr></table>
+                <p align="center">centered prose</p>
                 """);
 
         String html = html(card);
@@ -118,6 +119,24 @@ class ContentSanitizerTest {
         assertFalse(html.contains("width="), html);
         assertFalse(html.contains("onclick"), html);
         assertTrue(html.contains("colspan=\"2\""), "structural table attributes survive");
+    }
+
+    @Test
+    void gfmTableAlignment_isMarkdownSemanticsAndSurvives() {
+        // flexmark renders `---:` column syntax as align attributes on th/td;
+        // stripping those would destroy alignment the author expressed in
+        // pure markdown. Found in a real book's numeric tables.
+        Card card = parse(ContentPolicy.CLEAN, """
+                # T
+
+                | name | count |
+                | --- | ---: |
+                | a | 12 |
+                """);
+
+        String html = html(card);
+        assertTrue(html.contains("align=\"right\""), "GFM column alignment survives: " + html);
+        assertTrue(removals.isEmpty(), "and is not reported as a removal: " + removals);
     }
 
     @Test

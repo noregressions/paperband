@@ -121,7 +121,9 @@ vars:
   `<script>` blocks, head-metadata elements (`<link>`, `<meta>`, `<title>`, `<base>`),
   presentational tags (`<font>`, `<center>` — unwrapped, their content kept) and
   attributes (`align`, `bgcolor`, `width`, `border`, …), and `on*` event handlers.
-  Classes and ids survive — they're the sanctioned route.
+  Classes and ids survive — they're the sanctioned route — and so does `align` on
+  table cells, because GFM's `---:` column syntax renders as exactly that: it's
+  markdown-authored semantics, not smuggled styling.
 - **`strict`** — the same findings fail the build instead, for teams that want the
   source fixed rather than laundered.
 - **`allow`** — content HTML passes verbatim, today's escape hatch.

@@ -60,6 +60,18 @@ public final class ContentSanitizer {
             "border", "hspace", "vspace", "face", "width", "height",
             "cellpadding", "cellspacing");
 
+    /**
+     * On table cells, {@code align}/{@code valign} are <em>markdown-authored
+     * semantics</em>, not smuggled presentation: flexmark renders GFM's
+     * {@code ---:} column syntax as {@code align} attributes on {@code th}/
+     * {@code td}, so stripping them there would destroy alignment the author
+     * expressed in pure markdown (found the hard way: a numeric table in a
+     * real book lost its right-alignment). Everywhere else — {@code <p
+     * align="center">} and friends — they stay presentation and go.
+     */
+    private static final Set<String> TABLE_CELL_TAGS = Set.of("th", "td");
+    private static final Set<String> TABLE_CELL_KEPT = Set.of("align", "valign");
+
     private ContentSanitizer() {}
 
     /**
@@ -94,6 +106,9 @@ public final class ContentSanitizer {
             }
             for (Attribute a : new ArrayList<>(el.attributes().asList())) {
                 String name = a.getKey().toLowerCase(Locale.ROOT);
+                if (TABLE_CELL_TAGS.contains(tag) && TABLE_CELL_KEPT.contains(name)) {
+                    continue;   // GFM column alignment — see TABLE_CELL_KEPT
+                }
                 if (PRESENTATIONAL_ATTRS.contains(name) || name.startsWith("on")) {
                     removed.add("stripped " + abbreviate(a.html()) + " from <" + tag + ">");
                     el.removeAttr(a.getKey());
