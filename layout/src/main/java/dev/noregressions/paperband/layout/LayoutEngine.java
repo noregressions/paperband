@@ -175,7 +175,7 @@ public final class LayoutEngine {
      * from {@code layoutsDir} (the POM-decided location, defaulting to
      * {@code src/main/paperband/layouts}) rather than being derived from the
      * content root. Section grouping and card ids keep reading the content
-     * root through the model's {@link BookConfig#bookRoot()}.
+     * root through the model's {@link dev.noregressions.paperband.model.BookConfig#bookRoot()}.
      *
      * @param bookRoot   the content root, or null
      * @param layoutsDir the book's templates directory, or null for none
