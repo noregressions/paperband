@@ -56,7 +56,10 @@ The `build` goal's default phase is `process-resources`; override `<phase>` in t
 
 | Parameter | Property | Default | Notes |
 |---|---|---|---|
-| `input` | `paperband.input` | src/main/paperband | Markdown file (single card) or directory (book). Relative paths resolve against the module's basedir. Unset (and with no `<book>`), the conventional root `src/main/paperband` is used when it exists — see Organising Content. |
+| `input` | `paperband.input` | — | Markdown file (single card) or directory (book) — the legacy spelling of `content`, with wrapper detection. Relative paths resolve against the module's basedir. |
+| `home` | `paperband.home` | src/main/paperband | Where the book lives: `paperband.yaml`, `layouts/`, `styles/`. Moving it moves the defaults below. See Organising Content. |
+| `content` | `paperband.content` | ${home}/content | The content root: everything there is a card (`.md`, `.html`, `.yaml` with a schema). Mutually exclusive with `input` and a card-selecting `book`. |
+| `layouts` | `paperband.layouts` | ${home}/layouts | The book's templates: `{% include %}` snippets, `<page>` templates, overrides. |
 | `book` | — | — | A book whose structure is declared in the POM and whose cards are selected by glob. Mutually exclusive with `input`; see below. |
 | `output` | `paperband.output` | *(required)* | Output PDF file. |
 | `renderer` | `paperband.renderer` | `playwright` | See Renderers in the Rendering section. |

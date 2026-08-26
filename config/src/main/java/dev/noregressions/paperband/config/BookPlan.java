@@ -336,6 +336,7 @@ public final class BookPlan {
             List<Path> files = stream
                     .filter(Files::isRegularFile)
                     .filter(p -> !isHidden(base, p))
+                    .filter(p -> !isToolchainOutput(base, p))
                     .map(p -> p.toAbsolutePath().normalize())
                     .toList();
             nearMisses = files.stream()
@@ -434,6 +435,7 @@ public final class BookPlan {
             return stream
                     .filter(Files::isRegularFile)
                     .filter(p -> !isHidden(base, p))
+                    .filter(p -> !isToolchainOutput(base, p))
                     // Readmes included: for a planned book the pattern decides,
                     // and one naming README.md means it. See CardFiles.isCard.
                     // HTML files are candidates too, but match() lets them
@@ -454,6 +456,28 @@ public final class BookPlan {
         Path rel = base.relativize(file);
         for (Path name : rel) {
             if (name.toString().startsWith(".")) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Directory names below the root that are never candidates: build output
+     * and dependency trees. A planned book's {@code <root>} is typically the
+     * whole module, and {@code target/} holds copies of things (a previous
+     * site build, emitted HTML) while {@code node_modules/} holds other
+     * people's markdown — a {@code **} pattern sweeping either would quietly
+     * reshape the book. Deliberately a short, near-zero-false-positive list
+     * (both names are toolchain-owned); a book that genuinely keeps content
+     * in a directory by one of these names can point {@code <root>} inside
+     * it, where the name is no longer a relative segment.
+     */
+    private static final Set<String> EXCLUDED_DIRS = Set.of("target", "node_modules");
+
+    /** True when a path component below the root is toolchain output ({@link #EXCLUDED_DIRS}). */
+    private static boolean isToolchainOutput(Path base, Path file) {
+        Path rel = base.relativize(file);
+        for (Path name : rel) {
+            if (EXCLUDED_DIRS.contains(name.toString())) return true;
         }
         return false;
     }

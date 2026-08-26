@@ -9,24 +9,38 @@ By default a book's shape is **discovered**: every folder under the book root is
 every `.md` file becomes a card, alphabetically. Filename prefixes (`01-`, `02-`) are the
 whole ordering mechanism, and a file dropped into a folder appears in the next build.
 
-## The conventional layout
+## Where the book lives: the POM decides
 
-A book laid out at `src/main/paperband` needs no `<input>` at all — every goal defaults
-to it, the way `src/main/java` never needs declaring:
+The POM is the sole authority on *where* the book's pieces are; `paperband.yaml`
+declares *what* the book is (title, theme, axes, vars, sections) and never moves a
+root. Explicit parameters win, and the convention fills whatever the POM doesn't say:
 
 ```
-src/main/paperband/
-  paperband.yaml     ← book config (title, theme, axes, vars, css, sections)
-  content/           ← the cards; the walk descends here
-  layouts/           ← Pebble templates and snippets
-  styles/            ← the css chain's files
+src/main/paperband/        ← <home>: the default for everything below
+  paperband.yaml           ← book config (title, theme, axes, vars, css, sections)
+  content/                 ← <content>: the cards — .md, .html, .yaml-with-schema
+  layouts/                 ← <layouts>: Pebble templates and snippets
+  styles/                  ← the css chain's files (css: paths resolve against home)
 ```
 
-When the book root contains a `content/` directory, only `content/` is walked for cards, and `.html` files there are cards too (see HTML Cards in Authoring) —
-`layouts/` and `styles/` sit beside it as non-content. A book without the wrapper keeps
-working: the whole root is walked as before, except that root-level `layouts/` and
-`styles/` directories are always skipped (a markdown snippet in `layouts/` is a template
-asset, not a card). This guide is itself laid out this way.
+A book laid out like this needs no `<configuration>` at all — every goal defaults to
+it, the way `src/main/java` never needs declaring. This guide is itself laid out this
+way, and every build logs the resolved geography in one line
+(`book geography: home=…, content=…, layouts=…`).
+
+For an **existing project** whose content lives elsewhere, override the pieces
+individually: `<content>docs</content>` walks that directory as the book (everything
+there is content by declaration, so `.html` files are cards), while `home` keeps the
+book's own assets tidy in `src/main/paperband`. For content *scattered* across the
+project — one `TRACE.md` per service, say — use `<book>` with glob `<sections>`
+instead of `<content>`; the home still supplies `paperband.yaml`, `layouts/` and
+`styles/`. Build output never leaks in: `target/` and `node_modules/` are never
+candidates for a glob, whatever the pattern says.
+
+Legacy spellings keep working: `<input>` walks a directory the old way (a `content/`
+wrapper inside it is detected, root-level `layouts/`/`styles/` are skipped), and a
+self-contained book whose yaml sits in its content root keeps its own config — an
+empty home never shadows it.
 
 ## `ignore:` — keep files out of the book
 

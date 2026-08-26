@@ -107,18 +107,32 @@ public class SiteMojo extends AbstractPaperbandMojo {
         if (input != null && book != null) {
             throw new MojoExecutionException("Configure either <input> or <book>, not both.");
         }
+        if (content != null && input != null) {
+            throw new MojoExecutionException(
+                    "Configure either <content> or <input>, not both — <content> is the geography "
+                            + "spelling of the same thing (and enables HTML cards).");
+        }
         Path output = resolve(outputDirectory);
+        Geography geo = geography();
+        getLog().info(geo.describe());
 
         BookBuild.PlannedBook plan = null;
         Path declaredRoot = null;
+        boolean contentMode = false;
         Path walkFrom = input == null ? null : resolve(input);
-        if (walkFrom == null && book == null) {
-            // Convention over configuration — see conventionalBookRoot().
-            walkFrom = conventionalBookRoot();
-            if (walkFrom != null) {
-                getLog().info("No <input> configured — using the conventional book root " + walkFrom);
+        if (content != null) {
+            walkFrom = resolve(content);
+            contentMode = true;
+        } else if (walkFrom == null && book == null) {
+            // Convention over configuration — see Geography.
+            if (geo.content() != null) {
+                walkFrom = geo.content();
+                contentMode = true;
+            } else if (geo.home() != null) {
+                walkFrom = geo.home();   // home without a content/: legacy walk
             }
         }
+        if (contentMode) declaredRoot = walkFrom;
         if (book != null) {
             declaredRoot = book.getRoot() != null ? resolve(book.getRoot()) : basedir();
             if (book.declaresCardSelection()) {
@@ -132,7 +146,9 @@ public class SiteMojo extends AbstractPaperbandMojo {
                 walkFrom = declaredRoot;   // config declared, structure from the tree
             }
         }
-        BookSource.Resolved source = BookSource.of(walkFrom, plan, siteTarget, getLog());
+        BookSource.Resolved source = contentMode
+                ? BookSource.walkContent(walkFrom, siteTarget, getLog())
+                : BookSource.of(walkFrom, plan, siteTarget, getLog());
         Path bookDir = source.root();
         List<Path> cardFiles = source.cardFiles();
 
@@ -146,12 +162,13 @@ public class SiteMojo extends AbstractPaperbandMojo {
         RenderContext bookCtx = null;
         for (Path cardFile : cardFiles) {
             RenderContext ctx = configLoader.load(
-                    cardFile, siteTarget, pageSize, resolveMargins(), declaredRoot, declaredVars());
+                    cardFile, siteTarget, pageSize, resolveMargins(), declaredRoot, geo.home(),
+                    declaredVars());
             if (bookCtx == null) bookCtx = ctx;
             if (cardLoader == null) cardLoader = new CardLoader(bookCtx.book().bookRoot());
             contexts.add(ctx);
             MarkdownPreprocessor preprocessor = Includes.defaultPreprocessor(
-                    bookCtx.book().bookRoot(), providerConfig, ctx.vars());
+                    bookCtx.book().bookRoot(), geo.layouts(), providerConfig, ctx.vars());
             cards.add(CardLoading.load(cardLoader, preprocessor, cardFile, ctx.book().cardSchema(),
                     ctx.vars(), getLog()));
         }
@@ -162,14 +179,17 @@ public class SiteMojo extends AbstractPaperbandMojo {
         // in a build: the site's title, landing pages and nav then match the
         // PDF's cover and dividers.
         if (book != null && book.declaresBookConfig()) {
-            bookCtx = bookCtx.withBook(book.mergeInto(bookCtx.book(), bookCtx.book().bookRoot()));
+            bookCtx = bookCtx.withBook(book.mergeInto(bookCtx.book(),
+                    geo.home() != null ? geo.home() : bookCtx.book().bookRoot()));
         }
         if (!source.sections().isEmpty()) {
             bookCtx = bookCtx.withBook(bookCtx.book().withSections(source.sections()));
         }
 
         ThemeBundle theme = Themes.resolve(themeName, bookCtx.book().theme(), themeDirPath());
-        LayoutEngine layout = new LayoutEngine(bookCtx.book().bookRoot(), theme);
+        LayoutEngine layout = geo.layouts() != null
+                ? new LayoutEngine(bookCtx.book().bookRoot(), geo.layouts(), theme)
+                : new LayoutEngine(bookCtx.book().bookRoot(), theme);
         layout.setExtraCss(stylesheetPaths());
         Map<String, String> pages;
         try {

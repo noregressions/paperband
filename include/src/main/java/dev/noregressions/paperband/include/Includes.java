@@ -61,7 +61,32 @@ public final class Includes {
             Path bookRoot,
             Map<String, Map<String, Object>> providerConfigs,
             Map<String, Object> vars) {
-        return buildPreprocessor(defaultProviders(), defaultProcessors(), bookRoot, providerConfigs, vars);
+        return defaultPreprocessor(bookRoot, null, providerConfigs, vars);
+    }
+
+    /**
+     * Build a preprocessor with the bundled providers and processors and an
+     * explicit layouts directory — the split geography, where snippets live
+     * at the POM-decided location rather than under the content root.
+     *
+     * @param bookRoot        content root for fragment path resolution; may be null
+     * @param layoutsDir      where {@code {% include %}} snippets live; null
+     *                        derives {@code <bookRoot>/layouts} as before
+     * @param providerConfigs per-provider config blocks; may be empty
+     * @param vars            resolved {@code vars} map for the card being processed
+     * @return a new markdown preprocessor
+     */
+    public static MarkdownPreprocessor defaultPreprocessor(
+            Path bookRoot,
+            Path layoutsDir,
+            Map<String, Map<String, Object>> providerConfigs,
+            Map<String, Object> vars) {
+        MarkdownPreprocessor pre = buildPreprocessor(
+                defaultProviders(), defaultProcessors(), bookRoot, providerConfigs, vars);
+        if (layoutsDir != null && pre instanceof PebbleIncludePreprocessor pip) {
+            pip.setLayoutsDir(layoutsDir);
+        }
+        return pre;
     }
 
     /**

@@ -570,6 +570,21 @@ class PebbleIncludePreprocessorTest {
         assertTrue(out.contains("standalone snippet"));
     }
 
+    @Test
+    void include_explicitLayoutsDirWinsOverTheDerivedOne(@TempDir Path tmp) throws IOException {
+        // Split geography: snippets live at the POM-decided location, not
+        // under the content root.
+        Path source = writeFile(tmp, "docs/card.md", "unused");
+        writeFile(tmp, "docs/layouts/aside.html", "derived one\n");
+        writeFile(tmp, "book/templates/aside.html", "explicit one\n");
+
+        MarkdownPreprocessor pre = Includes.defaultPreprocessor(
+                tmp.resolve("docs"), tmp.resolve("book/templates"), Map.of(), Map.of());
+        String out = pre.process("{% include \"aside\" %}\n", source);
+
+        assertTrue(out.contains("explicit one"), out);
+    }
+
     // ---- HTML cards: the masking profile follows the source syntax ----
 
     @Test

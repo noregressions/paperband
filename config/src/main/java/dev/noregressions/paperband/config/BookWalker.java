@@ -199,9 +199,29 @@ public final class BookWalker {
         // card. An unwrapped root keeps today's md/yaml-only discovery — a
         // legacy book may have generated HTML lying around, and sweeping it
         // up silently would reshape the book.
-        this.htmlCards = Files.isDirectory(content);
-        if (this.htmlCards) root = content;
+        boolean wrapped = Files.isDirectory(content);
+        return walkResolved(wrapped ? content : root, wrapped, !wrapped);
+    }
 
+    /**
+     * Walk a directory the caller has already resolved as <em>the content
+     * root</em> — the POM-decided geography ({@code <content>}, or the
+     * conventional {@code src/main/paperband/content}). No wrapper detection
+     * and no reserved-name skipping: everything here is content by
+     * declaration, which is also why {@code .html} files are cards.
+     *
+     * @param contentRoot the directory holding the cards
+     * @return ordered card files
+     */
+    public List<Path> walkContent(Path contentRoot) {
+        if (contentRoot == null || !Files.isDirectory(contentRoot)) return List.of();
+        this.acceptYamlCards = CardFiles.declaresCardSchema(contentRoot);
+        return walkResolved(contentRoot.toAbsolutePath(), true, false);
+    }
+
+    private List<Path> walkResolved(Path root, boolean htmlCards, boolean skipReservedRootDirs) {
+        this.htmlCards = htmlCards;
+        this.skipReservedRootDirs = skipReservedRootDirs;
         List<Path> out = new ArrayList<>();
         this.walkRoot = root;
         this.ignoreScopes.clear();
@@ -211,6 +231,9 @@ public final class BookWalker {
 
     /** Whether {@code .html} files count as cards this walk — see {@link #walk}. */
     private boolean htmlCards;
+
+    /** Whether root-level {@code layouts/}/{@code styles/} are skipped — only for unresolved legacy roots. */
+    private boolean skipReservedRootDirs;
 
     // ---- internals ----
 
@@ -352,7 +375,8 @@ public final class BookWalker {
 
     /** True for {@code layouts/}/{@code styles/} directly under the walk root — templates and css, not content. */
     private boolean isReservedRootDir(Path p) {
-        return Files.isDirectory(p)
+        return skipReservedRootDirs
+                && Files.isDirectory(p)
                 && p.toAbsolutePath().getParent().equals(walkRoot)
                 && RESERVED_ROOT_DIRS.contains(p.getFileName().toString());
     }

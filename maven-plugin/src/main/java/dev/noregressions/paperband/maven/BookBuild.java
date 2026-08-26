@@ -107,6 +107,25 @@ final class BookBuild {
     Path declaredRoot;
 
     /**
+     * The book home — where {@code paperband.yaml}, {@code layouts/} and
+     * {@code styles/} live when the POM's geography splits them from the
+     * content root. Null keeps the self-contained behavior (home == content
+     * root). See {@link Geography}.
+     */
+    Path home;
+
+    /** The templates directory, or null to derive {@code <contentRoot>/layouts} as before. */
+    Path layoutsDir;
+
+    /**
+     * True when {@link #input} is a POM-resolved content root
+     * ({@code <content>} or the convention) rather than a legacy
+     * {@code <input>}: the walk then takes everything there as content —
+     * HTML cards on, no wrapper detection.
+     */
+    boolean contentDeclared;
+
+    /**
      * Book-level config declared in the POM (title, cover, footer, vars …),
      * layered over whatever the root yaml supplied. Null when the build
      * declares none.
@@ -164,14 +183,16 @@ final class BookBuild {
 
     private void buildSingle() throws Exception {
         RenderContext ctx = new ConfigLoader().load(
-                input, target, pageSize, margins, declaredRoot, declaredVars());
+                input, target, pageSize, margins, declaredRoot, home, declaredVars());
         MarkdownPreprocessor preprocessor = Includes.defaultPreprocessor(
-                ctx.book().bookRoot(), includeProviderConfig, ctx.vars());
+                ctx.book().bookRoot(), layoutsDir, includeProviderConfig, ctx.vars());
         Card card = CardLoading.load(new CardLoader(), preprocessor, input, ctx.book().cardSchema(),
                 ctx.vars(), log);
 
         ThemeBundle theme = Themes.resolve(themeName, ctx.book().theme(), themeDir);
-        LayoutEngine layout = new LayoutEngine(ctx.book().bookRoot(), theme);
+        LayoutEngine layout = layoutsDir != null
+                ? new LayoutEngine(ctx.book().bookRoot(), layoutsDir, theme)
+                : new LayoutEngine(ctx.book().bookRoot(), theme);
         layout.setExtraCss(stylesheets);
         String html = layoutOverride != null
                 ? layout.render(card, ctx, layoutOverride)
@@ -195,7 +216,9 @@ final class BookBuild {
     // ---- book ----
 
     private void buildBook() throws Exception {
-        BookSource.Resolved source = BookSource.of(input, plan, target, log);
+        BookSource.Resolved source = plan == null && contentDeclared
+                ? BookSource.walkContent(input, target, log)
+                : BookSource.of(input, plan, target, log);
         renderBook(source.root(), source.cardFiles(), source.sections(), source.tocCardIndex(),
                 source.pages());
     }
@@ -230,7 +253,7 @@ final class BookBuild {
         int totalBlocks = 0;
         for (Path cardFile : cardFiles) {
             RenderContext ctx = configLoader.load(
-                    cardFile, target, pageSize, margins, declaredRoot, declaredVars());
+                    cardFile, target, pageSize, margins, declaredRoot, home, declaredVars());
             if (bookCtx == null) {
                 bookCtx = ctx;                 // book-root css/title captured once
             }
@@ -243,7 +266,7 @@ final class BookBuild {
                 vars = merged;
             }
             MarkdownPreprocessor preprocessor = Includes.defaultPreprocessor(
-                    bookCtx.book().bookRoot(), includeProviderConfig, vars);
+                    bookCtx.book().bookRoot(), layoutsDir, includeProviderConfig, vars);
             Card card = CardLoading.load(cardLoader, preprocessor, cardFile, ctx.book().cardSchema(),
                     vars, log);
             cards.add(card);
@@ -262,8 +285,8 @@ final class BookBuild {
         // field by field. A declaration wins over a default: the POM is the
         // file the author just edited.
         if (bookDeclaration != null && bookDeclaration.declaresBookConfig()) {
-            bookCtx = bookCtx.withBook(
-                    bookDeclaration.mergeInto(bookCtx.book(), bookCtx.book().bookRoot()));
+            bookCtx = bookCtx.withBook(bookDeclaration.mergeInto(bookCtx.book(),
+                    home != null ? home : bookCtx.book().bookRoot()));
         }
 
         // Declared sections replace whatever the root yaml said: two sources for
@@ -277,7 +300,9 @@ final class BookBuild {
         }
 
         ThemeBundle theme = Themes.resolve(themeName, bookCtx.book().theme(), themeDir);
-        LayoutEngine layout = new LayoutEngine(bookCtx.book().bookRoot(), theme);
+        LayoutEngine layout = layoutsDir != null
+                ? new LayoutEngine(bookCtx.book().bookRoot(), layoutsDir, theme)
+                : new LayoutEngine(bookCtx.book().bookRoot(), theme);
         layout.setExtraCss(stylesheets);
         if (editionModel != null) layout.setEdition(editionModel);
         layout.setTocAt(tocCardIndex);

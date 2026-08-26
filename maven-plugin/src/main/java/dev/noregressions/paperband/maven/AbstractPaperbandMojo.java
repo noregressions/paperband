@@ -130,6 +130,48 @@ public abstract class AbstractPaperbandMojo extends AbstractMojo {
     @Parameter(property = "paperband.skip", defaultValue = "false")
     protected boolean skip;
 
+    // ---- geography: the POM decides where the book's pieces live ----
+    //
+    // paperband.yaml declares what the book IS (title, theme, axes, vars);
+    // these parameters declare WHERE it is. Explicit values win; the
+    // convention (src/main/paperband/{content,layouts,styles}) fills what's
+    // unsaid; the yaml never moves a root. See Geography.
+
+    /**
+     * The book home: where {@code paperband.yaml}, {@code layouts/} and
+     * {@code styles/} live. Defaults to {@code src/main/paperband} when that
+     * directory exists. Moving it moves every default below at once.
+     */
+    @Parameter(property = "paperband.home")
+    protected File home;
+
+    /**
+     * The content root: the directory whose files are the book's cards
+     * ({@code .md}, {@code .html}, {@code .yaml} with a schema). Defaults to
+     * {@code ${home}/content} when that exists. Mutually exclusive with
+     * {@code <input>} (the legacy spelling) and a card-selecting
+     * {@code <book>}.
+     */
+    @Parameter(property = "paperband.content")
+    protected File content;
+
+    /**
+     * The book's templates directory — {@code {% include %}} snippets,
+     * {@code <page>} templates, template overrides. Defaults to
+     * {@code ${home}/layouts} when that exists, else the legacy
+     * {@code <contentRoot>/layouts}.
+     */
+    @Parameter(property = "paperband.layouts")
+    protected File layouts;
+
+    /** The resolved geography for this module — see {@link Geography#resolve}. */
+    protected Geography geography() {
+        return Geography.resolve(basedir(),
+                home == null ? null : resolve(home),
+                content == null ? null : resolve(content),
+                layouts == null ? null : resolve(layouts));
+    }
+
     /**
      * Fail on a {@code <book>} element that declares the same singular thing
      * twice.
@@ -207,23 +249,6 @@ public abstract class AbstractPaperbandMojo extends AbstractMojo {
     /** The module basedir, or the working directory outside a project. */
     protected Path basedir() {
         return project == null ? Path.of("") : project.getBasedir().toPath();
-    }
-
-    /**
-     * The conventional book root — {@code src/main/paperband} under the
-     * module, when it exists. The goals that take an {@code <input>} fall
-     * back to it when neither {@code <input>} nor {@code <book>} is
-     * configured, the way {@code src/main/java} needs no declaring: a book
-     * laid out conventionally builds with no {@code <configuration>} at all.
-     * Inside it, cards live in {@code content/}, templates in
-     * {@code layouts/}, css in {@code styles/}, and the root
-     * {@code paperband.yaml} carries the book config (see BookWalker).
-     *
-     * @return the conventional root, or null when the module doesn't have one
-     */
-    protected Path conventionalBookRoot() {
-        Path conventional = basedir().resolve("src").resolve("main").resolve("paperband");
-        return Files.isDirectory(conventional) ? conventional : null;
     }
 
     /** Resolve a configured file against the module basedir when it's relative. */

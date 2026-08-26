@@ -80,8 +80,13 @@ public final class LayoutEngine {
 
     private final PebbleEngine engine;
     private final ThemeBundle theme;
-    /** Kept for diagnostics: naming the layouts dir a missing template should have been in. */
-    private final Path bookRoot;
+    /**
+     * Where the book's own templates live — the POM-decided geography, or the
+     * legacy {@code <bookRoot>/layouts} when the geography wasn't split. Also
+     * kept for diagnostics: naming the dir a missing template should have
+     * been in, and the base declared template paths strip against.
+     */
+    private final Path layoutsDir;
 
     /**
      * Optional edition identity for publication builds:
@@ -162,28 +167,40 @@ public final class LayoutEngine {
      * @param theme the theme bundle
      */
     public LayoutEngine(Path bookRoot, ThemeBundle theme) {
-        this.theme = (theme == null) ? ThemeBundle.NONE : theme;
-        this.bookRoot = bookRoot;
-        this.engine = buildEngine(bookRoot, this.theme);
+        this(bookRoot, bookRoot == null ? null : bookRoot.resolve("layouts"), theme);
     }
 
-    private static PebbleEngine buildEngine(Path bookRoot, ThemeBundle theme) {
+    /**
+     * Construct an engine with the geography split: the book's templates come
+     * from {@code layoutsDir} (the POM-decided location, defaulting to
+     * {@code src/main/paperband/layouts}) rather than being derived from the
+     * content root. Section grouping and card ids keep reading the content
+     * root through the model's {@link BookConfig#bookRoot()}.
+     *
+     * @param bookRoot   the content root, or null
+     * @param layoutsDir the book's templates directory, or null for none
+     * @param theme      the theme bundle
+     */
+    public LayoutEngine(Path bookRoot, Path layoutsDir, ThemeBundle theme) {
+        this.theme = (theme == null) ? ThemeBundle.NONE : theme;
+        this.layoutsDir = layoutsDir == null ? null : layoutsDir.toAbsolutePath().normalize();
+        this.engine = buildEngine(this.layoutsDir, this.theme);
+    }
+
+    private static PebbleEngine buildEngine(Path layoutsDir, ThemeBundle theme) {
         ClasspathLoader cp = new ClasspathLoader();
         cp.setPrefix("templates/");
         cp.setSuffix(".html");
 
         List<Loader<?>> chain = new ArrayList<>();
         if (theme.templateLoader() != null) chain.add(theme.templateLoader());
-        if (bookRoot != null) {
-            Path layouts = bookRoot.resolve("layouts");
-            if (Files.isDirectory(layouts)) {
-                // Pebble 4.1+ requires the prefix (an absolute path) at construction
-                // time; setPrefix() alone is no longer sufficient (also now rejects
-                // non-absolute paths — part of the CVE-2025-1686 traversal fix).
-                FileLoader fs = new FileLoader(layouts.toAbsolutePath().toString() + "/");
-                fs.setSuffix(".html");
-                chain.add(fs);
-            }
+        if (layoutsDir != null && Files.isDirectory(layoutsDir)) {
+            // Pebble 4.1+ requires the prefix (an absolute path) at construction
+            // time; setPrefix() alone is no longer sufficient (also now rejects
+            // non-absolute paths — part of the CVE-2025-1686 traversal fix).
+            FileLoader fs = new FileLoader(layoutsDir.toString() + "/");
+            fs.setSuffix(".html");
+            chain.add(fs);
         }
         chain.add(cp);
 
@@ -628,7 +645,7 @@ public final class LayoutEngine {
         for (AxisGrouping g : groupings) {
             String landingTemplate = g.axis().landingTemplate() == null
                     ? "site-tier"
-                    : templateNameOf(bookRoot, g.axis().landingTemplate());
+                    : templateNameOf(g.axis().landingTemplate());
             for (Map<String, Object> value : g.valueMetas()) {
                 List<Integer> indices = g.byValue().getOrDefault(normalizeAxisId(value.get("id")), List.of());
                 List<Map<String, Object>> valueCards = new ArrayList<>(indices.size());
@@ -759,12 +776,11 @@ public final class LayoutEngine {
     /** Strip a stored template path down to the bare name Pebble's loader expects (no extension). */
     /**
      * The template name for an axis's landing template — a path the config
-     * already resolved, so it goes through the {@code Path} form of
-     * {@link NamedTemplates#templateName} to keep any {@code layouts/}
-     * subdirectory in the name.
+     * already resolved, stripped against this engine's own layouts dir so
+     * subdirectory names survive whatever geography placed the dir.
      */
-    private static String templateNameOf(Path bookRoot, Path landingTemplate) {
-        return NamedTemplates.templateName(bookRoot, landingTemplate);
+    private String templateNameOf(Path landingTemplate) {
+        return NamedTemplates.templateNameUnder(layoutsDir, landingTemplate);
     }
 
     /** Output filename stem for one axis value's landing page: {@code {axisName}-{valueId}}. */
@@ -1603,8 +1619,8 @@ public final class LayoutEngine {
         if (!theme.isEmpty() && theme.templateLoader() != null) {
             hint.append("theme '").append(theme.name()).append("' overrides, then ");
         }
-        if (bookRoot != null) {
-            hint.append(bookRoot.resolve(NamedTemplates.LAYOUTS_DIR)).append("/<name>.html, then ");
+        if (layoutsDir != null) {
+            hint.append(layoutsDir).append("/<name>.html, then ");
         }
         hint.append("the bundled templates. A book's own templates live under its ")
                 .append(NamedTemplates.LAYOUTS_DIR)

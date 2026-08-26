@@ -65,6 +65,14 @@ public final class ConfigLoader {
     private static final String CONFIG_FILENAME = "paperband.yaml";
 
     /**
+     * The book home for the current load — where the book-level yaml and its
+     * relative asset paths live when the geography splits it from the content
+     * root; null when the content root is its own home (every load before
+     * the split, and every self-contained book after it).
+     */
+    private Path homeDir;
+
+    /**
      * Load and resolve config for {@code mdFile}.
      *
      * @param mdFile  the markdown card file
@@ -157,6 +165,38 @@ public final class ConfigLoader {
      */
     public RenderContext load(Path mdFile, String target, String size, Margins margins,
                               Path declaredRoot, Map<String, Object> declaredVars) {
+        return load(mdFile, target, size, margins, declaredRoot, null, declaredVars);
+    }
+
+    /**
+     * Load and resolve config for {@code mdFile}, with the book's
+     * <em>geography</em> split in two: {@code contentRoot} is where the cards
+     * live (the cascade boundary, and the {@link BookConfig#bookRoot()} the
+     * model reports — ids, section grouping and fragment resolution are
+     * content concerns), while {@code home} is where the book's own assets
+     * live — the {@code paperband.yaml} carrying the book-level config, whose
+     * relative paths (css, cover images) resolve against <em>home</em>, not
+     * the content root.
+     *
+     * <p>Resolution of the book-level yaml: {@code home/paperband.yaml} when
+     * {@code home} is given and has one; else {@code contentRoot/paperband.yaml}
+     * (the self-contained book, exactly as before); else empty (the book is
+     * declared in the POM). The per-folder cascade between card and
+     * {@code contentRoot} applies unchanged either way.
+     *
+     * @param mdFile      the card file
+     * @param target      current build target; may be null
+     * @param size        current page size; may be null
+     * @param margins     margins replacing the size preset's own; may be null
+     * @param contentRoot the content root; null to discover as usual
+     * @param home        the book home; null to treat the content root as home
+     * @param declaredVars book-level vars from the caller; may be empty
+     * @return resolved {@link RenderContext}
+     */
+    public RenderContext load(Path mdFile, String target, String size, Margins margins,
+                              Path contentRoot, Path home, Map<String, Object> declaredVars) {
+        Path declaredRoot = contentRoot;
+        this.homeDir = home == null ? null : home.toAbsolutePath().normalize();
         Map<String, Object> extraVars = declaredVars == null ? Map.of() : declaredVars;
         Path startDir = mdFile.toAbsolutePath().getParent();
         Path root = declaredRoot == null ? null : declaredRoot.toAbsolutePath().normalize();
@@ -180,7 +220,10 @@ public final class ConfigLoader {
             dir = dir.getParent();
         }
 
-        if (chain.isEmpty()) {
+        Path homeYaml = homeDir == null ? null : homeDir.resolve(CONFIG_FILENAME);
+        boolean homeHasYaml = homeYaml != null && Files.isRegularFile(homeYaml);
+
+        if (chain.isEmpty() && !homeHasYaml) {
             PageConfigResolver.Resolved page = PageConfigResolver.resolve(null, basePageSpec(size, margins));
             // With a declared root, an absent yaml is expected rather than a
             // fallback: the book is described somewhere else entirely.
@@ -191,21 +234,33 @@ public final class ConfigLoader {
 
         // Book root: declared when the caller knows it, otherwise the
         // directory of the topmost yaml found. The book-level config is read
-        // from the root's own yaml -- with a declared root that has none, the
-        // book carries no yaml-declared config at all, which is the point:
-        // it's declared elsewhere.
+        // from the home's yaml (split geography), else the root's own (a
+        // self-contained book), else nowhere -- with a declared root that has
+        // neither, the book carries no yaml-declared config at all, which is
+        // the point: it's declared elsewhere. bookYamlUsed marks which chain
+        // entry (if any) already supplied the book level, so the cascade
+        // below skips exactly that one — not blindly the first, which under a
+        // declared root with no root yaml is a FOLDER yaml that must apply.
         Path bookRoot;
         BookConfig book;
+        Path bookYamlUsed = null;
         if (root != null) {
             bookRoot = root;
             Path rootYaml = root.resolve(CONFIG_FILENAME);
-            book = Files.isRegularFile(rootYaml)
-                    ? parseBookConfig(root, rootYaml)
-                    : BookConfig.empty(root);
+            if (homeHasYaml) {
+                book = parseBookConfig(homeDir, homeYaml, root);
+                bookYamlUsed = rootYaml.equals(homeYaml) ? rootYaml : null;
+            } else if (Files.isRegularFile(rootYaml)) {
+                book = parseBookConfig(root, rootYaml, root);
+                bookYamlUsed = rootYaml;
+            } else {
+                book = BookConfig.empty(root);
+            }
         } else {
             Path bookRootYaml = chain.peekFirst();
             bookRoot = bookRootYaml.getParent();
-            book = parseBookConfig(bookRoot, bookRootYaml);
+            book = parseBookConfig(bookRoot, bookRootYaml, bookRoot);
+            bookYamlUsed = bookRootYaml;
         }
 
         // Cascade resolution: walk yamls book-first → file-closest.
@@ -218,9 +273,8 @@ public final class ConfigLoader {
         Path layout = null;
         List<String> targets = new ArrayList<>(book.targets());
 
-        boolean first = true;
         for (Path yaml : chain) {
-            if (first) { first = false; continue; }       // book root already applied
+            if (yaml.equals(bookYamlUsed)) continue;      // book level already applied
             Map<String, Object> data = readYaml(yaml);
             cssChain.addAll(resolveCssPaths(yaml.getParent(), data.get("css")));
             Object varsNode = data.get("vars");
@@ -283,7 +337,8 @@ public final class ConfigLoader {
     }
 
     @SuppressWarnings("unchecked")
-    private BookConfig parseBookConfig(Path bookRoot, Path bookYaml) {
+    /** Parse a book-level yaml: relative paths resolve against {@code bookRoot} (the yaml's home), the model reports {@code recordRoot} (the content root). */
+    private BookConfig parseBookConfig(Path bookRoot, Path bookYaml, Path recordRoot) {
         Map<String, Object> data = readYaml(bookYaml);
         String title = data.get("title") == null ? null : data.get("title").toString();
 
@@ -371,7 +426,7 @@ public final class ConfigLoader {
         // book root.
         List<Section> sections = parseSections(bookRoot, bookYaml, declaredSectionsNode);
 
-        return new BookConfig(bookRoot, title, axes, globalCss, vars, targets, theme,
+        return new BookConfig(recordRoot, title, axes, globalCss, vars, targets, theme,
                 sectionLandingTemplate, cardSchema, cover, back, footer, header, sections);
     }
 

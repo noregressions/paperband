@@ -450,4 +450,32 @@ class BookPlanTest {
                 "claimed by the html pattern, so the sweep has nothing to warn about: "
                         + plan.warnings());
     }
+
+    // ---- toolchain output is never a candidate ----
+
+    @Test
+    void targetAndNodeModulesAreNeverSweptUp() throws IOException {
+        servicesTree();
+        card("target/site/stale.md", "# stale copy\n");
+        card("node_modules/dep/README2.md", "# somebody else's docs\n");
+
+        BookPlan.Plan plan = BookPlan.resolve(bookRoot, List.of(part("All", "**/*.md")), "pdf-a4");
+
+        List<String> cards = relative(plan.cards());
+        assertFalse(cards.stream().anyMatch(c -> c.startsWith("target/")), cards.toString());
+        assertFalse(cards.stream().anyMatch(c -> c.startsWith("node_modules/")), cards.toString());
+        assertEquals(6, plan.cards().size(), "the six real service cards, nothing else");
+    }
+
+    @Test
+    void aRootInsideAnExcludedDirStillWorks() throws IOException {
+        // The escape hatch: the excluded NAME is only a filter on segments
+        // BELOW the root, so pointing <root> inside target/ works.
+        card("target/book/a.md", "# A\n");
+        Path inner = bookRoot.resolve("target/book");
+
+        BookPlan.Plan plan = BookPlan.resolve(inner, List.of(part("All", "*.md")), "pdf-a4");
+
+        assertEquals(1, plan.cards().size());
+    }
 }

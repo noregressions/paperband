@@ -94,6 +94,23 @@ public final class PebbleIncludePreprocessor implements MarkdownPreprocessor {
     private final Map<String, Object> vars;
 
     /**
+     * Explicit layouts directory for {@code {% include %}}/{@code {% import %}}
+     * — the POM-decided geography. Null derives it from the book root
+     * ({@code <bookRoot>/layouts}), the self-contained shape. Mutable via
+     * {@link #setLayoutsDir} rather than another constructor because every
+     * existing construction path goes through {@link Includes}.
+     */
+    private Path layoutsDirOverride;
+
+    /**
+     * Point snippet resolution at an explicit layouts directory.
+     * @param layoutsDir the layouts dir, or null to derive from the book root
+     */
+    public void setLayoutsDir(Path layoutsDir) {
+        this.layoutsDirOverride = layoutsDir == null ? null : layoutsDir.toAbsolutePath().normalize();
+    }
+
+    /**
      * @param providers       map of provider-name → provider; {@code file} is expected
      * @param processors      map of return-type → processor; {@code code, markdown, html, text} are expected
      * @param bookRoot        absolute path to the book root, or null for single-card builds
@@ -131,7 +148,9 @@ public final class PebbleIncludePreprocessor implements MarkdownPreprocessor {
                 ? MaskedRegions.substituteHtml(markdown)
                 : MaskedRegions.substitute(markdown);
 
-        Path layouts = layoutsDir(bookRoot, sourceFile);
+        Path layouts = layoutsDirOverride != null
+                ? layoutsDirOverride
+                : layoutsDir(bookRoot, sourceFile);
         FragmentExtension fragmentExtension =
                 new FragmentExtension(providers, processors, sourceFile, bookRoot, providerConfigs);
         PebbleEngine engine = new PebbleEngine.Builder()

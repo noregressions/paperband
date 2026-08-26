@@ -508,4 +508,36 @@ class BookWalkerTest {
         assertEquals(List.of("b.md", "a.html"), walkNames(root),
                 "an .html card's <meta> fields sort alongside markdown frontmatter");
     }
+
+    // ---- walkContent: the POM-resolved content root ----
+
+    @Test
+    void walkContentTakesEverythingAsContent(@TempDir Path root) throws IOException {
+        Path content = Files.createDirectory(root.resolve("docs"));
+        Files.writeString(content.resolve("a.md"), "# A\n");
+        Files.writeString(content.resolve("b.html"), "<h1>B</h1>\n");
+        Path layouts = Files.createDirectory(content.resolve("layouts"));
+        Files.writeString(layouts.resolve("chapter.md"), "# a section named layouts\n");
+
+        List<String> names = new BookWalker().walkContent(content).stream()
+                .map(pth -> pth.getFileName().toString()).toList();
+
+        assertEquals(List.of("a.md", "b.html", "chapter.md"), names,
+                "POM-resolved content: html is a card, no wrapper sniffing, no reserved names");
+    }
+
+    @Test
+    void walkContentDoesNotDetectAContentWrapper(@TempDir Path root) throws IOException {
+        Path content = Files.createDirectory(root.resolve("docs"));
+        Path nested = Files.createDirectory(content.resolve("content"));
+        Files.writeString(nested.resolve("a.md"), "# A\n");
+        Files.writeString(content.resolve("b.md"), "# B\n");
+
+        List<String> names = new BookWalker().walkContent(content).stream()
+                .map(pth -> pth.getFileName().toString()).toList();
+
+        assertEquals(List.of("b.md", "a.md"), names,
+                "a folder named content inside the content root is just a folder "
+                        + "(b.md sorts before the content/ dir)");
+    }
 }

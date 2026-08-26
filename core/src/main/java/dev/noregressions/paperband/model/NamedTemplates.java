@@ -114,7 +114,22 @@ public final class NamedTemplates {
      * @return the template name
      */
     public static String templateName(Path bookRoot, Path templatePath) {
-        Path layouts = bookRoot == null ? null : bookRoot.resolve(LAYOUTS_DIR).toAbsolutePath().normalize();
+        return templateNameUnder(
+                bookRoot == null ? null : bookRoot.resolve(LAYOUTS_DIR), templatePath);
+    }
+
+    /**
+     * The template name for an already-resolved absolute path, expressed
+     * relative to an explicit layouts directory — the form the split
+     * geography needs, where the layouts dir is POM-decided rather than
+     * derived from a book root.
+     *
+     * @param layoutsDir   the layouts directory, or null when unknown
+     * @param templatePath the resolved template path
+     * @return the template name
+     */
+    public static String templateNameUnder(Path layoutsDir, Path templatePath) {
+        Path layouts = layoutsDir == null ? null : layoutsDir.toAbsolutePath().normalize();
         Path resolved = templatePath.toAbsolutePath().normalize();
         if (layouts != null && resolved.startsWith(layouts)) {
             return stripExtension(layouts.relativize(resolved).toString().replace('\\', '/'));

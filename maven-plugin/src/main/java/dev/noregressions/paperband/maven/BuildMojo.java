@@ -142,6 +142,7 @@ public class BuildMojo extends AbstractPaperbandMojo {
         if (skipped("build")) return;
 
         checkBookDeclaration(book);
+        Geography geo = geography();
         boolean hasInput = input != null;
         boolean hasBook = book != null;
         if (hasInput && hasBook) {
@@ -149,19 +150,36 @@ public class BuildMojo extends AbstractPaperbandMojo {
                     "Configure either <input> or <book>, not both — <book> declares the structure "
                             + "the walker would otherwise infer from <input>'s directory tree.");
         }
-        Path conventional = null;
-        if (!hasInput && !hasBook) {
-            // Convention over configuration: a book laid out at
-            // src/main/paperband needs no <input> at all.
-            conventional = conventionalBookRoot();
-            if (conventional == null) {
-                throw new MojoExecutionException("Configure <input> (or <book>) — nothing to "
-                        + "build. (Or lay the book out at src/main/paperband, which needs "
-                        + "neither.)");
-            }
-            getLog().info("No <input> configured — using the conventional book root "
-                    + conventional);
+        if (content != null && hasInput) {
+            throw new MojoExecutionException(
+                    "Configure either <content> or <input>, not both — <content> is the geography "
+                            + "spelling of the same thing (and enables HTML cards).");
         }
+        if (content != null && hasBook && book.declaresCardSelection()) {
+            throw new MojoExecutionException(
+                    "Configure either <content> or a card-selecting <book>, not both — two answers "
+                            + "to which files are in the book.");
+        }
+        // The POM decides where content comes from: an explicit <content>,
+        // else (with no <input>/<book>) the conventional geography, else the
+        // legacy fallbacks. See Geography.
+        Path contentRoot = null;
+        Path legacyConventional = null;
+        if (content != null) {
+            contentRoot = resolve(content);
+        } else if (!hasInput && !hasBook) {
+            contentRoot = geo.content();
+            if (contentRoot == null && geo.home() != null) {
+                // A home without a content/ wrapper: walk it the legacy way.
+                legacyConventional = geo.home();
+            }
+            if (contentRoot == null && legacyConventional == null) {
+                throw new MojoExecutionException("Configure <content>, <input> or <book> — "
+                        + "nothing to build. (Or lay the book out at src/main/paperband, "
+                        + "which needs none of them.)");
+            }
+        }
+        getLog().info(geo.describe());
 
         BookBuild build = new BookBuild(getLog());
         build.output = resolve(output);
@@ -202,9 +220,17 @@ public class BuildMojo extends AbstractPaperbandMojo {
                 // Config declared, structure still from the tree.
                 build.input = root;
             }
+        } else if (contentRoot != null) {
+            build.input = contentRoot;
+            build.contentDeclared = true;
+            // POM-decided content is also the pinned root: the cascade stops
+            // there rather than being discovered per card.
+            build.declaredRoot = contentRoot;
         } else {
-            build.input = conventional != null ? conventional : resolve(input);
+            build.input = legacyConventional != null ? legacyConventional : resolve(input);
         }
+        build.home = geo.home();
+        build.layoutsDir = geo.layouts();
 
         run(build);
     }

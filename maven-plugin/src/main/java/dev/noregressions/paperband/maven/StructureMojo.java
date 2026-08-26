@@ -88,28 +88,38 @@ public class StructureMojo extends AbstractPaperbandMojo {
         if (input != null && book != null) {
             throw new MojoExecutionException("Configure either <input> or <book>, not both.");
         }
-        Path conventional = null;
-        if (input == null && book == null) {
-            // Convention over configuration — see conventionalBookRoot().
-            conventional = conventionalBookRoot();
-            if (conventional == null) {
-                throw new MojoExecutionException("Configure <input> (or <book>) — nothing to "
-                        + "describe. (Or lay the book out at src/main/paperband, which needs "
-                        + "neither.)");
+        Geography geo = geography();
+        Path contentRoot = null;
+        Path legacyConventional = null;
+        if (content != null) {
+            if (input != null) {
+                throw new MojoExecutionException(
+                        "Configure either <content> or <input>, not both.");
+            }
+            contentRoot = resolve(content);
+        } else if (input == null && book == null) {
+            contentRoot = geo.content();
+            if (contentRoot == null) legacyConventional = geo.home();
+            if (contentRoot == null && legacyConventional == null) {
+                throw new MojoExecutionException("Configure <content>, <input> or <book> — "
+                        + "nothing to describe. (Or lay the book out at src/main/paperband, "
+                        + "which needs none of them.)");
             }
         }
-        String text;
+        String text = geo.describe() + "\n";
         if (book != null) {
             Path root = book.getRoot() != null ? resolve(book.getRoot()) : basedir();
-            text = describeBook(book.declaresCardSelection()
+            text += describeBook(book.declaresCardSelection()
                     ? plannedBook()
                     : BookSource.walk(root, target, getLog()), root);
+        } else if (contentRoot != null) {
+            text += describeBook(BookSource.walkContent(contentRoot, target, getLog()), null);
         } else {
-            Path in = conventional != null ? conventional : resolve(input);
+            Path in = legacyConventional != null ? legacyConventional : resolve(input);
             if (Files.isRegularFile(in)) {
-                text = describeSingle(in);
+                text += describeSingle(in);
             } else if (Files.isDirectory(in)) {
-                text = describeBook(BookSource.walk(in, target, getLog()), null);
+                text += describeBook(BookSource.walk(in, target, getLog()), null);
             } else {
                 throw new MojoExecutionException("<input> not found: " + in);
             }
@@ -166,7 +176,8 @@ public class StructureMojo extends AbstractPaperbandMojo {
         RenderContext bookCtx = null;
         for (Path cardFile : cardFiles) {
             RenderContext ctx = configLoader.load(
-                    cardFile, target, pageSize, resolveMargins(), declaredRoot, declaredVars());
+                    cardFile, target, pageSize, resolveMargins(), declaredRoot,
+                    geography().home(), declaredVars());
             if (bookCtx == null) bookCtx = ctx;
             if (cardLoader == null) cardLoader = new CardLoader(bookCtx.book().bookRoot());
             contexts.add(ctx);

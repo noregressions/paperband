@@ -134,6 +134,27 @@ class BookPagesTest {
                 "front hook renders before the first card");
     }
 
+    @Test
+    void explicitLayoutsDir_servesTemplatesFromThePomDecidedLocation(@TempDir Path tmp)
+            throws IOException {
+        // Split geography: content in one place, templates in another. The
+        // engine's loader roots at the explicit dir instead of deriving
+        // <contentRoot>/layouts.
+        Path contentRoot = Files.createDirectory(tmp.resolve("docs"));
+        Path layouts = Files.createDirectories(tmp.resolve("book/templates"));
+        Files.writeString(layouts.resolve("matrix.html"), "SPLIT[{{ cards | length }}]");
+
+        BookConfig book = new BookConfig(contentRoot, "Test Book", List.of(), List.of(), Map.of(),
+                List.of(), null, null);
+        RenderContext ctx = new RenderContext(book, List.of(), Map.of(), null, "pdf", "A4");
+        LayoutEngine engine = new LayoutEngine(contentRoot, layouts, ThemeBundle.NONE);
+        engine.setPagesAt(List.of(new PlacedPage(0, "matrix")));
+        String html = engine.renderBook(List.of(card("alpha", "Alpha")), List.of(ctx), ctx);
+
+        assertTrue(html.contains("SPLIT[1]"),
+                "the page template resolved from the explicit layouts dir");
+    }
+
     // ---- helpers ----
 
     private static void writeTemplate(Path bookRoot, String name, String body) throws IOException {

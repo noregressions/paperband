@@ -48,7 +48,7 @@ final class BookSource {
     record Resolved(Path root, List<Path> cardFiles, List<Section> sections, Integer tocCardIndex,
                     List<PlacedPage> pages) {}
 
-    /** Walk {@code input}'s directory tree. */
+    /** Walk {@code input}'s directory tree (legacy form: wrapper detection, md-first). */
     static Resolved walk(Path input, String target, Log log) throws MojoFailureException {
         List<Path> cardFiles = new BookWalker(target).walk(input);
         if (cardFiles.isEmpty()) {
@@ -56,6 +56,21 @@ final class BookSource {
         }
         log.info("Found " + cardFiles.size() + " cards under " + input);
         return new Resolved(input, cardFiles, List.of(), null, List.of());
+    }
+
+    /**
+     * Walk a POM-resolved content root ({@code <content>}, or the
+     * conventional {@code src/main/paperband/content}) — everything there is
+     * content by declaration, so {@code .html} files are cards and no
+     * wrapper detection applies.
+     */
+    static Resolved walkContent(Path contentRoot, String target, Log log) throws MojoFailureException {
+        List<Path> cardFiles = new BookWalker(target).walkContent(contentRoot);
+        if (cardFiles.isEmpty()) {
+            throw new MojoFailureException("No cards found under " + contentRoot);
+        }
+        log.info("Found " + cardFiles.size() + " cards under " + contentRoot);
+        return new Resolved(contentRoot, cardFiles, List.of(), null, List.of());
     }
 
     /**

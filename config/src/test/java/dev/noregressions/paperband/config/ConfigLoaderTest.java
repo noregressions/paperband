@@ -936,4 +936,63 @@ class ConfigLoaderTest {
     private void createYamlFile(Path path, String content) throws IOException {
         Files.writeString(path, content);
     }
+
+    // ---- split geography: home vs content root ----
+
+    @Test
+    void homeYamlSuppliesTheBookConfig_withPathsResolvedAgainstHome(@TempDir Path tempDir)
+            throws IOException {
+        Path home = Files.createDirectories(tempDir.resolve("src/main/paperband"));
+        Files.createDirectories(home.resolve("styles"));
+        Files.writeString(home.resolve("styles/book.css"), "body{}");
+        createYamlFile(home.resolve("paperband.yaml"), """
+                title: "Scattered Book"
+                css: [styles/book.css]
+                """);
+        Path docs = Files.createDirectories(tempDir.resolve("docs"));
+        Path card = docs.resolve("a.md");
+        Files.createFile(card);
+
+        var ctx = new ConfigLoader().load(card, "pdf", "A4", null, docs, home, Map.of());
+
+        assertEquals("Scattered Book", ctx.book().title(), "book config comes from home's yaml");
+        assertEquals(docs.toAbsolutePath().normalize(), ctx.book().bookRoot(),
+                "the model's bookRoot stays the content root — ids and sections are content concerns");
+        assertTrue(ctx.cssChain().get(0).toString().contains("src/main/paperband"),
+                "css paths resolve against home, not the content root: " + ctx.cssChain());
+    }
+
+    @Test
+    void perFolderCascadeStillAppliesBetweenCardAndContentRoot(@TempDir Path tempDir)
+            throws IOException {
+        Path home = Files.createDirectories(tempDir.resolve("src/main/paperband"));
+        createYamlFile(home.resolve("paperband.yaml"), """
+                title: "Scattered Book"
+                vars: { tone: default }
+                """);
+        Path docs = Files.createDirectories(tempDir.resolve("docs/deep"));
+        createYamlFile(docs.resolve("paperband.yaml"), "vars: { tone: folder }\n");
+        Path card = docs.resolve("a.md");
+        Files.createFile(card);
+
+        var ctx = new ConfigLoader().load(card, "pdf", "A4", null,
+                tempDir.resolve("docs"), home, Map.of());
+
+        assertEquals("folder", ctx.vars().get("tone"),
+                "home supplies the book level; folder yamls between card and content root still win");
+    }
+
+    @Test
+    void withoutAHomeYaml_theContentRootsOwnStillApplies(@TempDir Path tempDir) throws IOException {
+        Path home = Files.createDirectories(tempDir.resolve("src/main/paperband"));  // no yaml
+        Path docs = Files.createDirectories(tempDir.resolve("docs"));
+        createYamlFile(docs.resolve("paperband.yaml"), "title: \"Self-Contained\"\n");
+        Path card = docs.resolve("a.md");
+        Files.createFile(card);
+
+        var ctx = new ConfigLoader().load(card, "pdf", "A4", null, docs, home, Map.of());
+
+        assertEquals("Self-Contained", ctx.book().title(),
+                "an empty home never shadows a self-contained book's own yaml");
+    }
 }
