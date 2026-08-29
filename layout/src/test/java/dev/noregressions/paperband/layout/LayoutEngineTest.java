@@ -504,7 +504,10 @@ class LayoutEngineTest {
 
             String undeclared = engine.renderBook(cards, contexts,
                     new RenderContext(book, List.of(), Map.of(), null, "pdf", "A4"));
-            assertFalse(undeclared.contains("--card-max-width"),
+            // "--card-max-width:" (with the colon) is the stamped declaration;
+            // the scaffold legitimately READS the token via
+            // var(--card-max-width, ...) whether or not a book declares one.
+            assertFalse(undeclared.contains("--card-max-width:"),
                     "a book that says nothing leaves the theme's own measure alone");
         }
 

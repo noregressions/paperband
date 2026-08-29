@@ -206,7 +206,7 @@ pre {
   border-radius: var(--nr-radius);
   background: var(--nr-surface);
   font-family: var(--font-mono);
-  font-size: 0.82rem;
+  font-size: 0.95rem;   /* one size with prose (section.block p/li) — code doesn't whisper */
   line-height: 1.55;
   color: var(--nr-ink);
   tab-size: 2;

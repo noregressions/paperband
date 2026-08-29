@@ -364,7 +364,7 @@ Key parameters (every one has a `-Dpaperband.<name>` property):
 | `pageSize` | `a4` | Seeds base geometry; yaml `vars.page` still wins. |
 | `margins` | page size's own | CSS shorthand: `0`, `18mm`, `20 15 25 15`; units mm/cm/in/pt. |
 | `theme` / `themeDir` / `stylesheets` | book's `theme:` / — / — | Build `theme` overrides yaml; `none` disables. |
-| `emitHtml` | — | Also write the pre-render HTML (gets `<base href>`). |
+| `emitHtml` | — | Also write the pre-render HTML — standalone (local images inlined as data: URIs) with a screen-only nav sidebar (opt out: `vars.sidebar: false`). |
 | `reportPages` / `maxPagesPerCard` | `false` / `vars.maxPagesPerCard` | |
 | `select` | — | Keep only cards matching `field=value` (book builds). |
 | `watermark` (+Color/Opacity/Angle/FontSize) | `vars.watermark` | |

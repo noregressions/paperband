@@ -262,12 +262,13 @@ pre {
   border: 1px solid var(--ws-panel-edge);
   border-radius: 2px;
   padding: 0.7rem 0.85rem;
-  font-size: 0.8rem;
+  font-size: 0.76rem;   /* one size with output: code shouldn't outsize the output it produces */
   line-height: 1.45;
   overflow-x: auto;
 }
 
 /* Commands to type: warm edge, matching the RUN label above them. */
+pre.command,
 pre:has(> code.language-bash),
 pre:has(> code.language-sh),
 pre:has(> code.language-cmd) {
@@ -276,11 +277,10 @@ pre:has(> code.language-cmd) {
   border-left: 3px solid var(--ws-do);
 }
 
-/* Output to compare against: plain, recessive, tighter for long dumps. */
+/* Output to compare against: plain, recessive. */
 pre:has(> code.language-text) {
   background: #f4f4f2;
   border-color: #e4e3de;
-  font-size: 0.76rem;
 }
 
 /* Inline code: a token, not a block. */

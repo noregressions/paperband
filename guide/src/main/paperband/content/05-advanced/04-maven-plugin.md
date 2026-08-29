@@ -71,7 +71,7 @@ The `build` goal's default phase is `process-resources`; override `<phase>` in t
 | `themeDir` | `paperband.themeDir` | — | User theme directory, checked before built-ins. |
 | `stylesheets` | `paperband.stylesheets` | — | Stylesheets this build contributes, inlined *after* the theme. See Declaring the whole book below. |
 | `skip` | `paperband.skip` | `false` | Skip the goal without failing the build. |
-| `emitHtml` | `paperband.emitHtml` | — | Also write the rendered HTML here, before the renderer sees it. A book's copy gets a `<base href>` so its assets resolve in a browser. |
+| `emitHtml` | `paperband.emitHtml` | — | Also write the rendered HTML here, before the renderer sees it. A book's copy is standalone — local images are inlined as `data:` URIs, and on screen it shows a navigation sidebar — so it can be copied or shared without the project that built it. |
 | `reportPages` | `paperband.reportPages` | `false` | Print a per-anchor page-span table after rendering. |
 | `maxPagesPerCard` | `paperband.maxPagesPerCard` | *(`vars.maxPagesPerCard`)* | Fail the build if a card runs longer. See Page Enforcement. |
 | `select` | `paperband.select` | — | Keep only cards whose `field=value` matches. Book builds only. |

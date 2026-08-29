@@ -7,8 +7,9 @@
   {% if ctx.book.title %}<meta name="book" content="{{ ctx.book.title }}">{% endif %}
   {% if target %}<meta name="paperband-target" content="{{ target }}">{% endif %}
 
-  {# Prism syntax highlighting — see book.html for the rationale. #}
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">
+  {# Prism syntax highlighting — see book.html for the rationale, including
+     why the stylesheet loads into a cascade layer. #}
+  <style>@import url("https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css") layer(prism);</style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
 

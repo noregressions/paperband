@@ -11,8 +11,17 @@
      The autoloader plugin fetches each language definition on demand from
      the CDN. Playwright waits for network-idle before snapshotting the PDF,
      so highlighting completes in PDF output too. Themes override
-     `.token.*` colours to match each palette. #}
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">
+     `.token.*` colours to match each palette.
+
+     The stylesheet loads into a cascade layer, not a plain <link>: Prism's
+     theme sheet styles pre[class*="language-"] at (0,1,1) specificity, which
+     would outrank every theme's plain `pre` rule — language-tagged fences
+     then take Prism's font-size/background/padding instead of the theme's
+     (seen as ```java blocks rendering bigger than ```output ones). Layered
+     rules lose to ALL unlayered author rules regardless of specificity, so
+     the token colours still apply where nothing competes, and the pre box
+     itself stays the theme's to style. #}
+  <style>@import url("https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css") layer(prism);</style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
 
@@ -163,6 +172,72 @@
       object-fit: cover;
     }
 {% endif %}
+    /* On screen (an emitHtml file opened in a browser) the body is
+       window-wide and there is no sheet to fill, so the paper-sized cover
+       above renders as an unconstrained image. Present it like the cards
+       instead: capped to the reading measure, centred, at the artwork's own
+       aspect ratio. Print media never sees these rules, so the PDF keeps
+       the full-bleed treatment. */
+    @media screen {
+      .book-cover, .book-back {
+        max-width: var(--card-max-width, 48rem);
+        margin-inline: auto;
+      }
+      .book-cover-fullpage {
+        height: auto;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      .book-cover-fullpage .book-cover-image { height: auto; }
+    }
+
+    /* Screen-only navigation sidebar, for the emitHtml file opened in a
+       browser: the book's dividers and cards as anchor links, mirroring the
+       structure the PDF gets as divider pages and bookmarks. Print never
+       shows it (base display:none, enabled only under @media screen), and it
+       only appears when the window can spare the width. The body inset uses
+       body:has(...) so its (0,1,1) specificity survives a theme's own plain
+       `body` rule (editorial-gold sets `body { margin: 0 }`). Colours are
+       inherited, so it follows any theme's ground. Opt out with
+       vars.sidebar: false. */
+    .book-screen-nav { display: none; }
+    @media screen and (min-width: 64rem) {
+      html { scroll-behavior: smooth; }
+      body:has(> nav.book-screen-nav) { margin-left: 18rem; }
+      .book-screen-nav {
+        display: block;
+        position: fixed;
+        top: 0; left: 0; bottom: 0;
+        width: 16rem;
+        box-sizing: border-box;
+        overflow-y: auto;
+        padding: 1.25rem 1rem 2rem;
+        border-right: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: 0.8rem;
+        line-height: 1.45;
+      }
+      .book-screen-nav .nav-book-title { font-weight: 700; margin-bottom: 0.75rem; }
+      .book-screen-nav ul { list-style: none; margin: 0; padding: 0; }
+      .book-screen-nav li { margin-block: 0.15rem; }
+      .book-screen-nav a { color: inherit; text-decoration: none; opacity: 0.7; }
+      .book-screen-nav a:hover { opacity: 1; text-decoration: underline; }
+      .book-screen-nav li.nav-divider {
+        margin-top: 0.9rem;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .book-screen-nav li.nav-divider a,
+      .book-screen-nav li.nav-divider span { opacity: 0.85; }
+      .book-screen-nav a.nav-current { opacity: 1; font-weight: 600; }
+      .book-screen-nav li.nav-card a.nav-current {
+        border-left: 2px solid currentColor;
+        padding-left: 0.4rem;
+        margin-left: -0.5rem;
+      }
+    }
     .book-cover-overlay .book-cover-inner {
       position: absolute;
       inset: 0;
@@ -300,6 +375,82 @@
        reading it. #}
     {% for card in cards %}<a href="#card-{{ card.id }}">{{ card.title }}</a>{% endfor %}
   </div>
+
+  {# Screen-only sidebar (see the .book-screen-nav CSS above). The entries
+     mirror the card loop's own divider logic below, so the nav shows exactly
+     the structure the PDF paginates: an axis-value or section label wherever
+     a divider page falls, each card beneath its group. A section that
+     declined its page (landingPage false) still labels its cards — as plain
+     text, since there's no divider to jump to. #}
+  {% if not (vars.sidebar == false) %}
+  <nav class="book-screen-nav" aria-label="Book contents">
+    <div class="nav-book-title"><a href="#book-cover">{{ ctx.book.title | default('Book') }}</a></div>
+    <ul>
+      {% if toc is not empty %}<li class="nav-divider"><a href="#book-toc">Contents</a></li>{% endif %}
+      {% for card in cards %}
+        {% for g in axisGroupings %}
+          {% if card.axesFirstOf[g.axis.name] and card.axes[g.axis.name] is not null %}
+          <li class="nav-divider"><a href="#axis-divider-{{ g.axis.name }}-{{ card.axes[g.axis.name].id }}">{{ card.axes[g.axis.name].label }}</a></li>
+          {% endif %}
+        {% endfor %}
+        {% if card.sectionFirst and card.sectionMeta is not null %}
+        <li class="nav-divider">{% if card.sectionMeta.landingPage %}<a href="#section-divider-{{ card.sectionMeta.id }}">{{ card.sectionMeta.label }}</a>{% else %}<span>{{ card.sectionMeta.label }}</span>{% endif %}</li>
+        {% endif %}
+        <li class="nav-card"><a href="#card-{{ card.id }}">{{ card.title }}</a></li>
+      {% endfor %}
+      {% if bookIndex is not empty %}<li class="nav-divider"><a href="#book-index">Index</a></li>{% endif %}
+    </ul>
+  </nav>
+  <script>
+  // Sidebar scrollspy: mark the entry whose target the reader is looking at,
+  // the way the site sidebar marks the current page. Screen-only in effect —
+  // print CSS hides the nav, and the class this toggles styles nothing
+  // outside it — and inert during the PDF render (the page never scrolls).
+  (function () {
+    // This script sits just after the nav, BEFORE the cards — defer the whole
+    // setup to DOMContentLoaded or the target list is captured empty.
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+    function init() {
+    var nav = document.querySelector('nav.book-screen-nav');
+    if (!nav) return;
+    var links = {};
+    nav.querySelectorAll('a[href^="#"]').forEach(function (a) {
+      links[a.getAttribute('href').slice(1)] = a;
+    });
+    var targets = Array.prototype.filter.call(
+        document.querySelectorAll('[id]'),
+        function (el) { return links[el.id] && !el.closest('.pt-anchor-bait'); });
+    var current = null;
+    function update() {
+      var line = window.scrollY + window.innerHeight * 0.25;
+      var best = null;
+      for (var i = 0; i < targets.length; i++) {
+        if (targets[i].offsetTop <= line) best = targets[i]; else break;
+      }
+      var link = best ? links[best.id] : null;
+      if (link === current) return;
+      if (current) current.classList.remove('nav-current');
+      current = link;
+      if (current) {
+        current.classList.add('nav-current');
+        current.scrollIntoView({ block: 'nearest' });
+      }
+    }
+    var queued = false;
+    window.addEventListener('scroll', function () {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(function () { queued = false; update(); });
+    }, { passive: true });
+    update();
+    }
+  })();
+  </script>
+  {% endif %}
 
   {# Cover page. A custom cover template (cover: { template: ... } in the
      book root yaml) replaces the built-in entirely; otherwise the built-in

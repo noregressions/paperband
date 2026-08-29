@@ -41,6 +41,11 @@ win back any rule by being more specific. Each inlined sheet is prefixed with a
 `/* === theme:name path === */` marker comment, so a view-source on the rendered page
 shows exactly where each rule came from.
 
+Prism's syntax-highlighting stylesheet sits below all of that, imported into a CSS
+cascade layer (`layer(prism)`), so its `pre[class*="language-"]` box rules can never
+outrank a theme's plain `pre` rule on specificity — the token colours apply where nothing
+competes, and the code block's size, background and padding stay the theme's to decide.
+
 ## What theme CSS can target
 
 The markup exposes stable, data-driven class hooks — this is the main way page data

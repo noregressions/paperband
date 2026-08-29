@@ -482,18 +482,99 @@ final class BookBuild {
     // ---- side outputs ----
 
     /**
-     * Write the intermediate HTML when asked. A book's copy gets a
-     * {@code <base href>} stamped in so relative assets (cover images and the
-     * like) still resolve when the file is opened in a browser from wherever it
-     * was written; the renderer receives the un-stamped html and does its own
-     * base handling.
+     * Write the intermediate HTML when asked. A book's copy is made
+     * <em>standalone</em>: every local image reference (a cover image sitting
+     * in the book's source tree, say) is inlined as a {@code data:} URI, so
+     * the file renders the same wherever it's opened or copied — no
+     * connection back to the project that built it. Only when something
+     * can't be inlined (missing file, or an asset over the size cap) does the
+     * copy fall back to a {@code <base href>} stamp so those references at
+     * least resolve in place. The renderer receives the untouched html and
+     * does its own base handling.
      */
     private void emitHtmlIfAsked(String html, String baseUri) throws Exception {
         if (emitHtml == null) return;
         ensureParentDir(emitHtml);
-        Files.writeString(emitHtml, baseUri == null ? html : withBaseForDebug(html, baseUri),
+        Files.writeString(emitHtml, baseUri == null ? html : standaloneForDebug(html, baseUri),
                 StandardCharsets.UTF_8);
         log.info("Wrote intermediate HTML -> " + emitHtml);
+    }
+
+    /** Assets larger than this stay a reference rather than a data: URI. */
+    private static final long INLINE_ASSET_CAP_BYTES = 20L * 1024 * 1024;
+
+    private static final java.util.regex.Pattern SRC_ATTR =
+            java.util.regex.Pattern.compile("\\bsrc=\"([^\"]+)\"");
+
+    /**
+     * Inline every local {@code src="..."} target as a data: URI. References
+     * that are already remote ({@code https:}), already inline ({@code data:}),
+     * missing on disk, or over the size cap are left alone; if any local
+     * reference survives un-inlined, a {@code <base href>} is stamped so it
+     * still resolves when the file is opened in place.
+     */
+    private static String standaloneForDebug(String html, String baseUri) {
+        Path baseDir = null;
+        try {
+            URI base = URI.create(baseUri);
+            if ("file".equals(base.getScheme())) baseDir = Path.of(base);
+        } catch (Exception ignored) {
+            // an unusable base means nothing local can resolve; fall through
+        }
+
+        boolean unresolved = false;
+        StringBuilder out = new StringBuilder(html.length());
+        java.util.regex.Matcher m = SRC_ATTR.matcher(html);
+        int last = 0;
+        while (m.find()) {
+            String ref = m.group(1);
+            String data = null;
+            Path file = localFile(ref, baseDir);
+            if (file != null) {
+                try {
+                    if (Files.isRegularFile(file) && Files.size(file) <= INLINE_ASSET_CAP_BYTES) {
+                        data = "data:" + mimeFor(file) + ";base64,"
+                                + java.util.Base64.getEncoder().encodeToString(Files.readAllBytes(file));
+                    }
+                } catch (Exception ignored) {
+                    // unreadable: treated the same as missing
+                }
+                if (data == null) unresolved = true;
+            }
+            out.append(html, last, m.start());
+            out.append("src=\"").append(data != null ? data : ref).append("\"");
+            last = m.end();
+        }
+        out.append(html, last, html.length());
+        String result = out.toString();
+        return unresolved ? withBaseForDebug(result, baseUri) : result;
+    }
+
+    /** The local file a src reference points at, or null when it isn't local. */
+    private static Path localFile(String ref, Path baseDir) {
+        try {
+            if (ref.startsWith("data:")) return null;
+            if (ref.startsWith("file://")) return Path.of(URI.create(ref));
+            if (ref.contains("://") || ref.startsWith("//")) return null;   // remote
+            return baseDir == null ? null : baseDir.resolve(ref).normalize();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static String mimeFor(Path file) {
+        String name = file.getFileName().toString().toLowerCase();
+        int dot = name.lastIndexOf('.');
+        String ext = dot < 0 ? "" : name.substring(dot + 1);
+        return switch (ext) {
+            case "png"          -> "image/png";
+            case "jpg", "jpeg"  -> "image/jpeg";
+            case "gif"          -> "image/gif";
+            case "svg"          -> "image/svg+xml";
+            case "webp"         -> "image/webp";
+            case "avif"         -> "image/avif";
+            default             -> "application/octet-stream";
+        };
     }
 
     private static String withBaseForDebug(String html, String baseUri) {

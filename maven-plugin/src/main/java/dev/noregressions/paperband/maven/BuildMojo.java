@@ -86,9 +86,10 @@ public class BuildMojo extends AbstractPaperbandMojo {
 
     /**
      * Also write the rendered HTML here, before it reaches the renderer — the
-     * debugging view of what layout produced. A book's copy gets a
-     * {@code <base href>} stamped in so its relative assets still resolve when
-     * opened in a browser.
+     * browsable view of what layout produced. A book's copy is standalone:
+     * local images are inlined as {@code data:} URIs, so the file works
+     * wherever it's copied, with no reference back to the project that built
+     * it.
      */
     @Parameter(property = "paperband.emitHtml")
     private java.io.File emitHtml;
