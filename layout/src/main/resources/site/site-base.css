@@ -185,3 +185,13 @@ pre.command::before, pre.output::before, pre.console::before {
 pre.command::before { content: "Command"; }
 pre.output::before  { content: "Output"; }
 pre.console::before { content: "Console"; }
+
+/* ```mermaid diagrams (blocks/mermaid.html + the _mermaid loader): once
+ * rendered the pre holds an SVG, not code, so the code-block dressing comes
+ * off — at .site-content specificity, so a theme's generic pre rules don't
+ * put it back. Mirrors the book scaffold in book.html. */
+pre.mermaid, .site-content pre.mermaid {
+  background: transparent; border: 0; padding: 0;
+  text-align: center;
+}
+pre.mermaid > svg { max-width: 100%; height: auto; }

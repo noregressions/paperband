@@ -16,6 +16,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
 
+  {% include "_mermaid" %}
+
   {% if cssImports is not empty %}<style>{{ cssImports | raw }}</style>{% endif %}
   <style>
     /* Minimal scaffold — book CSS chain follows and may override these. */
@@ -102,6 +104,18 @@
     pre.command::before { content: "Command"; }
     pre.output::before  { content: "Output"; }
     pre.console::before { content: "Console"; }
+
+    /* ```mermaid diagrams (blocks/mermaid.html + the _mermaid loader): once
+       rendered the pre holds an SVG, not code, so the code-block dressing
+       comes off — at article.card specificity, so a theme's generic pre
+       rules don't put it back. Kept unsplit: an SVG sliced across a page
+       boundary is unreadable, and diagrams are rarely taller than a page. */
+    pre.mermaid, article.card pre.mermaid {
+      background: transparent; border: 0; padding: 0;
+      text-align: center;
+      break-inside: avoid; page-break-inside: avoid;
+    }
+    pre.mermaid > svg { max-width: 100%; height: auto; }
 
     /* card.slots.takeWithLayout/requireWithLayout break-preference classes —
        bundled here (not per-theme) so every theme gets them regardless of

@@ -30,6 +30,12 @@ download and losing the zero-dependency pure-Java fallback.
   reporting and enforcement (see Page Enforcement in the Advanced section).
 - `PageSpec.size`/`PageSpec.margins` as the sole geometry authority, so a book's page
   dimensions and margins never depend on which renderer happened to build it.
+- Page JavaScript runs before the snapshot. The renderer waits for network-idle, then
+  `document.fonts.ready`, then every promise a page script has pushed into
+  `window.paperbandPending` — the settle contract behind ` ```mermaid ` diagrams
+  reaching the PDF fully rendered (see Card Structure in the Authoring section). A
+  rejected promise fails the render with the script's own error, so a diagram that
+  doesn't parse is a build failure, not a half-drawn page.
 
 ## Setup notes
 

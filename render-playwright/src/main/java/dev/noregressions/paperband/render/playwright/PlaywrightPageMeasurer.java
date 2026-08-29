@@ -175,6 +175,15 @@ public final class PlaywrightPageMeasurer {
                                 new Page.SetContentOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
                     }
 
+                    // Match PlaywrightRenderer's settle points before reading the
+                    // DOM: fonts swap text metrics, and window.paperbandPending is
+                    // the contract for page scripts doing post-load layout work
+                    // (mermaid diagrams rendering to SVG — see _mermaid.html).
+                    // Measuring earlier would report heights the PDF pass then
+                    // contradicts.
+                    page.evaluate("() => document.fonts.ready");
+                    page.evaluate("() => Promise.all(window.paperbandPending || [])");
+
                     Object raw = page.evaluate(
                             "() => {"
                             + "  const isUnit = el => el.classList.contains('block')"

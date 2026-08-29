@@ -79,4 +79,6 @@ mvn paperband:themes
 
 The first Playwright render downloads headless Chromium to `~/.cache/ms-playwright/`.
 In a CI environment without internet access, pre-cache it (or point
-`PLAYWRIGHT_BROWSERS_PATH` at an existing download) before the first build.
+`PLAYWRIGHT_BROWSERS_PATH` at an existing download) before the first build. Syntax
+highlighting and ` ```mermaid ` diagrams additionally load their libraries from the CDN
+at render time, so those need network on every build that uses them.

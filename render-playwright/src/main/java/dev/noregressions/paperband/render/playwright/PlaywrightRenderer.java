@@ -125,6 +125,18 @@ public final class PlaywrightRenderer implements HtmlToPdfRenderer {
                         // sans at one weight while the others embedded fine).
                         page.evaluate("() => document.fonts.ready");
 
+                        // Page scripts that lay out content AFTER load can't be
+                        // covered by NETWORKIDLE either — their work is CPU-bound
+                        // once the network goes quiet (mermaid diagrams rendering
+                        // to SVG, via the bundled _mermaid.html loader). The
+                        // contract: such a script pushes a promise into
+                        // window.paperbandPending, and the PDF is snapshotted only
+                        // once every registered promise has settled. A rejection
+                        // fails the render — deliberately: a half-rendered diagram
+                        // in a shipped PDF is worse than a build error carrying
+                        // the page script's own message.
+                        page.evaluate("() => Promise.all(window.paperbandPending || [])");
+
                         PageSize size = input.pageSpec().size();
                         Margins m   = input.pageSpec().margins();
 

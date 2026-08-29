@@ -139,6 +139,28 @@ Every theme gets a neutral treatment for all three; themes may restyle them. Rea
 languages (` ```java `, ` ```xml `) pass through untouched, and the attribute spellings
 (` ```bash {.command} `) keep working for cases the shorthand doesn't cover.
 
+### Mermaid diagrams
+
+One more bundled type draws instead of printing: a ` ```mermaid ` fence holds a
+[Mermaid](https://mermaid.js.org/) diagram as text, and the page renders it to an inline
+SVG — on the static site and in the PDF alike (the build waits for every diagram to
+finish rendering before it snapshots or measures a page, so printed page numbers stay
+exact). This one is live, rendered from this card's own fence:
+
+```mermaid
+graph LR
+  md["card.md"] --> blocks["H2 blocks"]
+  blocks --> pdf["PDF"]
+  blocks --> site["static site"]
+```
+
+Mermaid's colour theme follows `vars.mermaidTheme` (`default`, `dark`, `forest`,
+`neutral`, `base`) — set it book-wide when the page theme is dark. A diagram that doesn't
+parse fails the PDF build carrying mermaid's own error; on the site the error shows in
+the browser console and in place of the diagram. Like syntax highlighting, the library
+loads from the CDN at render time, so a fully offline build machine needs network access
+for books that use it — books without a ` ```mermaid ` fence never fetch it.
+
 ### Define your own block type
 
 A fenced block does two things: it captures text verbatim, and it selects how that text
@@ -162,7 +184,7 @@ The fragment's model: `content` (the verbatim block text — `{{ content }}` is 
 and `vars`. Resolution walks the usual chain — theme templates, then the book's
 `layouts/blocks/`, then the bundled ones — so a book can override `output`, and a theme
 can restyle a block type structurally, not just with CSS. The built-in `command`,
-`output` and `console` are themselves bundled block templates on this mechanism. (The
+`output`, `console` and `mermaid` are themselves bundled block templates on this mechanism. (The
 guide's directory trees, like the one in Organising Content, are a `filetree` block —
 see this book's own `layouts/blocks/`.)
 

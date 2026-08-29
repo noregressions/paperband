@@ -38,8 +38,8 @@ import java.util.Set;
  * bundled {@code templates/blocks/} — so a book can define its own block
  * types ({@code ```trace}), override a bundled one, and a theme can restyle a
  * block type <em>structurally</em>, not just with CSS. The bundled semantic
- * types ({@code command}, {@code output}, {@code console}) are themselves
- * block templates, riding the same mechanism.
+ * types ({@code command}, {@code output}, {@code console}, {@code mermaid})
+ * are themselves block templates, riding the same mechanism.
  *
  * <p>The fragment's model:
  * <ul>

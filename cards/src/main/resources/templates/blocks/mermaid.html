@@ -1,0 +1,7 @@
+{# ```mermaid — a Mermaid diagram. The fence text lands verbatim (escaped —
+   mermaid reads textContent, which unescapes) in a pre.mermaid; the page
+   templates' _mermaid loader renders it to inline SVG in the browser, and
+   the Playwright renderer waits for that via window.paperbandPending, so
+   the PDF gets finished diagrams too. With no JS the source stays readable
+   as preformatted text. Single line: <pre> is whitespace-sensitive. #}
+<pre class="mermaid{% for c in classes %} {{ c }}{% endfor %}"{% if id %} id="{{ id }}"{% endif %}>{{ content }}</pre>

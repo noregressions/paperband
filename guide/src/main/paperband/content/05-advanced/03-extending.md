@@ -36,6 +36,14 @@ selects it — `name()` is the selector, matched case-sensitively. `canRender` a
 `isAvailable` have sensible defaults (`true`); override `isAvailable` when the backend
 needs an external binary, so the `renderers` table can say so.
 
+One capability contract to know about: some page features render through in-page
+JavaScript — ` ```mermaid ` diagrams, Prism syntax highlighting — and the bundled
+`playwright` renderer waits for the promises page scripts push into
+`window.paperbandPending` before snapshotting (see Renderers in the Rendering section).
+A renderer whose engine doesn't execute JavaScript will print those blocks as their
+unprocessed source; one that does should honour the same wait, or diagrams can race the
+snapshot.
+
 ## A new content provider
 
 `dev.noregressions.paperband.include.ContentProvider` supplies content to `fragment` include

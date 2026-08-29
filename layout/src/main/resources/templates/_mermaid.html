@@ -1,0 +1,41 @@
+{# Mermaid diagrams — ```mermaid fences render through the bundled
+   blocks/mermaid.html into <pre class="mermaid"> holding the diagram source;
+   this loader turns each into inline SVG in the browser. Unlike Prism, the
+   library is fetched only when the page actually contains a diagram (it's
+   ~2.5MB) — and rendering is CPU work AFTER the network goes quiet, so the
+   renderer's network-idle wait can't guarantee the PDF snapshots finished
+   diagrams. The contract that does: a page script with post-load layout work
+   pushes a promise into window.paperbandPending, and the Playwright renderer
+   and measurer await Promise.all(window.paperbandPending) before
+   snapshotting/measuring. A failed load or a diagram that doesn't parse
+   rejects the promise, failing the PDF build loudly rather than shipping a
+   half-rendered page; in a live browser the same error lands on the console
+   and mermaid shows its own error box in place.
+
+   vars.mermaidTheme picks mermaid's colour theme (default | dark | forest |
+   neutral | base) — set it in the book's vars to match a dark page theme. #}
+<script>
+(window.paperbandPending = window.paperbandPending || []).push(new Promise(function (resolve, reject) {
+  function boot() {
+    if (!document.querySelector('pre.mermaid')) { resolve(); return; }
+    var s = document.createElement('script');
+    {# Pinned like Prism above. Not every cdnjs mermaid version carries the
+       single-file mermaid.min.js (11.4.x ships only ESM chunks there) — when
+       bumping, check the file exists before changing the number. #}
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.15.0/mermaid.min.js';
+    s.onerror = function () { reject(new Error('mermaid: failed to load ' + s.src)); };
+    s.onload = function () {
+      // Mermaid measures label text as it lays a diagram out, so render
+      // only after the faces this page uses have settled.
+      (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve())
+        .then(function () {
+          mermaid.initialize({ startOnLoad: false, theme: '{{ vars.mermaidTheme | default("default") }}' });
+          return mermaid.run({ querySelector: 'pre.mermaid' });
+        })
+        .then(resolve, function (e) { reject(new Error('mermaid: ' + (e && e.message ? e.message : e))); });
+    };
+    document.head.appendChild(s);
+  }
+  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', boot); } else { boot(); }
+}));
+</script>

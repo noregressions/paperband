@@ -133,4 +133,26 @@ class BlockTemplatesTest {
         assertTrue(html.contains("class=\"console\""), html);
         assertTrue(html.contains("language-shell-session"), html);
     }
+
+    @Test
+    void theBundledMermaidType_becomesADiagramContainer() {
+        // ```mermaid renders to a pre.mermaid the page-side loader turns into
+        // SVG; the source must be verbatim-escaped text (mermaid reads
+        // textContent, which unescapes), not an ordinary code block.
+        CardLoader loader = new CardLoader();
+        Card card = loader.parse(Path.of("card.md"), """
+                # T
+
+                ```mermaid
+                graph LR
+                  A[Start] --> B{Works?}
+                ```
+                """);
+
+        String html = html(card);
+        assertTrue(html.contains("<pre class=\"mermaid\">"), html);
+        assertTrue(html.contains("A[Start] --&gt; B{Works?}"),
+                "diagram source stays verbatim, escaped: " + html);
+        assertFalse(html.contains("language-mermaid"), "the code block is replaced");
+    }
 }
