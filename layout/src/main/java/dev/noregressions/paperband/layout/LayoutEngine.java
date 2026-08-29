@@ -399,11 +399,10 @@ public final class LayoutEngine {
         Path bookRoot = book.bookRoot();
         List<Section> declaredSections = book.sections();
 
-        // Same section discovery as buildBookModel: axis-less cards grouped
-        // by top-level folder.
+        // Same section discovery as buildBookModel: every card with a
+        // resolvable section belongs to it, axis-labelled or not.
         Map<String, List<Integer>> bySection = new LinkedHashMap<>();
         for (int i = 0; i < cards.size(); i++) {
-            if (hasAnyAxisValue(i, groupings)) continue;
             String secId = sectionIdFor(bookRoot, declaredSections, cards.get(i).source());
             if (secId == null) continue;
             bySection.computeIfAbsent(secId, k -> new ArrayList<>()).add(i);
@@ -424,11 +423,13 @@ public final class LayoutEngine {
 
             // Axis dividers — one per axis this card is first-of-value for,
             // stacked in axes: declaration order (mirrors axesFirstOf).
+            boolean axisDividerHere = false;
             for (AxisGrouping g : groupings) {
                 String key = normalizeAxisId(g.perCardValue().get(i));
                 if (key == null) continue;
                 grouped = true;
-                if (!key.equals(prevValueKeyByAxis.get(g.axis().name()))) {
+                if (g.axis().dividers() && !key.equals(prevValueKeyByAxis.get(g.axis().name()))) {
+                    axisDividerHere = true;
                     Map<String, Object> meta = g.metaFor(i);
                     sb.append("  DIVIDER ").append(g.axis().name()).append('=').append(key);
                     if (meta != null) {
@@ -440,22 +441,21 @@ public final class LayoutEngine {
                 prevValueKeyByAxis.put(g.axis().name(), key);
             }
 
-            // Section divider — the axis-less fallback (mirrors sectionFirst).
-            if (!hasAnyAxisValue(i, groupings)) {
-                String secId = sectionIdFor(bookRoot, declaredSections, card.source());
-                if (secId != null) {
-                    grouped = true;
-                    if (!secId.equals(prevSectionId)) {
-                        Map<String, Object> meta = findSectionMeta(sectionMetas, secId);
-                        sb.append("  SECTION ").append(secId);
-                        if (meta != null) {
-                            sb.append("  \"").append(meta.get("label")).append('"')
-                                    .append("  [").append(meta.get("count")).append(" cards]");
-                        }
-                        sb.append('\n');
+            // Section divider (mirrors sectionFirst): fires on the section's
+            // first card unless an axis divider fired on that same card.
+            String secId = sectionIdFor(bookRoot, declaredSections, card.source());
+            if (secId != null) {
+                grouped = true;
+                if (!secId.equals(prevSectionId) && !axisDividerHere) {
+                    Map<String, Object> meta = findSectionMeta(sectionMetas, secId);
+                    sb.append("  SECTION ").append(secId);
+                    if (meta != null) {
+                        sb.append("  \"").append(meta.get("label")).append('"')
+                                .append("  [").append(meta.get("count")).append(" cards]");
                     }
-                    prevSectionId = secId;
+                    sb.append('\n');
                 }
+                prevSectionId = secId;
             }
 
             String indent = grouped ? "    " : "  ";
@@ -798,6 +798,7 @@ public final class LayoutEngine {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("name", axis.name());
         m.put("title", axis.title());
+        m.put("dividers", axis.dividers());
         return m;
     }
 
@@ -1714,18 +1715,20 @@ public final class LayoutEngine {
             }
         }
 
-        // Plain "section" groupings — the axis-less fallback (see the Sections
-        // doc in CLAUDE.md): any top-level folder whose cards have no value on
-        // ANY declared axis. Mirrors renderSite's bySection/buildSectionMetas
-        // treatment so the book/PDF gets a divider page per section too, not
-        // just per axis value. A card is never in both an axis group and a
-        // section, so this and the axis dividers above are mutually exclusive
-        // per card.
+        // Plain "section" groupings (see the Sections doc in CLAUDE.md).
+        // Sections OWN cards; axes LABEL them: membership is independent of
+        // axis values, so a section's card count and its divider's TOC list
+        // every card the book placed in it, including cards that also carry
+        // an axis value. (Ejecting labelled cards to the axis grouping — the
+        // old rule — left "1 card" dividers wherever a section mixed plain
+        // and labelled cards, and no divider at all for a section whose every
+        // card was labelled.) What stays exclusive is the DIVIDER, below: an
+        // axis divider firing on a card suppresses that card's section
+        // divider, so at most one divider page still precedes any card.
         Path bookRoot = bookCtx.book().bookRoot();
         List<Section> declaredSections = bookCtx.book().sections();
         Map<String, List<Integer>> bookBySection = new LinkedHashMap<>();
         for (int i = 0; i < cards.size(); i++) {
-            if (hasAnyAxisValue(i, groupings)) continue;
             String secId = sectionIdFor(bookRoot, declaredSections, cards.get(i).source());
             if (secId == null) continue;
             bookBySection.computeIfAbsent(secId, k -> new ArrayList<>()).add(i);
@@ -1756,8 +1759,12 @@ public final class LayoutEngine {
         // one divider per axis before the first card of each of that axis's
         // value groups — a card can be "first of value" for more than one
         // axis at once, in which case the template stacks a divider per axis,
-        // in book.axes() declaration order. Axis-less cards instead get
-        // sectionMeta + sectionFirst, driving the section-divider check.
+        // in book.axes() declaration order. Every card with a resolvable
+        // section also gets sectionMeta (membership); sectionFirst — the
+        // section-divider trigger — fires on the section's first card unless
+        // an axis divider fires on that same card, in which case the axis
+        // divider wins and the section divider is skipped (not deferred:
+        // rendering it before a later card would put it after content).
         List<Map<String, Object>> cardModels = new ArrayList<>(cards.size());
         // Printed table of contents — built alongside the divider bookkeeping
         // below so its entries appear in the exact order the PDF assembles
@@ -1775,7 +1782,8 @@ public final class LayoutEngine {
             Map<String, Boolean> firstOf = new LinkedHashMap<>();
             for (AxisGrouping g : groupings) {
                 String key = normalizeAxisId(g.perCardValue().get(i));
-                boolean first = key != null && !key.equals(prevValueKeyByAxis.get(g.axis().name()));
+                boolean first = g.axis().dividers()
+                        && key != null && !key.equals(prevValueKeyByAxis.get(g.axis().name()));
                 firstOf.put(g.axis().name(), first);
                 if (key != null) prevValueKeyByAxis.put(g.axis().name(), key);
                 if (first && tocEntries != null
@@ -1787,21 +1795,20 @@ public final class LayoutEngine {
                 }
             }
             cm.put("axesFirstOf", firstOf);
+            boolean axisDividerHere = firstOf.containsValue(Boolean.TRUE);
 
             Map<String, Object> sectionMeta = null;
             boolean sectionFirst = false;
-            if (!hasAnyAxisValue(i, groupings)) {
-                String secId = sectionIdFor(bookRoot, declaredSections, cards.get(i).source());
-                if (secId != null) {
-                    sectionMeta = findSectionMeta(sectionMetas, secId);
-                    sectionFirst = !secId.equals(prevSectionId);
-                    prevSectionId = secId;
-                    if (sectionFirst && tocEntries != null && sectionMeta != null
-                            && Boolean.TRUE.equals(sectionMeta.get("landingPage"))) {
-                        tocEntries.add(tocEntry(
-                                String.valueOf(sectionMeta.get("label")),
-                                "section-divider-" + secId, "divider", 0));
-                    }
+            String secId = sectionIdFor(bookRoot, declaredSections, cards.get(i).source());
+            if (secId != null) {
+                sectionMeta = findSectionMeta(sectionMetas, secId);
+                sectionFirst = !secId.equals(prevSectionId) && !axisDividerHere;
+                prevSectionId = secId;
+                if (sectionFirst && tocEntries != null && sectionMeta != null
+                        && Boolean.TRUE.equals(sectionMeta.get("landingPage"))) {
+                    tocEntries.add(tocEntry(
+                            String.valueOf(sectionMeta.get("label")),
+                            "section-divider-" + secId, "divider", 0));
                 }
             }
             cm.put("sectionMeta", sectionMeta);

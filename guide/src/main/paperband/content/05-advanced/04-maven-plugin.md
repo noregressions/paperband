@@ -319,15 +319,21 @@ file, so a book whose every scenario file is called `TRACE.md` needs no hand-wri
 and it depends on that card's own path alone, so adding or renaming a *different* card can
 never change this one's URL. Declare `id:` in frontmatter for something shorter.
 
-Two rules about what a pattern actually claims are worth knowing, because both are silent
-by nature:
+An `<include>` pattern that matches **no card files at all fails the build**, naming the
+section and the pattern — a dead pattern is a broken reference (a typo, a moved folder),
+and continuing would ship a silently thinner book. Legitimately-empty stays legal: a
+pattern whose matches were all claimed by an earlier section (the documented narrowing)
+or removed by the section's own `<excludes>` did find its files, and only draws the
+empty-section warning. A `<where>`-skipped section's patterns are never evaluated at all.
+
+Two rules about what a pattern actually claims are worth knowing — and when they leave a
+pattern with nothing, the failure message says which rule bit:
 
 - **`README.md` is claimed only by a pattern that names it.** `scenarios/*/README.md` means
   those files and gets them. A wildcard sweep — `**`, `scenarios/**/*.md` — leaves readmes
   out, which is what stops a book swallowing every readme under `node_modules`.
 - **A `.yaml` card needs the book root to declare a `cardSchema:`.** Without one, a pattern
-  naming a yaml file matches nothing — and the build now says so rather than leaving you to
-  wonder, naming the files and the reason.
+  naming a yaml file matches nothing.
 
 ## Section pages
 

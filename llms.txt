@@ -239,7 +239,7 @@ a losing key alongside a winner warns):
 | Key | Meaning | Unlisted files |
 |---|---|---|
 | `sections:` | Titled groups of subfolders | Discovered, appended after |
-| `include:` | Exclusive list, this order only | Excluded silently (by design) |
+| `include:` | Exclusive list, this order only. A listed entry that resolves to nothing FAILS the build (an `order:` entry only warns) | Excluded silently (by design) |
 | `order:` | These first, rest appended | Appended alphabetically or per `sort:` |
 | `sort:` | Order by frontmatter field(s) | Sorted, not dropped |
 
@@ -412,7 +412,10 @@ yaml. Anything inside `<book>` WINS over the yaml; geometry outside it (`<margin
 Glob semantics: `glob:` patterns against paths relative to `<root>`; `*` stops at `/`,
 `**` crosses (zero or more segments). Only card files match (`.md` except `README.md` —
 a README is claimed only by a pattern naming it; `.html` only when the pattern itself ends
-`.html`; `.yaml` only with a `cardSchema:`). First matching section claims a file; matches
+`.html`; `.yaml` only with a `cardSchema:`). An `<include>` pattern that matches no card
+files at all FAILS the build naming the section and pattern; a pattern emptied only by an
+earlier section's claim or the section's own `<excludes>` is legal (empty-section warning).
+First matching section claims a file; matches
 are never duplicated. `<book>` with no sections/includes = declared config over a walked
 tree. Repeated singular elements (`<title>`, `<author>`, …) fail the build. `<author>` vs
 `<authors>` (list; `book.author` renders "A and B") — declaring both is an error.

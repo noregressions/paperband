@@ -45,6 +45,15 @@ public class AxisConfig {
      */
     private String landingTemplate;
 
+    /**
+     * Whether this axis contributes PDF divider pages before the first card
+     * of each value run. {@code <dividers>false</dividers>} makes the axis
+     * label-only: cards keep their axis classes, badges, landing pages and
+     * nav entries, but section dividers fire as if the axis were not there.
+     * Defaults to true.
+     */
+    private Boolean dividers;
+
     /** @return the axis name */
     public String getName() {
         return name;
@@ -63,6 +72,11 @@ public class AxisConfig {
     /** @return the landing template path, or null */
     public String getLandingTemplate() {
         return landingTemplate;
+    }
+
+    /** @return whether this axis contributes divider pages (default true) */
+    public Boolean getDividers() {
+        return dividers;
     }
 
     /**
@@ -88,6 +102,6 @@ public class AxisConfig {
         Path landing = (landingTemplate == null || landingTemplate.isBlank())
                 ? null
                 : bookRoot.resolve(landingTemplate.trim());
-        return new Axis(name.trim(), title, resolved, landing);
+        return new Axis(name.trim(), title, resolved, landing, dividers == null || dividers);
     }
 }

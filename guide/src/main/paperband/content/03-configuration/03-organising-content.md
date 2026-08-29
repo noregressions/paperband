@@ -109,6 +109,13 @@ stays out of the book entirely — no warning, because exclusion is the declared
 file added to the folder later stays out until it's listed, which is the point: the card
 list is a decision, not a consequence of what's on disk.
 
+The other direction is not tolerated: a listed entry that resolves to nothing — no
+subdirectory of that name, no card file — **fails the build** naming the entry and the
+folder. The list is the declaration, so a reference to nothing is a typo or a stale list,
+and a silently thinner book is the worst way to find out. (`order:` entries only warn:
+that list is a soft front-of-folder preference, and discovery still emits everything that
+exists.)
+
 `sort:` has nothing left to order under `include:` and is ignored.
 
 ## `sections:` — declare the book's top-level structure

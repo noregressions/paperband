@@ -294,10 +294,16 @@ public final class BookPlan {
                 continue;
             }
 
-            List<Path> matched = match(base, spec, candidates, claimed, acceptYamlCards);
+            List<Path> matched = match(base, spec, candidates, claimed, acceptYamlCards,
+                    describe(id));
             if (matched.isEmpty()) {
-                warnings.add("no cards matched " + describe(id)
-                        + " under " + base + ": " + spec.includes());
+                // Only reachable when every pattern DID find its files but
+                // claims by earlier sections or this section's own excludes
+                // emptied the list — narrowing, not a broken reference (those
+                // fail inside match()).
+                warnings.add("no cards left for " + describe(id)
+                        + " under " + base + ": every match was claimed earlier or excluded: "
+                        + spec.includes());
                 continue;
             }
             cards.addAll(matched);
@@ -489,7 +495,8 @@ public final class BookPlan {
      * so a later pattern in the same spec can't re-emit a file either.
      */
     private static List<Path> match(Path base, SectionSpec spec, List<Path> candidates,
-                                    Set<Path> claimed, boolean acceptYamlCards) {
+                                    Set<Path> claimed, boolean acceptYamlCards,
+                                    String sectionLabel) {
         List<GlobSet> excludes = GlobSet.of(spec.excludes());
         List<FrontmatterSort.SortKey> sort = FrontmatterSort.parse(
                 spec.sort().isEmpty() ? null : spec.sort());
@@ -500,11 +507,18 @@ public final class BookPlan {
             boolean namesAFile = namesAFile(pattern);
             boolean namesHtml = patternNamesHtml(pattern);
             List<Path> hits = new ArrayList<>();
+            // A pattern that finds NOTHING is a broken reference, not a choice,
+            // and fails the build below — same treatment as a missing fragment
+            // or template. globHits/eligibleHits are counted before the claimed
+            // and excludes filters: a pattern emptied by an earlier section's
+            // claim (documented narrowing) or by this section's own <excludes>
+            // (declared intent) did find its files, and stays legal.
+            int globHits = 0;
+            int eligibleHits = 0;
             for (Path candidate : candidates) {
-                if (claimed.contains(candidate)) continue;
                 Path rel = base.relativize(candidate);
                 if (!include.matches(rel)) continue;
-                if (excludes.stream().anyMatch(x -> x.matches(rel))) continue;
+                globHits++;
                 // An .html becomes a card only for a pattern that itself ends
                 // in .html — deliberate by spelling, so a sweep over a root
                 // that contains generated HTML can't quietly reshape the book.
@@ -517,7 +531,20 @@ public final class BookPlan {
                 // its keep: it's what stops a book swallowing every readme in
                 // node_modules.
                 else if (!CardFiles.isCard(candidate, acceptYamlCards) && !namesAFile) continue;
+                eligibleHits++;
+                if (claimed.contains(candidate)) continue;
+                if (excludes.stream().anyMatch(x -> x.matches(rel))) continue;
                 hits.add(candidate);
+            }
+            if (eligibleHits == 0) {
+                throw new ConfigParseException(sectionLabel
+                        + ": include pattern '" + pattern + "' matched no card files under "
+                        + base
+                        + (globHits > 0
+                            ? " (it matched " + globHits + " file(s), but none are cards for it —"
+                                + " README.md needs a pattern naming it, .html a pattern ending"
+                                + " in .html, .yaml a cardSchema: in the book root)"
+                            : ""));
             }
             Comparator<Path> byRelativePath = Comparator.comparing(p -> base.relativize(p).toString());
             hits.sort(sort != null

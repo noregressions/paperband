@@ -256,6 +256,16 @@ public final class BookWalker {
         for (Entry e : directive.entries()) {
             Path entry = resolveEntry(dir, e.name());
             if (entry == null) {
+                // include: is the folder's declared card list — a listed entry
+                // that resolves to nothing is a broken reference and fails the
+                // build, like a missing fragment or template. order: stays a
+                // warning: it's a soft front-of-folder preference, and the
+                // discovery pass still emits everything that exists.
+                if (directive.exclusive()) {
+                    throw new ConfigParseException(directive.key() + " entry not found in "
+                            + dir + ": '" + e.name()
+                            + "' (no such subdirectory, and no card file of that name)");
+                }
                 System.err.println("warn: " + directive.key() + " entry not found in "
                         + dir + ": '" + e.name() + "'");
                 continue;

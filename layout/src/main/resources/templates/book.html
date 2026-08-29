@@ -390,7 +390,7 @@
     {% if bookIndex is not empty %}<a href="#book-index">index</a>{% endif %}
     {% if book.back.present %}<a href="#book-back">back</a>{% endif %}
     {% for g in axisGroupings %}
-    {% for v in g.values %}<a href="#axis-divider-{{ g.axis.name }}-{{ v.id }}">{{ v.label }}</a>{% endfor %}
+    {% if g.axis.dividers %}{% for v in g.values %}<a href="#axis-divider-{{ g.axis.name }}-{{ v.id }}">{{ v.label }}</a>{% endfor %}{% endif %}
     {% endfor %}
     {% for s in sections %}{% if s.landingPage %}<a href="#section-divider-{{ s.id }}">{{ s.label }}</a>{% endif %}{% endfor %}
     {% for pg in bookPages %}<a href="#book-page-{{ pg.n }}">{{ pg.template }}</a>{% endfor %}
@@ -536,9 +536,11 @@
       {% endif %}
     {% endfor %}
 
-    {# A card either has a value on some axis (handled above) or falls into
-       the axis-less "section" fallback, never both — so at most one of the
-       axis-divider loop above or this section-divider check fires per card. #}
+    {# Sections own cards, axes label them: every card with a resolvable
+       section carries sectionMeta, whether or not it also has axis values.
+       sectionFirst is the divider trigger, computed in the model with axis
+       precedence — it is false whenever an axis divider fired on this same
+       card — so at most one divider page still precedes any card. #}
     {% if card.sectionFirst and card.sectionMeta is not null and card.sectionMeta.landingPage %}
     {% include "_section-divider" with {"section": card.sectionMeta} %}
     {% endif %}

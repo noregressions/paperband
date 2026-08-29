@@ -70,12 +70,59 @@ class BookPlanTest {
         List<BookPlan.SectionSpec> specs = List.of(
                 new BookPlan.SectionSpec(null, "Web only", null, "target == 'web'",
                         List.of("services/*/TRACE.md"), List.of(), List.of()),
-                part("Nothing", "missing/**/*.md"),
+                // Emptied by exclusion, not by a dead pattern (which now fails
+                // the build): the pattern finds its files, the excludes drop
+                // every one of them.
+                new BookPlan.SectionSpec(null, "Nothing", null, null,
+                        List.of("services/*/NOTES.md"), List.of("services/**"), List.of()),
                 part("Notes", "services/*/NOTES.md"));
 
         assertEquals(0, BookPlan.resolve(bookRoot, specs, 2, "pdf-a4").tocCardIndex(),
                 "a where-skipped part and an empty part claim no cards, so the "
                         + "marker after them still lands before the first real card");
+    }
+
+    // ---- a dead include pattern fails the build ----
+
+    @Test
+    void anIncludePatternThatMatchesNothingFailsTheBuild() throws IOException {
+        servicesTree();
+
+        ConfigParseException e = assertThrows(ConfigParseException.class,
+                () -> BookPlan.resolve(bookRoot, List.of(
+                        part("Traces", "services/*/TRACE.md"),
+                        part("Typo", "servces/*/TRACE.md")), "pdf-a4"));
+
+        assertTrue(e.getMessage().contains("servces/*/TRACE.md"), e.getMessage());
+        assertTrue(e.getMessage().contains("Typo".toLowerCase())
+                        || e.getMessage().contains("typo"),
+                "names the section: " + e.getMessage());
+    }
+
+    @Test
+    void aDeadPatternInsideAWhereSkippedSectionDoesNotFail() throws IOException {
+        servicesTree();
+
+        BookPlan.Plan plan = BookPlan.resolve(bookRoot, List.of(
+                new BookPlan.SectionSpec(null, "Web only", null, "target == 'web'",
+                        List.of("missing/**/*.md"), List.of(), List.of()),
+                part("Traces", "services/*/TRACE.md")), "pdf-a4");
+
+        assertEquals(3, plan.cards().size(),
+                "a skipped section's patterns are never evaluated, dead or not");
+    }
+
+    @Test
+    void aPatternEmptiedByAnEarlierClaimStaysLegal() throws IOException {
+        servicesTree();
+
+        BookPlan.Plan plan = BookPlan.resolve(bookRoot, List.of(
+                part("Traces", "services/*/TRACE.md"),
+                part("Traces again", "services/*/TRACE.md")), "pdf-a4");
+
+        assertEquals(3, plan.cards().size(), "narrowing, not duplication");
+        assertTrue(plan.warnings().stream().anyMatch(w -> w.contains("claimed earlier")),
+                "the emptied section still warns: " + plan.warnings());
     }
 
     // ---- page positions ----
@@ -385,15 +432,19 @@ class BookPlanTest {
     // ---- validation ----
 
     @Test
-    void aPartThatMatchesNothingIsWarnedAboutAndOmitted() throws IOException {
+    void aPartThatMatchesNothingFailsTheBuild() throws IOException {
+        // Previously warned and omitted the section; a pattern that finds no
+        // files at all is a broken reference, and a silently thinner book is
+        // the worst way to learn about it.
         servicesTree();
 
-        BookPlan.Plan plan = BookPlan.resolve(bookRoot, List.of(
-                part("Missing", "services/*/ABSENT.md"),
-                part("Traces", "services/*/TRACE.md")), "pdf-a4");
+        ConfigParseException e = assertThrows(ConfigParseException.class,
+                () -> BookPlan.resolve(bookRoot, List.of(
+                        part("Missing", "services/*/ABSENT.md"),
+                        part("Traces", "services/*/TRACE.md")), "pdf-a4"));
 
-        assertEquals(List.of("traces"), plan.sections().stream().map(Section::id).toList());
-        assertEquals(3, plan.cards().size());
+        assertTrue(e.getMessage().contains("services/*/ABSENT.md"), e.getMessage());
+        assertTrue(e.getMessage().contains("missing"), "names the section: " + e.getMessage());
     }
 
     @Test

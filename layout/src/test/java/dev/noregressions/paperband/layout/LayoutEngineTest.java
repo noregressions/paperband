@@ -809,6 +809,99 @@ class LayoutEngineTest {
             assertTrue(result.contains("axis-divider-tier-1"));
         }
 
+        @Test
+        void should_keep_axis_labelled_cards_in_their_sections(@TempDir Path tempDir) {
+            LayoutEngine engine = new LayoutEngine();
+
+            Path intro = tempDir.resolve("route").resolve("intro.md");
+            Path lab1 = tempDir.resolve("route").resolve("lab1.md");
+            Path lab2 = tempDir.resolve("extras").resolve("lab2.md");
+
+            List<Card> cards = List.of(
+                    createCardAt("intro", intro, Map.of()),
+                    createCardAt("lab1", lab1, Map.of("kind", "scenario")),
+                    createCardAt("lab2", lab2, Map.of("kind", "scenario")));
+            List<RenderContext> contexts = List.of(
+                    createMinimalContext(), createMinimalContext(), createMinimalContext());
+
+            Axis kind = new Axis("kind", "Kind", List.of(AxisValue.of("scenario", "Scenario")), null);
+            Section route = new Section("route", "The Route", List.of(), null, List.of(intro, lab1));
+            Section extras = new Section("extras", "Extras", List.of(), null, List.of(lab2));
+            BookConfig book = new BookConfig(tempDir, "Test Book", List.of(kind), List.of(), Map.of(),
+                    List.of(), null, null, null, null, null, null, null,
+                    List.of(route, extras));
+
+            String result = engine.renderBook(cards, contexts,
+                    new RenderContext(book, List.of(), Map.of(), null, "pdf", "A4"));
+
+            // Membership: the labelled card counts toward its section and is
+            // listed in the section divider's TOC.
+            assertEquals(1, countOccurrences(result, "id=\"section-divider-route\""),
+                    "sections own their cards whether or not those cards carry axis values");
+            int routeDivider = result.indexOf("id=\"section-divider-route\"");
+            int firstCard = result.indexOf("id=\"card-intro\"");
+            String routeBlock = result.substring(routeDivider, firstCard);
+            assertTrue(routeBlock.contains("#card-lab1"),
+                    "the labelled card is listed in its section divider's TOC");
+            assertTrue(routeBlock.contains("2 cards"),
+                    "the labelled card counts toward its section");
+
+            // A section whose only card carries an axis value still gets its
+            // divider, as long as no axis divider fires on that same card.
+            assertEquals(1, countOccurrences(result, "id=\"section-divider-extras\""),
+                    "a fully labelled section still gets a divider page");
+
+            // The axis divider fires once, before the first labelled card;
+            // divider exclusivity is per card, not per membership.
+            assertEquals(1, countOccurrences(result, "id=\"axis-divider-kind-scenario\""));
+        }
+
+        @Test
+        void should_let_an_axis_divider_suppress_the_section_divider_on_the_same_card(@TempDir Path tempDir) {
+            LayoutEngine engine = new LayoutEngine();
+
+            Path lab1 = tempDir.resolve("route").resolve("lab1.md");
+            List<Card> cards = List.of(createCardAt("lab1", lab1, Map.of("kind", "scenario")));
+            List<RenderContext> contexts = List.of(createMinimalContext());
+
+            Axis kind = new Axis("kind", "Kind", List.of(AxisValue.of("scenario", "Scenario")), null);
+            Section route = new Section("route", "The Route", List.of(), null, List.of(lab1));
+            BookConfig book = new BookConfig(tempDir, "Test Book", List.of(kind), List.of(), Map.of(),
+                    List.of(), null, null, null, null, null, null, null, List.of(route));
+
+            String result = engine.renderBook(cards, contexts,
+                    new RenderContext(book, List.of(), Map.of(), null, "pdf", "A4"));
+
+            assertEquals(1, countOccurrences(result, "id=\"axis-divider-kind-scenario\""));
+            assertFalse(result.contains("id=\"section-divider-route\""),
+                    "at most one divider page precedes a card: the axis divider wins");
+        }
+
+        @Test
+        void should_treat_a_dividerless_axis_as_label_only(@TempDir Path tempDir) {
+            LayoutEngine engine = new LayoutEngine();
+
+            Path lab1 = tempDir.resolve("route").resolve("lab1.md");
+            List<Card> cards = List.of(createCardAt("lab1", lab1, Map.of("kind", "scenario")));
+            List<RenderContext> contexts = List.of(createMinimalContext());
+
+            Axis kind = new Axis("kind", "Kind",
+                    List.of(AxisValue.of("scenario", "Scenario")), null, false);
+            Section route = new Section("route", "The Route", List.of(), null, List.of(lab1));
+            BookConfig book = new BookConfig(tempDir, "Test Book", List.of(kind), List.of(), Map.of(),
+                    List.of(), null, null, null, null, null, null, null, List.of(route));
+
+            String result = engine.renderBook(cards, contexts,
+                    new RenderContext(book, List.of(), Map.of(), null, "pdf", "A4"));
+
+            assertFalse(result.contains("id=\"axis-divider-kind-scenario\""),
+                    "a dividers:false axis emits no divider pages");
+            assertEquals(1, countOccurrences(result, "id=\"section-divider-route\""),
+                    "with the axis label-only, the section divider fires as if the axis were absent");
+            assertTrue(result.contains("class=\"card kind-scenario\""),
+                    "the axis still labels the card");
+        }
+
     }
 
     @Nested
@@ -1305,6 +1398,19 @@ class LayoutEngineTest {
             idx += needle.length();
         }
         return count;
+    }
+
+    private Card createCardAt(String id, Path path, Map<String, Object> frontmatterData) {
+        Block block = new Block(
+            Block.Kind.HEADING_SECTION,
+            null,
+            Set.of("intro"),
+            null,
+            0,
+            "<p>Test content</p>",
+            List.of()
+        );
+        return new Card(id, path, new Frontmatter(frontmatterData), "Test Card", List.of(block));
     }
 
     private Card createCardAtPath(String id, Path path) {

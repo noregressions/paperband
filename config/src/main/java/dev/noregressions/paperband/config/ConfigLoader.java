@@ -633,7 +633,13 @@ public final class ConfigLoader {
             }
         }
 
-        return new Axis(name, title, values, landingTemplate);
+        // dividers: false makes the axis label-only — no PDF divider pages,
+        // so section dividers fire as if the axis were not declared. Card
+        // classes, badges, landing pages and nav entries are unaffected.
+        Object dividersNode = data.get("dividers");
+        boolean dividers = dividersNode == null || truthy(dividersNode);
+
+        return new Axis(name, title, values, landingTemplate, dividers);
     }
 
     private static List<Path> resolveCssPaths(Path baseDir, Object cssNode) {

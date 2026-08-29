@@ -204,6 +204,32 @@ class BookWalkerTest {
     }
 
     @Test
+    void includeEntryThatResolvesToNothingFailsTheBuild(@TempDir Path root) throws IOException {
+        // include: is the folder's declared card list — a listed name with no
+        // file behind it is a broken reference (a typo, or a stale list), and
+        // continuing would silently ship a thinner book.
+        Files.writeString(root.resolve("paperband.yaml"), "include: [a, no-such-card]\n");
+        Files.writeString(root.resolve("a.md"), "# A\n");
+
+        ConfigParseException e = org.junit.jupiter.api.Assertions.assertThrows(
+                ConfigParseException.class, () -> walkNames(root));
+        assertTrue(e.getMessage().contains("no-such-card"), e.getMessage());
+        assertTrue(e.getMessage().contains("include"), e.getMessage());
+    }
+
+    @Test
+    void orderEntryThatResolvesToNothingStillOnlyWarns(@TempDir Path root) throws IOException {
+        // order: is a soft front-of-folder preference — discovery still emits
+        // everything that exists, so a stale entry warns rather than fails.
+        Files.writeString(root.resolve("paperband.yaml"), "order: [no-such-card, b]\n");
+        Files.writeString(root.resolve("a.md"), "# A\n");
+        Files.writeString(root.resolve("b.md"), "# B\n");
+
+        assertEquals(List.of("b.md", "a.md"), walkNames(root),
+                "the missing entry is skipped, the rest of the folder still walks");
+    }
+
+    @Test
     void includeResolvesSubdirectoriesAndRecursesIntoThem(@TempDir Path root) throws IOException {
         Files.writeString(root.resolve("paperband.yaml"), "include: [chapter]\n");
         Path chapter = Files.createDirectory(root.resolve("chapter"));
