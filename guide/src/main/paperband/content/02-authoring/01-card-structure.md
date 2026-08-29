@@ -139,6 +139,13 @@ Every theme gets a neutral treatment for all three; themes may restyle them. Rea
 languages (` ```java `, ` ```xml `) pass through untouched, and the attribute spellings
 (` ```bash {.command} `) keep working for cases the shorthand doesn't cover.
 
+On screen — the static site, or an `emitHtml` file in a browser — `command`, `console`
+and ` ```bash ` blocks grow a **Copy** button in their corner (a console block copies just its
+`$`-prefixed command lines, prefix stripped, since the output is for comparing, not
+pasting). Give any other block the same affordance with a `{.copy}` info-line attribute,
+take it off one block with `{.no-copy}`, or turn the feature off book-wide with
+`vars.copyButtons: false`. Print output never shows the buttons.
+
 ### Mermaid diagrams
 
 One more bundled type draws instead of printing: a ` ```mermaid ` fence holds a

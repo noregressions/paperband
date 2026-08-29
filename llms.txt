@@ -116,7 +116,10 @@ mvn paperband:themes                               # list themes
 - **Editorial shorthands**: the fence language IS the block type —
   ```` ```command ```` (highlighted bash, "Command" label), ```` ```output ```` (plain,
   "Output" label), ```` ```console ```` (mixed `$`-prefixed session). Real languages pass
-  through untouched.
+  through untouched. On screen (site pages, emitHtml in a browser) `command`/`console`/`bash`
+  blocks get a Copy button (console copies only the `$`-prefixed lines, stripped); opt
+  any block in with `{.copy}`, out with `{.no-copy}` or `vars.copyButtons: false`; never
+  shown in print.
 - **Mermaid diagrams**: ```` ```mermaid ```` holds Mermaid diagram text, rendered to
   inline SVG on the site AND in the PDF (the renderer waits for diagrams to finish before
   snapshotting/measuring, so page numbers stay exact). `vars.mermaidTheme` picks mermaid's

@@ -1,0 +1,88 @@
+{# Copy-to-clipboard buttons on fenced blocks — screen-only progressive
+   enhancement, same pattern as _mermaid and the book sidebar. ```command,
+   ```console and ```bash get a button by default (their editorial meaning is
+   "the reader types this"); any other block opts in with a {.copy} info-line attribute
+   (which lands on the <pre> via flexmark's AttributesExtension); a
+   {.no-copy} attribute or vars.copyButtons: false opts out. A console
+   block's copy takes only its $-prefixed command lines, prefix stripped —
+   the output lines are what you compare, not what you paste.
+
+   PDF safety, twice over: the PDF pass loads the page under screen media
+   (so buttons do get injected) but prints under print media, where the
+   scaffold hides .pw-copy-button — and the buttons are absolutely
+   positioned, so their presence can never shift pagination. The measurer
+   emulates print, where injection is skipped entirely. Clipboard writes use
+   the async API where the context allows it (file:// counts as secure) and
+   fall back to execCommand for plain-http hosting. #}
+{% if not (vars.copyButtons == false) %}
+<script>
+(function () {
+  function init() {
+    if (window.matchMedia && window.matchMedia('print').matches) return;
+    var pres = document.querySelectorAll('pre.command, pre.console, pre.copy, pre.language-bash');
+    Array.prototype.forEach.call(pres, function (pre) {
+      if (pre.classList.contains('no-copy') || pre.querySelector('.pw-copy-button')) return;
+      pre.classList.add('pw-copyable');
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'pw-copy-button';
+      btn.textContent = 'Copy';
+      btn.setAttribute('aria-label', 'Copy to clipboard');
+      btn.addEventListener('click', function () {
+        write(textFor(pre)).then(
+            function () { flash(btn, 'Copied ✓'); },
+            function () { flash(btn, 'Copy failed'); });
+      });
+      pre.appendChild(btn);
+    });
+  }
+  function textFor(pre) {
+    var clone = pre.cloneNode(true);
+    var b = clone.querySelector('.pw-copy-button');
+    if (b) b.remove();
+    var text = clone.textContent.replace(/\n+$/, '');
+    if (pre.classList.contains('console')) {
+      var cmds = text.split('\n')
+          .filter(function (l) { return /^\s*\$\s?/.test(l); })
+          .map(function (l) { return l.replace(/^\s*\$\s?/, ''); });
+      if (cmds.length) return cmds.join('\n');
+    }
+    return text;
+  }
+  function write(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise(function (resolve, reject) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        if (document.execCommand('copy')) resolve();
+        else reject(new Error('copy rejected'));
+      } catch (e) {
+        reject(e);
+      } finally {
+        ta.remove();
+      }
+    });
+  }
+  function flash(btn, msg) {
+    btn.textContent = msg;
+    btn.classList.add('pw-copied');
+    setTimeout(function () {
+      btn.textContent = 'Copy';
+      btn.classList.remove('pw-copied');
+    }, 1200);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+{% endif %}

@@ -186,6 +186,29 @@ pre.command::before { content: "Command"; }
 pre.output::before  { content: "Output"; }
 pre.console::before { content: "Console"; }
 
+/* Copy-to-clipboard buttons (_copy-buttons.html injects them into
+ * pre.command/pre.console/pre.copy). Mirrors the book scaffold in book.html;
+ * hidden when a reader prints the page. Themes restyle via .pw-copy-button. */
+.pw-copyable { position: relative; }
+.pw-copy-button {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  padding: 0.15rem 0.5rem;
+  font: 600 0.65rem/1.4 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  color: inherit;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  opacity: 0.35;
+  cursor: pointer;
+}
+.pw-copy-button:hover,
+.pw-copy-button:focus-visible,
+.pw-copy-button.pw-copied { opacity: 0.9; }
+@media print { .pw-copy-button { display: none; } }
+
 /* ```mermaid diagrams (blocks/mermaid.html + the _mermaid loader): once
  * rendered the pre holds an SVG, not code, so the code-block dressing comes
  * off — at .site-content specificity, so a theme's generic pre rules don't

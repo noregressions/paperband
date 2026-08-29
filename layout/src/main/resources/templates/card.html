@@ -14,6 +14,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
 
   {% include "_mermaid" %}
+  {% include "_copy-buttons" %}
 
   {% if cssImports is not empty %}<style>{{ cssImports | raw }}</style>{% endif %}
   <style>
@@ -69,6 +70,27 @@
        than per-theme. */
     .pw-avoid-split { break-inside: avoid; }
     .pw-page-start  { break-before: page; }
+
+    /* Copy-to-clipboard buttons — see book.html for the rationale. */
+    .pw-copyable { position: relative; }
+    .pw-copy-button {
+      position: absolute;
+      top: 0.35rem;
+      right: 0.35rem;
+      padding: 0.15rem 0.5rem;
+      font: 600 0.65rem/1.4 ui-sans-serif, system-ui, sans-serif;
+      letter-spacing: 0.04em;
+      color: inherit;
+      background: transparent;
+      border: 1px solid currentColor;
+      border-radius: 3px;
+      opacity: 0.35;
+      cursor: pointer;
+    }
+    .pw-copy-button:hover,
+    .pw-copy-button:focus-visible,
+    .pw-copy-button.pw-copied { opacity: 0.9; }
+    @media print { .pw-copy-button { display: none; } }
 
     /* ```mermaid diagrams — see book.html for the rationale. */
     pre.mermaid, article.card pre.mermaid {
