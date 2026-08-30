@@ -5,6 +5,7 @@ import dev.noregressions.paperband.cards.CardLoader;
 import dev.noregressions.paperband.cards.MarkdownPreprocessor;
 import dev.noregressions.paperband.config.BookPlan;
 import dev.noregressions.paperband.config.ConfigLoader;
+import dev.noregressions.paperband.render.PageSpec;
 import dev.noregressions.paperband.include.Includes;
 import dev.noregressions.paperband.layout.LayoutEngine;
 import dev.noregressions.paperband.layout.ThemeBundle;
@@ -322,6 +323,9 @@ final class BookBuild {
         if (editionModel != null) layout.setEdition(editionModel);
         layout.setTocAt(tocCardIndex);
         layout.setPagesAt(pages);
+        // The sheet must reach the layout too: per-card rotation is expressed
+        // relative to it, and the CSS @page rules restate its margins.
+        layout.setBookSheet(configLoader.bookPageSpec());
         String html = layoutOverride != null
                 ? layout.renderBook(cards, contexts, bookCtx, layoutOverride)
                 : layout.renderBook(cards, contexts, bookCtx);
@@ -330,13 +334,18 @@ final class BookBuild {
         emitHtmlIfAsked(html, baseUri.toString());
 
         HtmlToPdfRenderer renderer = Renderers.require(rendererName);
+        // The BOOK's sheet, not the first card's: a card may rotate its own
+        // pages (page.orientation, card scope), and bookCtx is simply whichever
+        // card was walked first. Taking geometry from it would let an opening
+        // landscape card turn every sheet in the book landscape.
+        PageSpec sheet = configLoader.bookPageSpec();
         String bookTitle = bookCtx.book().title();
         PdfMetadata metadata = bookTitle != null ? PdfMetadata.of(bookTitle) : PdfMetadata.empty();
         String footer = layout.renderFooter(bookCtx);
         String header = layout.renderHeader(bookCtx);
 
         ensureParentDir(output);
-        renderer.render(new HtmlInput(html, baseUri, bookCtx.pageSpec(), metadata, footer, header),
+        renderer.render(new HtmlInput(html, baseUri, sheet, metadata, footer, header),
                 output);
 
         // Two-pass page numbering: a printed TOC or index renders its page
@@ -353,7 +362,7 @@ final class BookBuild {
             }
             html = refs.html();
             emitHtmlIfAsked(html, baseUri.toString());
-            renderer.render(new HtmlInput(html, baseUri, bookCtx.pageSpec(), metadata, footer, header),
+            renderer.render(new HtmlInput(html, baseUri, sheet, metadata, footer, header),
                     output);
             log.info("Resolved " + refs.resolved() + " page reference(s) (toc/index)"
                     + " in a second render pass");
@@ -367,7 +376,7 @@ final class BookBuild {
         if (FullPageCover.needsBareFirstPage(html, footer, header)) {
             Path barePdf = FullPageCover.bareRenderPath(output);
             try {
-                renderer.render(new HtmlInput(html, baseUri, bookCtx.pageSpec(), metadata,
+                renderer.render(new HtmlInput(html, baseUri, sheet, metadata,
                         null, null), barePdf);
                 FullPageCover.replaceFirstPage(output, barePdf);
             } finally {

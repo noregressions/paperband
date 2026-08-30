@@ -242,7 +242,47 @@ public class SiteMojo extends AbstractPaperbandMojo {
             written++;
         }
 
+        written += copyMatterAssets(bookCtx, output);
+
         getLog().info("Built site " + bookDir + " -> " + output
                 + " (" + written + " pages, " + cards.size() + " cards)");
+    }
+
+    /**
+     * Copy the images a book's {@code cover:}/{@code back:} declare into the
+     * site's {@code assets/} directory.
+     *
+     * <p>The PDF resolves those images to absolute {@code file:} URIs, which a
+     * served site can't follow. The site references
+     * {@code assets/&lt;filename&gt;} instead (see {@code LayoutEngine.siteMatter})
+     * and this puts the file there.
+     *
+     * @param bookCtx the resolved book context
+     * @param output  the site output directory
+     * @return the number of assets copied
+     * @throws IOException if a declared image exists but can't be copied
+     */
+    private int copyMatterAssets(RenderContext bookCtx, Path output) throws IOException {
+        Path bookRoot = bookCtx.book().bookRoot();
+        List<dev.noregressions.paperband.model.PageMatter> matters = new ArrayList<>();
+        if (bookCtx.book().cover() != null) matters.add(bookCtx.book().cover());
+        if (bookCtx.book().back() != null) matters.add(bookCtx.book().back());
+
+        int copied = 0;
+        for (dev.noregressions.paperband.model.PageMatter matter : matters) {
+            if (matter.image() == null) continue;
+            Path src = bookRoot.resolve(matter.image()).normalize();
+            if (!Files.isRegularFile(src)) {
+                // A cover image the PDF would also fail on: warn rather than
+                // fail the site, so a broken image doesn't cost you the docs.
+                getLog().warn("cover/back image not found, skipping for the site: " + src);
+                continue;
+            }
+            Path dest = output.resolve(LayoutEngine.SITE_ASSET_DIR).resolve(src.getFileName());
+            Files.createDirectories(dest.getParent());
+            Files.copy(src, dest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            copied++;
+        }
+        return copied;
     }
 }

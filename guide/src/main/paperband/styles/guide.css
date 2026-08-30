@@ -53,10 +53,11 @@ code {
   padding: 0.1em 0.35em;
 }
 
-/* ── PDF page margins ───────────────────────────────────────────────────── */
-@page {
-  margin: 20mm 18mm 20mm 18mm;
-}
+/* Page margins live in paperband.yaml's `page:` block, not here. The build
+   emits them as an @page rule from the same PageSpec the renderer is handed,
+   so a second @page rule in book CSS would win on cascade order while
+   --pw-content-height kept describing the first — the content box would then
+   describe a page that isn't the one being printed. */
 
 @media print {
   .book-cover {

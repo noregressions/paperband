@@ -3,7 +3,7 @@ package dev.noregressions.paperband.render;
 import java.util.Map;
 
 /**
- * Resolves a {@code page:} yaml block (declared under {@code vars.page},
+ * Resolves a book's {@code page:} yaml block (also readable at {@code vars.page},
  * cascading exactly like any other {@code vars} entry — book root sets the
  * default, a folder-level {@code paperband.yaml} can override it wholesale
  * for one edition) into a real {@link PageSpec} plus a font-scale multiplier.
@@ -57,7 +57,7 @@ public final class PageConfigResolver {
     public record Resolved(PageSpec pageSpec, Double fontScale) {}
 
     /**
-     * @param raw  the parsed {@code vars.page} map, or null/empty if not declared
+     * @param raw  the parsed {@code page:} map, or null/empty if not declared
      * @param base the PageSpec to fall back to for any field {@code raw} doesn't set
      *             (normally whatever the plugin {@code <pageSize>} preset resolved to)
      */

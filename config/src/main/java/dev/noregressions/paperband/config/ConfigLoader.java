@@ -9,6 +9,7 @@ import dev.noregressions.paperband.model.PageMatter;
 import dev.noregressions.paperband.model.Section;
 import dev.noregressions.paperband.model.RenderContext;
 import dev.noregressions.paperband.render.Margins;
+import dev.noregressions.paperband.render.Orientation;
 import dev.noregressions.paperband.render.PageConfigResolver;
 import dev.noregressions.paperband.render.PageSpec;
 
@@ -73,6 +74,36 @@ public final class ConfigLoader {
     private Path homeDir;
 
     /**
+     * Parsed yamls, keyed by path. One loader serves every card in a build and
+     * the same book/folder yamls are re-walked for each of them, so without
+     * this the book root's yaml is re-parsed once per card.
+     */
+    private final Map<Path, Map<String, Object>> yamlCache = new LinkedHashMap<>();
+
+    /**
+     * The book's own sheet, as resolved on the last {@link #load} call — the
+     * geometry before any card's orientation is layered on.
+     *
+     * <p>The build must pass THIS to the renderer, not the first card's
+     * {@code ctx.pageSpec()}: a book whose opening card happens to be landscape
+     * would otherwise print every sheet landscape, which is the same
+     * first-card-decides-the-book defect that made page geometry unreliable in
+     * the first place, re-entering through the card-scope override.
+     */
+    private PageSpec bookPageSpec;
+
+    /**
+     * The book's sheet — size, margins and the book-level orientation — with no
+     * card-scope rotation applied. Valid once at least one card has been
+     * loaded; null before that.
+     *
+     * @return the book-scope page geometry, or null if nothing has been loaded
+     */
+    public PageSpec bookPageSpec() {
+        return bookPageSpec;
+    }
+
+    /**
      * Load and resolve config for {@code mdFile}.
      *
      * @param mdFile  the markdown card file
@@ -88,12 +119,13 @@ public final class ConfigLoader {
 
     /**
      * Load and resolve config for {@code mdFile}, with the page-size preset's
-     * margins replaced before the yaml cascade runs.
+     * margins replaced before the book's own {@code page:} block is read.
      *
      * <p>{@code margins} sits exactly where {@code size} does: it seeds the
-     * <em>base</em> geometry, so a {@code vars.page.margins} block in the
-     * book still wins over it — same precedence a {@code vars.page.size}
-     * block has over {@code size}. Its reason to exist is the build tool that
+     * <em>base</em> geometry, so a {@code page.margins} block in the book's own
+     * yaml still wins over it — same precedence {@code page.size} has over
+     * {@code size}. Both are book scope: only the book's yaml is consulted, and
+     * a folder that sets either fails the build. Its reason to exist is the build tool that
      * has no yaml of its own to edit: the Maven plugin's {@code <margins>},
      * which is how a book asks for a full-bleed render ({@code 0}) from the
      * POM.
@@ -202,6 +234,7 @@ public final class ConfigLoader {
         Path root = declaredRoot == null ? null : declaredRoot.toAbsolutePath().normalize();
         if (startDir == null) {
             PageConfigResolver.Resolved page = PageConfigResolver.resolve(null, basePageSpec(size, margins));
+            bookPageSpec = page.pageSpec();   // no yaml: the base IS the book's sheet
             return new RenderContext(BookConfig.empty(mdFile.toAbsolutePath()),
                     List.of(), seedVars(extraVars), null, target, size,
                     page.pageSpec(), page.fontScale());
@@ -225,6 +258,7 @@ public final class ConfigLoader {
 
         if (chain.isEmpty() && !homeHasYaml) {
             PageConfigResolver.Resolved page = PageConfigResolver.resolve(null, basePageSpec(size, margins));
+            bookPageSpec = page.pageSpec();   // no yaml: the base IS the book's sheet
             // With a declared root, an absent yaml is expected rather than a
             // fallback: the book is described somewhere else entirely.
             return new RenderContext(BookConfig.empty(root != null ? root : startDir),
@@ -244,15 +278,23 @@ public final class ConfigLoader {
         Path bookRoot;
         BookConfig book;
         Path bookYamlUsed = null;
+        // The yaml the BOOK level was read from, which is not always the chain
+        // entry bookYamlUsed marks: under a split geography the book config
+        // comes from home/paperband.yaml, which sits ABOVE the content root and
+        // so never appears in the card's parent chain at all. Book-scope keys
+        // (page:) are read from this file and no other.
+        Path bookConfigYaml = null;
         if (root != null) {
             bookRoot = root;
             Path rootYaml = root.resolve(CONFIG_FILENAME);
             if (homeHasYaml) {
                 book = parseBookConfig(homeDir, homeYaml, root);
                 bookYamlUsed = rootYaml.equals(homeYaml) ? rootYaml : null;
+                bookConfigYaml = homeYaml;
             } else if (Files.isRegularFile(rootYaml)) {
                 book = parseBookConfig(root, rootYaml, root);
                 bookYamlUsed = rootYaml;
+                bookConfigYaml = rootYaml;
             } else {
                 book = BookConfig.empty(root);
             }
@@ -261,6 +303,7 @@ public final class ConfigLoader {
             bookRoot = bookRootYaml.getParent();
             book = parseBookConfig(bookRoot, bookRootYaml, bookRoot);
             bookYamlUsed = bookRootYaml;
+            bookConfigYaml = bookRootYaml;
         }
 
         // Cascade resolution: walk yamls book-first → file-closest.
@@ -269,13 +312,41 @@ public final class ConfigLoader {
         // override (e.g. pin build_date in the book root yaml for reproducibility).
         Map<String, Object> vars = new LinkedHashMap<>(BuiltInVars.compute());
         vars.putAll(book.vars());
+        // The top-level `page:` block is also published as vars.page, so the two
+        // spellings are one thing downstream: everything that reads vars.page
+        // (page.measure, and any template that looks) sees a book that declares
+        // the preferred `page:` exactly as it saw the old vars.page. Merged
+        // rather than replaced so a book using both keeps both halves, and
+        // placed before the cascade so a folder can still tune the card-scope
+        // entries (measure) on top.
+        if (bookConfigYaml != null) {
+            Map<String, Object> bookPage = pageNodeOf(readYaml(bookConfigYaml));
+            if (bookPage != null) {
+                Map<String, Object> merged = new LinkedHashMap<>();
+                if (vars.get("page") instanceof Map<?, ?> existing) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> typed = (Map<String, Object>) existing;
+                    merged.putAll(typed);
+                }
+                merged.putAll(bookPage);
+                vars.put("page", merged);
+            }
+        }
         vars.putAll(extraVars);        // build-declared book vars sit with the book's own
         Path layout = null;
         List<String> targets = new ArrayList<>(book.targets());
 
+        // Card-scope page treatment, collected as the cascade deepens: the last
+        // folder to declare an orientation wins, like any other card-scope key.
+        Orientation cardOrientation = null;
         for (Path yaml : chain) {
             if (yaml.equals(bookYamlUsed)) continue;      // book level already applied
             Map<String, Object> data = readYaml(yaml);
+            // Below the book root only `orientation` is in scope: the sheet's
+            // size and margins describe the book as one artifact, and a folder
+            // has no standing to redefine them (see checkCardScopePage).
+            Orientation declared = checkCardScopePage(yaml, pageNodeOf(data));
+            if (declared != null) cardOrientation = declared;
             cssChain.addAll(resolveCssPaths(yaml.getParent(), data.get("css")));
             Object varsNode = data.get("vars");
             if (varsNode instanceof Map<?, ?> vm) {
@@ -302,18 +373,27 @@ public final class ConfigLoader {
             }
         }
 
-        // Resolve final page geometry: the plugin's <pageSize> picks the base preset;
-        // a `vars.page` yaml block (book root or any folder in the cascade,
-        // last-wins per field — same shallow-override semantics as the rest
-        // of `vars`) can override size/margins/orientation/fontScale on top.
-        // See PageConfigResolver for why fontScale is nullable.
-        @SuppressWarnings("unchecked")
-        Map<String, Object> pageNode = vars.get("page") instanceof Map<?, ?> pm
-                ? (Map<String, Object>) pm
-                : null;
-        PageConfigResolver.Resolved page = PageConfigResolver.resolve(pageNode, basePageSpec(size, margins));
+        // Page geometry is BOOK scope: one book is one sheet definition, so it
+        // resolves from the book's own yaml and the plugin's <pageSize>/<margins>
+        // base — never from the merged cascade. Reading it from `vars` after the
+        // merge (as this once did) meant a folder yaml deep in the tree could
+        // set the geometry of the whole book, or of nothing at all, depending
+        // only on which card the build happened to walk first.
+        //
+        // Orientation is the exception, and it is not really an exception: it
+        // describes a BLOCK's sheets rather than the book's, so it cascades
+        // like any other card-scope key and is applied per card below. The
+        // physical sheet stays the book's; only its rotation changes.
+        PageConfigResolver.Resolved page = PageConfigResolver.resolve(
+                bookConfigYaml == null ? null : pageNodeOf(readYaml(bookConfigYaml)),
+                basePageSpec(size, margins));
+        bookPageSpec = page.pageSpec();
+        PageSpec spec = page.pageSpec();
+        if (cardOrientation != null && cardOrientation != spec.orientation()) {
+            spec = new PageSpec(spec.size(), spec.margins(), cardOrientation);
+        }
 
-        return new RenderContext(book, cssChain, vars, layout, target, size, page.pageSpec(), page.fontScale());
+        return new RenderContext(book, cssChain, vars, layout, target, size, spec, page.fontScale());
     }
 
     // ---- internals ----
@@ -326,7 +406,67 @@ public final class ConfigLoader {
     }
 
     /**
-     * The page-size preset the yaml cascade layers on, with its margins
+     * A yaml's page block: the top-level {@code page:} key, falling back to
+     * {@code vars.page} — the original spelling, kept working because geometry
+     * riding inside {@code vars} is exactly what made it uncheckable (a member
+     * of a cascading map can't be scoped without special-casing it). Prefer
+     * {@code page:}; {@code vars.page} is a deprecated alias.
+     *
+     * @param data the parsed yaml
+     * @return the page map, or null when the yaml declares neither
+     */
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> pageNodeOf(Map<String, Object> data) {
+        if (data.get("page") instanceof Map<?, ?> top) return (Map<String, Object>) top;
+        if (data.get("vars") instanceof Map<?, ?> vm
+                && ((Map<String, Object>) vm).get("page") instanceof Map<?, ?> pm) {
+            return (Map<String, Object>) pm;
+        }
+        return null;
+    }
+
+    /** Page keys that describe the book's one physical sheet, so only the book root may set them. */
+    private static final List<String> BOOK_SCOPE_PAGE_KEYS = List.of("size", "margins", "fontScale");
+
+    /**
+     * Validate a below-the-root {@code page:} block and return the orientation
+     * it declares, if any.
+     *
+     * <p>{@code size}/{@code margins}/{@code fontScale} are book scope: they
+     * describe the single sheet every page of the book is printed on, and there
+     * is one {@code Page.pdf()} call to carry them. A folder declaring one used
+     * to half-apply — the card's CSS content box changed while the sheet did
+     * not — so this errors instead of resizing a content box to a page that
+     * will never exist.
+     *
+     * @param yaml the folder yaml, for the message
+     * @param page its page block, or null
+     * @return the declared orientation, or null when none is declared
+     * @throws ConfigParseException if the block declares a book-scope key
+     */
+    private static Orientation checkCardScopePage(Path yaml, Map<String, Object> page) {
+        if (page == null) return null;
+        for (String key : BOOK_SCOPE_PAGE_KEYS) {
+            if (page.containsKey(key)) {
+                throw new ConfigParseException(yaml + ": 'page." + key + "' can only be set at the "
+                        + "book root — the book is printed on one sheet, and a folder can't resize "
+                        + "it. Move it to the book's own paperband.yaml (or the POM's <pageSize>/"
+                        + "<margins>). Only 'page.orientation' is available per folder.");
+            }
+        }
+        Object node = page.get("orientation");
+        if (node == null) return null;
+        String s = node.toString().trim().toLowerCase();
+        return switch (s) {
+            case "landscape" -> Orientation.LANDSCAPE;
+            case "portrait"  -> Orientation.PORTRAIT;
+            default -> throw new ConfigParseException(
+                    yaml + ": page.orientation expected 'portrait' or 'landscape', got '" + node + "'");
+        };
+    }
+
+    /**
+     * The page-size preset the book's own {@code page:} block layers on, with its margins
      * swapped out when the caller supplied their own.
      */
     private static PageSpec basePageSpec(String size, Margins margins) {
@@ -664,6 +804,14 @@ public final class ConfigLoader {
 
     @SuppressWarnings("unchecked")
     private Map<String, Object> readYaml(Path yaml) {
+        Map<String, Object> cached = yamlCache.get(yaml);
+        if (cached != null) return cached;
+        Map<String, Object> parsed = parseYaml(yaml);
+        yamlCache.put(yaml, parsed);
+        return parsed;
+    }
+
+    private Map<String, Object> parseYaml(Path yaml) {
         try (Reader r = Files.newBufferedReader(yaml)) {
             Object data = new Yaml().load(r);
             if (data == null) return Map.of();

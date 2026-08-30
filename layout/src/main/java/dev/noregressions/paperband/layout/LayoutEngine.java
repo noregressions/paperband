@@ -11,6 +11,7 @@ import io.pebbletemplates.pebble.template.PebbleTemplate;
 import dev.noregressions.paperband.model.Axis;
 import dev.noregressions.paperband.model.AxisValue;
 import dev.noregressions.paperband.model.Block;
+import dev.noregressions.paperband.config.SectionFolderConfig;
 import dev.noregressions.paperband.model.Card;
 import dev.noregressions.paperband.model.NamedTemplates;
 import dev.noregressions.paperband.model.PlacedPage;
@@ -19,7 +20,6 @@ import dev.noregressions.paperband.model.RenderContext;
 import dev.noregressions.paperband.pebble.LenientMap;
 import dev.noregressions.paperband.pebble.LenientMapExtension;
 
-import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -584,7 +584,7 @@ public final class LayoutEngine {
         Path bookRoot = bookCtx.book().bookRoot();
         List<Section> declaredSections = bookCtx.book().sections();
         Map<String, List<Integer>> bySection = new LinkedHashMap<>();
-        Map<String, FolderYamlInfo> sectionFolderYamlCache = new HashMap<>();
+        Map<String, SectionFolderConfig> sectionFolderYamlCache = new HashMap<>();
         for (int i = 0; i < cards.size(); i++) {
             if (hasAnyAxisValue(i, groupings)) continue;
             String secId = sectionIdFor(bookRoot, declaredSections, cards.get(i).source());
@@ -994,7 +994,7 @@ public final class LayoutEngine {
             Path bookRoot,
             List<Section> declaredSections,
             String bookDefaultSectionTemplate,
-            Map<String, FolderYamlInfo> folderYamlCache) {
+            Map<String, SectionFolderConfig> folderYamlCache) {
         List<Map<String, Object>> out = new ArrayList<>(bySection.size());
         for (var e : bySection.entrySet()) {
             String id = e.getKey();
@@ -1003,8 +1003,8 @@ public final class LayoutEngine {
             // and no single one of them could speak for the group. Discovered
             // sections resolve from their folder's yaml exactly as before.
             Section declared = declaredSectionById(declaredSections, id);
-            FolderYamlInfo info = declared != null
-                    ? new FolderYamlInfo(declared.title(), declared.landingTemplate())
+            SectionFolderConfig info = declared != null
+                    ? new SectionFolderConfig(declared.title(), declared.landingTemplate())
                     : lookupSectionFolderYaml(bookRoot, id, folderYamlCache);
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id", id);
@@ -1040,47 +1040,14 @@ public final class LayoutEngine {
      * (section grouping happens once, after every card in the book is
      * already loaded, not while walking one card's parent chain).
      */
-    private record FolderYamlInfo(String title, String landingTemplate) {
-        static final FolderYamlInfo EMPTY = new FolderYamlInfo(null, null);
-    }
-
     /**
-     * Look up {@code sectionId}'s folder yaml. Tries
-     * {@code <bookRoot>/<id>/paperband.yaml} first, then
-     * {@code <bookRoot>/content/<id>/paperband.yaml}. Results are cached
-     * per call to {@link #renderSite}.
+     * Look up {@code sectionId}'s folder yaml, cached per {@link #renderSite}
+     * call. The reading itself is {@link SectionFolderConfig}'s — every
+     * paperband.yaml reader lives in the config module.
      */
-    private static FolderYamlInfo lookupSectionFolderYaml(
-            Path bookRoot, String sectionId, Map<String, FolderYamlInfo> cache) {
-        return cache.computeIfAbsent(sectionId, id -> {
-            if (bookRoot == null) return FolderYamlInfo.EMPTY;
-            FolderYamlInfo info = readFolderYaml(bookRoot, bookRoot.resolve(id).resolve("paperband.yaml"));
-            if (info != null) return info;
-            info = readFolderYaml(bookRoot, bookRoot.resolve("content").resolve(id).resolve("paperband.yaml"));
-            return info != null ? info : FolderYamlInfo.EMPTY;
-        });
-    }
-
-    /** Parse one folder's {@code paperband.yaml} for {@code title} and {@code landing.template}, or null if absent/unreadable. */
-    private static FolderYamlInfo readFolderYaml(Path bookRoot, Path yamlFile) {
-        if (yamlFile == null || !Files.isRegularFile(yamlFile)) return null;
-        try (Reader r = Files.newBufferedReader(yamlFile, StandardCharsets.UTF_8)) {
-            Object data = new Yaml().load(r);
-            if (!(data instanceof Map<?, ?> map)) return null;
-            Object titleNode = map.get("title");
-            String title = titleNode == null ? null : titleNode.toString();
-            String landingTemplate = null;
-            Object landingNode = map.get("landing");
-            if (landingNode instanceof Map<?, ?> lm) {
-                Object t = lm.get("template");
-                if (t != null) landingTemplate = NamedTemplates.resolveSectionTemplate(bookRoot, t.toString());
-            }
-            return (title == null && landingTemplate == null) ? null : new FolderYamlInfo(title, landingTemplate);
-        } catch (IOException | RuntimeException ignored) {
-            // Malformed/unreadable folder yaml shouldn't break the whole site
-            // build — fall back to the auto-formatted label and default template.
-            return null;
-        }
+    private static SectionFolderConfig lookupSectionFolderYaml(
+            Path bookRoot, String sectionId, Map<String, SectionFolderConfig> cache) {
+        return cache.computeIfAbsent(sectionId, id -> SectionFolderConfig.read(bookRoot, id));
     }
 
     /** {@code "delaying-tactics"} → {@code "Delaying Tactics"}; safe fallback. */
@@ -1149,8 +1116,8 @@ public final class LayoutEngine {
         // Front-cover / back-page declarations (see PageMatter). Always maps
         // (never null) so templates can test book.cover.image etc. directly
         // without short-circuit guards.
-        m.put("cover",  pageMatterModel(ctx.book().cover(),  ctx.book().bookRoot()));
-        m.put("back",   pageMatterModel(ctx.book().back(),   ctx.book().bookRoot()));
+        m.put("cover",  siteMatter(ctx.book().cover(),  ctx.book().bookRoot()));
+        m.put("back",   siteMatter(ctx.book().back(),   ctx.book().bookRoot()));
         m.put("footer", pageMatterModel(ctx.book().footer(), ctx.book().bookRoot()));
         m.put("header", pageMatterModel(ctx.book().header(), ctx.book().bookRoot()));
         return m;
@@ -1210,6 +1177,33 @@ public final class LayoutEngine {
      * base URI (which is the build <em>input</em> directory — not necessarily
      * the book root when a subfolder is built).
      */
+    /**
+     * A page matter's site model: {@link #pageMatterModel} plus
+     * {@code siteImage}, an output-relative path for a declared image.
+     *
+     * <p>The PDF resolves a cover image to an absolute {@code file:} URI,
+     * which is right for a document rendered once from the source tree and
+     * wrong for a site that gets served from somewhere else. The site names
+     * the copy the build drops into {@code assets/} instead (see
+     * {@code SiteMojo.copyMatterAssets}); templates prefix it with
+     * {@code urlPrefix} for their depth.
+     *
+     * @param matter   the declared page matter, or null
+     * @param bookRoot the book root images resolve against
+     * @return the model, with {@code siteImage} null when no image is declared
+     */
+    private static Map<String, Object> siteMatter(
+            dev.noregressions.paperband.model.PageMatter matter, Path bookRoot) {
+        Map<String, Object> m = pageMatterModel(matter, bookRoot);
+        m.put("siteImage", matter == null || matter.image() == null
+                ? null
+                : SITE_ASSET_DIR + "/" + Path.of(matter.image()).getFileName());
+        return m;
+    }
+
+    /** Output-relative directory the site build copies book assets into. */
+    public static final String SITE_ASSET_DIR = "assets";
+
     private static Map<String, Object> pageMatterModel(
             dev.noregressions.paperband.model.PageMatter matter, Path bookRoot) {
         Map<String, Object> m = new HashMap<>();
@@ -1779,6 +1773,12 @@ public final class LayoutEngine {
         for (int i = 0; i < cards.size(); i++) {
             Map<String, Object> axesForCard = cardAxesFromGroupings(i, groupings);
             Map<String, Object> cm = cardModel(cards.get(i), axesForCard);
+            // Card-scope page treatment: when this card's resolved orientation
+            // differs from the book's sheet, name the rotation so book.html can
+            // stamp a `page:` property on the article and Chromium gives the
+            // card's whole run of sheets that rotation. Null when it matches —
+            // the overwhelmingly common case, and no CSS is emitted for it.
+            cm.put("sheet", rotationOf(contexts, i, sheetFor(bookCtx)));
             Map<String, Boolean> firstOf = new LinkedHashMap<>();
             for (AxisGrouping g : groupings) {
                 String key = normalizeAxisId(g.perCardValue().get(i));
@@ -1854,9 +1854,21 @@ public final class LayoutEngine {
         model.put("target", bookCtx.target());
         model.put("size", bookCtx.size());
         model.put("fontScale", bookCtx.fontScale());
-        model.put("orientation", bookCtx.pageSpec().orientation().name().toLowerCase());
-        model.put("contentHeightMm", bookCtx.pageSpec().contentHeightMm());
-        model.put("pageMarginsMm", pageMarginsModel(bookCtx.pageSpec()));
+        // Book-level geometry comes from the book's sheet, never from bookCtx
+        // (= the first card walked, which may carry its own rotation).
+        dev.noregressions.paperband.render.PageSpec sheet =
+                bookSheet != null ? bookSheet : bookCtx.pageSpec();
+        model.put("orientation", sheet.orientation().name().toLowerCase());
+        model.put("contentHeightMm", sheet.contentHeightMm());
+        model.put("pageMarginsMm", pageMarginsModel(sheet));
+        // Content height for the rotated sheet, so a card that turns its pages
+        // gets a content box matching the page it will actually print on. Only
+        // emitted when some card rotates; book.html keys its @page rules off it.
+        model.put("rotatedContentHeightMm", new dev.noregressions.paperband.render.PageSpec(
+                sheet.size(), sheet.margins(),
+                sheet.orientation() == dev.noregressions.paperband.render.Orientation.LANDSCAPE
+                        ? dev.noregressions.paperband.render.Orientation.PORTRAIT
+                        : dev.noregressions.paperband.render.Orientation.LANDSCAPE).contentHeightMm());
         model.put("measure", resolveMeasure(bookCtx.vars()));
         String composedBookCss = composeCss(bookCtx.cssChain());
         model.put("cssImports", extractCssImports(composedBookCss));
@@ -2032,6 +2044,12 @@ public final class LayoutEngine {
         // card.axes.tier must return null on absence rather than throwing,
         // same reasoning as frontmatter above.
         m.put("axes", LenientMap.of(axes));
+        // Card-scope page rotation, filled in by buildBookModel where the book's
+        // sheet is known. Defaulted here so every path that renders a card body
+        // has the key: a single-card render has no book sheet to rotate against
+        // (the renderer is handed that card's own geometry directly), and the
+        // site has no sheets at all.
+        m.put("sheet", null);
 
         List<Map<String, Object>> blocks = new ArrayList<>(card.blocks().size());
         for (Block b : card.blocks()) {
@@ -2193,6 +2211,28 @@ public final class LayoutEngine {
      * read them to size insets the page margin isn't already providing — see
      * {@link dev.noregressions.paperband.render.PageSpec#marginsMm()}.
      */
+    /** The book's sheet, falling back to the book context when the build didn't declare one. */
+    private dev.noregressions.paperband.render.PageSpec sheetFor(RenderContext bookCtx) {
+        return bookSheet != null ? bookSheet : bookCtx.pageSpec();
+    }
+
+    /**
+     * The name of card {@code i}'s rotation relative to the book's sheet, or
+     * null when it prints the same way round as the rest of the book.
+     *
+     * @param contexts per-card contexts, positionally aligned with the cards
+     * @param i        card index
+     * @param sheet    the book's sheet
+     * @return {@code "landscape"}, {@code "portrait"}, or null for no rotation
+     */
+    private static String rotationOf(List<RenderContext> contexts,
+                                     int i,
+                                     dev.noregressions.paperband.render.PageSpec sheet) {
+        if (contexts == null || i >= contexts.size() || contexts.get(i) == null) return null;
+        dev.noregressions.paperband.render.Orientation o = contexts.get(i).pageSpec().orientation();
+        return o == sheet.orientation() ? null : o.name().toLowerCase();
+    }
+
     private static Map<String, Object> pageMarginsModel(
             dev.noregressions.paperband.render.PageSpec pageSpec) {
         double[] mm = pageSpec.marginsMm();
@@ -2235,6 +2275,26 @@ public final class LayoutEngine {
      */
     public void setExtraCss(List<Path> stylesheets) {
         this.extraCss = stylesheets == null ? List.of() : List.copyOf(stylesheets);
+    }
+
+    /**
+     * The book's own sheet — the geometry every page is printed on before any
+     * card rotates its own. Null falls back to the book context's spec.
+     *
+     * <p>Set by the build from the config loader's book-scope resolution rather
+     * than taken from {@code bookCtx}, which is only ever "whichever card was
+     * walked first" and may carry that card's {@code page.orientation}.
+     */
+    private dev.noregressions.paperband.render.PageSpec bookSheet;
+
+    /**
+     * Declare the book's sheet, so per-card rotation is expressed relative to
+     * it rather than to the first card's geometry.
+     *
+     * @param sheet the book-scope page geometry; null keeps the bookCtx default
+     */
+    public void setBookSheet(dev.noregressions.paperband.render.PageSpec sheet) {
+        this.bookSheet = sheet;
     }
 
     private String composeCss(List<Path> chain) {

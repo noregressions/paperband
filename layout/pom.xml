@@ -16,6 +16,19 @@
     <url>https://github.com/noregressions/paperband</url>
 
     <dependencies>
+        <!--
+            config supplies the one reader for paperband.yaml. The layout needs
+            it for a section folder's own title/landing override, which is read
+            outside the per-card cascade (section grouping happens after every
+            card is loaded, so no card's parent chain carries it). Depending on
+            config rather than re-parsing here keeps the file format to a single
+            reader. config depends only on core, so this adds no cycle.
+        -->
+        <dependency>
+            <groupId>dev.noregressions.paperband</groupId>
+            <artifactId>config</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>dev.noregressions.paperband</groupId>
             <artifactId>core</artifactId>
@@ -23,14 +36,6 @@
         <dependency>
             <groupId>io.pebbletemplates</groupId>
             <artifactId>pebble</artifactId>
-        </dependency>
-        <dependency>
-            <!-- Used only to read a section folder's own paperband.yaml
-                 (title + landing.template override) when building site
-                 section landing pages; not a dependency on config,
-                 just the same underlying YAML library. -->
-            <groupId>org.yaml</groupId>
-            <artifactId>snakeyaml</artifactId>
         </dependency>
         <dependency>
             <!-- Analyzers only (tokenisation, stopwords, stemming) for the

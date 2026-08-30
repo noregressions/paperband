@@ -18,11 +18,33 @@
 {% endif %}
 <main class="site-main">
 
-<div class="hero">
-  {% if book.series %}<div class="series">{{ book.series }}</div>{% endif %}
-  <h1>{{ book.title | default('paperband book') }}</h1>
-  {% if book.subtitle %}<div class="sub">{{ book.subtitle }}</div>{% endif %}
+{# The book's declared cover, as the index hero — the same `cover:` the PDF
+   renders, so one declaration serves both targets. Three forms, matching
+   _book-cover.html: a custom template, an image (with the text block laid
+   over it when the cover declares any text), or the plain text cover.
+   Cover-level text lines override the book's; null means inherit, so the
+   fallback chain is the same one the printed cover uses. #}
+{% if book.cover.template is not null %}
+<div class="hero hero-cover">{% include book.cover.template with {"book": book} %}</div>
+{% elseif book.cover.siteImage is not null %}
+<div class="hero hero-cover hero-cover-image">
+  <img src="{{ urlPrefix }}{{ book.cover.siteImage }}" alt="{{ book.cover.title | default(book.title) | default('Cover') }}">
+  {% if book.cover.hasText %}
+  <div class="hero-cover-overlay">
+    {% if book.cover.series | default(book.series) %}<div class="series">{{ book.cover.series | default(book.series) }}</div>{% endif %}
+    <h1>{{ book.cover.title | default(book.title) | default('paperband book') }}</h1>
+    {% if book.cover.subtitle | default(book.subtitle) %}<div class="sub">{{ book.cover.subtitle | default(book.subtitle) }}</div>{% endif %}
+    {% if book.cover.author | default(book.author) %}<div class="author">{{ book.cover.author | default(book.author) }}</div>{% endif %}
+  </div>
+  {% endif %}
 </div>
+{% else %}
+<div class="hero">
+  {% if book.cover.series | default(book.series) %}<div class="series">{{ book.cover.series | default(book.series) }}</div>{% endif %}
+  <h1>{{ book.cover.title | default(book.title) | default('paperband book') }}</h1>
+  {% if book.cover.subtitle | default(book.subtitle) %}<div class="sub">{{ book.cover.subtitle | default(book.subtitle) }}</div>{% endif %}
+</div>
+{% endif %}
 
 <div class="home-content">
   {# One stat row per declared axis, independently — each axis gets its own

@@ -1,5 +1,6 @@
 package dev.noregressions.paperband.maven;
 
+import dev.noregressions.paperband.config.BookOverlay;
 import dev.noregressions.paperband.config.BookPlan;
 import dev.noregressions.paperband.model.Axis;
 import dev.noregressions.paperband.model.BookConfig;
@@ -385,35 +386,44 @@ public class BookLayout {
      * @throws IllegalArgumentException if a declared page is empty
      */
     BookConfig mergeInto(BookConfig base, Path bookRoot) {
+        return overlay(bookRoot).applyTo(base);
+    }
+
+    /**
+     * This element's declarations as a {@link BookOverlay} — values only, in
+     * model types, with no opinion about precedence. Which layer wins is
+     * {@code BookOverlay}'s decision, made once for every build tool rather
+     * than restated here.
+     *
+     * <p>The XML parsing stays where it belongs: Maven's configurator still
+     * populates these fields from the POM, and the element classes
+     * ({@link PageMatterConfig}, {@link AxisConfig}, …) still live in this
+     * package. Only the merge left.
+     *
+     * @param bookRoot the root that declared templates and images resolve against
+     * @return the overlay this element declares
+     */
+    BookOverlay overlay(Path bookRoot) {
         validate();
-        Map<String, Object> mergedVars = new LinkedHashMap<>(base.vars());
-        mergedVars.putAll(vars);
+        BookOverlay.Builder b = BookOverlay.builder()
+                .title(title)
+                .axes(axes.isEmpty() ? null : resolvedAxes(bookRoot))
+                .sectionLandingTemplate(sectionLandingTemplate == null
+                        ? null
+                        : NamedTemplates.resolveSectionTemplate(bookRoot, sectionLandingTemplate.trim()))
+                .cover(cover   == null ? null : cover.toPageMatter(bookRoot, "cover"))
+                .back(back     == null ? null : back.toPageMatter(bookRoot, "back"))
+                .footer(footer == null ? null : footer.toPageMatter(bookRoot, "footer"))
+                .header(header == null ? null : header.toPageMatter(bookRoot, "header"))
+                .vars(new LinkedHashMap<String, Object>(vars));   // <vars> is String-valued XML
         // Authorship reaches templates through vars, where covers already look
         // for it: `author` rendered for the templates that know that name, and
         // `authors` as the list for those that want to lay several out.
         List<String> declaredAuthors = resolvedAuthors();
         if (!declaredAuthors.isEmpty()) {
-            mergedVars.put("author", joinAuthors(declaredAuthors));
-            mergedVars.put("authors", declaredAuthors);
+            b.var("author", joinAuthors(declaredAuthors)).var("authors", declaredAuthors);
         }
-        if (index != null) mergedVars.put("index", index);
-        return new BookConfig(
-                base.bookRoot(),
-                title != null ? title : base.title(),
-                axes.isEmpty() ? base.axes() : resolvedAxes(bookRoot),
-                base.globalCss(),
-                mergedVars,
-                base.targets(),
-                base.theme(),
-                sectionLandingTemplate != null
-                        ? NamedTemplates.resolveSectionTemplate(bookRoot, sectionLandingTemplate.trim())
-                        : base.sectionLandingTemplate(),
-                base.cardSchema(),
-                cover != null ? cover.toPageMatter(bookRoot, "cover") : base.cover(),
-                back != null ? back.toPageMatter(bookRoot, "back") : base.back(),
-                footer != null ? footer.toPageMatter(bookRoot, "footer") : base.footer(),
-                header != null ? header.toPageMatter(bookRoot, "header") : base.header(),
-                base.sections());
+        return b.var("index", index).build();
     }
 
     /** The declared axes as model {@link Axis} objects, in declaration order. */

@@ -8,7 +8,32 @@ index: [paperband.yaml, axes, vars]
 
 The `paperband.yaml` at the book root holds global configuration that applies to every
 card: the book `title`, categorical `axes`, the base `css` chain, free-form `vars`, the
-default `theme`, the declared build `targets`, and the book's declared `sections`.
+default `theme`, the declared build `targets`, the book's `page` geometry, and the book's
+declared `sections`.
+
+These are **book scope**: read from this file and no other. A folder's `paperband.yaml`
+that sets one is an error, not a quiet override — see Config Cascade for the full scope
+model and for how the Maven plugin's `<book>` element layers on top.
+
+## `page`
+
+The sheet every page of the book is printed on:
+
+```yaml
+page:
+  size: a5                                       # preset slug, or { width, height, unit }
+  margins: { top: 18, right: 15, bottom: 18, left: 15 }
+  orientation: portrait                          # portrait (default) | landscape
+  measure: 58rem                                 # text line-length; see Targets
+```
+
+`size` and `margins` seed from the plugin's `<pageSize>`/`<margins>`, and this block wins
+over them. Margins declared here are emitted as the book's CSS `@page` rule, so don't also
+write one in your book stylesheet — two rules for one thing, and the CSS one would win on
+cascade order while the content-box height still described this one.
+
+`orientation` is the single key here that a folder *may* also set: it rotates that folder's
+cards without changing the book's paper. See Config Cascade.
 
 ## `axes`
 

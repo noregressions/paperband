@@ -218,3 +218,31 @@ pre.mermaid, .site-content pre.mermaid {
   text-align: center;
 }
 pre.mermaid > svg { max-width: 100%; height: auto; }
+
+/* ---- cover hero (index) ----
+   Structure only, per this file's convention: a declared `cover:` image fills
+   the hero's width and the text block lays over it, exactly as the printed
+   cover overlays its artwork. Colour and type stay the theme's business, and
+   a theme that already styles .hero keeps styling this one — .hero-cover only
+   adds the image scaffold. */
+.hero-cover-image { position: relative; padding: 0; overflow: hidden; }
+.hero-cover-image > img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 60vh;
+  object-fit: cover;
+}
+/* Overlay only when the cover declares text; without it the image stands
+   alone and needs no absolutely-positioned layer at all. */
+.hero-cover-image .hero-cover-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  text-align: center;
+  padding: 1.5rem;
+}

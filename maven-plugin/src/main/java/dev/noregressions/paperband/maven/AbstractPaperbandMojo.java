@@ -67,7 +67,8 @@ public abstract class AbstractPaperbandMojo extends AbstractMojo {
      *
      * <p>Unset, the page size preset's own margins apply (20mm for A4, zero
      * for A5). Like {@link #pageSize}, this seeds the <em>base</em> geometry,
-     * so a {@code vars.page.margins} block in the book's yaml still wins.
+     * so a {@code page.margins} block in the book's own yaml still wins. Both
+     * are book scope — a folder yaml setting either is an error.
      *
      * <p>{@code 0} is what a theme whose ground is the paper needs: Chromium
      * paints nothing into a PDF page margin, so any margin shows as a white

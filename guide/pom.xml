@@ -36,16 +36,14 @@
                 plugin module is ordered before this one (see the -Pguide
                 profile comment in the parent pom), so `mvn install -Pguide`
                 renders with the plugin it just built rather than a released
-                one. Two executions, PDF then static site, from the same book
-                directory.
+                one.
             -->
             <plugin>
                 <groupId>dev.noregressions.paperband</groupId>
                 <artifactId>paperband-maven-plugin</artifactId>
                 <version>${project.version}</version>
                 <executions>
-                    <!-- No <input>: the book sits at src/main/paperband, the
-                         conventional root every goal defaults to. -->
+                    <!-- No <input>: the book sits at src/main/paperband -->
                     <execution>
                         <id>build-guide-pdf</id>
                         <phase>package</phase>
@@ -65,13 +63,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <!--
-                        The guide deliberately includes real project source from
-                        above its book root (pom.xml, include sources) to stay in
-                        sync with the code. This is a trusted first-party build,
-                        so allow-list the repo root explicitly rather than
-                        disabling containment.
-                    -->
+
                     <externalIncludeDirs>
                         <externalIncludeDir>${project.basedir}/..</externalIncludeDir>
                     </externalIncludeDirs>

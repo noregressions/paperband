@@ -14,10 +14,8 @@ availability with `mvn paperband:renderers`. Renderer choice is a build setting 
 ## Why only one
 
 Two earlier renderers, `openhtmltopdf` (pure Java, no external deps) and `weasyprint`
-(shelled out to a Python binary), were removed. Both read page geometry from `@page` CSS
-rules; Playwright instead treats `PageSpec.size`/`PageSpec.margins` as the sole authority
-and ignores a theme's own `@page` rule. Having two disagreeing geometry authorities meant a
-book could look right under one renderer and wrong under another. Standardising on
+(shelled out to a Python binary), were removed. Having two disagreeing geometry authorities
+meant a book could look right under one renderer and wrong under another. Standardising on
 Playwright removed that whole class of bug, at the cost of the ~300 MB first-run Chromium
 download and losing the zero-dependency pure-Java fallback.
 
@@ -28,8 +26,16 @@ download and losing the zero-dependency pure-Java fallback.
 - Named destinations in the output PDF — every anchor paperband plants (cover, back,
   dividers, cards) becomes a real PDF destination, which is what powers page-count
   reporting and enforcement (see Page Enforcement in the Advanced section).
-- `PageSpec.size`/`PageSpec.margins` as the sole geometry authority, so a book's page
-  dimensions and margins never depend on which renderer happened to build it.
+- One geometry authority. The resolved `PageSpec` fixes the sheet: its size is passed to
+  Chromium directly, and its margins are emitted as the book's `@page` rule. Chromium
+  honours a CSS `@page` margin over `Page.pdf()`'s own margin options, so emitting them
+  from the same `PageSpec` the renderer is handed is what keeps the two agreeing — a book
+  stylesheet that declares its own `@page { margin }` would win on cascade order while
+  `--pw-content-height` kept describing the resolved one, and the content box would then
+  describe a page that isn't the one being printed. Set margins in `page:`, not in CSS.
+- Per-card rotation, via a named `@page` rule: a card whose folder declares
+  `page.orientation` gets every sheet it occupies rotated, inside the same single render
+  pass. See Config Cascade.
 - Page JavaScript runs before the snapshot. The renderer waits for network-idle, then
   `document.fonts.ready`, then every promise a page script has pushed into
   `window.paperbandPending` — the settle contract behind ` ```mermaid ` diagrams

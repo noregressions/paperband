@@ -80,9 +80,8 @@ for by zeroing its page margins:
 
 ```yaml
 # book root paperband.yaml
-vars:
-  page:
-    margins: { top: 0, right: 0, bottom: 0, left: 0 }
+page:
+  margins: { top: 0, right: 0, bottom: 0, left: 0 }
 ```
 
 That hands every inset to the theme, and a full-bleed theme needs two things to supply

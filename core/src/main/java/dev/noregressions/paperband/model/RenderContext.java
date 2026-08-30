@@ -17,7 +17,8 @@ import java.util.Map;
  * @param target        current build target, e.g. {@code "pdf-a4"}, {@code "pdf-6x9"}, {@code "web"}
  * @param size          current page size, e.g. {@code "A4"}, {@code "6x9"}
  * @param pageSpec      resolved page geometry: the plugin's {@code <pageSize>} preset, with any
- *                      {@code vars.page} yaml override layered on top (see
+ *                      book's {@code page:} override layered on top, and this card's own
+ *                      {@code page.orientation} if its folder declared one (see
  *                      {@code dev.noregressions.paperband.render.PageConfigResolver}). This is what
  *                      the build should pass to the renderer, in place of switching on {@code size}
  *                      itself, so a {@code page:} override always takes effect.

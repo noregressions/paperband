@@ -161,6 +161,31 @@
     .pw-avoid-split { break-inside: avoid; }
     .pw-page-start  { break-before: page; }
 
+    /* ── Page geometry ──────────────────────────────────────────────────
+       The resolved margins, restated as CSS. Chromium honours a CSS @page
+       margin over Page.pdf()'s own margin options, so this — not the
+       renderer call — is what actually decides the printable box. Emitting
+       it here from the same PageSpec the renderer is handed keeps the two
+       from disagreeing (they used to: any book stylesheet declaring @page
+       silently moved the margins while --pw-content-height kept describing
+       the old ones). Size is deliberately NOT restated: the renderer's
+       explicit width/height stays authoritative for the sheet itself. */
+    @page { margin: {{ pageMarginsMm.top }}mm {{ pageMarginsMm.right }}mm {{ pageMarginsMm.bottom }}mm {{ pageMarginsMm.left }}mm; }
+
+    /* Card-scope rotation (page.orientation in a folder's paperband.yaml, or
+       a card's own frontmatter). A named page carrying a bare `size:
+       landscape` rotates whatever paper is in force without naming it, so
+       the book's sheet stays the renderer's business and this only turns it.
+       Chromium gives every sheet the card occupies the rotation, so a card
+       spilling to three pages gets three rotated pages — the run, not one
+       page, which is the only granularity Paperband ever addresses.
+       --pw-content-height is re-stamped per rotated block, since the
+       printable height is the other dimension there. */
+    @page pb-landscape { size: landscape; margin: {{ pageMarginsMm.top }}mm {{ pageMarginsMm.right }}mm {{ pageMarginsMm.bottom }}mm {{ pageMarginsMm.left }}mm; }
+    @page pb-portrait  { size: portrait;  margin: {{ pageMarginsMm.top }}mm {{ pageMarginsMm.right }}mm {{ pageMarginsMm.bottom }}mm {{ pageMarginsMm.left }}mm; }
+    .pb-sheet-landscape { page: pb-landscape; --pw-content-height: {{ rotatedContentHeightMm }}mm; }
+    .pb-sheet-portrait  { page: pb-portrait;  --pw-content-height: {{ rotatedContentHeightMm }}mm; }
+
     /* Cover / back-page scaffold. A declared cover or back page always gets
        its own sheet; the image fills the content box (the page margins come
        from the build's PageSpec — themes can tighten with @page rules where

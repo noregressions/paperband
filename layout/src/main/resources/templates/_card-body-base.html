@@ -24,7 +24,7 @@
    "_card-body" a theme's own same-named override would resolve {% extends %}
    back to itself and recurse. Keep any future shared base template under a
    distinct "-base" name for the same reason. #}
-<article class="card{% for entry in card.axes %} {{ entry.key }}-{{ entry.value.id }}{% endfor %}" id="card-{{ card.id }}">
+<article class="card{% for entry in card.axes %} {{ entry.key }}-{{ entry.value.id }}{% endfor %}{% if card.sheet %} pb-sheet-{{ card.sheet }}{% endif %}" id="card-{{ card.id }}">
   {% block header %}
   {% if card.title %}<h1 class="card-title">{{ card.title }}</h1>{% endif %}
   {% endblock %}

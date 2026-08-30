@@ -26,15 +26,84 @@ Not every key merges the same way. The per-key rules:
 So "innermost wins" holds for scalars and map entries, but the two list-valued keys differ
 from each other: `css` accumulates outward-in, `targets` replaces wholesale.
 
-## Book-root-only keys
+## Two scopes
 
-Some keys are read only from the root `paperband.yaml` and deliberately do not cascade:
-`title`, `axes`, `theme`, `sections`, `cardSchema`, `cover`, `back`, and the book-wide
-`sections.landing.template` default. They describe the book as a whole, not a subtree.
+Every key has a **scope**, and the scope decides both who may set it and who wins.
 
-Folder-level `order:`, `include:`, `sort:`, and `where:` are also not part of this value
-cascade — they control which cards a folder emits and in what sequence, and each folder
-declares its own independently (see Organising Content).
+**Card scope** is everything above: it cascades, and depth wins. `vars`, `axis`, `css`,
+`layout`, `targets`.
+
+**Book scope** describes the book as one artifact, so it has no depth to cascade through.
+It is read from the book's own `paperband.yaml` and nowhere else: `title`, `axes`,
+`theme`, `sections`, `cardSchema`, `cover`, `back`, `header`, `footer`, `page`, and the
+book-wide `sections.landing.template` default.
+
+A book-scope key set in a folder yaml is an **error**, not a silent win or a silent loss.
+That matters most for `page` — see below.
+
+`css`, `vars` and `targets` sit in both: the book root is where they start, and folders
+extend or override them from there. They're card scope with a book-level entry point, not
+a third kind of thing. Config Reference lists every key with its scope and precedence.
+
+Folder-level `order:`, `include:`, `sort:`, and `where:` are in neither cascade: they
+control which cards a folder emits and in what sequence, and each folder declares its own
+independently (see Organising Content).
+
+## Where the POM fits
+
+A build tool can declare book config too — the Maven plugin's `<book>` element. The rule
+has two halves, because the two scopes want opposite things:
+
+> **The POM outranks the root yaml. Depth outranks the POM.**
+
+For **book scope** the POM simply wins, field by field: a declaration beats a default, and
+the POM is the file you just edited. Fields stay independent — declaring `<title>` doesn't
+clear a yaml-declared `cover`.
+
+For **card scope** the POM's `<book><vars>` enters the cascade *at the book's own level* —
+above the built-ins, below any folder. So a folder yaml still overrides a POM-declared var,
+exactly as it overrides a root-yaml one. A build-declared var has to reach every card, and
+it has to stay overridable per folder; a rule that just said "the POM always wins" would
+break the second half.
+
+Book scope has no depth, so there the two halves coincide and the POM wins outright.
+
+Geography — `<home>`, `<content>`, `<layouts>` — is POM-only in both scopes. `paperband.yaml`
+declares what the book *is*; the POM declares *where* it is.
+
+## Page geometry is book scope
+
+A book is printed on one sheet, so `page:` is read from the book's own yaml only:
+
+```yaml
+# book root paperband.yaml
+page:
+  size: a5
+  margins: { top: 18, right: 15, bottom: 18, left: 15 }
+  orientation: portrait
+```
+
+`size`, `margins` and `fontScale` in a folder yaml raise a build error naming the file.
+They used to half-apply — the card's CSS content box changed while the physical sheet did
+not, so the card was laid out for a page it was never printed on — and the outcome depended
+on which card the build happened to walk first.
+
+`orientation` is the exception, and only because it isn't really one: it describes a
+**block's** sheets rather than the book's, so it cascades like any other card-scope key.
+
+```yaml
+# content/appendices/paperband.yaml — these cards print sideways
+page:
+  orientation: landscape
+```
+
+Every card in that folder gets its whole run of pages rotated — the run, not one page:
+Paperband addresses cards, never pages, and a card is always a whole number of sheets. The
+book's paper stays the same; only its rotation changes.
+
+`page:` was previously spelled `vars.page`, which still works as a deprecated alias.
+Geometry riding inside `vars` is exactly what made it uncheckable — a member of a cascading
+map can't be scoped without special-casing it.
 
 ## A three-level cascade, worked
 

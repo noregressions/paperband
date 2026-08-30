@@ -38,20 +38,21 @@ documentation and a checklist rather than an enforced enum.
 
 ## Page sizes
 
-`<pageSize>` and `vars.page.size` (yaml, case-insensitive) share the same slugs:
+`<pageSize>` and `page.size` (yaml, case-insensitive) share the same slugs:
 
 | Slug | Dimensions | Notes |
 |---|---|---|
 | `a4` | 210×297mm | Default |
 | `a5` | 148×210mm | Zero margins — full-bleed card/booklet themes |
 | `letter` | 8.5×11in | |
-| `legal` | 8.5×14in | `vars.page.size` only — no `<pageSize>` slug yet |
+| `legal` | 8.5×14in | `page.size` only — no `<pageSize>` slug yet |
 | `6x9` | 6×9in | Standard trade-paperback trim |
 | `packt`, `7.5x9.25` | 7.5×9.25in | Compact tech-book trim (Packt Publishing's paperback size) — wide like A4 but noticeably shorter, so code samples get more room per line without the page feeling oversized |
 
-A size outside this list works too, via `vars.page.size: { width, height, unit }` — see
+A size outside this list works too, via `page.size: { width, height, unit }` — see
 Book Configuration / Config Cascade for the full `page:` block (margins, orientation,
-fontScale, measure). Named presets above (except `packt`, a deliberately plain trim with no
+fontScale, measure) and for why `size` and `margins` are **book scope**: they are read from
+the book's own `paperband.yaml` only, and a folder that sets them fails the build. Named presets above (except `packt`, a deliberately plain trim with no
 curated per-theme type scale yet) have hand-tuned `font-size` rules per bundled theme;
 anything else gets an automatic scale derived from page width relative to A4's.
 
@@ -62,9 +63,9 @@ margin. On a full-bleed build that still looks margined, it's usually the last o
 
 | Layer | Set by | Repeats per page? |
 |---|---|---|
-| Page margin | `vars.page.margins`, or the plugin's `<margins>` | Yes — it's the physical printable area |
+| Page margin | `page.margins`, or the plugin's `<margins>` | Yes — it's the physical printable area |
 | Body safety padding | Built in: `max(0mm, 8mm - page margin)`, horizontal only | Yes |
-| Text measure | The theme's `--card-max-width`, retunable per book with `vars.page.measure` | Yes |
+| Text measure | The theme's `--card-max-width`, retunable per book with `page.measure` | Yes |
 | Card padding | The theme, repeated per page via `box-decoration-break: clone` | Yes |
 
 The measure is the one that surprises people, because it reads as a margin but isn't: it's
@@ -73,10 +74,9 @@ a line-length decision. `classical` sets a Tufte-narrow 38rem in print, which on
 remove. Retune it from the book:
 
 ```yaml
-vars:
-  page:
-    margins: { top: 0, right: 0, bottom: 0, left: 0 }
-    measure: 58rem      # or a length in mm, or `none` for the full width
+page:
+  margins: { top: 0, right: 0, bottom: 0, left: 0 }
+  measure: 58rem        # or a length in mm, or `none` for the full width
 ```
 
 `measure` is stamped inline on `<html>` as `--card-max-width`, which is deliberate: theme

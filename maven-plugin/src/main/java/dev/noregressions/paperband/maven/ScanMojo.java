@@ -93,6 +93,19 @@ public class ScanMojo extends AbstractPaperbandMojo {
         getLog().info("target    : " + ctx.target());
         getLog().info("size      : " + ctx.size());
         getLog().info("layout    : " + (ctx.layout() == null ? "<none>" : ctx.layout()));
+        // Resolved sheet, so the one tool that answers "what did the layers
+        // actually produce" answers it for geometry too. This is the card's
+        // effective spec: the book's sheet, plus this card's own rotation if
+        // its folder declared page.orientation.
+        dev.noregressions.paperband.render.PageSpec spec = ctx.pageSpec();
+        double[] mm = spec.marginsMm();
+        getLog().info(String.format(
+                "page      : %s\u00d7%s%s %s, margins %s %s %s %s (mm), content height %smm",
+                trim(spec.size().width()), trim(spec.size().height()),
+                spec.size().unit().name().toLowerCase(),
+                spec.orientation().name().toLowerCase(),
+                trim(mm[0]), trim(mm[1]), trim(mm[2]), trim(mm[3]),
+                trim(spec.contentHeightMm())));
         getLog().info("css chain (" + ctx.cssChain().size() + "):");
         for (Path p : ctx.cssChain()) {
             getLog().info("  - " + p);
@@ -114,5 +127,10 @@ public class ScanMojo extends AbstractPaperbandMojo {
         if (html == null) return "<null>";
         String compact = html.replaceAll("\\s+", " ").trim();
         return compact.length() <= 80 ? compact : compact.substring(0, 77) + "...";
+    }
+
+    /** {@code 20.0} → {@code "20"}, {@code 8.5} → {@code "8.5"} — geometry reads better without trailing zeros. */
+    private static String trim(double v) {
+        return v == Math.rint(v) ? String.valueOf((long) v) : String.valueOf(v);
     }
 }

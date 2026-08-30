@@ -19,6 +19,12 @@ axes:
       - id: advanced
         label: "Advanced"
 
+# The book's sheet. Book scope: one book is printed on one page size, so this
+# is read from THIS file only — a folder yaml may set page.orientation (which
+# rotates that folder's cards) but not size or margins.
+page:
+  margins: { top: 20, right: 18, bottom: 20, left: 18 }
+
 css:
   - styles/guide.css
 
