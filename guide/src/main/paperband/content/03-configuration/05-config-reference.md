@@ -183,3 +183,7 @@ page      : 210×297mm portrait, margins 20 18 20 18 (mm), content height 257mm
 
 The `page` line is the *card's* effective sheet: the book's geometry, plus this card's own
 rotation if its folder declared `page.orientation`.
+
+`scan` resolves the same geography and the same `<book>` overlay a build does, so a book
+whose config lives in the POM reports its real title, cover and vars rather than only what
+the yaml happens to say. Pass `-Dpaperband.input=` the card; the POM supplies the rest.

@@ -146,7 +146,7 @@ expresses that first section — the trace cards' own folders say nothing about 
 
 | Element | Notes |
 |---|---|
-| `root` | Book root. Patterns resolve against it, and its `paperband.yaml` still supplies the title, css, theme, vars, cover and footer. Defaults to the module basedir. |
+| `root` | Book root. Patterns resolve against it. **Defaults to the conventional geography** — the `content/` wrapper if there is one, else `src/main/paperband`, else the module basedir — so a `<book>` that carries only config doesn't move the book. Declare it only for a book that lives somewhere else. |
 | `sections` | Ordered list of `section` elements. |
 | `section/id` | Section id — becomes `<id>.html` on the static site. Defaults to a slug of `title`. |
 | `section/title` | Shown on the divider and landing page. |

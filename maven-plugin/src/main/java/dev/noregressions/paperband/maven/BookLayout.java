@@ -67,8 +67,12 @@ public class BookLayout {
     /**
      * The book root: patterns resolve against it, and its
      * {@code paperband.yaml} supplies everything this element doesn't
-     * describe. Defaults to the module's basedir; relative paths resolve
-     * against it.
+     * describe. Defaults to whatever the conventional geography resolved —
+     * the {@code content/} wrapper, else {@code src/main/paperband}, else the
+     * module basedir — so declaring a config-only {@code <book>} doesn't
+     * re-root a conventionally laid-out project (see
+     * {@code AbstractPaperbandMojo.bookRoot}). Relative paths resolve against
+     * the module basedir.
      */
     private File root;
 
@@ -184,7 +188,7 @@ public class BookLayout {
      */
     private List<AxisConfig> axes = new ArrayList<>();
 
-    /** @return the declared book root, or null for the module basedir */
+    /** @return the declared book root, or null to take the conventional geography */
     public File getRoot() {
         return root;
     }

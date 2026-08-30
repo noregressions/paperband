@@ -40,12 +40,28 @@ public final class FullPageCover {
     public static final String MARKER = "book-cover-fullpage";
 
     /**
+     * The marker as an actual class on an element, rather than anywhere in the
+     * document text. {@code book.html} also emits {@code .book-cover-fullpage}
+     * CSS rules — the {@code @media screen} block styles the class whether or
+     * not this book uses it — so a plain substring test matches every book, and
+     * every book with a running band would pay for a second full render and a
+     * pointless first-page splice.
+     */
+    private static final java.util.regex.Pattern MARKER_CLASS = java.util.regex.Pattern.compile(
+            "class\\s*=\\s*[\"'][^\"']*\\b" + MARKER + "\\b");
+
+    /**
      * Whether {@code target}'s first page needs the bare-render splice: the
      * book declared a full-page cover AND a running band that would print
      * over it.
+     *
+     * @param html       the rendered book HTML
+     * @param footerHtml the running footer, or null
+     * @param headerHtml the running header, or null
+     * @return true when the splice is needed
      */
     public static boolean needsBareFirstPage(String html, String footerHtml, String headerHtml) {
-        return html.contains(MARKER)
+        return MARKER_CLASS.matcher(html).find()
                 && (notBlank(footerHtml) || notBlank(headerHtml));
     }
 

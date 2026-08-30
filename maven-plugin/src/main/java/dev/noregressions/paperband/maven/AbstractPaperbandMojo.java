@@ -252,6 +252,40 @@ public abstract class AbstractPaperbandMojo extends AbstractMojo {
         return project == null ? Path.of("") : project.getBasedir().toPath();
     }
 
+    /**
+     * The root a {@code <book>} element resolves against: its own
+     * {@code <root>} when declared, otherwise whatever the convention already
+     * resolved — the content root, then the book home, then the module basedir.
+     *
+     * <p>The middle steps are the point. Every other way of naming a book —
+     * {@code <input>}, {@code <content>}, bare convention — goes through
+     * {@link Geography} and lands on {@code src/main/paperband} (or its
+     * {@code content/} wrapper). {@code <book>} used to skip that and drop
+     * straight to the basedir, so adding a POM {@code <book>} to a
+     * conventionally laid-out project silently re-rooted it at the module
+     * directory and the walk swept up {@code src/}, {@code target/} and
+     * everything else. A book element that declares only config should not
+     * move the book.
+     *
+     * <p>Content before home, matching the order the no-{@code <book>} path
+     * uses: under a split geography the content root is the cascade boundary
+     * and the root the model reports, while the home is passed separately as
+     * where the book's own yaml and assets live. Preferring home here would
+     * make the same project root differently depending only on whether its POM
+     * happens to carry a {@code <book>} config block, and a {@code content/}
+     * wrapper would collapse into a single section.
+     *
+     * @param book the declared book element, or null
+     * @param geo  the resolved geography
+     * @return the book root
+     */
+    protected Path bookRoot(BookLayout book, Geography geo) {
+        if (book != null && book.getRoot() != null) return resolve(book.getRoot());
+        if (geo != null && geo.content() != null) return geo.content();
+        if (geo != null && geo.home() != null) return geo.home();
+        return basedir();
+    }
+
     /** Resolve a configured file against the module basedir when it's relative. */
     protected Path resolve(File f) {
         Path p = f.toPath();

@@ -135,7 +135,7 @@ public class SiteMojo extends AbstractPaperbandMojo {
         }
         if (contentMode) declaredRoot = walkFrom;
         if (book != null) {
-            declaredRoot = book.getRoot() != null ? resolve(book.getRoot()) : basedir();
+            declaredRoot = bookRoot(book, geo);
             if (book.declaresCardSelection()) {
                 try {
                     plan = new BookBuild.PlannedBook(declaredRoot, book.toSpecs(), book.tocAfterSpec(),

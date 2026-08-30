@@ -36,6 +36,19 @@ public class ScanMojo extends AbstractPaperbandMojo {
     @Parameter(property = "paperband.input", required = true)
     private java.io.File input;
 
+    /**
+     * The POM's book declaration, so the scan reports the config a build would
+     * actually use.
+     *
+     * <p>Without this the scan reads the book's {@code paperband.yaml} alone,
+     * which under-reports for exactly the books that need it most: one whose
+     * config lives in the POM sees {@code title : <none>} and no cover, because
+     * the layer that declares them was never applied. The diagnostic has to
+     * resolve config the same way the build does or it isn't a diagnostic.
+     */
+    @Parameter
+    private BookLayout book;
+
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         if (skipped("scan")) return;
@@ -45,7 +58,29 @@ public class ScanMojo extends AbstractPaperbandMojo {
             throw new MojoExecutionException("<input> card file not found: " + cardFile);
         }
 
-        RenderContext ctx = new ConfigLoader().load(cardFile, target, pageSize, resolveMargins());
+        // Same geography and same book overlay a build resolves, so the scan
+        // can't disagree with the thing it is meant to explain.
+        checkBookDeclaration(book);
+        Geography geo = geography();
+        getLog().info(geo.describe());
+        Path declaredRoot = null;
+        if (book != null) {
+            declaredRoot = bookRoot(book, geo);
+        } else if (geo.content() != null) {
+            declaredRoot = geo.content();
+        }
+
+        RenderContext ctx = new ConfigLoader().load(
+                cardFile, target, pageSize, resolveMargins(), declaredRoot, geo.home(),
+                book == null ? java.util.Map.of() : book.declaredVars());
+        if (book != null && book.declaresBookConfig()) {
+            try {
+                ctx = ctx.withBook(book.mergeInto(
+                        ctx.book(), geo.home() != null ? geo.home() : ctx.book().bookRoot()));
+            } catch (IllegalArgumentException e) {
+                throw new MojoExecutionException(e.getMessage(), e);
+            }
+        }
         Card card = new CardLoader().load(cardFile);
 
         printCard(card);

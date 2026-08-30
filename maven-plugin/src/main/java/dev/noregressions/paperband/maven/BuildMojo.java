@@ -205,7 +205,7 @@ public class BuildMojo extends AbstractPaperbandMojo {
         build.stylesheets = stylesheetPaths();
 
         if (hasBook) {
-            Path root = book.getRoot() != null ? resolve(book.getRoot()) : basedir();
+            Path root = bookRoot(book, geo);
             // Pinning the root is what lets a book have no paperband.yaml: the
             // loader stops inferring one from the first card's parent directory.
             build.declaredRoot = root;

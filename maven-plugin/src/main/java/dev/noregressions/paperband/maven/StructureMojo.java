@@ -109,7 +109,7 @@ public class StructureMojo extends AbstractPaperbandMojo {
         }
         String text = geo.describe() + "\n";
         if (book != null) {
-            Path root = book.getRoot() != null ? resolve(book.getRoot()) : basedir();
+            Path root = bookRoot(book, geo);
             text += describeBook(book.declaresCardSelection()
                     ? plannedBook()
                     : BookSource.walk(root, target, getLog()), root);
@@ -156,7 +156,7 @@ public class StructureMojo extends AbstractPaperbandMojo {
         } catch (IllegalArgumentException e) {
             throw new MojoExecutionException(e.getMessage(), e);
         }
-        Path root = book.getRoot() != null ? resolve(book.getRoot()) : basedir();
+        Path root = bookRoot(book, geography());
         return BookSource.plan(root, specs, book.tocAfterSpec(), book.pageMarkers(), target, getLog());
     }
 
