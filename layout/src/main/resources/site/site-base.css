@@ -329,8 +329,10 @@ pre.mermaid > svg { max-width: 100%; height: auto; }
    `.pw-breakout` stays as an explicit, rare opt-in: one hero diagram or one
    very wide matrix per page, chosen by the author, not applied to a whole
    element type. */
-.paperband-site article.card .block > pre { overflow-x: auto; }
-.paperband-site article.card .block > table { display: block; overflow-x: auto; }
+.paperband-site article.card .block > pre,
+.paperband-site .section-body .block > pre { overflow-x: auto; }
+.paperband-site article.card .block > table,
+.paperband-site .section-body .block > table { display: block; overflow-x: auto; }
 
 .paperband-site article.card .block > .pw-breakout {
   width: min(var(--pb-breakout-max, 78rem), 100cqw - 3rem);
@@ -349,7 +351,12 @@ pre.mermaid > svg { max-width: 100%; height: auto; }
   max-width: var(--card-max-width, 48rem);
   padding: 1.25rem 2rem 0.25rem;
 }
+/* The body's blocks carry the same `section.block` wrappers a card's do — that
+   is what lets a theme style a section body and a chapter with one set of
+   rules — so the "no space above the first thing on the page" reset has to
+   reach through the wrapper as well as sit on it. */
 .paperband-site .section-body > :first-child { margin-top: 0; }
+.paperband-site .section-body > .block:first-child > :first-child { margin-top: 0; }
 
 /* The book's own body, from the content root's _section.md. Same treatment as
    a section's — it is the same file at the outermost level. */

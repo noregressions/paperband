@@ -166,17 +166,48 @@ final class SectionBodies {
         return out;
     }
 
-    /** Flatten a card's block tree back to HTML, in document order. */
+    /**
+     * Flatten a card's block tree back to HTML, in document order, keeping the
+     * {@code <section class="block ...">} wrappers a card page gets from
+     * {@code _block-section.html}.
+     *
+     * <p>The wrappers are not decoration. Every theme states its prose through
+     * them — {@code section.block > h2}'s marker and spacing,
+     * {@code section.block p}'s measure, the {@code .watch-out} / {@code .check}
+     * callout boxes — because a card's body is the only place they used to
+     * appear. A body flattened to bare {@code <h2>} and {@code <p>} therefore
+     * came out in the browser's defaults while the chapter beside it came out
+     * in the theme's, which is the one thing a section body must not do: it is
+     * the same writing, on the same page, as the cards it introduces.
+     */
     private static void appendBlocks(StringBuilder sb, List<Block> blocks) {
         for (Block b : blocks) {
+            String classes = String.join(" ", b.classes());
+            sb.append("<section class=\"block");
+            if (!classes.isEmpty()) sb.append(' ').append(classes);
+            sb.append("\">\n");
             if (b.heading() != null) {
+                // h1 is the section's own title -- the site hero and the PDF
+                // divider each print it -- so a body's headings start at h2
+                // however the markdown numbered them.
                 int level = Math.max(2, b.level());
-                sb.append("<h").append(level).append('>').append(b.heading())
+                sb.append("<h").append(level).append('>').append(escape(b.heading()))
                         .append("</h").append(level).append(">\n");
             }
             if (b.html() != null) sb.append(b.html()).append('\n');
             appendBlocks(sb, b.children());
+            sb.append("</section>\n");
         }
+    }
+
+    /**
+     * Heading text is plain text (jsoup's {@code Element.text()}, entities
+     * already resolved), so it is escaped on the way back into markup —
+     * the same thing Pebble does for {@code _block-section.html}'s
+     * {@code {{ block.heading }}}.
+     */
+    private static String escape(String s) {
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
 
     /** Yaml truthiness, matching the rest of the pipeline: true/yes/1, or a real boolean. */

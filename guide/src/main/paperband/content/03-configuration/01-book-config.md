@@ -332,8 +332,14 @@ Only folder-backed sections can have one. An axis value is a label spanning the 
 with no directory of its own, so there's nowhere to put the file. Declared sections that
 span several folders don't pick one up either — bodies are keyed by folder name.
 
-The wrapper is `.section-body`. The hero above it is page chrome, not content; override the
-`hero` block to drop it. The PDF divider is unaffected — this is a site feature.
+The wrapper is `.section-body`, and inside it the body's headings carry the same
+`<section class="block …">` wrappers a card's do — so a theme styles a section body and a
+chapter with one set of rules, and the two read as the same book. The hero above it is page
+chrome, not content; override the `hero` block to drop it.
+
+The PDF divider renders the same body. A divider that has one is set as a page of prose
+rather than a title centred on a sheet: it carries `.section-divider.has-body`, drops the
+centring, takes the card measure, and runs onto as many sheets as the writing needs.
 
 ## Writing a custom section template
 

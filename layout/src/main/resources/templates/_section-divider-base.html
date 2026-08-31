@@ -13,6 +13,11 @@
    Expects: section {id, label, count, minimal, body, bodyCards,
                      cards: [{id, title, oneliner, effort}]}.
 
+   A divider whose section wrote a body also carries `has-body`: an empty
+   divider is a title centred on a sheet, but a body is prose, and prose set
+   centred at a title's measure is unreadable — see book.html, which turns the
+   centring off for that case and hands the body the card measure instead.
+
    Anchor id is "section-divider-{sectionId}" — deliberately a different
    prefix from "axis-divider-{axisName}-{valueId}" so PagesReport can tell
    the two apart generically, without needing to know which axis names or
@@ -22,7 +27,7 @@
    <section> tag opens while inheriting everything else unchanged — see
    _card-body-base.html for why this lives under a "-base" name rather than
    "_section-divider". #}
-{% block sectionOpen %}<section class="section-divider" id="section-divider-{{ section.id }}">{% endblock %}
+{% block sectionOpen %}<section class="section-divider{% if section.body %} has-body{% endif %}" id="section-divider-{{ section.id }}">{% endblock %}
   <div class="tier-divider-inner">
     <h1>{{ section.label }}</h1>
     {% block sectionBody %}

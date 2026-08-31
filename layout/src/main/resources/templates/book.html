@@ -346,6 +346,27 @@
        the table of contents, which reads badly centred. */
     .section-divider .tier-divider-inner { width: 100%; max-width: 34rem; }
     .section-divider h1 { margin: 0 0 0.5rem; }
+
+    /* A divider whose section wrote a body (_section.md) is a different page:
+       not a title floating mid-sheet but an opener followed by prose, and
+       often several sheets of it. So the centring comes off — a paragraph set
+       centred, ragged both sides, at a title's 34rem measure is the one thing
+       that reads as "not the rest of the book" — and the block runs at the
+       same measure the cards use. min-height stays: the sheet is still at
+       least a page, it just grows past one when the writing does. */
+    .section-divider.has-body {
+      display: block;
+      text-align: left;
+    }
+    .section-divider.has-body .tier-divider-inner {
+      max-width: var(--card-max-width, 42rem);
+      margin: 0 auto;
+    }
+    /* The body is a card's body in every respect but where it lives, so it
+       gets the card's own padding rather than sitting flush against the
+       heading above it. */
+    .section-divider.has-body .section-body { padding-top: 1rem; }
+    .section-divider.has-body .section-body > .block:first-child > :first-child { margin-top: 0; }
     /* Colours inherit rather than hardcode: a divider covers a whole sheet in
        whatever ground the theme paints, so a fixed grey and the UA's link
        blue turn invisible the moment that ground is dark (they did). Themes
