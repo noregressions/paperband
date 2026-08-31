@@ -202,7 +202,8 @@ public class SiteMojo extends AbstractPaperbandMojo {
                 ? new LayoutEngine(bookCtx.book().bookRoot(), geo.layouts(), theme)
                 : new LayoutEngine(bookCtx.book().bookRoot(), theme);
         layout.setExtraCss(stylesheetPaths());
-        layout.setSectionBodys(sectionBodies(bookCtx, geo, providerConfig));
+        layout.setSectionBodies(SectionBodies.render(
+                bookCtx, geo.layouts(), providerConfig, cards, "site", siteTarget));
         Map<String, String> pages;
         try {
             pages = layout.renderSite(cards, contexts, bookCtx);
@@ -249,101 +250,6 @@ public class SiteMojo extends AbstractPaperbandMojo {
 
         getLog().info("Built site " + bookDir + " -> " + output
                 + " (" + written + " pages, " + cards.size() + " cards)");
-    }
-
-    /** The filenames a section folder may use for its own content, in precedence order. */
-    private static final List<String> INTRO_FILENAMES = List.of("_section.md", "README.md");
-
-    /**
-     * Render each section folder's own landing-page markdown, keyed by section id.
-     *
-     * <p>A landing template is layout; what a section says for itself is prose, and
-     * making an author write prose as an HTML template is the wrong tool. The
-     * markdown goes through exactly the pipeline a card does — the same
-     * preprocessor, so {@code {{ vars.x }}}, {@code {% if %}},
-     * {@code {% include %}} and {@code {% fragment %}} all work — and the same
-     * loader, so the content policy and block templates apply too.
-     *
-     * <p>{@code README.md} works because card discovery deliberately skips it
-     * (see {@code CardFiles.isCard}): a readme is documentation about the
-     * directory, which is exactly what a section intro is. {@code _section.md}
-     * is the explicit spelling for a book that wants its readme to stay a
-     * readme, and wins when both are present.
-     *
-     * <p>Declaring one replaces the landing page's default card grid; see
-     * {@link SectionBody}. Only folder-backed sections can have one — an axis
-     * value is a label spanning the whole book with no directory of its own.
-     *
-     * @param bookCtx        the resolved book context, for the cascade's vars
-     * @param geo            the book's geography
-     * @param providerConfig include-provider configuration
-     * @return rendered bodies by section id; empty when the book declares none
-     */
-    private Map<String, SectionBody> sectionBodies(
-            RenderContext bookCtx, Geography geo,
-            Map<String, Map<String, Object>> providerConfig) {
-
-        Path root = bookCtx.book().bookRoot();
-        if (root == null || !Files.isDirectory(root)) return Map.of();
-
-        Map<String, SectionBody> out = new java.util.LinkedHashMap<>();
-        try (var dirs = Files.list(root)) {
-            for (Path dir : dirs.filter(Files::isDirectory).sorted().toList()) {
-                Path file = introFile(dir);
-                if (file == null) continue;
-                try {
-                    MarkdownPreprocessor pre = Includes.defaultPreprocessor(
-                            root, geo.layouts(), providerConfig, bookCtx.vars());
-                    Card card = new CardLoader(pre, root).load(file);
-                    StringBuilder html = new StringBuilder();
-                    appendBlocks(html, card.blocks());
-                    // `cards: true` asks for the default grid back, after the
-                    // prose. Absent, the body replaces it.
-                    boolean withCards = truthy(card.frontmatter().values().get("cards"));
-                    out.put(dir.getFileName().toString(),
-                            new SectionBody(html.toString(), card.title(), withCards));
-                } catch (RuntimeException e) {
-                    // The body is prose, not structure: a broken one should say
-                    // so and stop, the same as a broken card would.
-                    throw new IllegalStateException(
-                            "Section body " + file + " failed to render: " + e.getMessage(), e);
-                }
-            }
-        } catch (IOException e) {
-            getLog().warn("Could not scan for section bodies under " + root + ": " + e.getMessage());
-            return Map.of();
-        }
-        return out;
-    }
-
-    /** Yaml truthiness, matching the rest of the pipeline: true/yes/1, or a real boolean. */
-    private static boolean truthy(Object v) {
-        if (v == null) return false;
-        if (v instanceof Boolean b) return b;
-        String s = v.toString().trim().toLowerCase(java.util.Locale.ROOT);
-        return s.equals("true") || s.equals("yes") || s.equals("1");
-    }
-
-    /** The section-body file in {@code dir}, or null — {@code _section.md} beats {@code README.md}. */
-    private static Path introFile(Path dir) {
-        for (String name : INTRO_FILENAMES) {
-            Path candidate = dir.resolve(name);
-            if (Files.isRegularFile(candidate)) return candidate;
-        }
-        return null;
-    }
-
-    /** Flatten a card's block tree back to HTML, in document order. */
-    private static void appendBlocks(StringBuilder sb, List<Block> blocks) {
-        for (Block b : blocks) {
-            if (b.heading() != null) {
-                sb.append("<h").append(Math.max(2, b.level())).append('>')
-                        .append(b.heading())
-                        .append("</h").append(Math.max(2, b.level())).append(">\n");
-            }
-            if (b.html() != null) sb.append(b.html()).append('\n');
-            appendBlocks(sb, b.children());
-        }
     }
 
     /**

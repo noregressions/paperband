@@ -350,3 +350,7 @@ pre.mermaid > svg { max-width: 100%; height: auto; }
   padding: 1.25rem 2rem 0.25rem;
 }
 .paperband-site .section-body > :first-child { margin-top: 0; }
+
+/* The book's own body, from the content root's _section.md. Same treatment as
+   a section's — it is the same file at the outermost level. */
+.paperband-site .book-body { max-width: var(--card-max-width, 48rem); padding: 1.25rem 2rem 0.25rem; }

@@ -10,7 +10,8 @@
    sections.landing.template default) a card count and table of contents,
    matching whatever the section's site landing page shows.
 
-   Expects: section {id, label, count, minimal, cards: [{id, title, oneliner, effort}]}.
+   Expects: section {id, label, count, minimal, body, bodyCards,
+                     cards: [{id, title, oneliner, effort}]}.
 
    Anchor id is "section-divider-{sectionId}" — deliberately a different
    prefix from "axis-divider-{axisName}-{valueId}" so PagesReport can tell
@@ -24,7 +25,16 @@
 {% block sectionOpen %}<section class="section-divider" id="section-divider-{{ section.id }}">{% endblock %}
   <div class="tier-divider-inner">
     <h1>{{ section.label }}</h1>
-    {% if not section.minimal %}
+    {% block sectionBody %}
+    {% if section.body %}
+    {# The section's own _section.md — the same file the site's landing page
+       renders, so one piece of writing serves both. It replaces the count and
+       contents below, exactly as it replaces the card grid on the site;
+       `cards: true` in its frontmatter asks for them back. #}
+    <div class="section-body">{{ section.body | raw }}</div>
+    {% endif %}
+    {% endblock %}
+    {% if not section.minimal and (section.body is null or section.bodyCards) %}
     <div class="tier-count">{{ section.count }} card{% if section.count != 1 %}s{% endif %}</div>
 
     {% if section.cards is not empty %}

@@ -1,6 +1,18 @@
-{# Book front-matter hook — deliberately empty. book.html includes this
-   between the cover and the first card; themes override it (ship their own
+{# Book front-matter hook, rendered between the cover and the first card.
+
+   Its one built-in job is the book's own _section.md: the content root is the
+   outermost section, so a book introduces itself with the same file and the
+   same rules a section does — and the markdown branches on `output` where the
+   printed foreword and the site's index want different words.
+
+   Otherwise deliberately empty. Themes override it (ship their own
    templates/_book-front.html) to generate front sections from the render
-   context: `cards` (full card models, walk order), `axisGroupings`
-   (per-axis value counts), and `book` are all in scope. See the hook
-   comment in book.html. #}
+   context: `cards` (full card models, walk order), `axisGroupings` (per-axis
+   value counts), and `book` are all in scope. See the hook comment in
+   book.html. A theme override that wants the book body too should include
+   this partial or repeat the block below. #}
+{% if bookBody %}
+<section class="book-front book-body" id="book-front">
+  {{ bookBody | raw }}
+</section>
+{% endif %}

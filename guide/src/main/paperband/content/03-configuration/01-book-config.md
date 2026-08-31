@@ -232,6 +232,38 @@ the content policy.
 
 Neither is loaded as a card, so the section's card count and card list are unaffected.
 
+### The book has one too
+
+The content root is the outermost section, so `content/_section.md` is the **book's** own —
+no second filename and no second rule. It renders as the site index's body, and in the PDF
+as front matter between the cover and the first card. It replaces the index's stat rows and
+section grid; `sections: true` in its frontmatter asks for them back.
+
+### Both targets, one file
+
+A section body renders on the site's landing page **and** on the PDF's section divider —
+the same writing, not two copies. Where the two want different words, branch on `output`:
+
+```markdown
+# The Tools
+
+Ten JDK tools that answer *what will break* before you change a line of code.
+
+{% if output == 'print' %}
+The chapters that follow cover each in turn.
+{% else %}
+Browse them below — start with `jdeps`.
+{% endif %}
+```
+
+| In scope | Value |
+|---|---|
+| `output` | `print` or `site` — what to branch on |
+| `target` | the raw build target (`pdf-a4`, `web`), which a book may rename |
+
+On the divider a body replaces the card count and printed contents, exactly as it replaces
+the card grid on the site.
+
 ### It replaces, it doesn't decorate
 
 The card list is the **default** content — what a section shows when it has nothing of its
@@ -250,6 +282,45 @@ Prose, and then the usual card list beneath it.
 That holds even for a book with a custom landing template: the rule is about the section,
 not about who draws the list, so the test wraps the `cards` block's *invocation* rather
 than its contents.
+
+### Laying the cards out yourself
+
+The section's own cards are in scope as `section`, so the markdown can list them however it
+likes instead of choosing between the default grid and nothing:
+
+```markdown
+## All {{ section.count }} chapters
+
+{% for c in section.cards %}1. [{{ c.title }}]({{ c.url }})
+
+{% endfor %}
+```
+
+| In scope | What |
+|---|---|
+| `section.id` | the folder name |
+| `section.count` | how many cards it holds |
+| `section.cards` | each `{id, title, url, anchor, oneliner, frontmatter}`, in book order |
+| `vars` | the config cascade, as in any card |
+
+`url` is relative to the landing page and `anchor` is the in-PDF `#card-…` target, so a
+body that serves both targets links with whichever suits: `[{{ c.title }}]({{ c.url }})` on
+the site, `{{ c.anchor }}` in print. `frontmatter` gives you everything else the card declared — filter or group on
+it with ordinary Pebble.
+
+**One gotcha, and it will bite you:** Pebble eats the newline immediately after a
+`{% %}` tag. A markdown line that *ends* with a tag loses its line break, and the next line
+runs on — a ten-item list collapses into one. Put something after the tag, or leave a blank
+line before the closing one:
+
+```markdown
+{% for c in section.cards %}1. [{{ c.title }}]({{ c.url }}){% if c.oneliner %} — {{ c.oneliner }}{% endif %}
+{% endfor %}          ← broken: the line ends with {% endif %}
+
+{% for c in section.cards %}1. [{{ c.title }}]({{ c.url }})
+
+{% endfor %}          ← fine: a blank line survives
+```
 
 ### Other details
 

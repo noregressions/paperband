@@ -326,6 +326,11 @@ final class BookBuild {
         // The sheet must reach the layout too: per-card rotation is expressed
         // relative to it, and the CSS @page rules restate its margins.
         layout.setBookSheet(configLoader.bookPageSpec());
+        // A section's own _section.md is its content on the divider, just as it
+        // is on the site's landing page — same file, same mechanism, and the
+        // markdown branches on `output` where the two want different words.
+        layout.setSectionBodies(SectionBodies.render(
+                bookCtx, layoutsDir, includeProviderConfig, cards, "print", target));
         String html = layoutOverride != null
                 ? layout.renderBook(cards, contexts, bookCtx, layoutOverride)
                 : layout.renderBook(cards, contexts, bookCtx);

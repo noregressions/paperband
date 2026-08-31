@@ -94,6 +94,19 @@ public final class PebbleIncludePreprocessor implements MarkdownPreprocessor {
     private final Map<String, Object> vars;
 
     /**
+     * Extra top-level template entries, beyond {@code vars}.
+     *
+     * <p>Card markdown only ever needs {@code vars}. A section's own
+     * {@code _section.md} needs more — the cards in that section, so it can lay
+     * them out itself instead of taking the default list or nothing. They go in
+     * at the top level rather than under {@code vars} because {@code vars} is
+     * the author's namespace: a folder binding an axis called {@code section}
+     * already puts {@code vars.section} to work, and a built-in has no business
+     * colliding with it.
+     */
+    private Map<String, Object> extraModel = Map.of();
+
+    /**
      * Explicit layouts directory for {@code {% include %}}/{@code {% import %}}
      * — the POM-decided geography. Null derives it from the book root
      * ({@code <bookRoot>/layouts}), the self-contained shape. Mutable via
@@ -106,6 +119,16 @@ public final class PebbleIncludePreprocessor implements MarkdownPreprocessor {
      * Point snippet resolution at an explicit layouts directory.
      * @param layoutsDir the layouts dir, or null to derive from the book root
      */
+
+    /**
+     * Add top-level entries to the template model for the next render.
+     *
+     * @param model extra entries, e.g. {@code section}; null clears
+     */
+    public void setExtraModel(Map<String, Object> model) {
+        this.extraModel = model == null ? Map.of() : Map.copyOf(model);
+    }
+
     public void setLayoutsDir(Path layoutsDir) {
         this.layoutsDirOverride = layoutsDir == null ? null : layoutsDir.toAbsolutePath().normalize();
     }
@@ -165,7 +188,9 @@ public final class PebbleIncludePreprocessor implements MarkdownPreprocessor {
         try {
             PebbleTemplate tmpl = engine.getLiteralTemplate(masked.text());
             StringWriter out = new StringWriter();
-            tmpl.evaluate(out, Map.of("vars", LenientMap.of(vars)));
+            Map<String, Object> model = new java.util.HashMap<>(extraModel);
+            model.put("vars", LenientMap.of(vars));
+            tmpl.evaluate(out, model);
             rendered = out.toString();
         } catch (IncludeException e) {
             throw e; // already carries sourceFile + a clear message

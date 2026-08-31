@@ -674,6 +674,8 @@ public final class LayoutEngine {
         indexModel.put("css", css);
         indexModel.put("cssImports", cssImports);
         indexModel.put("htmlClass", htmlClass);
+        indexModel.put("bookBody", bookBodyHtml());
+        indexModel.put("bookBodyKeepsDefault", bookBodyKeepsDefault());
         indexModel.put("measure", measure);
         indexModel.put("urlPrefix", "");
         indexModel.put("page", Map.of("kind", "index"));
@@ -1205,6 +1207,25 @@ public final class LayoutEngine {
         sb.append(" (A bare name like 'minimal' or 'default' is a built-in preset; "
                 + "anything else is a path under layouts/, without the extension.)");
         return sb.toString();
+    }
+
+    /**
+     * The book's own body — the content root's {@code _section.md}, rendered.
+     *
+     * <p>The root is the outermost section, so it needs no separate filename:
+     * {@link SectionBodies#BOOK} is simply the empty section id.
+     *
+     * @return the rendered body, or null when the book wrote none
+     */
+    private String bookBodyHtml() {
+        SectionBody b = sectionBodies.get("");
+        return b == null ? null : b.html();
+    }
+
+    /** True when the book's own body asked for the default content to follow it. */
+    private boolean bookBodyKeepsDefault() {
+        SectionBody b = sectionBodies.get("");
+        return b != null && b.withCards();
     }
 
     private static Map<String, Object> bookSiteModel(RenderContext ctx) {
@@ -1973,6 +1994,8 @@ public final class LayoutEngine {
                         ? dev.noregressions.paperband.render.Orientation.PORTRAIT
                         : dev.noregressions.paperband.render.Orientation.LANDSCAPE).contentHeightMm());
         model.put("measure", resolveMeasure(bookCtx.vars()));
+        model.put("bookBody", bookBodyHtml());
+        model.put("bookBodyKeepsDefault", bookBodyKeepsDefault());
         String composedBookCss = composeCss(bookCtx.cssChain());
         model.put("cssImports", extractCssImports(composedBookCss));
         model.put("css", stripCssImports(composedBookCss));
@@ -2460,10 +2483,10 @@ public final class LayoutEngine {
      * needs the card loader and the include preprocessor, which live in the
      * build. The layout's job is to put the result on the page.
      *
-     * @param intros rendered intros by section id; null clears
+     * @param bodies rendered bodies by section id; null clears
      */
-    public void setSectionBodys(java.util.Map<String, SectionBody> intros) {
-        this.sectionBodies = intros == null ? java.util.Map.of() : java.util.Map.copyOf(intros);
+    public void setSectionBodies(java.util.Map<String, SectionBody> bodies) {
+        this.sectionBodies = bodies == null ? java.util.Map.of() : java.util.Map.copyOf(bodies);
     }
 
     /**

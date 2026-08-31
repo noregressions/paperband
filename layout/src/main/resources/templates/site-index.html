@@ -34,6 +34,17 @@
 
 {% endblock %}
 
+{% block body %}
+{% if bookBody %}
+{# The book's own content root _section.md — the same file the PDF renders as
+   front matter. It replaces the stats and section grid below, exactly as a
+   section's body replaces its card list; `sections: true` in its frontmatter
+   asks for them back. #}
+<div class="section-body book-body">{{ bookBody | raw }}</div>
+{% endif %}
+{% endblock %}
+
+{% if bookBody is null or bookBodyKeepsDefault %}
 <div class="home-content">
   {# One stat row per declared axis, independently — each axis gets its own
      row of value/count boxes. A book with no axes (or axes with no
@@ -88,5 +99,6 @@
   </div>
   {% endblock %}
 </div>
+{% endif %}
 
 {% endblock %}
