@@ -408,7 +408,8 @@ public final class LayoutEngine {
             bySection.computeIfAbsent(secId, k -> new ArrayList<>()).add(i);
         }
         List<Map<String, Object>> sectionMetas = buildSectionMetas(
-                bySection, bookRoot, declaredSections, book.sectionLandingTemplate(), new HashMap<>());
+                bySection, bookRoot, declaredSections, book.sectionLandingTemplate(), new HashMap<>(),
+                Map.of());   // the structure outline lists shape, not prose
 
         // The same index-term resolution the PDF's index page uses, so this
         // outline is the cheap way to review what `index: auto` picked —
@@ -571,9 +572,23 @@ public final class LayoutEngine {
         // built-in scaffold stylesheet first (weakest), then the user chain, then
         // the theme (strongest) — themes restyle colours without re-implementing
         // the sidebar/column layout.
-        String composedSiteCss = siteBaseCss() + composeCss(bookCtx.cssChain());
+        String composedSiteCss = siteBaseCss() + composeCss(bookCtx.cssChain(), Target.SITE);
         String cssImports = extractCssImports(composedSiteCss);
         String css = stripCssImports(composedSiteCss);
+
+        // The identity hook every site page stamps on <html>, mirroring what
+        // book.html does for the PDF. Without it a theme has no way to say
+        // "on the web, do this": noregressions ships an `html.target-web`
+        // rule that never matched, so every site silently rendered at the
+        // book's 10.5pt print scale.
+        //
+        // Deliberately NOT the `size-*` class the PDF stamps: themes hang
+        // page-density type off it (`html.size-a4 { font-size: 10.5pt }`), and
+        // a website has no page size to be. `paperband-site` is the stable
+        // hook — `target-*` follows <siteTarget>, which a book may rename.
+        String htmlClass = "paperband-site"
+                + (bookCtx.target() == null ? "" : " target-" + bookCtx.target().toLowerCase());
+        String measure = resolveMeasure(bookCtx.vars());
         Map<String, Object> bookModel = bookSiteModel(bookCtx);
 
         // Sections: any top-level folder under the book root (or under a
@@ -592,7 +607,8 @@ public final class LayoutEngine {
             bySection.computeIfAbsent(secId, k -> new ArrayList<>()).add(i);
         }
         List<Map<String, Object>> sectionMetas = buildSectionMetas(
-                bySection, bookRoot, declaredSections, bookCtx.book().sectionLandingTemplate(), sectionFolderYamlCache);
+                bySection, bookRoot, declaredSections, bookCtx.book().sectionLandingTemplate(),
+                sectionFolderYamlCache, sectionBodies);
 
         // The sidebar is book scope — structure, declared once, resolved by the
         // config loader (which also honours the deprecated vars spelling). It
@@ -657,6 +673,8 @@ public final class LayoutEngine {
         indexModel.put("stats", stats);
         indexModel.put("css", css);
         indexModel.put("cssImports", cssImports);
+        indexModel.put("htmlClass", htmlClass);
+        indexModel.put("measure", measure);
         indexModel.put("urlPrefix", "");
         indexModel.put("page", Map.of("kind", "index"));
         indexModel.put("sidebar", sidebar);
@@ -687,8 +705,10 @@ public final class LayoutEngine {
                 valueModel.put("value", value);
                 valueModel.put("cards", valueCards);
                 valueModel.put("stats", stats);
-                valueModel.put("css", css);
+            valueModel.put("css", css);
             valueModel.put("cssImports", cssImports);
+            valueModel.put("htmlClass", htmlClass);
+            valueModel.put("measure", measure);
                 valueModel.put("urlPrefix", "");
                 valueModel.put("page", Map.of("kind", "axis", "axis", g.axis().name(), "id", value.get("id")));
                 valueModel.put("sidebar", sidebar);
@@ -722,6 +742,8 @@ public final class LayoutEngine {
             sectionModel.put("stats", stats);
             sectionModel.put("css", css);
             sectionModel.put("cssImports", cssImports);
+            sectionModel.put("htmlClass", htmlClass);
+            sectionModel.put("measure", measure);
             sectionModel.put("urlPrefix", "");
             sectionModel.put("page", Map.of("kind", "section", "id", id));
             sectionModel.put("sidebar", sidebar);
@@ -768,7 +790,7 @@ public final class LayoutEngine {
             Map<String, Object> cm = cardModel(card, cardAxesFromGroupings(i, groupings));
             model.put("book", bookModel);
             model.put("navEntries", navEntries);
-                model.put("sidebarEntries", sidebarEntries);
+            model.put("sidebarEntries", sidebarEntries);
             model.put("sections", sectionMetas);
             model.put("section", sectionMeta);
             model.put("axisBack", axisBack);
@@ -779,6 +801,12 @@ public final class LayoutEngine {
             model.put("stats", stats);
             model.put("css", css);
             model.put("cssImports", cssImports);
+            model.put("htmlClass", htmlClass);
+            // Whether this card has anything to put in the rail. Decided here
+            // rather than in the template so the grid and the rail agree: an
+            // empty rail beside a short page reads worse than no rail at all.
+            model.put("hasRail", hasRail(card));
+            model.put("measure", measure);
             model.put("urlPrefix", "../");
             model.put("page", Map.of("kind", "card", "id", card.id()));
             model.put("sidebar", sidebar);
@@ -1020,7 +1048,8 @@ public final class LayoutEngine {
             Path bookRoot,
             List<Section> declaredSections,
             String bookDefaultSectionTemplate,
-            Map<String, SectionFolderConfig> folderYamlCache) {
+            Map<String, SectionFolderConfig> folderYamlCache,
+            Map<String, SectionBody> bodies) {
         List<Map<String, Object>> out = new ArrayList<>(bySection.size());
         for (var e : bySection.entrySet()) {
             String id = e.getKey();
@@ -1032,9 +1061,22 @@ public final class LayoutEngine {
             SectionFolderConfig info = declared != null
                     ? new SectionFolderConfig(declared.title(), declared.landingTemplate())
                     : lookupSectionFolderYaml(bookRoot, id, folderYamlCache);
+            SectionBody body = bodies.get(id);
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id", id);
-            m.put("label", info.title() != null ? info.title() : formatSectionLabel(id));
+            // Label precedence: the folder's (or declaration's) own title, then
+            // the intro markdown's hoisted heading, then the folder name. The
+            // middle step is what keeps a `# The Tools` in _section.md from
+            // disappearing — the loader hoists it out of the body, so without
+            // this it would be written and then silently dropped.
+            m.put("label", info.title() != null ? info.title()
+                    : body != null && body.title() != null ? body.title()
+                    : formatSectionLabel(id));
+            // The section's own content, when it wrote some. Present means the
+            // default card grid is replaced, not decorated: `cards` is the
+            // fallback for a section that says nothing about itself.
+            m.put("body", body == null ? null : body.html());
+            m.put("bodyCards", body != null && body.withCards());
             m.put("count", e.getValue().size());
             String template = info.landingTemplate() != null ? info.landingTemplate() : bookDefaultSectionTemplate;
             template = template == null ? "site-section" : template;
@@ -1125,10 +1167,44 @@ public final class LayoutEngine {
         } catch (IOException e) {
             throw new LayoutException("Failed to render site template '" + layoutName + "'", e);
         } catch (RuntimeException e) {
+            if (messageOf(e).contains("Could not find template")) {
+                throw new LayoutException(missingTemplate(layoutName), e);
+            }
             throw new LayoutException(
                     "Site template '" + layoutName + "' failed"
                             + locationOf(e) + ": " + messageOf(e), e);
         }
+    }
+
+    /**
+     * A "no such template" message that says where we looked.
+     *
+     * <p>Pebble's own error names the template and stops there, which for a
+     * declared {@code landing.template} or {@code <sectionLandingTemplate>} is
+     * the least useful half: the author knows what they wrote, and wants to
+     * know which directory it was expected in and what is actually there.
+     *
+     * @param layoutName the bare template name Pebble was asked for
+     * @return the message
+     */
+    private String missingTemplate(String layoutName) {
+        StringBuilder sb = new StringBuilder("Template '" + layoutName + "' not found.");
+        if (layoutsDir != null) {
+            sb.append(" Declared template paths resolve against the book's layouts directory, ")
+                    .append(layoutsDir).append(" — expected ")
+                    .append(layoutsDir.resolve(layoutName + ".html")).append('.');
+            try (var files = java.nio.file.Files.list(layoutsDir)) {
+                List<String> found = files.map(f -> f.getFileName().toString()).sorted().toList();
+                sb.append(found.isEmpty()
+                        ? " That directory is empty."
+                        : " It contains: " + String.join(", ", found) + ".");
+            } catch (IOException | RuntimeException ignored) {
+                // Can't list it; the path above is still the useful half.
+            }
+        }
+        sb.append(" (A bare name like 'minimal' or 'default' is a built-in preset; "
+                + "anything else is a path under layouts/, without the extension.)");
+        return sb.toString();
     }
 
     private static Map<String, Object> bookSiteModel(RenderContext ctx) {
@@ -1758,7 +1834,8 @@ public final class LayoutEngine {
         // resolved to the minimal preset gets a minimal PDF divider too —
         // _section-divider-base.html reads the "minimal" flag this sets.
         List<Map<String, Object>> sectionMetas = buildSectionMetas(
-                bookBySection, bookRoot, declaredSections, bookCtx.book().sectionLandingTemplate(), new HashMap<>());
+                bookBySection, bookRoot, declaredSections, bookCtx.book().sectionLandingTemplate(),
+                new HashMap<>(), sectionBodies);
         for (Map<String, Object> section : sectionMetas) {
             String id = (String) section.get("id");
             List<Integer> indices = bookBySection.getOrDefault(id, List.of());
@@ -2130,10 +2207,40 @@ public final class LayoutEngine {
      * one level and self-includes for each entry in {@code children}, so the
      * nesting here has to survive all the way down, not just at the top.
      */
+    /**
+     * The id a block can be linked to, or null when it has nothing to name it.
+     *
+     * <p>Blocks already slugify their heading into a class
+     * ({@code <section class="block sun-misc-unsafe-memory-access">}); this
+     * derives the same string for use as an anchor, so an on-this-page rail
+     * has somewhere to point. An explicit {@code {#id}} always wins.
+     *
+     * @param b the block
+     * @return the anchor, or null
+     */
+    private static String blockAnchor(Block b) {
+        if (b.id() != null && !b.id().isBlank()) return b.id();
+        if (b.heading() == null) return null;
+        String lower = b.heading().toLowerCase(java.util.Locale.ROOT);
+        StringBuilder sb = new StringBuilder(lower.length());
+        for (int i = 0; i < lower.length(); i++) {
+            char c = lower.charAt(i);
+            if (Character.isLetterOrDigit(c)) sb.append(c);
+            else if (c == '-' || c == '_' || Character.isWhitespace(c)) sb.append('-');
+        }
+        String out = sb.toString().replaceAll("-+", "-").replaceAll("^-|-$", "");
+        return out.isEmpty() ? null : out;
+    }
+
     private static Map<String, Object> blockModel(Block b) {
         Map<String, Object> bm = new HashMap<>();
         bm.put("kind", b.kind().name());
         bm.put("id", b.id());
+        // A stable link target for this block: its declared {#id} when the
+        // author gave one, else a slug of the heading — the same slug the
+        // block already carries as a class, so the anchor and the styling
+        // hook agree. Null for a block with no heading, which nothing links to.
+        bm.put("anchor", blockAnchor(b));
         bm.put("classes", new ArrayList<>(b.classes()));
         bm.put("classAttr", String.join(" ", b.classes()));
         bm.put("heading", b.heading());
@@ -2237,6 +2344,33 @@ public final class LayoutEngine {
      * read them to size insets the page margin isn't already providing — see
      * {@link dev.noregressions.paperband.render.PageSpec#marginsMm()}.
      */
+    /**
+     * Whether this card has enough headings to be worth an on-this-page rail.
+     *
+     * <p>A boolean, not a count: the template walks {@code card.blocks} itself,
+     * and all the caller needs is whether there is enough to be worth a second
+     * column. A card of one or two sections is better served by the plain
+     * centred one. (A count would also be a trap here — Pebble's
+     * {@code is not empty} reports a zero Integer as present.)
+     *
+     * @param card the card
+     * @return true when a rail would list at least {@value #RAIL_MIN_ENTRIES} headings
+     */
+    private static boolean hasRail(Card card) {
+        int n = 0;
+        for (Block b : card.blocks()) {
+            if (blockAnchor(b) == null) continue;
+            n++;
+            for (Block c : b.children()) {
+                if (blockAnchor(c) != null) n++;
+            }
+        }
+        return n >= RAIL_MIN_ENTRIES;
+    }
+
+    /** Below this many headings a rail is more furniture than help. */
+    private static final int RAIL_MIN_ENTRIES = 3;
+
     /** The book's sheet, falling back to the book context when the build didn't declare one. */
     private dev.noregressions.paperband.render.PageSpec sheetFor(RenderContext bookCtx) {
         return bookSheet != null ? bookSheet : bookCtx.pageSpec();
@@ -2314,6 +2448,25 @@ public final class LayoutEngine {
     private dev.noregressions.paperband.render.PageSpec bookSheet;
 
     /**
+     * Markdown section bodies the build rendered, keyed by section id. Empty
+     * when a book declares none. See {@link SectionBody}.
+     */
+    private java.util.Map<String, SectionBody> sectionBodies = java.util.Map.of();
+
+    /**
+     * Supply the section bodies for this render.
+     *
+     * <p>Rendered by the caller rather than here: turning markdown into HTML
+     * needs the card loader and the include preprocessor, which live in the
+     * build. The layout's job is to put the result on the page.
+     *
+     * @param intros rendered intros by section id; null clears
+     */
+    public void setSectionBodys(java.util.Map<String, SectionBody> intros) {
+        this.sectionBodies = intros == null ? java.util.Map.of() : java.util.Map.copyOf(intros);
+    }
+
+    /**
      * Declare the book's sheet, so per-card rotation is expressed relative to
      * it rather than to the first card's geometry.
      *
@@ -2324,8 +2477,20 @@ public final class LayoutEngine {
     }
 
     private String composeCss(List<Path> chain) {
+        return composeCss(chain, Target.PRINT);
+    }
+
+    /**
+     * The book's CSS chain, then the theme's stylesheets for {@code target},
+     * then the build's own — weakest to strongest.
+     *
+     * @param chain  the book's css chain
+     * @param target which output's theme layer to include
+     * @return the composed CSS
+     */
+    private String composeCss(List<Path> chain, Target target) {
         StringBuilder sb = new StringBuilder(inlineCss(chain));
-        for (String css : theme.stylesheets()) {
+        for (String css : theme.stylesheets(target)) {
             sb.append(css);
             if (!css.endsWith("\n")) sb.append('\n');
         }

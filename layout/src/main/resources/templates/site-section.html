@@ -1,29 +1,46 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ section.label }} — {{ book.title | default('paperband') }}</title>
-  <meta name="generator" content="paperband">
-  {% if cssImports is not empty %}<style>{{ cssImports | raw }}</style>{% endif %}
-  <style>
-    {{ css | raw }}
-  </style>
-</head>
-<body{% if sidebar %} class="has-sidebar{% if sidebar_collapsed %} sidebar-collapsed{% endif %}"{% endif %}>
-{% include "_site-nav" with {"book": book, "navEntries": navEntries, "urlPrefix": urlPrefix, "sidebar": sidebar, "sidebar_collapsed": sidebar_collapsed} %}
-<div class="site-layout">
-{% if sidebar %}
-{% include "_site-sidebar" with {"navEntries": sidebarEntries, "urlPrefix": urlPrefix, "page": page, "sidebar_collapsed": sidebar_collapsed} %}
-{% endif %}
-<main class="site-main">
+{# Section landing page: hero, then a grid of card tiles.
 
+   Two levels of override, so a change costs only what it changes:
+
+     {% extends "site-section" %}      keep the hero, replace the card list
+     {% block cards %}...{% endblock %}
+
+   Blocks: hero, body (the folder's _section.md content), cards.
+
+     {% extends "_site-page" %}        replace the whole main column
+     {% block content %}...{% endblock %}
+
+   Both keep the head, nav, sidebar and stylesheet. See _site-page. #}
+{% extends "_site-page" %}
+
+{% block title %}{{ section.label }} — {{ book.title | default('paperband') }}{% endblock %}
+
+{% block content %}
+{% block hero %}
 <div class="tier-hero section-hero">
   <div class="tier-hero-inner">
     <h1>{{ section.label }}</h1>
   </div>
 </div>
+{% endblock %}
 
+{% block body %}
+{% if section.body %}
+{# The section's own content, from its _section.md (or README.md), rendered
+   through the same markdown pipeline a card gets. #}
+<div class="section-body">{{ section.body | raw }}</div>
+{% endif %}
+{% endblock %}
+
+{# The card list is the DEFAULT content, not a fixture: a section that wrote
+   its own body replaces it. `cards: true` in that markdown's frontmatter asks
+   for the list back, after the prose.
+
+   The test wraps the block INVOCATION, not the block's contents, so it still
+   holds for a template that overrides `cards` with a list of its own — the
+   rule is about the section, not about who draws the list. #}
+{% if section.body is null or section.bodyCards %}
+{% block cards %}
 <div class="tier-body">
   <div class="cards-heading"></div>
   <div class="card-grid">
@@ -39,8 +56,6 @@
     {% endfor %}
   </div>
 </div>
-
-</main>
-</div>
-</body>
-</html>
+{% endblock %}
+{% endif %}
+{% endblock %}

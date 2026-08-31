@@ -33,6 +33,18 @@ final class CardFiles {
      * @param acceptYamlCards  whether the book root declares a {@code cardSchema:}
      * @return true when the file should be loaded as a card
      */
+    /**
+     * Markdown files that describe a folder rather than being a card in it.
+     *
+     * <p>{@code README.md} is documentation about the directory; {@code
+     * _section.md} is a section's own introduction, rendered onto its landing
+     * page (see {@code SiteMojo.sectionIntros}). Sweeping either into the book
+     * as a card is wrong, and for {@code _section.md} it is visibly wrong — the
+     * prose would appear both above the card list and as an entry in it.
+     */
+    private static final java.util.Set<String> INTRO_FILENAMES =
+            java.util.Set.of("readme.md", "_section.md");
+
     static boolean isCard(Path p, boolean acceptYamlCards) {
         return isCard(p, acceptYamlCards, false);
     }
@@ -56,7 +68,7 @@ final class CardFiles {
     static boolean isCard(Path p, boolean acceptYamlCards, boolean namedExplicitly) {
         String name = p.getFileName().toString();
         if (name.endsWith(".md")) {
-            return namedExplicitly || !name.equalsIgnoreCase("README.md");
+            return namedExplicitly || !INTRO_FILENAMES.contains(name.toLowerCase(Locale.ROOT));
         }
         if (acceptYamlCards && (name.endsWith(".yaml") || name.endsWith(".yml"))) {
             String lower = name.toLowerCase(Locale.ROOT);

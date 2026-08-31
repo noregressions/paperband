@@ -1,0 +1,55 @@
+{# The shared shell every site page sits in: document, head, stylesheet, top
+   nav, sidebar, and the main column. Everything that differs between an index,
+   a section landing page and a card page is a block below.
+
+   This exists so a custom template does not have to be a 100% replacement. The
+   overwhelmingly common override is a content change — a different card list,
+   an extra panel — and re-emitting the head, nav, sidebar and CSS to get one is
+   both tedious and a standing bug: a page that hardcodes the shell stops
+   picking up changes to it, so a new sidebar option or a theme hook silently
+   passes that page by.
+
+   Extend it and fill in only what changes:
+
+     {% extends "_site-page" %}
+     {% block content %}
+       <h1>{{ section.label }}</h1>
+       ...
+     {% endblock %}
+
+   Blocks:
+     title       — the <title> text. Defaults to the book title.
+     head        — extra <head> content, before the stylesheet, so a page
+                   adding a font or a script still has the CSS applied last.
+     bodyClass   — extra classes on <body>, appended to the sidebar state.
+     content     — everything inside <main>. The one most overrides touch.
+
+   Naming: the underscore marks it a partial, as with _site-nav. Don't name a
+   book's own template the same as one it extends — a same-named override
+   resolves {% extends %} to itself and recurses (see _card-body-base). #}
+<!DOCTYPE html>
+<html lang="en" class="{{ htmlClass }}"{% if measure %} style="--card-max-width: {{ measure }};"{% endif %}>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ book.title | default('paperband') }}{% endblock %}</title>
+  <meta name="generator" content="paperband">
+  {% block head %}{% endblock %}
+  {% if cssImports is not empty %}<style>{{ cssImports | raw }}</style>{% endif %}
+  <style>
+    /* CSS chain (book + site) inlined */
+    {{ css | raw }}
+  </style>
+</head>
+<body{% if sidebar %} class="has-sidebar{% if sidebar_collapsed %} sidebar-collapsed{% endif %}{% block bodyClass %}{% endblock %}"{% endif %}>
+{% include "_site-nav" with {"book": book, "navEntries": navEntries, "urlPrefix": urlPrefix, "sidebar": sidebar, "sidebar_collapsed": sidebar_collapsed} %}
+<div class="site-layout">
+{% if sidebar %}
+{% include "_site-sidebar" with {"navEntries": sidebarEntries, "urlPrefix": urlPrefix, "page": page, "sidebar_collapsed": sidebar_collapsed} %}
+{% endif %}
+<main class="site-main">
+{% block content %}{% endblock %}
+</main>
+</div>
+</body>
+</html>

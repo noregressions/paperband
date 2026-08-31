@@ -11,7 +11,7 @@
    as consistently as the top-level call does), so there's no self-extends
    hazard the way there is with {% extends %} + {{ parent() }}. #}
 {% if not (card.frontmatter.verify == false and block.classes contains "check") %}
-<section class="block{% if block.classAttr %} {{ block.classAttr }}{% endif %}"{% if block.id %} id="{{ block.id }}"{% endif %}>
+<section class="block{% if block.classAttr %} {{ block.classAttr }}{% endif %}"{% if block.anchor %} id="{{ block.anchor }}"{% endif %}>
   {% if block.heading %}
     {# A level-1 block is an h1 the author wrote after the card's title one --
        see CardLoader. Without this branch it fell through to <h6>, so a

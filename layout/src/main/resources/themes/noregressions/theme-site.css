@@ -1,0 +1,15 @@
+/*
+ * NoRegressions — static site only.
+ *
+ * A browser is not a sheet of paper: it has a viewport, a reader who scrolls,
+ * and a default body size of 16px that the page has no business shrinking.
+ * The print layer keeps its points and its paper measure; this states the web's.
+ */
+
+html.paperband-site { font-size: 16px; }
+
+/* Prose keeps a readable measure — the fix for a cramped site is not to run
+   text to the window edge, which only trades too little width for too much.
+   Wide content earns its extra width in the site layer instead; see
+   site-base.css's breakout rules. */
+:root { --card-max-width: 46rem; }

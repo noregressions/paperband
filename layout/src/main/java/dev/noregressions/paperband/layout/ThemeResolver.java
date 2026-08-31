@@ -29,6 +29,20 @@ import java.util.List;
  * the theme directory; blank lines and lines starting with {@code #} are
  * ignored. Listed paths are inlined as CSS in declaration order — place
  * tokens / variables before component overrides.
+ *
+ * <p>A path may carry a target prefix, naming the output it applies to:
+ *
+ * <pre>
+ * theme.css                 # shared — every target
+ * print: theme-print.css    # paged output only
+ * site:  theme-site.css     # the static site only
+ * </pre>
+ *
+ * <p>Unprefixed is shared, so a manifest written before target scoping existed
+ * behaves exactly as it did. The split is what lets one theme describe both
+ * media honestly: a measure chosen for paper and a page-density type scale are
+ * {@code print:} concerns, and a site that inherits them renders as a book in a
+ * browser window.
  */
 public final class ThemeResolver {
 
@@ -66,18 +80,22 @@ public final class ThemeResolver {
                             + "or filesystem dir " + (themeDir == null ? "(no <themeDir> set)" : themeDir.resolve(n)));
         }
 
-        List<String> stylePaths;
+        Manifest entries;
         try (manifest) {
-            stylePaths = readManifest(manifest);
+            entries = readManifest(manifest);
         }
 
-        List<String> styles = new ArrayList<>(stylePaths.size());
-        for (String p : stylePaths) {
-            try (InputStream in = cl.getResourceAsStream(resBase + "/" + p)) {
+        List<String> styles = new ArrayList<>();
+        List<String> print = new ArrayList<>();
+        List<String> site = new ArrayList<>();
+        for (Entry e : entries.entries()) {
+            String body;
+            try (InputStream in = cl.getResourceAsStream(resBase + "/" + e.path())) {
                 if (in == null) continue;
-                styles.add("/* === theme:" + n + " " + p + " === */\n"
-                        + new String(in.readAllBytes(), StandardCharsets.UTF_8));
+                body = "/* === theme:" + n + " " + e.path() + " === */\n"
+                        + new String(in.readAllBytes(), StandardCharsets.UTF_8);
             }
+            bucket(e, styles, print, site).add(body);
         }
 
         // Always provide a template loader for classpath themes; if the theme
@@ -87,7 +105,7 @@ public final class ThemeResolver {
         templateLoader.setPrefix(resBase + "/templates/");
         templateLoader.setSuffix(".html");
 
-        return new ThemeBundle(n, styles, templateLoader);
+        return new ThemeBundle(n, styles, print, site, templateLoader);
     }
 
     private static ThemeBundle loadFromFilesystem(String name, Path dir) throws IOException {
@@ -96,18 +114,19 @@ public final class ThemeResolver {
             throw new IOException("Theme manifest missing: " + manifestPath);
         }
 
-        List<String> stylePaths;
+        Manifest entries;
         try (InputStream in = Files.newInputStream(manifestPath)) {
-            stylePaths = readManifest(in);
+            entries = readManifest(in);
         }
 
-        List<String> styles = new ArrayList<>(stylePaths.size());
-        for (String p : stylePaths) {
-            Path file = dir.resolve(p);
-            if (Files.isRegularFile(file)) {
-                styles.add("/* === theme:" + name + " " + p + " === */\n"
-                        + Files.readString(file, StandardCharsets.UTF_8));
-            }
+        List<String> styles = new ArrayList<>();
+        List<String> print = new ArrayList<>();
+        List<String> site = new ArrayList<>();
+        for (Entry e : entries.entries()) {
+            Path file = dir.resolve(e.path());
+            if (!Files.isRegularFile(file)) continue;
+            bucket(e, styles, print, site).add("/* === theme:" + name + " " + e.path() + " === */\n"
+                    + Files.readString(file, StandardCharsets.UTF_8));
         }
 
         Loader<?> templateLoader = null;
@@ -121,19 +140,58 @@ public final class ThemeResolver {
             templateLoader = fl;
         }
 
-        return new ThemeBundle(name, styles, templateLoader);
+        return new ThemeBundle(name, styles, print, site, templateLoader);
     }
 
-    private static List<String> readManifest(InputStream in) throws IOException {
-        List<String> out = new ArrayList<>();
+    /** One manifest line: a stylesheet path and the target it applies to (null = shared). */
+    private record Entry(Target target, String path) {}
+
+    /** A parsed manifest. */
+    private record Manifest(List<Entry> entries) {}
+
+    private static List<String> bucket(Entry e, List<String> shared, List<String> print,
+                                       List<String> site) {
+        if (e.target() == Target.PRINT) return print;
+        if (e.target() == Target.SITE) return site;
+        return shared;
+    }
+
+    private static Manifest readManifest(InputStream in) throws IOException {
+        List<Entry> out = new ArrayList<>();
         try (BufferedReader r = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
             String line;
             while ((line = r.readLine()) != null) {
                 String s = line.trim();
                 if (s.isEmpty() || s.startsWith("#")) continue;
-                out.add(s);
+                out.add(parseEntry(s));
             }
         }
-        return out;
+        return new Manifest(out);
+    }
+
+    /**
+     * Parse one manifest line into its target and path.
+     *
+     * <p>An unknown prefix is an error rather than a filename: {@code web:
+     * theme.css} would otherwise be read as a file literally called
+     * {@code web: theme.css}, silently contributing nothing.
+     */
+    private static Entry parseEntry(String line) {
+        int colon = line.indexOf(':');
+        if (colon > 0) {
+            String prefix = line.substring(0, colon).trim().toLowerCase();
+            String rest = line.substring(colon + 1).trim();
+            if (!rest.isEmpty() && prefix.chars().allMatch(Character::isLetter)) {
+                switch (prefix) {
+                    case "print": return new Entry(Target.PRINT, rest);
+                    case "site":  return new Entry(Target.SITE, rest);
+                    default:
+                        throw new IllegalArgumentException("theme manifest: unknown target prefix '"
+                                + prefix + ":' in \"" + line + "\" — expected 'print:' or 'site:', "
+                                + "or no prefix for a stylesheet shared by both.");
+                }
+            }
+        }
+        return new Entry(null, line);
     }
 }

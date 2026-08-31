@@ -64,6 +64,66 @@ body.has-sidebar { margin: 0; }
   box-sizing: border-box;
 }
 
+/* ---- content + on-this-page rail ----
+   What to do with the space a book column leaves over. Not give it to the
+   text: prose has a readable length and exceeding it is a regression, and
+   handing it to individual wide elements breaks the left edge (see below).
+   Give it to a second column instead.
+
+   The grid only engages when there is a rail to show — a card with no
+   headings keeps the centred single column, so a short page never sits
+   lopsided beside an empty gutter. */
+.paperband-site .site-main { container-type: inline-size; }
+
+.paperband-site .site-content.has-rail {
+  max-width: 74rem;
+  display: grid;
+  grid-template-columns: minmax(0, 48rem) minmax(12rem, 16rem);
+  gap: 3rem;
+  align-items: start;
+}
+.paperband-site .site-content.has-rail > .card-nav,
+.paperband-site .site-content.has-rail > .card-nav-bottom { grid-column: 1; }
+.paperband-site .site-content.has-rail > .page { grid-column: 1; min-width: 0; }
+
+.page-rail {
+  grid-column: 2;
+  grid-row: 2;
+  position: sticky;
+  top: 1.5rem;
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+.page-rail-heading {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  opacity: 0.6;
+  margin: 0 0 0.6rem;
+}
+.page-rail ol { list-style: none; margin: 0; padding: 0; }
+.page-rail li { margin: 0 0 0.35rem; }
+.page-rail li.depth-2 { padding-left: 0.85rem; }
+.page-rail a {
+  text-decoration: none;
+  display: block;
+  padding: 0.12rem 0 0.12rem 0.7rem;
+  border-left: 2px solid rgba(0, 0, 0, 0.12);
+}
+.page-rail a:hover { border-left-color: currentColor; }
+
+/* Below the grid's comfortable width there is no room for a third column;
+   the rail becomes a plain list above the content rather than disappearing. */
+@media (max-width: 68rem) {
+  .paperband-site .site-content.has-rail {
+    display: block;
+    max-width: 48rem;
+  }
+  .page-rail { position: static; max-height: none; margin-bottom: 1.5rem; }
+}
+
 /* ---- sidebar contents ---- */
 .sidebar-nav { line-height: 1.4; }
 .sidebar-section { margin-bottom: 1rem; }
@@ -254,3 +314,39 @@ pre.mermaid > svg { max-width: 100%; height: auto; }
   text-align: center;
   padding: 1.5rem;
 }
+
+/* ---- one left edge ----
+   Wide content is NOT given extra width automatically. Pulling every `pre`
+   and `table` out of the measure was tried and is visibly worse: on a page
+   with eleven code blocks it threw the left edge 305px sideways eleven times,
+   and the eye has nothing to follow down the page. A stable spine beats a few
+   hundred pixels of reclaimed width.
+
+   Code that is too wide scrolls inside its own box; a table gets its own
+   scroller. The empty space is answered by the layout instead — see the
+   content/rail grid above.
+
+   `.pw-breakout` stays as an explicit, rare opt-in: one hero diagram or one
+   very wide matrix per page, chosen by the author, not applied to a whole
+   element type. */
+.paperband-site article.card .block > pre { overflow-x: auto; }
+.paperband-site article.card .block > table { display: block; overflow-x: auto; }
+
+.paperband-site article.card .block > .pw-breakout {
+  width: min(var(--pb-breakout-max, 78rem), 100cqw - 3rem);
+  max-width: none;
+  margin-left: 50%;
+  transform: translateX(-50%);
+}
+
+/* ---- section body ----
+   Content a section folder supplies from its own _section.md, in place of the
+   default card grid. At the reading measure — it is writing, not layout. */
+.paperband-site .section-body {
+  /* Capped at the reading measure but left-aligned, not centred: the card list
+     below starts at the left of the main column, and an intro floating in the
+     middle of the page reads as a different column rather than the same one. */
+  max-width: var(--card-max-width, 48rem);
+  padding: 1.25rem 2rem 0.25rem;
+}
+.paperband-site .section-body > :first-child { margin-top: 0; }

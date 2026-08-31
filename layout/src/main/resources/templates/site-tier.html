@@ -1,34 +1,29 @@
-{# Landing page for one axis value — kept under its historical filename
-   ("tier"), but this template is axis-generic: it renders the landing page
-   for any declared axis's value, not just "tier". Expects: axis {name,
-   title}, value {id, label, color, count}, cards. #}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ value.label }} — {{ book.title | default('paperband') }}</title>
-  <meta name="generator" content="paperband">
-  {% if cssImports is not empty %}<style>{{ cssImports | raw }}</style>{% endif %}
-  <style>
-    {{ css | raw }}
-  </style>
-</head>
-<body{% if sidebar %} class="has-sidebar{% if sidebar_collapsed %} sidebar-collapsed{% endif %}"{% endif %}>
-{% include "_site-nav" with {"book": book, "navEntries": navEntries, "urlPrefix": urlPrefix, "sidebar": sidebar, "sidebar_collapsed": sidebar_collapsed} %}
-<div class="site-layout">
-{% if sidebar %}
-{% include "_site-sidebar" with {"navEntries": sidebarEntries, "urlPrefix": urlPrefix, "page": page, "sidebar_collapsed": sidebar_collapsed} %}
-{% endif %}
-<main class="site-main">
+{# Axis-value landing page. The class hooks still say "tier" (the first axis
+   this shipped for), but this template is axis-generic: it renders the landing
+   page for any declared axis value.
 
+   Overridable the same way as site-section — extend it and replace just the
+   part that changes:
+
+     {% extends "site-tier" %}
+     {% block cards %}...{% endblock %}
+
+   See _site-page for the shell and the full block list. #}
+{% extends "_site-page" %}
+
+{% block title %}{{ value.label }} — {{ book.title | default('paperband') }}{% endblock %}
+
+{% block content %}
+{% block hero %}
 <div class="tier-hero" style="background: {{ value.color }}">
   <div class="tier-hero-inner">
     <div class="tier-badge-lg">{{ axis.title }} {{ value.id }}</div>
     <h1>{{ value.label }}</h1>
   </div>
 </div>
+{% endblock %}
 
+{% block cards %}
 <div class="tier-body">
   <div class="cards-heading">{{ value.count }} card{% if value.count != 1 %}s{% endif %} in this {{ axis.title | lower }}</div>
   <div class="card-grid">
@@ -44,8 +39,5 @@
     {% endfor %}
   </div>
 </div>
-
-</main>
-</div>
-</body>
-</html>
+{% endblock %}
+{% endblock %}

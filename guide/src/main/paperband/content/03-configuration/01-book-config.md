@@ -132,10 +132,30 @@ sections:
 ## `sections.landing.template`
 
 A section's landing page normally renders with the built-in `site-section` template, but
-this is overridable in two places, checked in this order:
+this is overridable in three places, most specific first:
 
-1. The section folder's own `paperband.yaml`, with the same `landing.template` shape an
-   axis value uses:
+1. **A declared section's own template.** A section declared in the book yaml or the POM
+   carries its own, because it can span several folders and no one of them speaks for the
+   group — a declared section never consults a folder yaml at all:
+
+   ```yaml
+   sections:
+     - title: "Scanners & Blindspots"
+       folders: [scanners, blindspots]
+       landing:
+         template: "layouts/scanners-section.html"
+   ```
+
+   ```xml
+   <section>
+     <title>Scanners &amp; Blindspots</title>
+     <landingTemplate>layouts/scanners-section.html</landingTemplate>
+     <includes><include>scanners/*.md</include></includes>
+   </section>
+   ```
+
+2. **A discovered folder's own `paperband.yaml`**, with the same `landing.template` shape
+   an axis value uses:
 
    ```yaml
    # content/scanners/paperband.yaml
@@ -144,8 +164,8 @@ this is overridable in two places, checked in this order:
      template: "layouts/scanners-section.html"
    ```
 
-2. A book-wide default for every section that doesn't declare its own, set at the book
-   root:
+3. **A book-wide default** for every section that doesn't declare its own — at the book
+   root, or as the POM's `<book><sectionLandingTemplate>`:
 
    ```yaml
    sections:
@@ -178,6 +198,146 @@ above. Named presets and file-path overrides can be mixed freely across a book's
 sections — some folders can use `minimal`, others their own custom template, others
 nothing at all (falling through to the book default, then the built-in template).
 
-The same folder `paperband.yaml` `title:` key (independent of `landing.template`) sets
-the section's display label; without it, the label is auto-formatted from the folder name
-(hyphens/underscores become spaces, each word capitalized).
+`minimal` is worth one note: it is not only a site preset. The PDF's section divider has no
+HTML template of its own to dispatch on, so it reads the resolved choice and scales itself
+down to match — title only, no count or contents. Choosing `minimal` therefore changes
+**both** targets. A custom file path only changes the site; the divider keeps its default.
+
+## Section content in markdown
+
+Most "customise the section page" needs are writing, not layout. For that, don't write a
+template at all — put a markdown file in the section folder and it **becomes** that
+section's landing page content:
+
+```markdown
+<!-- content/02-tools/_section.md -->
+# The Tools
+
+Ten JDK tools that answer *what will break* before you change a line of code.
+
+Run them roughly in the order below: `jdeps` first to map what you depend on,
+then the scanners, then the runtime diagnostics once something actually fails.
+
+{% if vars.audience == "internal" %}Start with the flag audit.{% endif %}
+```
+
+It goes through **exactly the pipeline a card gets**, so `{{ vars.x }}`, `{% if %}`,
+`{% for %}`, `{% include %}` and `{% fragment %}` all work, along with block templates and
+the content policy.
+
+| File | Notes |
+|---|---|
+| `_section.md` | The explicit spelling; wins when both are present |
+| `README.md` | Works too — card discovery already skips readmes, and a readme *is* documentation about the directory |
+
+Neither is loaded as a card, so the section's card count and card list are unaffected.
+
+### It replaces, it doesn't decorate
+
+The card list is the **default** content — what a section shows when it has nothing of its
+own to say. Writing a `_section.md` replaces it. To keep the list as well, ask for it:
+
+```markdown
+---
+cards: true
+---
+
+# The Tools
+
+Prose, and then the usual card list beneath it.
+```
+
+That holds even for a book with a custom landing template: the rule is about the section,
+not about who draws the list, so the test wraps the `cards` block's *invocation* rather
+than its contents.
+
+### Other details
+
+The `# Heading` becomes the **section's label** when the folder declares no `title:` — one
+file then describes the section completely. (The markdown loader hoists a leading `#` out
+of the body, so without that rule it would be written and silently dropped.)
+
+Only folder-backed sections can have one. An axis value is a label spanning the whole book
+with no directory of its own, so there's nowhere to put the file. Declared sections that
+span several folders don't pick one up either — bodies are keyed by folder name.
+
+The wrapper is `.section-body`. The hero above it is page chrome, not content; override the
+`hero` block to drop it. The PDF divider is unaffected — this is a site feature.
+
+## Writing a custom section template
+
+**A custom template does not have to replace the whole page.** The shell — document head,
+stylesheet, top nav, sidebar, main column — lives in one base template, and every built-in
+site page extends it. Override only the block you care about:
+
+```html
+{# layouts/sectionLanding.html — a reading list instead of the card grid #}
+{% extends "site-section" %}
+
+{% block cards %}
+<ol class="section-landing-list">
+  {% for c in cards %}
+  <li>
+    <a href="{{ urlPrefix }}cards/{{ c.id }}.html">{{ c.title }}</a>
+    {% if c.oneliner %}<span class="section-landing-oneliner">{{ c.oneliner }}</span>{% endif %}
+  </li>
+  {% endfor %}
+</ol>
+{% endblock %}
+```
+
+That is the whole file. Everything else is inherited, which matters beyond brevity: a page
+that hardcodes the shell stops tracking it, so a new sidebar option or theme hook silently
+passes it by.
+
+Every site page works this way, not just section landings. Extend the page you want to
+change and override one block:
+
+| Extend | Blocks it adds | Page |
+|---|---|---|
+| `site-index` | `hero`, `stats`, `sections` | the book's front page |
+| `site-section` | `hero`, `body`, `cards` | a section landing page |
+| `site-tier` | `hero`, `cards` | an axis-value landing page |
+| `site-card` | `cardNav`, `body`, `rail`, `cardNavBottom` | a card page |
+| `_site-page` | — | the shell itself, when you want the whole main column |
+
+`cards` is the body below the hero — the card grid and its heading. `body` on a card page is
+the card itself plus any auto-cards; `rail` is the on-this-page nav.
+
+All of them also inherit the shell's own blocks:
+
+| Block | Contents |
+|---|---|
+| `title` | the `<title>` text; defaults to the book title |
+| `head` | extra `<head>` content, before the stylesheet |
+| `bodyClass` | extra classes on `<body>`, appended to the sidebar state |
+| `content` | everything inside `<main>` |
+
+A block you don't mention keeps its built-in contents, and an empty block removes it —
+`site-section-minimal` is nothing but `{% extends "site-section" %}` with an empty `cards`
+block.
+
+Don't name your file the same as the template it extends — a same-named override resolves
+`{% extends %}` to itself and recurses. Name it for what it is (`sectionLanding.html`), not
+for what it replaces.
+
+### What the template is given
+
+| Key | What |
+|---|---|
+| `section` | this section: `id`, `label`, `count`, `landingTemplate`, `minimal`, `landingPage`, `cards` |
+| `cards` | its cards, each `{id, title, oneliner, axes, effort, openrewrite, subsystem}` |
+| `book` | `title`, `subtitle`, `series`, `author`, `vars`, `cover`, `back`, `header`, `footer` |
+| `sections` | every section's meta, for cross-links |
+| `navEntries` / `sidebarEntries` | the nav model (the shell passes these to the partials) |
+| `stats` | `{total, openrewrite}` |
+| `css` / `cssImports` | the composed stylesheet (the shell emits it) |
+| `htmlClass` / `measure` | the `<html>` hooks — see Themes / print and site layers |
+| `sidebar`, `sidebar_collapsed`, `sidebar_sections_collapsed` | sidebar state |
+| `page` | `{kind: "section", id}` — lets the partials mark the active row |
+| `urlPrefix` | `""` on a landing page (`"../"` on card pages) |
+
+Style your own classes from the book's CSS chain, or the POM's `<stylesheets>` — they're
+yours, not the theme's.
+
+Axis values work identically: extend `site-tier` and override its `cards` or `hero` block.

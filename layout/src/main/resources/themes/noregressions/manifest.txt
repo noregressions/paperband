@@ -3,3 +3,5 @@
 # amber = warnings, red = danger). Derived from the commented design-system
 # stylesheet; the DO/DO NOT guidance there governs how components are used.
 theme.css
+print: theme-print.css
+site:  theme-site.css

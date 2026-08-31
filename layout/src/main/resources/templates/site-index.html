@@ -1,22 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ book.title | default('paperband') }}</title>
-  <meta name="generator" content="paperband">
-  {% if cssImports is not empty %}<style>{{ cssImports | raw }}</style>{% endif %}
-  <style>
-    {{ css | raw }}
-  </style>
-</head>
-<body{% if sidebar %} class="has-sidebar{% if sidebar_collapsed %} sidebar-collapsed{% endif %}"{% endif %}>
-{% include "_site-nav" with {"book": book, "navEntries": navEntries, "urlPrefix": urlPrefix, "sidebar": sidebar, "sidebar_collapsed": sidebar_collapsed} %}
-<div class="site-layout">
-{% if sidebar %}
-{% include "_site-sidebar" with {"navEntries": sidebarEntries, "urlPrefix": urlPrefix, "page": page, "sidebar_collapsed": sidebar_collapsed} %}
-{% endif %}
-<main class="site-main">
+
+{% extends "_site-page" %}
+
+{% block content %}
 
 {# The book's declared cover, as the index hero — the same `cover:` the PDF
    renders, so one declaration serves both targets. Three forms, matching
@@ -24,6 +9,7 @@
    over it when the cover declares any text), or the plain text cover.
    Cover-level text lines override the book's; null means inherit, so the
    fallback chain is the same one the printed cover uses. #}
+{% block hero %}
 {% if book.cover.template is not null %}
 <div class="hero hero-cover">{% include book.cover.template with {"book": book} %}</div>
 {% elseif book.cover.siteImage is not null %}
@@ -46,10 +32,13 @@
 </div>
 {% endif %}
 
+{% endblock %}
+
 <div class="home-content">
   {# One stat row per declared axis, independently — each axis gets its own
      row of value/count boxes. A book with no axes (or axes with no
      declared values) skips this section entirely, same as before. #}
+  {% block stats %}
   {% for g in axisGroupings %}
   {% if g.values | length > 0 %}
   <div class="stat-row">
@@ -71,6 +60,9 @@
      independently) and sections appear in the order they first show up in
      the book walk (driven by content/paperband.yaml `order:`), rather than
      axes-first / sections-last. #}
+  {% endblock %}
+
+  {% block sections %}
   <div class="tier-grid">
     {% for e in navEntries %}
     {% if e.kind == 'axis' %}
@@ -94,9 +86,7 @@
     {% endif %}
     {% endfor %}
   </div>
+  {% endblock %}
 </div>
 
-</main>
-</div>
-</body>
-</html>
+{% endblock %}

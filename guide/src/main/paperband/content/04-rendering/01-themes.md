@@ -46,6 +46,66 @@ cascade layer (`layer(prism)`), so its `pre[class*="language-"]` box rules can n
 outrank a theme's plain `pre` rule on specificity — the token colours apply where nothing
 competes, and the code block's size, background and padding stay the theme's to decide.
 
+## Print and site layers
+
+One theme describes two media, and they don't want the same things. A measure chosen for a
+210mm trim and a type scale in points are decisions about paper; a site has a viewport, a
+sidebar and a reader who scrolls. A manifest entry can name the target it applies to:
+
+```
+theme.css                 # shared — tokens, colour, type family, code, block semantics
+print: theme-print.css    # paged output only — measure, point sizes, page density
+site:  theme-site.css     # the static site only — web type scale, grid, breakout
+```
+
+Unprefixed is shared, so a manifest written before target layers existed behaves exactly as
+it did. Target layers are inlined **after** the shared one, so they correct it rather than
+having to pre-empt it with heavier selectors. An unknown prefix fails the build rather than
+being read as a filename.
+
+Every site page stamps `class="paperband-site target-<target>"` on `<html>`. Key web rules
+off `paperband-site` rather than `target-web`: the target name follows `<siteTarget>`, which
+a book may rename, while the site hook is stable. Site pages deliberately do **not** carry
+the `size-*` class the PDF stamps — themes hang page density off it
+(`html.size-a4 { font-size: 10.5pt }`), and a website has no page size to be.
+
+## Width on the web
+
+A book column centred in a browser window leaves a lot of empty page, and there are two
+tempting wrong answers. Running prose to the window edge is one: text at 1300px is less
+readable, not more. Widening individual elements — pulling every `pre` and `table` out of
+the measure — is the other, and it is worse than it sounds. Tried on a card with eleven
+code blocks, it threw the left edge 305px sideways eleven times; the eye has nothing to
+follow down the page, and a stable spine is worth more than the reclaimed width.
+
+So the content column keeps **one left edge**. Code that is too wide scrolls inside its own
+box, and a wide table gets its own scroller, rather than the page scrolling sideways.
+
+The space is answered by the layout instead. A card with at least three headings renders in
+a two-column grid — content, then a sticky **on this page** rail built from the card's own
+block headings:
+
+```
+┌──────────┬───────────────────────────┬──────────────┐
+│ sidebar  │ content (one left edge)   │ on this page │
+└──────────┴───────────────────────────┴──────────────┘
+```
+
+Below `68rem` there is no room for a third column, so the rail becomes a plain list above
+the content. A card with fewer than three headings keeps the plain centred column — an
+empty gutter beside a short page reads worse than no rail.
+
+Every block gets a stable anchor for the rail to point at: its declared `{#id}` when the
+heading has one, otherwise a slug of the heading — the same slug the block already carries
+as a class, so the anchor and the styling hook agree.
+
+`.pw-breakout` remains as a deliberate, rare opt-out of the measure — one hero diagram or
+one very wide matrix, chosen per element by the author, not applied to a whole element type:
+
+```css
+:root { --pb-breakout-max: 90rem; }   /* how wide an opted-in breakout may go */
+```
+
 ## What theme CSS can target
 
 The markup exposes stable, data-driven class hooks — this is the main way page data

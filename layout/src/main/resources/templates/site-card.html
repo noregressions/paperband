@@ -1,28 +1,18 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ card.title | default(card.id) }} — {{ book.title | default('paperband') }}</title>
-  <meta name="generator" content="paperband">
+
+{% extends "_site-page" %}
+
+{% block title %}{{ card.title | default(card.id) }} — {{ book.title | default('paperband') }}{% endblock %}
+
+{% block head %}
   {% if book.title %}<meta name="book" content="{{ book.title }}">{% endif %}
   {% include "_mermaid" %}
   {% include "_copy-buttons" %}
-  {% if cssImports is not empty %}<style>{{ cssImports | raw }}</style>{% endif %}
-  <style>
-    /* CSS chain (book + site) inlined */
-    {{ css | raw }}
-  </style>
-</head>
-<body{% if sidebar %} class="has-sidebar{% if sidebar_collapsed %} sidebar-collapsed{% endif %}"{% endif %}>
-{% include "_site-nav" with {"book": book, "navEntries": navEntries, "urlPrefix": urlPrefix, "sidebar": sidebar, "sidebar_collapsed": sidebar_collapsed} %}
-<div class="site-layout">
-{% if sidebar %}
-{% include "_site-sidebar" with {"navEntries": sidebarEntries, "urlPrefix": urlPrefix, "page": page, "sidebar_collapsed": sidebar_collapsed} %}
-{% endif %}
-<main class="site-main">
+{% endblock %}
 
-<div class="site-content">
+{% block content %}
+
+<div class="site-content{% if hasRail %} has-rail{% endif %}">
+  {% block cardNav %}
   <div class="card-nav">
     {% if axisBack is not null %}
     <a class="tier-back {{ axisBack.axis }}-{{ axisBack.id }}" href="{{ urlPrefix }}{{ axisBack.url }}"
@@ -38,7 +28,9 @@
     {% endif %}
     <a href="{{ urlPrefix }}index.html">Home</a>
   </div>
+  {% endblock %}
 
+  {% block body %}
   <div class="page">
     {# card.axes already carries every axis's resolved value; no per-page
        "tier" param needs threading through anymore. #}
@@ -59,7 +51,15 @@
     </section>
     {% endif %}
   </div>
+  {% endblock %}
 
+  {% block rail %}
+  {% if hasRail %}
+  {% include "_page-rail" with {"blocks": card.blocks} %}
+  {% endif %}
+  {% endblock %}
+
+  {% block cardNavBottom %}
   <div class="card-nav-bottom">
     {% if prev is not null %}
     <a href="{{ prev.id }}.html">← {{ prev.title }}</a>
@@ -68,9 +68,7 @@
     <a href="{{ next.id }}.html">{{ next.title }} →</a>
     {% else %}<span></span>{% endif %}
   </div>
+  {% endblock %}
 </div>
 
-</main>
-</div>
-</body>
-</html>
+{% endblock %}
