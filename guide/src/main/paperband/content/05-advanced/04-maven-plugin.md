@@ -222,6 +222,7 @@ sensible owner for a config file sitting among the output.
 | `book/header`, `book/footer` | Running fixtures, same `<image>`/`<template>` shape. |
 | `book/sectionLandingTemplate` | Default landing/divider template for sections that name none — a preset (`minimal`) or a path. |
 | `book/author` | The book's author, for the cover. |
+| `book/sidebar` | The static site's navigation sidebar. The element's presence is the opt-in — `<sidebar/>` is enough; `<enabled>false</enabled>` turns one off from a profile. `<collapsed>` starts the sidebar shut, `<sectionsCollapsed>` (default true) starts each section's card list shut. Ignored by `build`. |
 | `book/authors` | Several authors: `<authors><author>A</author><author>B</author></authors>`. Templates get `book.authors` as a list and `book.author` rendered as "A and B", so a theme written for one author still shows both. Declaring both `<author>` and `<authors>` is an error. |
 | `book/sections/toc` | An empty `<toc/>` between `<section>` elements renders the printed table of contents at that point in the book — first for the traditional spot up front, last for contents-at-the-back. It always lists the whole book, with real page numbers from a second render pass, and at most one is allowed (two markers fail the build). See TOC and Index. |
 | `book/sections/page` | `<page><template>matrix</template></page>` between `<section>` elements renders a generated page at that point — a Pebble template with the **whole book model** in scope. Any number of markers is fine. See Generated pages below. |

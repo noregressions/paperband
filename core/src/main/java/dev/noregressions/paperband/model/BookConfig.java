@@ -58,6 +58,8 @@ import java.util.Map;
  *        separate mini-document with no access to the main page's
  *        stylesheet. Needs real page-margin space to render into — see
  *        {@code vars.page.margins} ({@link dev.noregressions.paperband.render.PageConfigResolver}).
+ * @param sidebar the static site's navigation sidebar — structure, so book scope
+ *        rather than a var; never null, defaulting to {@link Sidebar#NONE}
  * @param header running page-header declaration from a root
  *        {@code header: { template: ... }} key — same shape, same
  *        pre-rendering path ({@code LayoutEngine.renderHeader} ->
@@ -79,10 +81,12 @@ public record BookConfig(
         PageMatter back,
         PageMatter footer,
         PageMatter header,
-        List<Section> sections
+        List<Section> sections,
+        Sidebar sidebar
 ) {
 
     public BookConfig {
+        sidebar   = sidebar   == null ? Sidebar.NONE : sidebar;
         axes      = axes      == null ? List.of() : List.copyOf(axes);
         globalCss = globalCss == null ? List.of() : List.copyOf(globalCss);
         vars      = vars      == null ? Map.of()  : Map.copyOf(vars);
@@ -102,7 +106,7 @@ public record BookConfig(
             String theme,
             String sectionLandingTemplate) {
         this(bookRoot, title, axes, globalCss, vars, targets, theme, sectionLandingTemplate,
-                null, null, null, null, null, List.of());
+                null, null, null, null, null, List.of(), Sidebar.NONE);
     }
 
     /** Convenience constructor for books with a {@code cardSchema:} but no {@code cover:}/{@code back:}/{@code footer:}/{@code header:}. */
@@ -117,7 +121,7 @@ public record BookConfig(
             String sectionLandingTemplate,
             CardSchema cardSchema) {
         this(bookRoot, title, axes, globalCss, vars, targets, theme, sectionLandingTemplate,
-                cardSchema, null, null, null, null, List.of());
+                cardSchema, null, null, null, null, List.of(), Sidebar.NONE);
     }
 
     /**
@@ -140,7 +144,47 @@ public record BookConfig(
             PageMatter footer,
             PageMatter header) {
         this(bookRoot, title, axes, globalCss, vars, targets, theme, sectionLandingTemplate,
-                cardSchema, cover, back, footer, header, List.of());
+                cardSchema, cover, back, footer, header, List.of(), Sidebar.NONE);
+    }
+
+    /**
+     * Convenience constructor for books that declare no {@code sidebar:} — the
+     * shape of the canonical constructor before the sidebar moved out of
+     * {@code vars} into book config, kept so existing callers stay
+     * source-compatible.
+     *
+     * @param bookRoot the book root
+     * @param title the book title
+     * @param axes declared axes
+     * @param globalCss the book-level css chain
+     * @param vars book vars
+     * @param targets declared targets
+     * @param theme the theme name
+     * @param sectionLandingTemplate the book-wide section landing template
+     * @param cardSchema the yaml-card schema
+     * @param cover the front cover
+     * @param back the back page
+     * @param footer the running footer
+     * @param header the running header
+     * @param sections declared sections
+     */
+    public BookConfig(
+            Path bookRoot,
+            String title,
+            List<Axis> axes,
+            List<Path> globalCss,
+            Map<String, Object> vars,
+            List<String> targets,
+            String theme,
+            String sectionLandingTemplate,
+            CardSchema cardSchema,
+            PageMatter cover,
+            PageMatter back,
+            PageMatter footer,
+            PageMatter header,
+            List<Section> sections) {
+        this(bookRoot, title, axes, globalCss, vars, targets, theme, sectionLandingTemplate,
+                cardSchema, cover, back, footer, header, sections, Sidebar.NONE);
     }
 
     /**
@@ -156,11 +200,12 @@ public record BookConfig(
      */
     public BookConfig withSections(List<Section> newSections) {
         return new BookConfig(bookRoot, title, axes, globalCss, vars, targets, theme,
-                sectionLandingTemplate, cardSchema, cover, back, footer, header, newSections);
+                sectionLandingTemplate, cardSchema, cover, back, footer, header, newSections,
+                sidebar);
     }
 
     public static BookConfig empty(Path bookRoot) {
         return new BookConfig(bookRoot, null, List.of(), List.of(), Map.of(), List.of(),
-                null, null, null, null, null, null, null, List.of());
+                null, null, null, null, null, null, null, List.of(), Sidebar.NONE);
     }
 }

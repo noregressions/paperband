@@ -239,11 +239,16 @@ public abstract class AbstractPaperbandMojo extends AbstractMojo {
     }
 
     /** Log and report whether {@code paperband.skip} turned this goal off. */
-    protected boolean skipped(String goal) {
+    protected boolean skipped(String goal) throws MojoExecutionException {
         if (skip) {
             getLog().info("paperband.skip=true — skipping " + goal + ".");
             return true;
         }
+        // Every goal calls this first, which is why the POM check hangs off it:
+        // a goal added later gets the validation without anyone remembering to
+        // wire it in. After the skip test on purpose — skipping means doing
+        // nothing at all, including complaining.
+        PomValidation.check(mojoExecution, project);
         return false;
     }
 

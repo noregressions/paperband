@@ -3,6 +3,7 @@ package dev.noregressions.paperband.config;
 import dev.noregressions.paperband.model.Axis;
 import dev.noregressions.paperband.model.BookConfig;
 import dev.noregressions.paperband.model.PageMatter;
+import dev.noregressions.paperband.model.Sidebar;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -52,6 +53,7 @@ public final class BookOverlay {
     private final PageMatter back;
     private final PageMatter footer;
     private final PageMatter header;
+    private final Sidebar sidebar;
     private final Map<String, Object> vars;
 
     private BookOverlay(Builder b) {
@@ -62,6 +64,7 @@ public final class BookOverlay {
         this.back = b.back;
         this.footer = b.footer;
         this.header = b.header;
+        this.sidebar = b.sidebar;
         this.vars = Map.copyOf(b.vars);
     }
 
@@ -74,7 +77,7 @@ public final class BookOverlay {
     public boolean isEmpty() {
         return title == null && axes == null && sectionLandingTemplate == null
                 && cover == null && back == null && footer == null && header == null
-                && vars.isEmpty();
+                && sidebar == null && vars.isEmpty();
     }
 
     /**
@@ -102,7 +105,8 @@ public final class BookOverlay {
                 back   != null ? back   : base.back(),
                 footer != null ? footer : base.footer(),
                 header != null ? header : base.header(),
-                base.sections());
+                base.sections(),
+                sidebar != null ? sidebar : base.sidebar());
     }
 
     /** Collects declared values; every setter takes null for "not declared". */
@@ -114,6 +118,7 @@ public final class BookOverlay {
         private PageMatter back;
         private PageMatter footer;
         private PageMatter header;
+        private Sidebar sidebar;
         private final Map<String, Object> vars = new LinkedHashMap<>();
 
         private Builder() {}
@@ -170,6 +175,12 @@ public final class BookOverlay {
          */
         public Builder var(String key, Object value) {
             if (value != null) vars.put(key, value);
+            return this;
+        }
+
+        /** @param v the declared site sidebar, or null @return this */
+        public Builder sidebar(Sidebar v) {
+            this.sidebar = v;
             return this;
         }
 

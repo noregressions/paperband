@@ -150,6 +150,18 @@ public class BookLayout {
      */
     private String index;
 
+    /**
+     * The static site's navigation sidebar.
+     *
+     * <pre>
+     * &lt;sidebar/&gt;                              a sidebar, default behaviour
+     * &lt;sidebar&gt;&lt;sectionsCollapsed&gt;false&lt;/sectionsCollapsed&gt;&lt;/sidebar&gt;
+     * </pre>
+     *
+     * <p>Book scope: the site has one sidebar or none.
+     */
+    private SidebarConfig sidebar;
+
     /** Full-page cover, as an image or a template. */
     private PageMatterConfig cover;
 
@@ -306,6 +318,11 @@ public class BookLayout {
                 + " and " + names.get(names.size() - 1);
     }
 
+    /** @return the declared site sidebar, or null */
+    public SidebarConfig getSidebar() {
+        return sidebar;
+    }
+
     /** @return the declared cover, or null */
     public PageMatterConfig getCover() {
         return cover;
@@ -373,7 +390,7 @@ public class BookLayout {
         return title != null || cover != null || back != null || header != null
                 || footer != null || sectionLandingTemplate != null || !vars.isEmpty()
                 || !axes.isEmpty() || author != null || !authors.isEmpty()
-                || index != null;
+                || index != null || sidebar != null;
     }
 
     /**
@@ -419,6 +436,7 @@ public class BookLayout {
                 .back(back     == null ? null : back.toPageMatter(bookRoot, "back"))
                 .footer(footer == null ? null : footer.toPageMatter(bookRoot, "footer"))
                 .header(header == null ? null : header.toPageMatter(bookRoot, "header"))
+                .sidebar(sidebar == null ? null : sidebar.toSidebar())
                 .vars(new LinkedHashMap<String, Object>(vars));   // <vars> is String-valued XML
         // Authorship reaches templates through vars, where covers already look
         // for it: `author` rendered for the templates that know that name, and

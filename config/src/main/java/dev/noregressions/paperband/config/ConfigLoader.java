@@ -7,6 +7,7 @@ import dev.noregressions.paperband.model.CardSchema;
 import dev.noregressions.paperband.model.NamedTemplates;
 import dev.noregressions.paperband.model.PageMatter;
 import dev.noregressions.paperband.model.Section;
+import dev.noregressions.paperband.model.Sidebar;
 import dev.noregressions.paperband.model.RenderContext;
 import dev.noregressions.paperband.render.Margins;
 import dev.noregressions.paperband.render.Orientation;
@@ -347,6 +348,7 @@ public final class ConfigLoader {
             // has no standing to redefine them (see checkCardScopePage).
             Orientation declared = checkCardScopePage(yaml, pageNodeOf(data));
             if (declared != null) cardOrientation = declared;
+            checkBookScopeOnly(yaml, data);
             cssChain.addAll(resolveCssPaths(yaml.getParent(), data.get("css")));
             Object varsNode = data.get("vars");
             if (varsNode instanceof Map<?, ?> vm) {
@@ -405,6 +407,71 @@ public final class ConfigLoader {
         return vars;
     }
 
+    /** The keys a {@code sidebar:} map may carry. */
+    private static final java.util.Set<String> SIDEBAR_KEYS =
+            java.util.Set.of("enabled", "collapsed", "sectionsCollapsed");
+
+    /**
+     * Parse the book's {@code sidebar:} declaration.
+     *
+     * <p>A bare boolean is the shorthand for {@code enabled}, matching how
+     * {@code cover:} takes a bare string:
+     *
+     * <pre>
+     * sidebar: true
+     *
+     * sidebar:
+     *   enabled: true
+     *   collapsed: false          # start the sidebar itself open
+     *   sectionsCollapsed: false  # start every section's card list open
+     * </pre>
+     *
+     * <p>Falls back to the {@code vars.sidebar} / {@code vars.sidebar_collapsed}
+     * / {@code vars.sidebar_sections_collapsed} spelling this replaces, so books
+     * written against it keep working. Those are deprecated: a whole-site
+     * structural switch has no business on the per-card vars channel, where the
+     * site only ever read whichever card the build walked first.
+     *
+     * @param bookYaml the book yaml, for error messages
+     * @param data     its parsed contents
+     * @return the declaration, or {@link Sidebar#NONE}
+     */
+    @SuppressWarnings("unchecked")
+    private static Sidebar parseSidebar(Path bookYaml, Map<String, Object> data) {
+        Object node = data.get("sidebar");
+        if (node instanceof Map<?, ?> m) {
+            Map<String, Object> map = (Map<String, Object>) m;
+            for (Object k : map.keySet()) {
+                if (!SIDEBAR_KEYS.contains(String.valueOf(k))) {
+                    throw new ConfigParseException(bookYaml + ": 'sidebar' has unknown key '" + k
+                            + "' — expected one of " + SIDEBAR_KEYS);
+                }
+            }
+            return new Sidebar(
+                    truthy(map.get("enabled"), true),      // present as a map means "I want one"
+                    truthy(map.get("collapsed"), false),
+                    truthy(map.get("sectionsCollapsed"), true));
+        }
+        if (node != null) {
+            return truthy(node, false) ? Sidebar.on() : Sidebar.NONE;
+        }
+        // Deprecated vars spelling.
+        Map<String, Object> vars = data.get("vars") instanceof Map<?, ?> vm
+                ? (Map<String, Object>) vm : Map.of();
+        if (!truthy(vars.get("sidebar"), false)) return Sidebar.NONE;
+        return new Sidebar(true,
+                truthy(vars.get("sidebar_collapsed"), false),
+                truthy(vars.get("sidebar_sections_collapsed"), true));
+    }
+
+    /** Yaml truthiness, matching the layout engine: true/yes/1, or a real boolean. */
+    private static boolean truthy(Object v, boolean defaultValue) {
+        if (v == null) return defaultValue;
+        if (v instanceof Boolean b) return b;
+        String s = v.toString().trim().toLowerCase(java.util.Locale.ROOT);
+        return s.equals("true") || s.equals("yes") || s.equals("1");
+    }
+
     /**
      * A yaml's page block: the top-level {@code page:} key, falling back to
      * {@code vars.page} — the original spelling, kept working because geometry
@@ -423,6 +490,35 @@ public final class ConfigLoader {
             return (Map<String, Object>) pm;
         }
         return null;
+    }
+
+    /**
+     * Book-scope keys, with the reason a folder can't set them. Structure that
+     * frames the whole book has no meaningful per-folder value: the site either
+     * has a sidebar or it doesn't.
+     */
+    private static final Map<String, String> BOOK_ONLY_KEYS = Map.of(
+            "sidebar", "the site has one sidebar or none — it frames every page or no page");
+
+    /**
+     * Reject a book-scope key declared below the book root.
+     *
+     * <p>These used to be read from the merged {@code vars} of whichever card
+     * the build walked first, so a folder that set one either did nothing or
+     * changed the whole site, decided by walk order. Erroring beats both.
+     *
+     * @param yaml the folder yaml, for the message
+     * @param data its parsed contents
+     * @throws ConfigParseException if it declares a book-scope key
+     */
+    private static void checkBookScopeOnly(Path yaml, Map<String, Object> data) {
+        for (Map.Entry<String, String> entry : BOOK_ONLY_KEYS.entrySet()) {
+            if (data.containsKey(entry.getKey())) {
+                throw new ConfigParseException(yaml + ": '" + entry.getKey() + "' can only be set "
+                        + "at the book root — " + entry.getValue() + ". Move it to the book's own "
+                        + "paperband.yaml (or the POM's <book>).");
+            }
+        }
     }
 
     /** Page keys that describe the book's one physical sheet, so only the book root may set them. */
@@ -566,8 +662,13 @@ public final class ConfigLoader {
         // book root.
         List<Section> sections = parseSections(bookRoot, bookYaml, declaredSectionsNode);
 
+        // Site navigation sidebar. Book scope: it frames every page of the site
+        // or none of them, so one declaration decides it.
+        Sidebar sidebar = parseSidebar(bookYaml, data);
+
         return new BookConfig(recordRoot, title, axes, globalCss, vars, targets, theme,
-                sectionLandingTemplate, cardSchema, cover, back, footer, header, sections);
+                sectionLandingTemplate, cardSchema, cover, back, footer, header, sections,
+                sidebar);
     }
 
     /**

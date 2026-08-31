@@ -594,17 +594,15 @@ public final class LayoutEngine {
         List<Map<String, Object>> sectionMetas = buildSectionMetas(
                 bySection, bookRoot, declaredSections, bookCtx.book().sectionLandingTemplate(), sectionFolderYamlCache);
 
-        // Sidebar opt-in lives in bookCtx.vars() so it cascades through the
-        // standard yaml chain. Boolean / string-truthy both accepted.
-        // sidebar_sections_collapsed controls the initial open/closed state
-        // of each axis-value/section row's card list. Default is true
-        // (closed), matching the "table of contents that opens what you
-        // need" pattern; set to false in book vars to ship every section
-        // expanded.
-        boolean sidebar = truthy(bookCtx.vars().get("sidebar"));
-        boolean sidebarCollapsed = truthy(bookCtx.vars().get("sidebar_collapsed"));
-        boolean sidebarSectionsCollapsed = truthyOrDefault(
-                bookCtx.vars().get("sidebar_sections_collapsed"), true);
+        // The sidebar is book scope — structure, declared once, resolved by the
+        // config loader (which also honours the deprecated vars spelling). It
+        // used to be read straight off bookCtx.vars(), i.e. the vars of
+        // whichever card was walked first, which made a whole-site switch
+        // depend on walk order.
+        dev.noregressions.paperband.model.Sidebar sidebarConfig = bookCtx.book().sidebar();
+        boolean sidebar = sidebarConfig.enabled();
+        boolean sidebarCollapsed = sidebarConfig.collapsed();
+        boolean sidebarSectionsCollapsed = sidebarConfig.sectionsCollapsed();
 
         // Sidebar axis-value cards: each value needs its `cards` filled with
         // the card summaries belonging to it so the partial can render the
@@ -623,12 +621,37 @@ public final class LayoutEngine {
         // `order:` chain) rather than always "axes first, sections last".
         List<Map<String, Object>> navEntries = buildNavEntries(cards, groupings, bookRoot, declaredSections, sectionMetas);
 
+        // A flat book — no axes, every card in the content root — groups into
+        // nothing, so navEntries comes back empty and a declared sidebar would
+        // render as an empty panel. Its cards are still a table of contents, so
+        // the sidebar falls back to one unlabelled entry holding all of them.
+        //
+        // Deliberately a SEPARATE list: navEntries also drives the top nav and
+        // the index's section grid, and neither wants a nameless catch-all tile.
+        List<Map<String, Object>> sidebarEntries = navEntries;
+        if (sidebar && navEntries.isEmpty() && !cards.isEmpty()) {
+            List<Map<String, Object>> allCards = new ArrayList<>(cards.size());
+            for (int i = 0; i < cards.size(); i++) {
+                allCards.add(siteCardSummary(cards.get(i), groupings, i));
+            }
+            Map<String, Object> flat = new LinkedHashMap<>();
+            flat.put("kind", "section");
+            flat.put("id", "all");
+            flat.put("label", null);          // rendered as no heading at all
+            flat.put("url", null);            // no landing page to link to
+            flat.put("count", cards.size());
+            flat.put("landingPage", Boolean.FALSE);
+            flat.put("cards", allCards);
+            sidebarEntries = List.of(flat);
+        }
+
         Map<String, String> out = new LinkedHashMap<>();
 
         // index.html
         Map<String, Object> indexModel = new HashMap<>();
         indexModel.put("book", bookModel);
         indexModel.put("navEntries", navEntries);
+        indexModel.put("sidebarEntries", sidebarEntries);
         indexModel.put("sections", sectionMetas);
         indexModel.put("axisGroupings", axisGroupingsModel(groupings));
         indexModel.put("stats", stats);
@@ -658,6 +681,7 @@ public final class LayoutEngine {
                 Map<String, Object> valueModel = new HashMap<>();
                 valueModel.put("book", bookModel);
                 valueModel.put("navEntries", navEntries);
+                valueModel.put("sidebarEntries", sidebarEntries);
                 valueModel.put("sections", sectionMetas);
                 valueModel.put("axis", axisMetaModel(g.axis()));
                 valueModel.put("value", value);
@@ -691,6 +715,7 @@ public final class LayoutEngine {
             Map<String, Object> sectionModel = new HashMap<>();
             sectionModel.put("book", bookModel);
             sectionModel.put("navEntries", navEntries);
+                sectionModel.put("sidebarEntries", sidebarEntries);
             sectionModel.put("sections", sectionMetas);
             sectionModel.put("section", section);
             sectionModel.put("cards", sectionCards);
@@ -743,6 +768,7 @@ public final class LayoutEngine {
             Map<String, Object> cm = cardModel(card, cardAxesFromGroupings(i, groupings));
             model.put("book", bookModel);
             model.put("navEntries", navEntries);
+                model.put("sidebarEntries", sidebarEntries);
             model.put("sections", sectionMetas);
             model.put("section", sectionMeta);
             model.put("axisBack", axisBack);

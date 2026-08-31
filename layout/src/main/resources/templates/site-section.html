@@ -14,7 +14,7 @@
 {% include "_site-nav" with {"book": book, "navEntries": navEntries, "urlPrefix": urlPrefix, "sidebar": sidebar, "sidebar_collapsed": sidebar_collapsed} %}
 <div class="site-layout">
 {% if sidebar %}
-{% include "_site-sidebar" with {"navEntries": navEntries, "urlPrefix": urlPrefix, "page": page, "sidebar_collapsed": sidebar_collapsed} %}
+{% include "_site-sidebar" with {"navEntries": sidebarEntries, "urlPrefix": urlPrefix, "page": page, "sidebar_collapsed": sidebar_collapsed} %}
 {% endif %}
 <main class="site-main">
 
@@ -25,7 +25,7 @@
 </div>
 
 <div class="tier-body">
-  <div class="cards-heading">{{ section.count }} card{% if section.count != 1 %}s{% endif %} in this section</div>
+  <div class="cards-heading"></div>
   <div class="card-grid">
     {% for c in cards %}
     <a class="card-item" href="cards/{{ c.id }}.html">

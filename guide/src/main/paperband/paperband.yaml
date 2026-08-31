@@ -28,12 +28,16 @@ page:
 css:
   - styles/guide.css
 
+# The static site's navigation sidebar. Book scope, like every other key at
+# this level: the site has one sidebar or none, so a folder yaml declaring it
+# is an error rather than a walk-order coin flip.
+sidebar: true
+
 vars:
   author: "The Paperband Team"
   version: "0.1.0-SNAPSHOT"
   subtitle: "A self-documenting reference built with Paperband itself"
   series: "Paperband Documentation"
-  sidebar: true
   # Printed table of contents and back-of-book index -- both live demos of
   # the features documented in Book Configuration / TOC and Index.
   toc: true

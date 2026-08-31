@@ -30,7 +30,7 @@
        `start_collapsed_for_this_section` is recomputed inline below
        because Pebble's `{% set %}` isn't used elsewhere in this codebase
        and we want to keep the template footprint conservative. #}
-    <section class="sidebar-section sidebar-section-{% if e.kind == 'axis' %}{{ e.axis }}-{{ e.id }}{% else %}{{ e.id }}{% endif %}{% if sidebar_sections_collapsed and e.cards is not empty and not ((page.kind == 'axis' and e.kind == 'axis' and page.axis == e.axis and page.id == e.id) or (page.kind == 'section' and e.kind == 'section' and page.id == e.id)) %} collapsed{% endif %}"
+    <section class="sidebar-section sidebar-section-{% if e.kind == 'axis' %}{{ e.axis }}-{{ e.id }}{% else %}{{ e.id }}{% endif %}{% if sidebar_sections_collapsed and e.label is not null and e.cards is not empty and not ((page.kind == 'axis' and e.kind == 'axis' and page.axis == e.axis and page.id == e.id) or (page.kind == 'section' and e.kind == 'section' and page.id == e.id)) %} collapsed{% endif %}"
              data-section-id="{% if e.kind == 'axis' %}axis-{{ e.axis }}-{{ e.id }}{% else %}section-{{ e.id }}{% endif %}">
       {% if e.kind == 'axis' %}
       <h3 class="sidebar-tier-heading">
@@ -46,6 +46,10 @@
                 onclick="paperbandToggleSection(this)">▾</button>
         {% endif %}
       </h3>
+      {% elseif e.label is null %}
+      {# Flat book: one unlabelled entry holding every card. No heading —
+         there is no section here, just the book's cards — and therefore no
+         toggle, which is why the collapsed class is suppressed above. #}
       {% else %}
       <h3 class="sidebar-section-heading">
         {% if e.url is not null %}

@@ -35,8 +35,8 @@ Every key has a **scope**, and the scope decides both who may set it and who win
 
 **Book scope** describes the book as one artifact, so it has no depth to cascade through.
 It is read from the book's own `paperband.yaml` and nowhere else: `title`, `axes`,
-`theme`, `sections`, `cardSchema`, `cover`, `back`, `header`, `footer`, `page`, and the
-book-wide `sections.landing.template` default.
+`theme`, `sections`, `cardSchema`, `cover`, `back`, `header`, `footer`, `page`, `sidebar`,
+and the book-wide `sections.landing.template` default.
 
 A book-scope key set in a folder yaml is an **error**, not a silent win or a silent loss.
 That matters most for `page` — see below.

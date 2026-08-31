@@ -61,6 +61,7 @@ second block is read at book level *and* cascades, so a folder may extend or ove
 | `cover`, `back` | Front/back matter: `image`, `template`, `text`, `title`, `subtitle`, `series`, `author`, `fullPage` (cover only). A bare string is shorthand for `image`. The `site` goal renders `cover` as its index hero. | `<book><cover>`, `<book><back>` |
 | `header`, `footer` | Running band templates | `<book><header>`, `<book><footer>` |
 | `sections` | Declared top-level structure, and `sections.landing.template` | `<book><sections>`; the book-wide landing default is `<book><sectionLandingTemplate>` |
+| `sidebar` | The static site's navigation sidebar: a bare boolean, or a map of `enabled`, `collapsed`, `sectionsCollapsed` | `<book><sidebar>` |
 | `cardSchema` | Transpile `*.yaml` files into cards | — |
 
 Book-level entry points for keys that also cascade:
@@ -106,15 +107,17 @@ Precedence: `sections:` beats `include:`, which beats `order:`.
 These live in `vars` — so they cascade — but the engine reads them as switches rather than
 as template values. Easy to miss, because nothing else marks them out.
 
+Each is read from the **book context**, which is the context of whichever card the build
+walked first. Setting one in a folder yaml is therefore either a no-op or a whole-book
+switch, decided by walk order — so set them at the book root. (`sidebar` used to be in this
+list for that reason; it is now a book-scope key of its own.)
+
 | Var | What it does | Read at |
 |---|---|---|
 | `toc` | Render a printed table of contents | Book |
 | `index` | Back-of-book index: `true`, `auto`, or a term list; also `<book><index>` | Book |
 | `indexStop` | Terms to veto from an `auto` index | Book |
 | `subtitle`, `series`, `author` | Cover and site-hero lines (a `cover:` block overrides them per line). `author` also comes from `<book><author>`/`<book><authors>`. | Book |
-| `sidebar` | Render the site's sidebar | Book |
-| `sidebar_collapsed` | Start the site sidebar collapsed | Book |
-| `sidebar_sections_collapsed` | Start sidebar section groups collapsed (default true) | Book |
 | `page.measure` | Text line-length — overrides the theme's `--card-max-width` | Book |
 | `maxPagesPerCard` | Page-count ceiling per card; `<maxPagesPerCard>` wins | Book |
 | `watermark` | Watermark text/appearance; `<watermarkText>` wins | Book |
@@ -160,6 +163,75 @@ No yaml equivalent: they describe the build, not the book.
 | `<stylesheets>` | Build-owned CSS, inlined last |
 | `<emitHtml>`, `<reportPages>` | Side outputs |
 | `<skip>` | Skip the goal |
+
+## The site sidebar
+
+Structure rather than a setting, so it is book scope — the site has a sidebar on every page
+or on none:
+
+```yaml
+sidebar: true                 # shorthand
+
+sidebar:                      # or, for the open/closed behaviour
+  enabled: true               # default true — declaring the map is the opt-in
+  collapsed: false            # start the sidebar itself shut
+  sectionsCollapsed: true     # start each section's card list shut (default true)
+```
+
+Note `sectionsCollapsed` defaults the *opposite* way to the other two: a sidebar listing
+every card of every section at once is a wall of links, so it behaves like a table of
+contents that opens what you need.
+
+In the POM, the element's presence is the opt-in:
+
+```xml
+<book>
+  <sidebar/>
+  <!-- or <sidebar><sectionsCollapsed>false</sectionsCollapsed></sidebar> -->
+</book>
+```
+
+PDF builds ignore it entirely. A folder yaml declaring it is an error.
+
+The previous spelling — `vars.sidebar`, `vars.sidebar_collapsed`,
+`vars.sidebar_sections_collapsed` — still works and is deprecated. It put a whole-site
+switch on the per-card `vars` channel, where the site only ever read the copy belonging to
+the first card walked: a folder that set it either did nothing or changed the entire site,
+decided by walk order alone.
+
+## Unknown configuration is an error
+
+Maven's own reaction to a POM element no parameter matches is a warning:
+
+```
+[WARNING] Parameter 'sidebar' is unknown for plugin 'paperband-maven-plugin:site'
+```
+
+In a build printing hundreds of lines that is indistinguishable from silence — the element
+looks configured, nothing reads it, and the symptom arrives much later as "that setting
+doesn't work". Paperband fails the build instead, and says what to write:
+
+```
+execution 'build-guide-site' <configuration>: <sidebar> is not a Paperband plugin
+parameter. It is a book var, not a build setting — declare it inside the book:
+<book><vars><sidebar>…</sidebar></vars></book>.
+```
+
+Three checks Maven doesn't already make:
+
+| Mistake | What you get |
+|---|---|
+| An element no goal knows | Rejected, with a `Did you mean <…>?` suggestion or the list of what's valid there |
+| A parameter belonging to a **different** goal, on an execution that doesn't run it | Rejected, naming the goal it belongs to |
+| A boolean that isn't `true`/`false` | Rejected — Plexus converts anything else to `false` silently, so `<fullPage>yes</fullPage>` would quietly do nothing |
+
+Plugin-level `<configuration>` is checked more leniently than an execution's, deliberately:
+it is shared by *every* goal, so a `<book>` declared once for `build` and `site` is also
+handed to `renderers`, which has no such parameter. An element some goal accepts is legal
+there; only one no goal knows is a typo.
+
+Unknown *nested* elements (inside `<book>`, `<cover>`, `<axis>`) and unparseable numbers
+were already hard errors from Maven's own configurator — those need nothing extra.
 
 ## Check
 
