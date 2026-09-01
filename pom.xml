@@ -20,6 +20,9 @@
         <module>include</module>
         <module>layout</module>
         <module>render-playwright</module>
+        <!-- Optional block renderers. Not depended on by the plugin: a book
+             that wants one adds it to the plugin's own <dependencies>. -->
+        <module>plantuml</module>
         <module>maven-plugin</module>
         <module>archetype</module>
     </modules>
@@ -42,6 +45,9 @@
         <junit.version>5.10.2</junit.version>
          <pdfbox.version>2.0.24</pdfbox.version>
         <lucene.version>9.12.0</lucene.version>
+        <!-- The MIT-licensed build of PlantUML. See plantuml/pom.xml for
+             why not the default (GPL) artifact. -->
+        <plantuml.version>1.2026.7</plantuml.version>
 
         <!-- Maven Plugin API: latest Maven-3 line release (3.9.16) rather than
              the in-progress Maven 4 line (4.0.0-*), since the plugin needs to
@@ -111,6 +117,20 @@
                 <groupId>dev.noregressions.paperband</groupId>
                 <artifactId>include</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>dev.noregressions.paperband</groupId>
+                <artifactId>block-plantuml</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- PlantUML, for plantuml only. Nothing else in the build
+                 sees it - that module exists precisely to keep a 17 MB
+                 diagram engine off every book's classpath. -->
+            <dependency>
+                <groupId>net.sourceforge.plantuml</groupId>
+                <artifactId>plantuml-mit</artifactId>
+                <version>${plantuml.version}</version>
             </dependency>
 
             <!-- Lucene analyzers only - tokenisation, stopwords and stemming

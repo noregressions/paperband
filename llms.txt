@@ -89,6 +89,7 @@ mvn paperband:scan -Dpaperband.input=some/card.md  # one card's parsed blocks + 
 mvn paperband:pages -Dpaperband.pdf=out.pdf        # per-card page-span table from a built PDF
 mvn paperband:renderers                            # list renderers + availability
 mvn paperband:themes                               # list themes
+mvn paperband:blocks                               # list ```type fences + what renders each
 ```
 
 ## Authoring cards (Markdown)
@@ -340,7 +341,7 @@ built PDF.
 
 ## Maven plugin reference
 
-Goal prefix `paperband`. Nine goals:
+Goal prefix `paperband`. Ten goals:
 
 | Goal | Does | Default phase |
 |---|---|---|
@@ -353,6 +354,7 @@ Goal prefix `paperband`. Nine goals:
 | `render` | One HTML file → PDF, no card pipeline (e.g. re-render a hand-edited `emitHtml`) | direct |
 | `renderers` | List renderers + availability | direct |
 | `themes` | List themes (`-Dpaperband.themeDir=` to include custom) | direct |
+| `blocks` | List ```` ```type ```` fences the build can render, and what renders each | direct |
 
 Key parameters (every one has a `-Dpaperband.<name>` property):
 
@@ -458,6 +460,21 @@ the end naming failures.
 - **PDF renderer** — implement `dev.noregressions.paperband.render.HtmlToPdfRenderer`
   (`name()` is the `<renderer>` selector; override `isAvailable()` for external binaries),
   register in `META-INF/services/…HtmlToPdfRenderer` (true ServiceLoader SPI).
+- **Block renderer** (`block.BlockRenderer`) — a ```` ```type ```` fence whose HTML is
+  computed by a jar rather than a template. Declares `name()`, `types()` (the fence tags it
+  claims), `isAvailable()`/`unavailableReason()`, and `render(BlockRequest)`; register in
+  `META-INF/services/…block.BlockRenderer` (true ServiceLoader SPI). Installed by adding
+  the jar to the **plugin's** `<dependencies>`. Precedence: theme/book
+  `blocks/<type>.html` > BlockRenderer > bundled `blocks/<type>.html` > plain code block.
+  Settings arrive as `vars.<rendererName>` (so they cascade). Two renderers claiming one
+  type fails the build. `mvn paperband:blocks` lists every type and what renders it.
+  Bundled implementation: `block-plantuml` (```` ```plantuml ````/`puml`/`uml` → inline SVG
+  at build time, no browser and no network;
+  `vars.plantuml.{theme,styleFile,style,background,format,scale}`). Theming a PlantUML
+  diagram is NOT a CSS job — it bakes colours into each shape and emits no classes, so
+  nothing can select them; use `styleFile:` (a PlantUML `<style>`/`skinparam` file, path
+  relative to the book home) or inline `style:`. They compose broadest-first:
+  `theme` → `styleFile` → `style`.
 - **Content provider** (`include.ContentProvider`) — new fragment sources selected by
   scheme prefix (`git:path@ref`); and **fragment processor** (`include.FragmentProcessor`)
   — new `as="type"` conversions. Both currently wired explicitly in

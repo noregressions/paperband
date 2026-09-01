@@ -188,7 +188,9 @@ public class StructureMojo extends AbstractPaperbandMojo {
             if (blockTemplates == null) {
                 blockTemplates = new BlockTemplates(null,
                         geography().layouts() != null ? geography().layouts()
-                                : bookCtx.book().bookRoot().resolve("layouts"));
+                                : bookCtx.book().bookRoot().resolve("layouts"),
+                        BlockRenderers.discover(getLog()), geography().home() != null
+                                ? geography().home() : bookCtx.book().bookRoot());
             }
             cards.add(CardLoading.load(cardLoader, preprocessor, cardFile, ctx.book().cardSchema(),
                     ctx.vars(), getLog(), blockTemplates));

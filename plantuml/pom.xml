@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>dev.noregressions.paperband</groupId>
+        <artifactId>parent</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>block-plantuml</artifactId>
+    <name>Paperband :: Block :: PlantUML</name>
+    <description>Renders ```plantuml fences to inline SVG at build time. Optional: add it to the plugin's dependencies.</description>
+    <url>https://github.com/noregressions/paperband</url>
+
+    <!--
+        Deliberately NOT a dependency of paperband-maven-plugin. PlantUML is a
+        ~17 MB jar that most books never need, and the whole point of the
+        BlockRenderer SPI is that a book which does need it says so once, in
+        its own pom:
+
+            <plugin>
+              <artifactId>paperband-maven-plugin</artifactId>
+              <dependencies>
+                <dependency>
+                  <groupId>dev.noregressions.paperband</groupId>
+                  <artifactId>plantuml</artifactId>
+                  <version>...</version>
+                </dependency>
+              </dependencies>
+            </plugin>
+    -->
+    <dependencies>
+        <dependency>
+            <groupId>dev.noregressions.paperband</groupId>
+            <artifactId>core</artifactId>
+        </dependency>
+        <!--
+            plantuml-mit, not plantuml. PlantUML is multi-licensed and the
+            default artifact is GPL, which paperband (Apache-2.0) will not
+            take a dependency on even in an optional module - a jar someone
+            puts on their build classpath is still a jar we told them to use.
+            Same upstream code, MIT terms.
+        -->
+        <dependency>
+            <groupId>net.sourceforge.plantuml</groupId>
+            <artifactId>plantuml-mit</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+
+        <!-- Test-only: the diagram has to survive the card pipeline (jsoup
+             re-parses whatever a renderer returns), and asserting that here
+             is the only place both halves exist. -->
+        <dependency>
+            <groupId>dev.noregressions.paperband</groupId>
+            <artifactId>cards</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

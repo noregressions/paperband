@@ -37,6 +37,12 @@ vars:
   author: "The Paperband Team"
   version: "0.1.0-SNAPSHOT"
   subtitle: "A self-documenting reference built with Paperband itself"
+  # ```plantuml diagrams, styled to this book's own palette. PlantUML bakes its
+  # colours into each shape and emits no CSS classes, so a theme cannot reach
+  # the drawing from outside -- its own style language is the way in, and this
+  # is the file. See Card Structure / PlantUML diagrams.
+  plantuml:
+    styleFile: styles/diagrams.puml
   series: "Paperband Documentation"
   # Printed table of contents and back-of-book index -- both live demos of
   # the features documented in Book Configuration / TOC and Index.

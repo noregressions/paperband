@@ -200,6 +200,92 @@ captures every ` ```java ` block in the book — powerful, and worth doing only 
 purpose. And a broken template fails the build naming the card, the type, and the
 template file.
 
+### PlantUML diagrams
+
+A template rearranges text. Drawing a diagram takes code, which paperband ships as an
+optional module rather than a dependency every book carries: add
+`dev.noregressions.paperband:block-plantuml` to the **plugin's** own `<dependencies>` and
+` ```plantuml ` (also ` ```puml `, ` ```uml `) becomes a diagram.
+
+````markdown
+```plantuml
+Alice -> Bob: order placed
+Bob --> Alice: confirmed
+```
+````
+
+`@startuml` / `@enduml` are optional — the fence already said it was a diagram — though any
+other `@start` form (`@startmindmap`, `@startgantt`, `@startjson`, …) is passed through as
+written. This guide has the module installed, so that fence is this drawing:
+
+```plantuml
+Alice -> Bob: order placed
+Bob --> Alice: confirmed
+```
+
+Unlike mermaid, this one is drawn during the build, not by the browser: the SVG is in the
+HTML before Chromium ever sees the page. So there is nothing to wait for, nothing to fetch,
+the labels stay real selectable text in the PDF, and an offline CI machine renders it
+happily. Settings come from the `vars` cascade, so they can be book-wide or per folder:
+
+```yaml
+vars:
+  plantuml:
+    theme: plain          # one of PlantUML's 40-odd bundled !theme names
+    styleFile: styles/diagrams.puml   # your own styling — see below
+    style: "<style>root { FontSize 11 }</style>"   # ...or inline, per folder or card
+    background: "#fff"    # default transparent — the page shows through
+    format: svg           # or png, embedded as a data: URI
+    scale: 0.8
+```
+
+A diagram that doesn't parse fails the build with PlantUML's own message. PlantUML's own
+habit is to *draw* the error instead, which in a book means a page that builds green and
+prints a picture of a stack trace.
+
+### Making diagrams match the book
+
+**Not with CSS**, which is the first thing everyone tries. PlantUML bakes every colour into
+the shape that carries it — `fill="#E2E2F0"`, `style="stroke:#181818"` — and emits no class
+attributes at all, so a stylesheet has nothing to select. Neither the theme nor the book's
+CSS chain can reach inside the drawing.
+
+What can is PlantUML's own style language, and `styleFile` is where a book keeps it: one
+file, named once in the root `paperband.yaml`, applied to every diagram in the book. This
+guide's is `styles/diagrams.puml`, which is why the sequence diagram above is set in IBM
+Plex on the page's own paper rather than in Arial on a white rectangle:
+
+```
+<style>
+root {
+  FontName        "IBM Plex Sans"
+  FontColor       #333333
+  LineColor       #aeb7c2
+  BackgroundColor transparent
+}
+participant, class, node, component {
+  BackgroundColor #f6f8fa
+  LineColor       #aeb7c2
+}
+arrow { LineColor #687280; FontSize 11 }
+</style>
+```
+
+The file is injected verbatim, so `skinparam` lines, `!include` and `!theme` all work in
+there too — and the pieces compose broadest-first: a bundled `theme:`, then `styleFile:`,
+then an inline `style:` from a folder or a single card, each overriding the last.
+
+Two things to know. The colours are a hand-made copy of the theme's — the two systems have
+no way to share tokens, so a palette change means editing both. And PlantUML measures text
+with fonts installed *on the build machine* to decide how big each box is; a face that
+isn't there is substituted for layout while the SVG still asks the browser for the real
+one. The labels don't clip (PlantUML pins each one with `textLength`), but glyph spacing
+can look faintly stretched. Naming a font the machine has avoids it.
+
+`mvn paperband:blocks` lists every fence type the build can render and what renders each —
+the first thing to run when a diagram came out as a code block. Writing your own renderer
+is in Extending Paperband.
+
 ## Raw HTML and the content policy
 
 Raw HTML in a card is a legitimate *structural* escape hatch — a table with rowspans,

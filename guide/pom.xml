@@ -42,6 +42,23 @@
                 <groupId>dev.noregressions.paperband</groupId>
                 <artifactId>paperband-maven-plugin</artifactId>
                 <version>${project.version}</version>
+
+                <!--
+                    The guide documents ```plantuml, so the guide renders one -
+                    and the only way to render one is the way the docs tell a
+                    reader to: the optional module on the plugin's own
+                    classpath. Dogfooding the install instructions, and the
+                    reason the diagram in Card Structure is a real diagram
+                    rather than a screenshot of one.
+                -->
+                <dependencies>
+                    <dependency>
+                        <groupId>dev.noregressions.paperband</groupId>
+                        <artifactId>block-plantuml</artifactId>
+                        <version>${project.version}</version>
+                    </dependency>
+                </dependencies>
+
                 <executions>
                     <!-- No <input>: the book sits at src/main/paperband -->
                     <execution>

@@ -279,6 +279,14 @@ pre.mermaid, .site-content pre.mermaid {
 }
 pre.mermaid > svg { max-width: 100%; height: auto; }
 
+/* Diagrams drawn into the page by a BlockRenderer module (```plantuml and
+ * friends): the SVG is already there, so unlike mermaid there is nothing to
+ * wait for — only sizing to state. The drawn width stands until it exceeds
+ * the column, and then the whole thing scales rather than overflowing. */
+figure.plantuml, figure.diagram { margin: 1.8rem 0; text-align: center; }
+figure.plantuml > svg, figure.diagram > svg,
+figure.plantuml > img, figure.diagram > img { max-width: 100%; height: auto; }
+
 /* ---- cover hero (index) ----
    Structure only, per this file's convention: a declared `cover:` image fills
    the hero's width and the text block lays over it, exactly as the printed

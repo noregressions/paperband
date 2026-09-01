@@ -1,6 +1,6 @@
 ---
 id: maven-plugin
-oneliner: "Nine goals: build, site, publish, and the inspection goals around them."
+oneliner: "Ten goals: build, site, publish, and the inspection goals around them."
 ---
 
 # Maven Plugin
@@ -21,6 +21,7 @@ oneliner: "Nine goals: build, site, publish, and the inspection goals around the
 | `render` | One HTML file straight to PDF, no card pipeline in the way | *(invoke directly)* |
 | `renderers` | List the renderers this build can reach | *(invoke directly)* |
 | `themes` | List the themes `<theme>` can name | *(invoke directly)* |
+| `blocks` | List the ```` ```type ```` fences this build can render, and what renders each | *(invoke directly)* |
 
 Every goal runs standalone as well as from an execution — `mvn paperband:structure
 -Dpaperband.input=book` needs no POM edit — and every parameter has a `-D` property, so a
@@ -601,6 +602,7 @@ mvn paperband:pages -Dpaperband.pdf=target/book.pdf -Dpaperband.byPages=true
 # What's available in this build?
 mvn paperband:renderers
 mvn paperband:themes -Dpaperband.themeDir=mythemes
+mvn paperband:blocks
 ```
 
 `structure` takes the same `<book>` element `build` does, which is the point of it: the

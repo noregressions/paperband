@@ -4,6 +4,8 @@ import org.jsoup.nodes.Attribute;
 import org.jsoup.nodes.Element;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -42,6 +44,18 @@ import java.util.Set;
  * contents are escaped <em>text</em> by the time flexmark has rendered them,
  * so a literal {@code <div style="…">} in an example never appears to this
  * class as an element.
+ *
+ * <p><b>Inline SVG is exempt</b>, and deliberately so. Every rule above rests
+ * on one distinction — appearance the theme should own, versus structure the
+ * author wrote — and inside a picture that distinction collapses: a
+ * {@code fill}, a {@code style}, a {@code width} on an SVG shape <em>is</em>
+ * the drawing, not a decision about how the drawing should look on this
+ * theme. Stripping them leaves a blank rectangle, and under
+ * {@link ContentPolicy#STRICT} it would fail the build for every diagram a
+ * {@link dev.noregressions.paperband.block.BlockRenderer} drew. So an
+ * {@code <svg>} subtree passes through as written, with one exception that
+ * isn't about presentation at all: {@code <script>} and {@code on*} handlers
+ * go, wherever they are.
  */
 public final class ContentSanitizer {
 
@@ -85,10 +99,21 @@ public final class ContentSanitizer {
      */
     public static List<String> strip(Element body) {
         List<String> removed = new ArrayList<>();
+        // Every element inside a picture, gathered up front: asking each
+        // element "am I in an SVG?" would walk its ancestors, and a diagram is
+        // thousands of elements deep in aggregate.
+        Set<Element> drawing = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (Element svg : body.select("svg")) {
+            drawing.addAll(svg.getAllElements());
+        }
         // Snapshot: the walk mutates the tree it came from.
         for (Element el : new ArrayList<>(body.getAllElements())) {
             if (el == body) continue;
             String tag = el.tagName();
+            if (drawing.contains(el)) {
+                stripScripting(el, tag, removed);
+                continue;   // the rest of a picture is the picture -- see the class javadoc
+            }
             if (DROP_WITH_CONTENT.contains(tag)) {
                 removed.add("dropped <" + tag + "> and its content");
                 el.remove();
@@ -116,6 +141,25 @@ public final class ContentSanitizer {
             }
         }
         return removed;
+    }
+
+    /**
+     * The part of the policy that still applies inside a picture: nothing
+     * executes. An {@code <svg>} island shares the page's script context like
+     * any other markup, so a {@code <script>} in one is a script in the book.
+     */
+    private static void stripScripting(Element el, String tag, List<String> removed) {
+        if (tag.equals("script")) {
+            removed.add("dropped <script> inside <svg>");
+            el.remove();
+            return;
+        }
+        for (Attribute a : new ArrayList<>(el.attributes().asList())) {
+            if (a.getKey().toLowerCase(Locale.ROOT).startsWith("on")) {
+                removed.add("stripped " + abbreviate(a.html()) + " from <" + tag + "> inside <svg>");
+                el.removeAttr(a.getKey());
+            }
+        }
     }
 
     /** The element's attributes for a removal message, abbreviated. */

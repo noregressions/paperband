@@ -1,5 +1,9 @@
 package dev.noregressions.paperband.cards;
 
+import dev.noregressions.paperband.block.BlockRenderException;
+import dev.noregressions.paperband.block.BlockRenderer;
+import dev.noregressions.paperband.block.BlockRendererRegistry;
+import dev.noregressions.paperband.block.BlockRequest;
 import dev.noregressions.paperband.pebble.LenientMap;
 import dev.noregressions.paperband.pebble.LenientMapExtension;
 
@@ -17,6 +21,7 @@ import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -58,6 +63,29 @@ import java.util.Set;
  * through untouched. The corollary: a book that ships
  * {@code layouts/blocks/java.html} deliberately captures every
  * {@code ```java} block, which is powerful and worth doing on purpose.
+ *
+ * <h2>Renderers, and the order of the three</h2>
+ *
+ * A template can only rearrange the text it was given. A block whose HTML has
+ * to be <em>computed</em> — a diagram drawn at build time — needs a jar, which
+ * is what {@link BlockRenderer} is: an optional module, discovered from the
+ * classpath. It slots into the middle of the chain:
+ *
+ * <ol>
+ *   <li>the theme's or the book's own {@code blocks/<type>.html},</li>
+ *   <li>a registered {@link BlockRenderer} claiming the type,</li>
+ *   <li>the bundled {@code blocks/<type>.html},</li>
+ *   <li>nothing — an ordinary code block.</li>
+ * </ol>
+ *
+ * <p>Author beats jar beats default. The first rung is what makes a module
+ * safe to install: a book that dislikes one diagram overrides that one type
+ * with markup of its own and keeps everything else. The third is what lets a
+ * module claim a type paperband already ships — a server-side {@code mermaid},
+ * say — without paperband having to give the type up.
+ *
+ * <p>Which rung a type is on is a question worth being able to ask, so
+ * {@code mvn paperband:blocks} prints the answer.
  */
 public final class BlockTemplates {
 
@@ -69,6 +97,19 @@ public final class BlockTemplates {
     /** Types looked up and not found, so a book full of ```java doesn't re-probe the loader per block. */
     private final Set<String> missing = new HashSet<>();
 
+    /** The optional modules that render a type in code. Never null; empty is the norm. */
+    private final BlockRendererRegistry renderers;
+
+    /** The two authored rungs of the chain, kept for the "does the author override this?" probe. */
+    private final Loader<?> themeLoader;
+    private final Path layoutsDir;
+
+    /** Probe results, per type — a filesystem stat per block would be silly. */
+    private final Map<String, Boolean> authored = new HashMap<>();
+
+    /** The book's content root, for a renderer setting that names a file. May be null. */
+    private final Path bookRoot;
+
     /** Bundled-only instance: the built-in block types with no book or theme in the chain. */
     private static final BlockTemplates BUNDLED = new BlockTemplates(null, null);
 
@@ -78,14 +119,39 @@ public final class BlockTemplates {
     }
 
     /**
-     * Build a resolver over the standard chain: {@code themeLoader} (when the
-     * theme ships templates), then {@code layoutsDir} (the book's own), then
-     * the bundled classpath templates.
+     * Build a resolver over the standard chain with no renderer modules —
+     * every type resolves to a template or to nothing.
      *
      * @param themeLoader the theme's template loader, or null
      * @param layoutsDir  the book's layouts directory, or null
      */
     public BlockTemplates(Loader<?> themeLoader, Path layoutsDir) {
+        this(themeLoader, layoutsDir, null, null);
+    }
+
+    /** As {@link #BlockTemplates(Loader, Path, BlockRendererRegistry, Path)}, with no book root. */
+    public BlockTemplates(Loader<?> themeLoader, Path layoutsDir, BlockRendererRegistry renderers) {
+        this(themeLoader, layoutsDir, renderers, null);
+    }
+
+    /**
+     * Build a resolver over the standard chain: {@code themeLoader} (when the
+     * theme ships templates), then {@code layoutsDir} (the book's own), then
+     * the bundled classpath templates — with {@code renderers} sitting between
+     * the authored templates and the bundled ones (see the class javadoc).
+     *
+     * @param themeLoader the theme's template loader, or null
+     * @param layoutsDir  the book's layouts directory, or null
+     * @param renderers   the discovered block renderers, or null for none
+     * @param bookRoot    the book's content root, for a renderer setting that
+     *                    names a file; may be null
+     */
+    public BlockTemplates(Loader<?> themeLoader, Path layoutsDir, BlockRendererRegistry renderers,
+                          Path bookRoot) {
+        this.renderers = renderers == null ? BlockRendererRegistry.empty() : renderers;
+        this.themeLoader = themeLoader;
+        this.layoutsDir = layoutsDir;
+        this.bookRoot = bookRoot;
         ClasspathLoader cp = new ClasspathLoader();
         cp.setPrefix("templates/");
         cp.setSuffix(".html");
@@ -108,20 +174,103 @@ public final class BlockTemplates {
     }
 
     /**
-     * Render {@code blocks/<type>} with the block's model, or return null when
-     * no template exists for the type — the block then stays an ordinary code
-     * block.
+     * Render a block with no file behind it — a section body, a test.
      *
      * @param type    the fence's language tag
      * @param content the verbatim block text
      * @param classes extra classes from info-line attributes; may be empty
      * @param id      an {@code {#id}} attribute, or null
      * @param vars    the card's resolved vars; may be null
-     * @return the rendered HTML, or null when the type has no template
-     * @throws BlockTemplateException when the template exists but fails
+     * @return the rendered HTML, or null when nothing claims the type
      */
     public String render(String type, String content, List<String> classes, String id,
                          Map<String, Object> vars) {
+        return render(type, content, classes, id, vars, null);
+    }
+
+    /**
+     * Render one fenced block, or return null when nothing claims its type —
+     * the block then stays an ordinary code block.
+     *
+     * <p>Resolution order is the one in the class javadoc: an authored
+     * template, then a {@link BlockRenderer}, then a bundled template. The
+     * renderer lookup is a map hit and comes first; the "did the author
+     * override this?" probe only runs for a type some module actually claims,
+     * so a book with no modules installed pays nothing for the mechanism.
+     *
+     * @param type    the fence's language tag
+     * @param content the verbatim block text
+     * @param classes extra classes from info-line attributes; may be empty
+     * @param id      an {@code {#id}} attribute, or null
+     * @param vars    the card's resolved vars; may be null
+     * @param source  the card the block came from, for error messages and for
+     *                a renderer that resolves the block's own includes; may be null
+     * @return the rendered HTML, or null when nothing claims the type
+     * @throws BlockTemplateException when a template exists but fails, or a
+     *         renderer rejects the block
+     */
+    public String render(String type, String content, List<String> classes, String id,
+                         Map<String, Object> vars, Path source) {
+        BlockRenderer renderer = renderers.forType(type).orElse(null);
+        if (renderer != null && !authorOverrides(type)) {
+            return renderWith(renderer, type, content, classes, id, vars, source);
+        }
+        return renderTemplate(type, content, classes, id, vars);
+    }
+
+    /**
+     * Does the theme or the book ship its own {@code blocks/<type>.html}?
+     *
+     * <p>Asked of the two authored loaders directly rather than of the engine,
+     * because the engine's chain ends in the bundled templates and cannot tell
+     * "the book wrote one" from "paperband ships one" — and that distinction
+     * is the whole precedence rule.
+     */
+    private boolean authorOverrides(String type) {
+        return authored.computeIfAbsent(type, t -> {
+            if (themeLoader != null && themeLoader.resourceExists(DIR + "/" + t)) return true;
+            return layoutsDir != null
+                    && Files.isRegularFile(layoutsDir.resolve(DIR).resolve(t + ".html"));
+        });
+    }
+
+    /** Hand the block to a module, and turn its complaints into build failures. */
+    private String renderWith(BlockRenderer renderer, String type, String content,
+                              List<String> classes, String id, Map<String, Object> vars,
+                              Path source) {
+        Map<String, Object> all = vars == null ? Map.of() : vars;
+        Object own = all.get(renderer.name());
+        Map<String, Object> config = own instanceof Map<?, ?> m ? castConfig(m) : Map.of();
+        String html;
+        try {
+            html = renderer.render(new BlockRequest(
+                    type, content, classes == null ? List.of() : classes, id, all, config,
+                    bookRoot, source));
+        } catch (BlockRenderException e) {
+            throw new BlockTemplateException("block renderer '" + renderer.name()
+                    + "' rejected this ```" + type + " block: " + e.getMessage(), e);
+        } catch (RuntimeException e) {
+            // A module that throws something else is a bug in the module, but
+            // the book author is the one holding the build: name the module.
+            throw new BlockTemplateException("block renderer '" + renderer.name()
+                    + "' (" + renderer.getClass().getName() + ") failed on this ```" + type
+                    + " block: " + e, e);
+        }
+        // A renderer may decline after looking at the content -- fall through
+        // to whatever a template would have done, exactly as if it were absent.
+        return html != null ? html : renderTemplate(type, content, classes, id, vars);
+    }
+
+    /** Yaml gives us Map<?,?>; the SPI wants Map<String,Object>. Keys stringified, once. */
+    private static Map<String, Object> castConfig(Map<?, ?> raw) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        raw.forEach((k, v) -> out.put(String.valueOf(k), v));
+        return out;
+    }
+
+    /** The original path: {@code blocks/<type>.html} anywhere in the loader chain. */
+    private String renderTemplate(String type, String content, List<String> classes, String id,
+                                  Map<String, Object> vars) {
         if (missing.contains(type)) return null;
         PebbleTemplate template;
         try {

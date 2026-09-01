@@ -153,6 +153,17 @@
     }
     pre.mermaid > svg { max-width: 100%; height: auto; }
 
+    /* Diagrams drawn into the page by a BlockRenderer module (```plantuml and
+       friends). Nothing to wait for — the SVG is in the HTML before Chromium
+       sees it — so this is only sizing, plus the same "never slice a picture
+       across a sheet" rule the mermaid block gets. */
+    figure.plantuml, figure.diagram {
+      margin: 1.8rem 0; text-align: center;
+      break-inside: avoid; page-break-inside: avoid;
+    }
+    figure.plantuml > svg, figure.diagram > svg,
+    figure.plantuml > img, figure.diagram > img { max-width: 100%; height: auto; }
+
     /* card.slots.takeWithLayout/requireWithLayout break-preference classes —
        bundled here (not per-theme) so every theme gets them regardless of
        whether it opts into slot-based layout. break-inside/break-before are

@@ -1,0 +1,79 @@
+' PlantUML styling for this book's diagrams.
+'
+' Named once, in the root paperband.yaml:
+'
+'   vars:
+'     plantuml:
+'       styleFile: styles/diagrams.puml
+'
+' It has to be a file like this rather than CSS, and that is not a paperband
+' decision: PlantUML bakes every colour into the shape that carries it
+' (fill="#E2E2F0", style="stroke:#181818") and emits no class attributes, so a
+' stylesheet has nothing to select. PlantUML's own style language is the only
+' way in.
+'
+' The values below are the noregressions theme's tokens, copied by hand — the
+' two systems have no way to share them. When the theme's palette moves, this
+' moves with it. See theme.css.
+
+<style>
+root {
+  FontName        "IBM Plex Sans"
+  FontSize        12
+  FontColor       #333333          ' --nr-text
+  LineColor       #aeb7c2          ' --nr-line-strong
+  BackgroundColor transparent
+  HyperLinkColor  #1d4ed8          ' --nr-brand
+}
+
+' Titles and captions sit with the book's headings, not with its prose.
+title {
+  FontName  "IBM Plex Sans"
+  FontSize  14
+  FontColor #161616                ' --nr-ink
+}
+
+' One quiet fill for every kind of box, so a diagram reads as structure
+' rather than as decoration -- the same rule the prose theme follows.
+node, component, class, entity, participant, state, usecase, rectangle, artifact {
+  BackgroundColor #f6f8fa          ' --nr-surface
+  LineColor       #aeb7c2
+  FontColor       #161616
+  RoundCorner     3
+}
+
+arrow {
+  LineColor #687280                ' --nr-muted
+  FontColor #333333
+  FontSize  11
+}
+
+note {
+  BackgroundColor #eefafd          ' --nr-info-soft
+  LineColor       #0e8ea9          ' --nr-info
+  FontColor       #333333
+  FontSize        11
+}
+
+sequenceDiagram {
+  lifeLine {
+    LineColor #aeb7c2
+  }
+  group {
+    BackgroundColor transparent
+    LineColor       #aeb7c2
+    FontColor       #161616
+  }
+  divider {
+    BackgroundColor #edf1f5        ' --nr-surface-strong
+    LineColor       #aeb7c2
+  }
+}
+
+' Monospace wherever the diagram is quoting the machine, matching the book's
+' rule that mono means "what the computer said".
+stereotype {
+  FontName "IBM Plex Mono"
+  FontSize 10
+}
+</style>

@@ -175,7 +175,9 @@ public class SiteMojo extends AbstractPaperbandMojo {
                 theme = Themes.resolve(themeName, bookCtx.book().theme(), themeDirPath());
                 blockTemplates = new BlockTemplates(theme.templateLoader(),
                         geo.layouts() != null ? geo.layouts()
-                                : bookCtx.book().bookRoot().resolve("layouts"));
+                                : bookCtx.book().bookRoot().resolve("layouts"),
+                        BlockRenderers.discover(getLog()),
+                        geo.home() != null ? geo.home() : bookCtx.book().bookRoot());
             }
             contexts.add(ctx);
             MarkdownPreprocessor preprocessor = Includes.defaultPreprocessor(

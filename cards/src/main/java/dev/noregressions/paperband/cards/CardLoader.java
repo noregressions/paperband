@@ -465,7 +465,8 @@ public final class CardLoader {
                     : (code.id().isEmpty() ? null : code.id());
             String rendered;
             try {
-                rendered = blockTemplates.render(type, code.wholeText(), extraClasses, id, blockVars);
+                rendered = blockTemplates.render(type, code.wholeText(), extraClasses, id,
+                        blockVars, source);
             } catch (BlockTemplates.BlockTemplateException e) {
                 throw new CardParseException(source + ": ```" + type + " — " + e.getMessage(), e);
             }

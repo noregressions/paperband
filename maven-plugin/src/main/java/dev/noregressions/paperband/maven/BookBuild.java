@@ -188,7 +188,8 @@ final class BookBuild {
                 input, target, pageSize, margins, declaredRoot, home, declaredVars());
         ThemeBundle theme = Themes.resolve(themeName, ctx.book().theme(), themeDir);
         BlockTemplates blockTemplates = new BlockTemplates(theme.templateLoader(),
-                layoutsDir != null ? layoutsDir : ctx.book().bookRoot().resolve("layouts"));
+                layoutsDir != null ? layoutsDir : ctx.book().bookRoot().resolve("layouts"),
+                BlockRenderers.discover(log), home != null ? home : ctx.book().bookRoot());
         MarkdownPreprocessor preprocessor = Includes.defaultPreprocessor(
                 ctx.book().bookRoot(), layoutsDir, includeProviderConfig, ctx.vars());
         Card card = CardLoading.load(new CardLoader(), preprocessor, input, ctx.book().cardSchema(),
@@ -272,7 +273,9 @@ final class BookBuild {
                 theme = Themes.resolve(themeName, bookCtx.book().theme(), themeDir);
                 blockTemplates = new BlockTemplates(theme.templateLoader(),
                         layoutsDir != null ? layoutsDir
-                                : bookCtx.book().bookRoot().resolve("layouts"));
+                                : bookCtx.book().bookRoot().resolve("layouts"),
+                        BlockRenderers.discover(log),
+                        home != null ? home : bookCtx.book().bookRoot());
             }
             contexts.add(ctx);
             Map<String, Object> vars = ctx.vars();
