@@ -72,7 +72,7 @@ on — so a one-off stamp needs no POM edit. `build`, `site` and `render` all ta
 <plugin>
   <groupId>dev.noregressions.paperband</groupId>
   <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.1</version>
 
   <!-- Shared by every goal below: one declaration, both outputs marked. -->
   <configuration>

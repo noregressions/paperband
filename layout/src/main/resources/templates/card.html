@@ -49,6 +49,12 @@
        takes the UA's 2em and outshouts the very title it sits under. */
     section.block > h1 { font-size: 1.35rem; margin-block: 1.5rem 0.75rem; }
     pre, code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
+    /* Content images. A markdown `![alt](x.png)` is a bare <img> in a <p>, so
+       without a cap a screenshot wider than the measure runs off the page —
+       and in print there is no scrollbar to fall back on. Weakest possible
+       selector on purpose: the cover/back rules below set their own width and
+       outrank this, as does any theme rule. */
+    img { max-width: 100%; height: auto; }
     pre { background: #f5f5f5; padding: 1rem; overflow-x: auto; }
 
     /* Fenced-code font-size step-down — see book.html for the full

@@ -232,6 +232,9 @@ body.sidebar-collapsed .site-sidebar { display: none; }
   }
   body.menu-open .site-sidebar { transform: translateX(0); }
   .site-content { padding: 1.25rem; }
+  .tier-hero-inner,
+  .tier-body,
+  .home-content { padding-inline: 1.25rem; }
 }
 
 /* Semantic fences (```command / ```output / ```console) — neutral scaffold,
@@ -286,6 +289,14 @@ pre.mermaid > svg { max-width: 100%; height: auto; }
 figure.plantuml, figure.diagram { margin: 1.8rem 0; text-align: center; }
 figure.plantuml > svg, figure.diagram > svg,
 figure.plantuml > img, figure.diagram > img { max-width: 100%; height: auto; }
+
+/* Content images. A markdown `![alt](x.png)` renders as a bare <img> inside a
+ * <p> — never the <figure> the rules above size — so without this a
+ * screenshot wider than the column simply overflows it. Weakest possible
+ * selector on purpose: `.hero-cover-image > img` and the figure rules above
+ * both outrank it, and a theme or book stylesheet overrides it with a single
+ * class. `height: auto` keeps the aspect ratio once the width is capped. */
+img { max-width: 100%; height: auto; }
 
 /* ---- cover hero (index) ----
    Structure only, per this file's convention: a declared `cover:` image fills
@@ -369,3 +380,126 @@ figure.plantuml > img, figure.diagram > img { max-width: 100%; height: auto; }
 /* The book's own body, from the content root's _section.md. Same treatment as
    a section's — it is the same file at the outermost level. */
 .paperband-site .book-body { max-width: var(--card-max-width, 48rem); padding: 1.25rem 2rem 0.25rem; }
+
+/* Left-aligned holds only while something below shares that left edge. A body
+   that replaced the default home content (or a section's card list) is the
+   whole page, and left-aligning it dumps every pixel of a wide window on one
+   side — under a centred cover hero, which reads as a layout mistake rather
+   than as a column. With nothing to align to, it centres. */
+.paperband-site .book-body:not(:has(~ .home-content)),
+.paperband-site .section-body:not(.book-body):not(:has(~ .tier-body)) {
+  margin-inline: auto;
+}
+
+/* ---- section / axis-value landing pages ----
+ * site-section.html and site-tier.html emit a hero band (.tier-hero >
+ * .tier-hero-inner) above a card list (.tier-body > .cards-heading +
+ * .card-grid > a.card-item). Nothing laid any of it out — not this scaffold,
+ * and not the bundled themes, which reach straight for .tier-hero colours and
+ * .ci-title fonts on the assumption that a box is already there. So every
+ * landing page in every theme, this project's own guide included, rendered as
+ * a run of bare underlined links flush against the window edge, with no
+ * measure and no tiles. Same fault as .tier-grid above, one level down, and
+ * the same fix: a usable layout here, colour left to the theme.
+ *
+ * The hero stays deliberately neutral. site-tier.html paints the axis value's
+ * declared colour inline, which outranks anything in this file, so all that
+ * belongs here is the tint a page gets when its axis declares no colour — and
+ * never a text colour, which would have to guess its contrast against a hue
+ * this file cannot see. */
+.tier-hero {
+  padding: 2rem 0;
+  background: rgba(0, 0, 0, 0.02);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+/* Hero and cards ride one column, so the page has a single left edge running
+   down it rather than each band starting somewhere of its own. Wider than the
+   reading measure on purpose: this is a grid of tiles, not prose. */
+.tier-hero-inner,
+.tier-body,
+.home-content {
+  max-width: var(--pb-landing-max-width, 74rem);
+  margin-inline: auto;
+  padding-inline: 2rem;
+  box-sizing: border-box;
+}
+.tier-hero-inner > h1 { margin: 0; }
+.tier-badge-lg {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.75;
+  margin-bottom: 0.4rem;
+}
+.tier-body { padding-block: 1.5rem 3rem; }
+.home-content { padding-block: 1.5rem 3rem; }
+/* The text index hero. Excluding .hero-cover-image on purpose: that one is
+   declared padding-free above so the artwork reaches the band's edges, and a
+   bare `.hero` rule down here would out-order it and put the inset back. */
+.hero:not(.hero-cover-image) { padding: 2rem; }
+.hero > h1 { margin: 0.2rem 0; }
+
+.cards-heading { font-size: 0.85rem; opacity: 0.7; margin-bottom: 0.9rem; }
+/* site-section.html emits this div empty — a section page has no count to
+   announce — so it must not reserve the space it has nothing to put in. */
+.cards-heading:empty { display: none; }
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 0.85rem;
+}
+.card-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.9rem 1rem;
+  text-decoration: none;
+  color: inherit;
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  /* Width and style, no colour: site-tier.html sets `border-top-color` inline
+     per axis value, and a tile on a page that declares none keeps the neutral
+     border above rather than showing a black edge. */
+  border-top-width: 3px;
+  border-top-style: solid;
+}
+a.card-item:hover { background: rgba(0, 0, 0, 0.05); }
+.ci-title { font-weight: 600; }
+.ci-oneliner { font-size: 0.9em; opacity: 0.75; }
+/* Pushed to the tile's foot so titles of different lengths still line their
+   badges up across a row. */
+.ci-badges { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: auto; padding-top: 0.4rem; }
+/* Both templates emit the badge row unconditionally, and a card with neither
+   effort nor recipe leaves it holding only whitespace — which `:empty` does
+   not match. `:not(:has(*))` does. */
+.ci-badges:not(:has(*)) { display: none; }
+.cb-effort, .cb-openrewrite {
+  font-size: 0.72rem;
+  padding: 0.1rem 0.4rem;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+/* The index's stat row, when the book keeps the default home content. The
+   boxes are the same neutral tile as .tier-box above; a theme that colours
+   one usually colours the other in the same rule. */
+.stat-row { display: flex; flex-wrap: wrap; gap: 0.85rem; margin: 1.4rem 0; }
+.stat-box {
+  flex: 1 1 8rem;
+  padding: 0.85rem 1rem;
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+.stat-num { font-size: 1.6rem; font-weight: 700; line-height: 1.1; }
+.stat-lbl { font-size: 0.85rem; opacity: 0.7; }
+.effort-box {
+  padding: 0.7rem 1rem;
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  font-size: 0.9rem;
+}

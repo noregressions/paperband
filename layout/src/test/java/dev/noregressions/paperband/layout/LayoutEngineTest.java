@@ -1095,8 +1095,11 @@ class LayoutEngineTest {
             String page = result.get("plainSection.html");
             assertNotNull(page);
             // site-section-minimal.html shows only the title, no count or card grid.
-            assertFalse(page.contains("cards-heading"));
-            assertFalse(page.contains("card-grid"));
+            // Matched as markup, not as bare class names: site-base.css is inlined
+            // into every page's head and styles both classes, so the names appear
+            // in a page that emits neither element.
+            assertFalse(page.contains("class=\"cards-heading\""));
+            assertFalse(page.contains("class=\"card-grid\""));
             assertTrue(page.contains("<h1>"));
         }
 
@@ -1125,8 +1128,8 @@ class LayoutEngineTest {
             String page = result.get("scanners.html");
             assertNotNull(page);
             assertTrue(page.contains("Scanners &amp; Blindspots") || page.contains("Scanners & Blindspots"));
-            assertFalse(page.contains("cards-heading"));
-            assertFalse(page.contains("card-grid"));
+            assertFalse(page.contains("class=\"cards-heading\""));
+            assertFalse(page.contains("class=\"card-grid\""));
         }
     }
 
@@ -1479,6 +1482,136 @@ class LayoutEngineTest {
                     Map.of(), List.of(), null, null);
             return engine.renderSite(cards, contexts,
                     new RenderContext(book, List.of(), vars, null, "web", "A4"));
+        }
+    }
+
+    @Nested
+    @DisplayName("Site content assets")
+    class SiteContentAssets {
+
+        @Test
+        void should_point_a_local_image_at_the_assets_copy_at_the_right_depth(@TempDir Path book)
+                throws IOException {
+            image(book, "diagrams/gc.png");
+
+            Map<String, String> site = renderWith(book,
+                    "<p><img src=\"diagrams/gc.png\" alt=\"GC\"></p>");
+
+            // A card lives one directory down, the index at the root: the same
+            // book-relative ref has to come out with different prefixes.
+            assertTrue(site.get("cards/install.html")
+                            .contains("src=\"../assets/diagrams/gc.png\""),
+                    site.get("cards/install.html"));
+            assertEquals(Set.of("diagrams/gc.png"), engine.siteContentAssets());
+            assertTrue(engine.siteMissingAssets().isEmpty());
+        }
+
+        @Test
+        void should_mirror_the_book_tree_rather_than_flattening_it(@TempDir Path book)
+                throws IOException {
+            // Two cards each with their own diagram.png is ordinary; flattening
+            // to assets/<filename> would silently serve one for both.
+            image(book, "ch1/diagram.png");
+            image(book, "ch2/diagram.png");
+
+            renderWith(book, "<p><img src=\"ch1/diagram.png\"><img src=\"ch2/diagram.png\"></p>");
+
+            assertEquals(Set.of("ch1/diagram.png", "ch2/diagram.png"), engine.siteContentAssets());
+        }
+
+        @Test
+        void should_leave_remote_and_inline_refs_alone(@TempDir Path book) {
+            String html = "<p><img src=\"https://example.dev/x.png\">"
+                    + "<img src=\"//cdn.example.dev/y.png\">"
+                    + "<img src=\"data:image/gif;base64,R0lGOD\">"
+                    + "<img src=\"/deploy-root/z.png\"></p>";
+
+            String page = renderWith(book, html).get("cards/install.html");
+
+            assertTrue(page.contains("src=\"https://example.dev/x.png\""), page);
+            assertTrue(page.contains("src=\"//cdn.example.dev/y.png\""), page);
+            assertTrue(page.contains("src=\"data:image/gif;base64,R0lGOD\""), page);
+            assertTrue(page.contains("src=\"/deploy-root/z.png\""), page);
+            assertTrue(engine.siteContentAssets().isEmpty());
+        }
+
+        @Test
+        void should_leave_a_missing_image_as_the_author_wrote_it(@TempDir Path book) {
+            // Rewriting it would point a broken image into assets/ and lose the
+            // path the author actually typed — the one thing that identifies it.
+            String page = renderWith(book, "<p><img src=\"diagrams/gone.png\"></p>")
+                    .get("cards/install.html");
+
+            assertTrue(page.contains("src=\"diagrams/gone.png\""), page);
+            assertTrue(engine.siteContentAssets().isEmpty());
+            assertEquals(Set.of("diagrams/gone.png"), engine.siteMissingAssets());
+        }
+
+        @Test
+        void should_not_reach_into_an_escaped_example(@TempDir Path book) throws IOException {
+            // A book documenting this very syntax shows `<img src="...">` inside
+            // a fence, which is escaped text by now. A bare src= regex rewrote
+            // the example; matching the tag cannot.
+            image(book, "diagrams/gc.png");
+
+            String page = renderWith(book,
+                    "<pre><code>&lt;img src=\"diagrams/gc.png\"&gt;</code></pre>")
+                    .get("cards/install.html");
+
+            assertTrue(page.contains("&lt;img src=\"diagrams/gc.png\"&gt;"), page);
+            assertTrue(engine.siteContentAssets().isEmpty());
+        }
+
+        @Test
+        void should_not_re_prefix_a_build_managed_asset(@TempDir Path book) {
+            // What the cover, back and watermark templates already emit.
+            String page = renderWith(book, "<p><img src=\"../assets/logo.png\"></p>")
+                    .get("cards/install.html");
+
+            assertTrue(page.contains("src=\"../assets/logo.png\""), page);
+            assertTrue(engine.siteContentAssets().isEmpty());
+        }
+
+        @Test
+        void should_refuse_a_ref_that_climbs_out_of_the_book(@TempDir Path book) {
+            String page = renderWith(book, "<p><img src=\"../../etc/secret.png\"></p>")
+                    .get("cards/install.html");
+
+            assertTrue(page.contains("src=\"../../etc/secret.png\""), page);
+            assertTrue(engine.siteContentAssets().isEmpty());
+            assertTrue(engine.siteMissingAssets().isEmpty());
+        }
+
+        @Test
+        void should_report_only_what_the_latest_render_referenced(@TempDir Path book)
+                throws IOException {
+            image(book, "diagrams/gc.png");
+            renderWith(book, "<p><img src=\"diagrams/gc.png\"></p>");
+            assertEquals(Set.of("diagrams/gc.png"), engine.siteContentAssets());
+
+            renderWith(book, "<p>no images here</p>");
+            assertTrue(engine.siteContentAssets().isEmpty());
+        }
+
+        private LayoutEngine engine;
+
+        /** Render a one-card site whose only block content is {@code html}. */
+        private Map<String, String> renderWith(Path book, String html) {
+            engine = new LayoutEngine();
+            Block block = new Block(Block.Kind.HEADING_SECTION, null, Set.of("intro"),
+                    null, 0, html, List.of());
+            Card card = new Card("install", book.resolve("setup").resolve("install.md"),
+                    new Frontmatter(Map.of()), "Test Card", List.of(block));
+            BookConfig cfg = new BookConfig(book, "Test Book", List.of(), List.of(),
+                    Map.of(), List.of(), null, null);
+            return engine.renderSite(List.of(card), List.of(createMinimalContext()),
+                    new RenderContext(cfg, List.of(), Map.of(), null, "web", "A4"));
+        }
+
+        private void image(Path book, String rel) throws IOException {
+            Path file = book.resolve(rel);
+            Files.createDirectories(file.getParent());
+            Files.write(file, new byte[] {1, 2, 3});
         }
     }
 

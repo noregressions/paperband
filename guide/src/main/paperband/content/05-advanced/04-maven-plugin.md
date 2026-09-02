@@ -37,7 +37,7 @@ The plugin shares the parent's version. The parent POM version:
 <plugin>
   <groupId>dev.noregressions.paperband</groupId>
   <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.1</version>
   <executions>
     <execution>
       <goals><goal>build</goal></goals>
@@ -526,7 +526,7 @@ and the site — put it in the plugin's own `<configuration>` and both goals rea
 <plugin>
   <groupId>dev.noregressions.paperband</groupId>
   <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.1</version>
 
   <!-- Shared by every goal: what the book is, and how it renders. -->
   <configuration>

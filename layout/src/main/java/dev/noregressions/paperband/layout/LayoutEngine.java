@@ -878,7 +878,7 @@ public final class LayoutEngine {
         for (Map.Entry<String, String> e : out.entrySet()) {
             e.setValue(links.site(e.getValue(), e.getKey()));
         }
-        return watermarked(out, bookCtx);
+        return watermarked(withContentAssets(out, bookCtx), bookCtx);
     }
 
     /**
@@ -898,6 +898,157 @@ public final class LayoutEngine {
      * @param bookCtx the book context whose vars carry the declaration
      * @return the same map, with the overlay injected into each page
      */
+    /** Book-relative paths of the content images the last {@link #renderSite} rewrote. */
+    private final LinkedHashSet<String> siteContentAssets = new LinkedHashSet<>();
+
+    /** Refs the last {@link #renderSite} found no file for, for the caller to warn about. */
+    private final LinkedHashSet<String> siteMissingAssets = new LinkedHashSet<>();
+
+    /**
+     * The content images the last {@link #renderSite} pointed at {@code assets/},
+     * as book-root-relative paths — what the caller has to copy there for the
+     * rewritten pages to resolve.
+     *
+     * <p>Rendering rewrites the markup but copies nothing: the engine composes
+     * pages, and moving bytes into an output directory belongs to whatever is
+     * writing that directory ({@code SiteMojo.copyContentAssets}). Same split
+     * the cover already uses — see {@link #siteMatter}.
+     *
+     * @return the paths, in first-seen order; empty when no page referenced a
+     *         local image
+     */
+    public Set<String> siteContentAssets() {
+        return java.util.Collections.unmodifiableSet(siteContentAssets);
+    }
+
+    /**
+     * Image references the last {@link #renderSite} resolved to no file on
+     * disk. Left in the markup exactly as the author wrote them — a broken
+     * image should look broken rather than silently point into {@code assets/}
+     * — and reported here so the build can name them.
+     *
+     * @return the references, in first-seen order
+     */
+    public Set<String> siteMissingAssets() {
+        return java.util.Collections.unmodifiableSet(siteMissingAssets);
+    }
+
+    /** Matches a whole {@code <img>} tag. */
+    private static final java.util.regex.Pattern IMG_TAG =
+            java.util.regex.Pattern.compile("(?i)<img\\b[^>]*>");
+
+    /** Matches the {@code src="..."} inside one. */
+    private static final java.util.regex.Pattern IMG_SRC =
+            java.util.regex.Pattern.compile("(?i)\\bsrc\\s*=\\s*\"([^\"]*)\"");
+
+    /**
+     * Point every local content image at the site's {@code assets/} copy.
+     *
+     * <p>A card writes {@code ![alt](diagrams/gc.png)}, and the PDF resolves
+     * that against the book root (the render's base URI). A site page lives at
+     * {@code cards/<id>.html} and is served from wherever it was deployed, so
+     * the same relative ref would look for {@code cards/diagrams/gc.png} and
+     * 404. Rather than make authors write one path for print and another for
+     * the web, the ref keeps meaning "from the book root" and this rewrites it
+     * to {@code <urlPrefix>assets/diagrams/gc.png} — the tree mirrored under
+     * {@code assets/}, so two cards can both have a {@code diagram.png}
+     * without colliding.
+     *
+     * <p>Matched on the {@code <img>} tag rather than on {@code src="} alone,
+     * which matters for a book that <em>documents</em> this: an example inside
+     * a fenced block is escaped text ({@code &lt;img src="…"}) by the time it
+     * gets here, so a tag regex cannot reach into it while a bare attribute
+     * regex would have rewritten the example.
+     *
+     * <p>Left alone: remote refs, {@code data:} URIs, an author's absolute
+     * {@code /path} (a deployment-root reference they chose deliberately),
+     * anything already under {@code assets/} (the cover, back and watermark
+     * copies the templates emit), and anything resolving outside the book root.
+     *
+     * @param pages   the rendered pages, keyed by output-relative path
+     * @param bookCtx the book context, for the root refs resolve against
+     * @return the same map, values rewritten
+     */
+    private Map<String, String> withContentAssets(Map<String, String> pages, RenderContext bookCtx) {
+        siteContentAssets.clear();
+        siteMissingAssets.clear();
+        Path bookRoot = bookCtx.book() == null ? null : bookCtx.book().bookRoot();
+        if (bookRoot == null) return pages;
+        Path root = bookRoot.toAbsolutePath().normalize();
+        for (Map.Entry<String, String> e : pages.entrySet()) {
+            e.setValue(rewriteContentImages(e.getValue(), e.getKey(), root));
+        }
+        return pages;
+    }
+
+    /** {@link #withContentAssets} for one page. */
+    private String rewriteContentImages(String html, String pageKey, Path root) {
+        java.util.regex.Matcher tags = IMG_TAG.matcher(html);
+        StringBuilder out = new StringBuilder(html.length());
+        int last = 0;
+        while (tags.find()) {
+            String tag = tags.group();
+            String replacement = tag;
+            java.util.regex.Matcher src = IMG_SRC.matcher(tag);
+            if (src.find()) {
+                String ref = src.group(1);
+                String rel = bookRelativeAsset(ref, root);
+                if (rel != null) {
+                    if (Files.isRegularFile(root.resolve(rel))) {
+                        siteContentAssets.add(rel);
+                        replacement = tag.substring(0, src.start(1))
+                                + urlPrefixFor(pageKey) + SITE_ASSET_DIR + "/" + rel
+                                + tag.substring(src.end(1));
+                    } else {
+                        siteMissingAssets.add(ref);
+                    }
+                }
+            }
+            out.append(html, last, tags.start()).append(replacement);
+            last = tags.end();
+        }
+        out.append(html, last, html.length());
+        return out.toString();
+    }
+
+    /**
+     * The book-root-relative path an {@code <img src>} names, or null when it
+     * is not a local content image this build should take over.
+     *
+     * @param ref  the raw attribute value
+     * @param root the absolute, normalised book root
+     * @return the relative path with {@code /} separators, or null
+     */
+    private static String bookRelativeAsset(String ref, Path root) {
+        if (ref == null || ref.isBlank()) return null;
+        String trimmed = ref.trim();
+        if (trimmed.startsWith("data:") || trimmed.startsWith("#")) return null;
+        if (trimmed.startsWith("//") || trimmed.contains("://")) return null;   // remote
+        if (trimmed.startsWith("/")) return null;                               // author's own absolute ref
+        // A query or fragment on a local file is not something to resolve.
+        int cut = trimmed.indexOf('?');
+        if (cut >= 0) trimmed = trimmed.substring(0, cut);
+        cut = trimmed.indexOf('#');
+        if (cut >= 0) trimmed = trimmed.substring(0, cut);
+        if (trimmed.isEmpty()) return null;
+        // Already ours: the templates emit the cover/back/watermark copies as
+        // `<urlPrefix>assets/<file>`, and rewriting those would nest them.
+        String bare = trimmed;
+        while (bare.startsWith("../")) bare = bare.substring(3);
+        if (bare.equals(SITE_ASSET_DIR) || bare.startsWith(SITE_ASSET_DIR + "/")) return null;
+        try {
+            Path resolved = root.resolve(trimmed).normalize();
+            // Defence in depth, and the reason `../` is not simply stripped
+            // above: a ref that climbs out of the book is not the build's to
+            // copy, and must not be able to name a file outside it.
+            if (!resolved.startsWith(root)) return null;
+            String rel = root.relativize(resolved).toString().replace(java.io.File.separatorChar, '/');
+            return rel.isEmpty() ? null : rel;
+        } catch (RuntimeException ex) {
+            return null;   // not a usable path: leave the ref as the author wrote it
+        }
+    }
+
     private Map<String, String> watermarked(Map<String, String> pages, RenderContext bookCtx) {
         Watermark watermark = this.watermark != null
                 ? this.watermark

@@ -27,6 +27,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Builds a multi-file static HTML site from a book directory: an index, a
@@ -325,6 +326,7 @@ public class SiteMojo extends AbstractPaperbandMojo {
         }
 
         written += copyMatterAssets(bookCtx, output, watermark(bookCtx));
+        written += copyContentAssets(layout, bookCtx, output);
 
         getLog().info("Built site " + bookDir + " -> " + output
                 + " (" + written + " pages, " + cards.size() + " cards)");
@@ -355,6 +357,61 @@ public class SiteMojo extends AbstractPaperbandMojo {
         return base.withOverrides(Watermarks.overrides(watermark,
                 watermarkColor, watermarkOpacity, watermarkAngle, watermarkFontSize, watermarkBold,
                 watermarkScale, watermarkFit, watermarkBehind, watermarkTile, null, null));
+    }
+
+    /**
+     * Copy the content images the cards reference into the site's
+     * {@code assets/} directory.
+     *
+     * <p>The counterpart to {@code LayoutEngine.withContentAssets}, which
+     * already rewrote every local {@code <img src>} to
+     * {@code <urlPrefix>assets/<path>} and recorded what it pointed at. Only
+     * referenced files are copied, and the book's tree is mirrored under
+     * {@code assets/} so that two cards can each keep a {@code diagram.png}
+     * beside them.
+     *
+     * <p>A ref with no file behind it was left in the markup as the author
+     * wrote it, so it is a warning rather than a failure — the same call the
+     * cover makes. A missing screenshot should not cost you the docs, and the
+     * broken image is visible on the page it belongs to.
+     *
+     * @param layout  the engine that rendered the pages
+     * @param bookCtx the resolved book context
+     * @param output  the site output directory
+     * @return the number of assets copied
+     * @throws IOException if a referenced image exists but can't be copied
+     */
+    private int copyContentAssets(LayoutEngine layout, RenderContext bookCtx, Path output)
+            throws IOException {
+        for (String missing : layout.siteMissingAssets()) {
+            getLog().warn("content image not found, left as written: " + missing);
+        }
+        Set<String> refs = layout.siteContentAssets();
+        if (refs.isEmpty()) return 0;
+
+        Path bookRoot = bookCtx.book().bookRoot().toAbsolutePath().normalize();
+        Path assetsRoot = output.resolve(LayoutEngine.SITE_ASSET_DIR).toAbsolutePath().normalize();
+        int copied = 0;
+        for (String rel : refs) {
+            Path src = bookRoot.resolve(rel).normalize();
+            Path dest = assetsRoot.resolve(rel).normalize();
+            // The engine already refused anything resolving outside the book,
+            // but the destination is a fresh join and gets its own check —
+            // the same defence in depth the page writer above applies.
+            if (!dest.startsWith(assetsRoot)) {
+                throw new IOException("refusing to write asset outside "
+                        + LayoutEngine.SITE_ASSET_DIR + ": " + rel);
+            }
+            if (!Files.isRegularFile(src)) {
+                // Vanished between render and copy; nothing to fail over.
+                getLog().warn("content image disappeared during the build: " + src);
+                continue;
+            }
+            Files.createDirectories(dest.getParent());
+            Files.copy(src, dest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            copied++;
+        }
+        return copied;
     }
 
     /**

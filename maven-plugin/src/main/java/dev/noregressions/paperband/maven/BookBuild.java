@@ -208,7 +208,7 @@ final class BookBuild {
                 ? layout.render(card, ctx, layoutOverride)
                 : layout.render(card, ctx);
 
-        emitHtmlIfAsked(html, null, ctx);
+        emitHtmlIfAsked(html, null, ctx, null);
 
         HtmlToPdfRenderer renderer = Renderers.require(rendererName);
         URI baseUri = input.toAbsolutePath().getParent().toUri();
@@ -350,7 +350,13 @@ final class BookBuild {
                 : layout.renderBook(cards, contexts, bookCtx);
 
         URI baseUri = bookRoot.toAbsolutePath().toUri();
-        emitHtmlIfAsked(html, baseUri.toString(), bookCtx);
+        // Whether a second pass is coming is knowable now — it is the same
+        // check the toc/index block below makes on the same html — so the
+        // label can say "1 of 2" only when that is true, rather than
+        // promising a pass that a book without page refs never runs.
+        boolean twoPass = PageRefs.present(html);
+        emitHtmlIfAsked(html, baseUri.toString(), bookCtx,
+                twoPass ? "pass 1 of 2, page numbers unresolved" : null);
 
         HtmlToPdfRenderer renderer = Renderers.require(rendererName);
         // The BOOK's sheet, not the first card's: a card may rotate its own
@@ -373,14 +379,15 @@ final class BookBuild {
         // just written and render once more with the numbers filled in. The
         // substitution changes only text inside the placeholder spans, so
         // pagination holds between passes and the numbers are exact.
-        if (PageRefs.present(html)) {
+        if (twoPass) {
             PageRefs.Resolved refs = PageRefs.resolve(html, PageRefs.readAnchorPages(output));
             for (String anchor : refs.unresolved()) {
                 log.warn("Page reference to #" + anchor + " matched no named destination"
                         + " — rendered as '?'");
             }
             html = refs.html();
-            emitHtmlIfAsked(html, baseUri.toString(), bookCtx);
+            emitHtmlIfAsked(html, baseUri.toString(), bookCtx,
+                    "pass 2 of 2, page numbers resolved — overwrites pass 1");
             renderer.render(new HtmlInput(html, baseUri, sheet, metadata, footer, header),
                     output);
             log.info("Resolved " + refs.resolved() + " page reference(s) (toc/index)"
@@ -519,8 +526,22 @@ final class BookBuild {
      * copy fall back to a {@code <base href>} stamp so those references at
      * least resolve in place. The renderer receives the untouched html and
      * does its own base handling.
+     *
+     * <p>{@code pass} names which write this is, for the log. A book with a
+     * printed toc or index is rendered twice — page numbers can only be read
+     * back out of a finished PDF — and both passes write here, the second
+     * overwriting the first. Saying so is the difference between two
+     * deliberate writes and what looks like a duplicated message.
+     *
+     * @param html    the finished document
+     * @param baseUri the base local references resolve against; null for a
+     *                single card, whose copy is not made standalone
+     * @param ctx     the render context, for the screen watermark
+     * @param pass    a short description of which write this is, or null when
+     *                the build only writes once
      */
-    private void emitHtmlIfAsked(String html, String baseUri, RenderContext ctx) throws Exception {
+    private void emitHtmlIfAsked(String html, String baseUri, RenderContext ctx, String pass)
+            throws Exception {
         if (emitHtml == null) return;
         ensureParentDir(emitHtml);
         // Screen-only: this file's print path is the renderer plus the PDFBox
@@ -534,23 +555,57 @@ final class BookBuild {
         // file like every other local reference does.
         Files.writeString(emitHtml, baseUri == null ? marked : standaloneForDebug(marked, baseUri),
                 StandardCharsets.UTF_8);
-        log.info("Wrote intermediate HTML -> " + emitHtml);
+        log.info("Wrote intermediate HTML"
+                + (pass == null || pass.isBlank() ? "" : " (" + pass + ")")
+                + " -> " + emitHtml);
     }
 
     /** Assets larger than this stay a reference rather than a data: URI. */
     private static final long INLINE_ASSET_CAP_BYTES = 20L * 1024 * 1024;
 
+    /**
+     * Matches an opening tag — the scan's outer step.
+     *
+     * <p>{@link #SRC_ATTR} is applied <em>within</em> a tag rather than to the
+     * whole document, because a book that documents this project shows markup
+     * in a fenced block, and by the time it reaches here that example is
+     * escaped text: {@code &lt;img src="diagrams/gc.png"&gt;}. A bare
+     * {@code src="} scan cannot tell that from real markup and rewrote the
+     * example — turning a card that teaches the syntax into one showing a
+     * base64 blob. An escaped example has no literal {@code <img}, so a tag
+     * match cannot reach into it.
+     *
+     * <p>Deliberately every tag rather than an element allow-list: a
+     * {@code <script>}, {@code <video>} or {@code <source>} reference wants
+     * inlining just as much as an image does, and naming them would silently
+     * stop inlining whatever the list forgot.
+     */
+    private static final java.util.regex.Pattern TAG =
+            java.util.regex.Pattern.compile("(?i)<[a-z][^>]*>");
+
+    /** Matches the {@code src} attribute inside one tag. */
     private static final java.util.regex.Pattern SRC_ATTR =
-            java.util.regex.Pattern.compile("\\bsrc=\"([^\"]+)\"");
+            java.util.regex.Pattern.compile("(?i)\\bsrc\\s*=\\s*\"([^\"]+)\"");
 
     /**
-     * Inline every local {@code src="..."} target as a data: URI. References
-     * that are already remote ({@code https:}), already inline ({@code data:}),
+     * Inline every local {@code src="..."} target as a data: URI, so the
+     * {@code emitHtml} file is one self-contained document. References that
+     * are already remote ({@code https:}), already inline ({@code data:}),
      * missing on disk, or over the size cap are left alone; if any local
      * reference survives un-inlined, a {@code <base href>} is stamped so it
      * still resolves when the file is opened in place.
+     *
+     * <p>Only real attributes are touched — see {@link #TAG} for why that is
+     * a two-step scan rather than one pass for {@code src="}.
+     *
+     * <p>Package-private rather than private so the scan can be tested
+     * directly, as {@code LayoutEngine.urlPrefixFor} is.
+     *
+     * @param html    the finished document
+     * @param baseUri the {@code file:} URI local references resolve against
+     * @return the document with its local references inlined
      */
-    private static String standaloneForDebug(String html, String baseUri) {
+    static String standaloneForDebug(String html, String baseUri) {
         Path baseDir = null;
         try {
             URI base = URI.create(baseUri);
@@ -561,26 +616,35 @@ final class BookBuild {
 
         boolean unresolved = false;
         StringBuilder out = new StringBuilder(html.length());
-        java.util.regex.Matcher m = SRC_ATTR.matcher(html);
+        java.util.regex.Matcher tags = TAG.matcher(html);
         int last = 0;
-        while (m.find()) {
-            String ref = m.group(1);
-            String data = null;
-            Path file = localFile(ref, baseDir);
-            if (file != null) {
-                try {
-                    if (Files.isRegularFile(file) && Files.size(file) <= INLINE_ASSET_CAP_BYTES) {
-                        data = "data:" + mimeFor(file) + ";base64,"
-                                + java.util.Base64.getEncoder().encodeToString(Files.readAllBytes(file));
+        while (tags.find()) {
+            String tag = tags.group();
+            String replacement = tag;
+            java.util.regex.Matcher m = SRC_ATTR.matcher(tag);
+            if (m.find()) {
+                String ref = m.group(1);
+                String data = null;
+                Path file = localFile(ref, baseDir);
+                if (file != null) {
+                    try {
+                        if (Files.isRegularFile(file) && Files.size(file) <= INLINE_ASSET_CAP_BYTES) {
+                            data = "data:" + mimeFor(file) + ";base64,"
+                                    + java.util.Base64.getEncoder().encodeToString(Files.readAllBytes(file));
+                        }
+                    } catch (Exception ignored) {
+                        // unreadable: treated the same as missing
                     }
-                } catch (Exception ignored) {
-                    // unreadable: treated the same as missing
+                    if (data == null) unresolved = true;
                 }
-                if (data == null) unresolved = true;
+                // Only the attribute value is spliced, so whatever else the tag
+                // carried (alt, class, a loader's async) survives verbatim.
+                if (data != null) {
+                    replacement = tag.substring(0, m.start(1)) + data + tag.substring(m.end(1));
+                }
             }
-            out.append(html, last, m.start());
-            out.append("src=\"").append(data != null ? data : ref).append("\"");
-            last = m.end();
+            out.append(html, last, tags.start()).append(replacement);
+            last = tags.end();
         }
         out.append(html, last, html.length());
         String result = out.toString();

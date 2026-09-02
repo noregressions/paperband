@@ -102,12 +102,13 @@ class PomValidationTest {
         @Test
         void a_var_written_as_a_parameter_says_where_it_belongs() {
             // The mistake that motivated this: <sidebar> on the site execution
-            // is a book var, silently ignored by Maven with only a warning.
+            // is part of the book, silently ignored by Maven with only a warning.
+            // It is not a var any more either, so the advice names the element.
             String msg = message(() -> check("build", null,
                     "site-exec", "site", "<configuration><sidebar>true</sidebar></configuration>"));
 
             assertTrue(msg.contains("<sidebar> is not a Paperband plugin parameter"), msg);
-            assertTrue(msg.contains("<book><vars><sidebar>"), msg);
+            assertTrue(msg.contains("<book><sidebar/></book>"), msg);
             assertTrue(msg.contains("site-exec"), "names the block at fault: " + msg);
         }
 
@@ -199,13 +200,26 @@ class PomValidationTest {
                             + "  <author>Ada Lovelace</author>"
                             + "  <cover><image>c.png</image><fullPage>true</fullPage></cover>"
                             + "  <header><template>layouts/h.html</template></header>"
-                            + "  <vars><subtitle>Sub</subtitle><sidebar>true</sidebar></vars>"
+                            + "  <sidebar/>"
+                            + "  <vars><subtitle>Sub</subtitle></vars>"
                             + "  <axes><axis><name>tier</name>"
                             + "    <values><value><id>1</id><label>One</label></value></values>"
                             + "  </axis></axes>"
                             + "</book>"
                             + "</configuration>",
                     "pdf", "build", "<configuration><output>out.pdf</output></configuration>"));
+        }
+
+        @Test
+        void a_relocated_var_is_rejected_where_it_used_to_live() {
+            // <vars><sidebar> parses (a var block takes any key) and then does
+            // nothing at all: only the yaml loader still honours that spelling.
+            String msg = message(() -> check("build",
+                    "<configuration><book><vars><sidebar>true</sidebar></vars></book>"
+                            + "</configuration>", null, null, null));
+
+            assertTrue(msg.contains("<sidebar> is no longer a var"), msg);
+            assertTrue(msg.contains("<book><sidebar/></book>"), msg);
         }
 
         @Test

@@ -17,7 +17,7 @@
     -->
     <requiredProperties>
         <requiredProperty key="paperbandVersion">
-            <defaultValue>0.1.0</defaultValue>
+            <defaultValue>0.1.1</defaultValue>
         </requiredProperty>
     </requiredProperties>
 

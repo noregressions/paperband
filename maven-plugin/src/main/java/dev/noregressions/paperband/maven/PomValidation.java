@@ -62,8 +62,22 @@ final class PomValidation {
      * silently ignored — the mistake that motivated this whole class.
      */
     private static final Set<String> KNOWN_VARS = Set.of(
-            "sidebar", "sidebar_collapsed", "sidebar_sections_collapsed",
             "toc", "subtitle", "series", "strapline", "measure", "indexStop");
+
+    /**
+     * Vars that a typed element owns now, and where each one moved to. They read
+     * like vars and used to be vars, so a POM keeps declaring them inside
+     * {@code <vars>}, where they still parse — a var block takes any key — and
+     * still do nothing: only the yaml loader honours the old spelling, and a
+     * book declared in the POM never reaches that fallback. Silently ignored
+     * configuration is exactly what this class exists to catch, so these are an
+     * error wherever they appear rather than a setting that looks live.
+     */
+    private static final Map<String, String> RELOCATED_VARS = Map.of(
+            "sidebar", "<sidebar/>",
+            "sidebar_collapsed", "<sidebar><collapsed>true</collapsed></sidebar>",
+            "sidebar_sections_collapsed",
+            "<sidebar><sectionsCollapsed>false</sectionsCollapsed></sidebar>");
 
     /**
      * Validate the POM's configuration for this plugin.
@@ -195,7 +209,15 @@ final class PomValidation {
     private static void checkNode(Xpp3Dom node, Class<?> type, Class<?> element, String path)
             throws MojoExecutionException {
 
-        if (Map.class.isAssignableFrom(type)) return;          // arbitrary keys by design (<vars>)
+        if (Map.class.isAssignableFrom(type)) {                 // arbitrary keys by design (<vars>)
+            for (Xpp3Dom child : node.getChildren()) {
+                String moved = RELOCATED_VARS.get(child.getName());
+                if (moved != null) {
+                    throw new MojoExecutionException(relocatedVar(child.getName(), path, moved));
+                }
+            }
+            return;
+        }
 
         if (Collection.class.isAssignableFrom(type)) {
             if (element == null || !isOwnType(element)) return;  // list of scalars: names are free
@@ -271,6 +293,12 @@ final class PomValidation {
                                           Set<String> anyGoal, PluginDescriptor plugin) {
         StringBuilder sb = new StringBuilder(
                 where + ": <" + name + "> is not a Paperband plugin parameter.");
+        String moved = RELOCATED_VARS.get(name);
+        if (moved != null) {
+            sb.append(" It is part of the book, not a build setting — and no longer a var:")
+                    .append(" declare it as <book>").append(moved).append("</book>.");
+            return sb.toString();
+        }
         if (KNOWN_VARS.contains(name)) {
             sb.append(" It is a book var, not a build setting — declare it inside the book:")
                     .append(" <book><vars><").append(name).append(">…</").append(name)
@@ -295,6 +323,12 @@ final class PomValidation {
             sb.append(" Valid here: ").append(sorted(accepted)).append('.');
         }
         return sb.toString();
+    }
+
+    private static String relocatedVar(String name, String path, String moved) {
+        return path + "<" + name + "> is no longer a var: declare it as <book>" + moved
+                + "</book>. A var block takes any key, so this one parses and is then ignored —"
+                + " the site would render with the setting looking declared and doing nothing.";
     }
 
     private static String unknownNested(String name, String path, Class<?> type) {

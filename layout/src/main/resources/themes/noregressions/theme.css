@@ -256,14 +256,19 @@ section.block .important, section.block .warning, section.block .caution,
 section.block .danger,
 blockquote.note, blockquote.info, blockquote.tip, blockquote.important,
 blockquote.warning, blockquote.caution, blockquote.danger {
-  --callout-color: var(--nr-brand);
-  --callout-bg: var(--nr-brand-soft);
+  /* note/important carry no modifier below and take the brand fallback here.
+     The fallback lives in the var() rather than as `--callout-color:
+     var(--nr-brand)` on this rule, because this rule's selectors are
+     (0,2,1)/(0,1,1) and the modifiers below are a bare class (0,1,0): a
+     declaration here would outrank every one of them and paint the whole
+     vocabulary brand blue. Keep new kinds as bare-class modifiers, and keep
+     the default in the var(). */
   margin: 1.4rem 0;
   padding: 0.85rem 1.1rem;
-  border: 1px solid color-mix(in srgb, var(--callout-color) 40%, white);
-  border-left: 4px solid var(--callout-color);
+  border: 1px solid color-mix(in srgb, var(--callout-color, var(--nr-brand)) 40%, white);
+  border-left: 4px solid var(--callout-color, var(--nr-brand));
   border-radius: var(--nr-radius);
-  background: var(--callout-bg);
+  background: var(--callout-bg, var(--nr-brand-soft));
   font-style: normal;
   break-inside: avoid;
 }
@@ -325,6 +330,37 @@ blockquote:not([class]) {
 }
 blockquote > :last-child { margin-bottom: 0; }
 
+/* A callout authored as a blockquote — `> Deletes the branch. {.warning}`, the
+   form card-structure.md teaches — does not put the class where you would
+   expect. Flexmark's AttributesExtension attaches an attribute list to the
+   *inline-most* element it follows, so the markdown above renders as
+   `<blockquote><p class="warning">`, never `<blockquote class="warning">`.
+   Two consequences:
+
+     - the `blockquote.note … .danger` selectors above are unreachable from
+       markdown. They stay because an HTML card or an {% include %} snippet
+       *can* emit `<blockquote class="note">` directly, and should still get
+       the box;
+     - the callout box is drawn by the inner paragraph via `section.block
+       .warning`, while the blockquote itself — having no class — also matched
+       `blockquote:not([class])` above and drew the generic quote box around
+       it. One callout rendered as two nested boxes.
+
+   So: a blockquote that exists only to carry a callout stops decorating
+   itself, and the paragraph's box is the whole callout. That makes the
+   blockquote and bare-paragraph forms render identically, which is what the
+   fixed vocabulary above promises. `:has()`/`:is()` are Chromium 105/88; the
+   PDF path is Playwright 1.47 (Chromium 129), so both are safe here. */
+blockquote:has(> p:is(.note, .info, .tip, .important, .warning, .caution, .danger)) {
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+}
+
 /* ── Tables: lookup, not narrative ───────────────────────────────────────── */
 table {
   width: 100%;
@@ -349,7 +385,19 @@ th {
   color: var(--nr-ink);
 }
 tbody tr:nth-child(even) td { background: #fbfcfd; }
-td code { white-space: nowrap; }
+/* A cell's code token does not break while it fits — but it must be allowed
+ * to. nowrap alone makes a cell's minimum width the width of its longest
+ * string, and one long command in one table (a full `docker pull … && docker
+ * pull …`) is enough to push a table past the printable column. Chromium's
+ * print path does not clip that overflow: it scales the whole document down
+ * to fit the widest thing in it, so one wide cell silently shrinks every page
+ * of the book and no page margin can win the space back. Short identifiers
+ * have no break opportunity to take, which is what nowrap was protecting;
+ * long ones break rather than resize the book. */
+td code, th code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 
 /* Reference tables ({.reference-table}): mono first column — machine tokens,
  * not prose. */

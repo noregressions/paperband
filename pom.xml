@@ -29,7 +29,7 @@
 
     <properties>
         <!-- ANCHOR: version-declaration -->
-        <revision>0.1.0</revision>
+        <revision>0.1.1</revision>
         <!-- ANCHOR_END: version-declaration -->
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

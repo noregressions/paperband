@@ -21,7 +21,7 @@ Paperband builds books from Maven. Declare the plugin in the project that holds 
 <plugin>
   <groupId>dev.noregressions.paperband</groupId>
   <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.1</version>
   <executions>
     <execution>
       <goals><goal>build</goal></goals>
