@@ -117,6 +117,7 @@ list for that reason; it is now a book-scope key of its own.)
 | `toc` | Render a printed table of contents | Book |
 | `index` | Back-of-book index: `true`, `auto`, or a term list; also `<book><index>` | Book |
 | `indexStop` | Terms to veto from an `auto` index | Book |
+| `pdfBookmarks` | `false` opts out of the PDF's bookmark tree (on by default) | Book |
 | `subtitle`, `series`, `author` | Cover and site-hero lines (a `cover:` block overrides them per line). `author` also comes from `<book><author>`/`<book><authors>`. | Book |
 | `page.measure` | Text line-length — overrides the theme's `--card-max-width` | Book |
 | `maxPagesPerCard` | Page-count ceiling per card; `<maxPagesPerCard>` wins | Book |

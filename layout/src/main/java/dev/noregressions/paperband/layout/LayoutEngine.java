@@ -13,7 +13,12 @@ import dev.noregressions.paperband.model.AxisValue;
 import dev.noregressions.paperband.model.Block;
 import dev.noregressions.paperband.config.SectionFolderConfig;
 import dev.noregressions.paperband.model.Card;
+import dev.noregressions.paperband.model.CardNumber;
 import dev.noregressions.paperband.model.NamedTemplates;
+import dev.noregressions.paperband.model.OutlineEntry;
+import dev.noregressions.paperband.model.PageMatter;
+import dev.noregressions.paperband.number.Numbering;
+import dev.noregressions.paperband.number.SectionNumbering;
 import dev.noregressions.paperband.model.PlacedPage;
 import dev.noregressions.paperband.model.Section;
 import dev.noregressions.paperband.model.Watermark;
@@ -127,6 +132,33 @@ public final class LayoutEngine {
      */
     public void setTocAt(Integer cardIndex) {
         this.tocAt = cardIndex;
+    }
+
+    /**
+     * The book's bookmark tree, as of the last {@link #renderBook} call — the
+     * structure a PDF viewer's outline pane shows, and the input the maven
+     * plugin's {@code PdfOutline} writes into the finished file.
+     *
+     * <p>Same entries the printed contents page is made of (dividers, cards,
+     * the index), whether or not the book prints one: a contents page is a
+     * choice about paper, bookmarks are navigation, and a book can sensibly
+     * want either without the other.
+     */
+    private List<OutlineEntry> outline = List.of();
+
+    /**
+     * The bookmark tree for the book most recently rendered by
+     * {@link #renderBook}, in page order.
+     *
+     * <p>Empty before the first book render, and for card/site renders (a
+     * single card has no book structure to bookmark). Anchors are named
+     * destinations, so the caller resolves them against the rendered PDF
+     * rather than against anything the engine knows — see {@code PdfOutline}.
+     *
+     * @return the outline entries, top-level and depth-1, in page order
+     */
+    public List<OutlineEntry> outline() {
+        return outline;
     }
 
     /**
@@ -385,7 +417,8 @@ public final class LayoutEngine {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> cardModels = (List<Map<String, Object>>) model.get("cards");
         checkSlots(layoutName, cardModels);
-        return CardLinks.of(cards, excludedCardIds).print(html);
+        return CardLinks.of(cards, excludedCardIds)
+                .withNumbers(cardNumbers).print(html);
     }
 
     private static List<RenderContext> repeatedContexts(RenderContext ctx, int n) {
@@ -832,6 +865,7 @@ public final class LayoutEngine {
 
             Map<String, Object> model = new HashMap<>();
             Map<String, Object> cm = cardModel(card, cardAxesFromGroupings(i, groupings));
+            cm.put("number", numberLabel(card.id()));
             model.put("book", bookModel);
             model.put("navEntries", navEntries);
             model.put("sidebarEntries", sidebarEntries);
@@ -874,7 +908,8 @@ public final class LayoutEngine {
             checkSlots("site-card", List.of(cm));
         }
 
-        CardLinks links = CardLinks.of(cards, excludedCardIds);
+        CardLinks links = CardLinks.of(cards, excludedCardIds)
+                .withNumbers(cardNumbers);
         for (Map.Entry<String, String> e : out.entrySet()) {
             e.setValue(links.site(e.getValue(), e.getKey()));
         }
@@ -1208,6 +1243,69 @@ public final class LayoutEngine {
      * directory layout doesn't group, and two of them may draw different files
      * out of the same folder.
      */
+    /**
+     * Every card's chapter number, derived from book order.
+     *
+     * <p>Section resolution lives here, so numbering is assembled here too and
+     * handed to {@link Numbering} — which owns the rules and knows nothing
+     * about paths. The declarations come from each section's {@code _section.md}
+     * frontmatter, carried on {@link SectionBody#numbering()}.
+     *
+     * <p>Cards in unnumbered sections are absent from the result rather than
+     * mapped to null, so a caller asking for one gets nothing to render.
+     *
+     * <p>Numbering is opt-in: without {@code vars.numbering} the result is
+     * empty and nothing downstream renders or checks a number, so an existing
+     * book's output is untouched. The only mode today is {@code sequential} —
+     * numbers derived from position, gaps closing themselves — which is what a
+     * book wants until it publishes and its numbers escape into other people's
+     * references.
+     *
+     * @param bookRoot the book root, for resolving a card's section
+     * @param declared declared sections, which may claim a card or a folder
+     * @param cards    every card in the build, in book order
+     * @param vars     the book's vars, read for the {@code numbering} opt-in
+     * @return card id to number, in book order; empty when numbering is off
+     */
+    public Map<String, CardNumber> cardNumbers(Path bookRoot, List<Section> declared,
+            List<Card> cards, Map<String, Object> vars) {
+        if (!numberingEnabled(vars)) return Map.of();
+        if (cards == null || cards.isEmpty()) return Map.of();
+        List<Numbering.Placement> placements = new ArrayList<>(cards.size());
+        for (Card card : cards) {
+            String secId = sectionIdFor(bookRoot, declared, card.source());
+            // A card sitting directly in the root has no section; give it a
+            // stable key of its own rather than dropping it from numbering.
+            placements.add(new Numbering.Placement(card.id(), secId == null ? "" : secId));
+        }
+        Map<String, SectionNumbering> sections = new LinkedHashMap<>();
+        sectionBodies.forEach((id, body) -> {
+            if (body != null) sections.put(id, body.numbering());
+        });
+        return Numbering.resolve(placements, sections);
+    }
+
+    /**
+     * Whether the book asked for chapter numbers. {@code vars.numbering:} takes
+     * {@code sequential} (or plain truthiness, which means the same thing while
+     * {@code sequential} is the only mode); anything else, including absent, is
+     * off.
+     *
+     * <p>An unrecognised value is rejected rather than read as "off": a book
+     * that wrote {@code numbering: pinned} expecting the mode this design
+     * reserves for after publication should be told it does not exist yet, not
+     * silently shipped with no numbers at all.
+     */
+    static boolean numberingEnabled(Map<String, Object> vars) {
+        Object mode = vars == null ? null : vars.get("numbering");
+        if (mode == null) return false;
+        String s = String.valueOf(mode).trim().toLowerCase(java.util.Locale.ROOT);
+        if (s.isEmpty() || s.equals("false") || s.equals("none") || s.equals("off")) return false;
+        if (s.equals("sequential") || s.equals("true")) return true;
+        throw new IllegalStateException("Unknown numbering mode `" + mode
+                + "`. The only mode is `sequential`; omit `numbering:` to turn numbering off.");
+    }
+
     private static String sectionIdFor(Path bookRoot, List<Section> declared, Path source) {
         String claimed = declaredSectionIdForCard(declared, source);
         if (claimed != null) return claimed;
@@ -2137,12 +2235,34 @@ public final class LayoutEngine {
         // what lets the build's second render pass fill in real page numbers
         // (see PageRefs in the maven plugin).
         boolean wantToc = tocAt != null || truthyVar(bookCtx.vars().get("toc"));
-        List<Map<String, Object>> tocEntries = wantToc ? new ArrayList<>() : null;
+        // Built for every book, printed only when one was asked for: these same
+        // entries are what the PDF's bookmark tree is made of (see outline()),
+        // and bookmarks are worth having in a book that prints no contents
+        // page. Only the model put below is gated on wantToc.
+        List<Map<String, Object>> tocEntries = new ArrayList<>();
+        // Section id -> the part divider that section opens. Empty for a book
+        // that declares no part spanning more than one section, which is every
+        // book that says nothing about parts.
+        Map<String, Map<String, Object>> partDividers =
+                partDividers(bookRoot, declaredSections, cards);
+        Set<Integer> partsWithDividers = new LinkedHashSet<>();
+        for (Map<String, Object> pd : partDividers.values()) {
+            partsWithDividers.add((Integer) pd.get("part"));
+        }
+        // Where a declared mid-book contents page falls among those entries,
+        // for the bookmark that points at it (tocAt names the card the printed
+        // page precedes; -1 means "up front").
+        int tocEntryIndex = -1;
         Map<String, String> prevValueKeyByAxis = new HashMap<>();
         String prevSectionId = null;
         for (int i = 0; i < cards.size(); i++) {
+            // book.html emits a declared contents page in front of this card
+            // AND in front of the dividers that fire on it, so the bookmark's
+            // slot is taken before any of this card's entries are added.
+            if (tocAt != null && i == tocAt) tocEntryIndex = tocEntries.size();
             Map<String, Object> axesForCard = cardAxesFromGroupings(i, groupings);
             Map<String, Object> cm = cardModel(cards.get(i), axesForCard);
+            cm.put("number", numberLabel(cards.get(i).id()));
             // Card-scope page treatment: when this card's resolved orientation
             // differs from the book's sheet, name the rotation so book.html can
             // stamp a `page:` property on the article and Chromium gives the
@@ -2156,7 +2276,7 @@ public final class LayoutEngine {
                         && key != null && !key.equals(prevValueKeyByAxis.get(g.axis().name()));
                 firstOf.put(g.axis().name(), first);
                 if (key != null) prevValueKeyByAxis.put(g.axis().name(), key);
-                if (first && tocEntries != null
+                if (first
                         && axesForCard.get(g.axis().name()) instanceof Map<?, ?> valueMeta) {
                     tocEntries.add(tocEntry(
                             String.valueOf(valueMeta.get("label")),
@@ -2168,31 +2288,59 @@ public final class LayoutEngine {
             boolean axisDividerHere = firstOf.containsValue(Boolean.TRUE);
 
             Map<String, Object> sectionMeta = null;
+            Map<String, Object> partMeta = null;
             boolean sectionFirst = false;
             String secId = sectionIdFor(bookRoot, declaredSections, cards.get(i).source());
+            // Whether this card's section sits inside a part that prints a
+            // divider. That is what pushes it and its section one level deeper
+            // in the contents, so the nesting the dividers imply is visible.
+            boolean inPart = secId != null && partOf(secId) != null
+                    && partsWithDividers.contains(partOf(secId));
             if (secId != null) {
                 sectionMeta = findSectionMeta(sectionMetas, secId);
                 sectionFirst = !secId.equals(prevSectionId) && !axisDividerHere;
                 prevSectionId = secId;
-                if (sectionFirst && tocEntries != null && sectionMeta != null
+                // The part divider precedes the section divider of the section
+                // that opens the part, so a reader meets "Part 3 — The Failure
+                // Catalogue" once and then its first level — rather than five
+                // sections each announcing Part 3.
+                partMeta = sectionFirst ? partDividers.get(secId) : null;
+                if (partMeta != null) {
+                    tocEntries.add(tocEntry(String.valueOf(partMeta.get("label")),
+                            "section-divider-" + partMeta.get("id"), "divider", 0));
+                }
+                if (sectionFirst && sectionMeta != null
                         && Boolean.TRUE.equals(sectionMeta.get("landingPage"))) {
                     tocEntries.add(tocEntry(
                             String.valueOf(sectionMeta.get("label")),
-                            "section-divider-" + secId, "divider", 0));
+                            "section-divider-" + secId, "divider", inPart ? 1 : 0));
                 }
             }
             cm.put("sectionMeta", sectionMeta);
             cm.put("sectionFirst", sectionFirst);
-            if (tocEntries != null) {
-                int depth = (sectionMeta != null || hasAnyAxisValue(i, groupings)) ? 1 : 0;
-                tocEntries.add(tocEntry(
-                        cards.get(i).title(), "card-" + cards.get(i).id(), "card", depth));
-            }
+            // Non-null on exactly one card per part: the first card of the
+            // section that opens it. book.html renders it ahead of the section
+            // divider.
+            cm.put("partMeta", partMeta);
+            int tocDepth = (sectionMeta != null || hasAnyAxisValue(i, groupings)) ? 1 : 0;
+            if (inPart && tocDepth > 0) tocDepth++;
+            // The number goes into the label rather than alongside it, so a
+            // theme that knows nothing about numbering still prints a
+            // numbered contents page.
+            String num = numberLabel(cards.get(i).id());
+            String tocLabel = num == null
+                    ? cards.get(i).title() : num + " " + cards.get(i).title();
+            tocEntries.add(tocEntry(
+                    tocLabel, "card-" + cards.get(i).id(), "card", tocDepth));
 
             cardModels.add(cm);
         }
 
-        model.put("toc", tocEntries);
+        // A trailing marker (tocAt at or past the last card) never came up in
+        // the loop above: book.html emits that contents page after every card
+        // and before the index, so its bookmark slot is the end of the cards.
+        if (tocAt != null && tocAt >= cards.size()) tocEntryIndex = tocEntries.size();
+        model.put("toc", wantToc ? tocEntries : null);
         // Where book.html drops the contents page: in front of this card
         // index, cards.size() meaning after the last card. A vars-toggled TOC
         // with no declared position keeps its traditional spot up front.
@@ -2212,8 +2360,23 @@ public final class LayoutEngine {
         }
         model.put("bookPages", pageModels);
         Map<String, List<String>> indexTerms = resolvedIndexTerms(cards, bookCtx.vars());
-        model.put("bookIndex",
-                indexTerms.isEmpty() ? null : buildIndexModel(cards, indexTerms));
+        Object bookIndex = indexTerms.isEmpty() ? null : buildIndexModel(cards, indexTerms);
+        model.put("bookIndex", bookIndex);
+        // The index is a page of the book like any other, so it belongs in the
+        // contents — a reader who cannot find the index from the contents page
+        // has to know it exists. Appended here rather than in the card loop
+        // because that is where book.html emits it (last), and because whether
+        // there is an index at all is only settled on the line above.
+        // tocEntries is the same list the model already holds (when the book
+        // prints one), so this reaches the template without re-putting it —
+        // and reaches the bookmark tree either way.
+        if (bookIndex != null) {
+            tocEntries.add(tocEntry("Index", "book-index", "divider", 0));
+        }
+        // Same entries, minus the printing: the PDF's bookmark tree. Built
+        // here (not by the caller from the model) because this is where the
+        // contents page's own position is known.
+        this.outline = buildOutline(tocEntries, wantToc, tocEntryIndex, bookCtx);
         model.put("cards", cardModels);
         model.put("axisGroupings", axisGroupingsModel(groupings));
         model.put("sections", sectionMetas);
@@ -2269,6 +2432,60 @@ public final class LayoutEngine {
     private static boolean truthyVar(Object v) {
         if (v instanceof Boolean b) return b;
         return v != null && "true".equalsIgnoreCase(String.valueOf(v).trim());
+    }
+
+    /**
+     * The book's bookmark tree: every printed-contents entry, plus the two
+     * pages a contents page can't list — itself, and the back page.
+     *
+     * <p>Both extras are places a reader navigates to and neither is a card,
+     * so they belong in the outline pane even though the printed contents
+     * page has no line for them (a contents page listing itself is noise on
+     * paper; a bookmark for it is a way back).
+     *
+     * <p>The contents bookmark inherits the depth of the entry it displaces
+     * rather than always sitting at the top level. A declared {@code <toc/>}
+     * marker normally lands between sections, where the next entry is a
+     * divider and the inherited depth is 0 — but a marker that lands inside a
+     * divider's run of cards would otherwise drop a top-level bookmark in the
+     * middle of that run and adopt the rest of it. Borrowing the depth keeps
+     * the tree honest and the order exact.
+     *
+     * @param tocEntries    the printed-contents entries, in page order
+     * @param wantToc       whether the book prints a contents page at all
+     * @param tocEntryIndex where a declared contents page falls among them, or -1 for up front
+     * @param bookCtx       the book context — supplies the contents label and the back page
+     * @return the outline, in page order
+     */
+    private static List<OutlineEntry> buildOutline(
+            List<Map<String, Object>> tocEntries, boolean wantToc, int tocEntryIndex,
+            RenderContext bookCtx) {
+        List<OutlineEntry> out = new ArrayList<>(tocEntries.size() + 2);
+        for (Map<String, Object> e : tocEntries) {
+            out.add(new OutlineEntry(
+                    e.get("label") == null ? null : String.valueOf(e.get("label")),
+                    String.valueOf(e.get("anchor")),
+                    e.get("depth") instanceof Number n ? n.intValue() : 0));
+        }
+        if (wantToc) {
+            // The same label the contents page prints (_book-toc.html), so the
+            // bookmark and the page it opens say the same thing.
+            Object declared = bookCtx.vars().get("tocTitle");
+            String label = declared == null || String.valueOf(declared).isBlank()
+                    ? "Contents" : String.valueOf(declared).trim();
+            int at = tocEntryIndex < 0 || tocEntryIndex > out.size() ? 0 : tocEntryIndex;
+            int depth = tocEntryIndex >= 0 && at < out.size() ? out.get(at).depth() : 0;
+            out.add(at, new OutlineEntry(label, "book-toc", depth));
+        }
+        PageMatter back = bookCtx.book() == null ? null : bookCtx.book().back();
+        if (back != null && !back.isEmpty()) {
+            // Image- or template-only back matter has no title of its own;
+            // "book-back" (what OutlineEntry would fall back to) is an anchor,
+            // not a thing to show a reader.
+            out.add(new OutlineEntry(
+                    back.title() == null ? "Back page" : back.title(), "book-back", 0));
+        }
+        return List.copyOf(out);
     }
 
     /** One printed-TOC line: what to say, where it points, and how deep it sits. */
@@ -2403,6 +2620,78 @@ public final class LayoutEngine {
         if (!s.isEmpty()) out.add(s);
     }
 
+    /**
+     * The parts this book declares, as section-id to part divider model.
+     *
+     * <p>A part groups sibling sections: the JDK guide's "Part 3 — The Failure
+     * Catalogue" spans five level folders, each of which keeps its own divider
+     * and its own contents entry. Sections join a part with {@code part:} in
+     * their {@code _section.md} (the same key numbering reads), and one of them
+     * names it with {@code part_title:}.
+     *
+     * <p>Only the section that <em>opens</em> a part gets an entry, and only
+     * where the part spans more than one section. A part of one section is
+     * already announced by that section's own divider; a second page saying
+     * nearly the same thing reads as a mistake, which is exactly what five
+     * dividers each headed "Part 3" looked like before this existed.
+     *
+     * @param bookRoot the book root, for resolving a card's section
+     * @param declared declared sections, which may claim a card or a folder
+     * @param cards    every card in the build, in book order
+     * @return section id to the divider model for the part it opens; empty when
+     *         the book declares no multi-section part
+     */
+    private Map<String, Map<String, Object>> partDividers(
+            Path bookRoot, List<Section> declared, List<Card> cards) {
+        if (cards == null || cards.isEmpty()) return Map.of();
+        // Sections in book order, de-duplicated.
+        List<String> order = new ArrayList<>();
+        for (Card card : cards) {
+            String secId = sectionIdFor(bookRoot, declared, card.source());
+            if (secId != null && !order.contains(secId)) order.add(secId);
+        }
+        Map<Integer, List<String>> byPart = new LinkedHashMap<>();
+        Map<Integer, String> titles = new LinkedHashMap<>();
+        for (String secId : order) {
+            SectionBody body = sectionBodies.get(secId);
+            if (body == null) continue;
+            Integer part = body.numbering().part();
+            if (part == null) continue;
+            byPart.computeIfAbsent(part, k -> new ArrayList<>()).add(secId);
+            if (body.partTitle() != null) titles.putIfAbsent(part, body.partTitle());
+        }
+        Map<String, Map<String, Object>> out = new LinkedHashMap<>();
+        for (var e : byPart.entrySet()) {
+            String title = titles.get(e.getKey());
+            if (title == null || e.getValue().size() < 2) continue;
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", "part-" + e.getKey());
+            m.put("label", title);
+            m.put("part", e.getKey());
+            // Title only: the sections below carry the counts and contents, and
+            // repeating them here would preview the preview.
+            m.put("minimal", true);
+            m.put("count", 0);
+            m.put("body", null);
+            m.put("bodyCards", false);
+            m.put("cards", List.of());
+            out.put(e.getValue().get(0), m);
+        }
+        return out;
+    }
+
+    /** The part number a section declared, or null when it declared none. */
+    private Integer partOf(String sectionId) {
+        SectionBody body = sectionBodies.get(sectionId);
+        return body == null ? null : body.numbering().part();
+    }
+
+    /** This card's number as a template-ready string, or null when unnumbered. */
+    private String numberLabel(String cardId) {
+        CardNumber n = cardNumbers.get(cardId);
+        return n == null ? null : n.label();
+    }
+
     private static Map<String, Object> cardModel(Card card, Map<String, Object> axes) {
         Map<String, Object> m = new HashMap<>();
         m.put("id", card.id());
@@ -2422,6 +2711,11 @@ public final class LayoutEngine {
         // (the renderer is handed that card's own geometry directly), and the
         // site has no sheets at all.
         m.put("sheet", null);
+        // The chapter number, filled in by the callers that know it (the book
+        // and site models). Defaulted here so `{% if card.number %}` is a
+        // valid guard on every path, including a single-card preview that has
+        // no book to number against.
+        m.put("number", null);
 
         List<Map<String, Object>> blocks = new ArrayList<>(card.blocks().size());
         for (Block b : card.blocks()) {
@@ -2735,6 +3029,22 @@ public final class LayoutEngine {
      *
      * @param bodies rendered bodies by section id; null clears
      */
+    /**
+     * Card id to chapter number, when the book numbers itself. Set by the
+     * build, which computes it once via {@link #cardNumbers}, so the reference
+     * resolver and the check see the same numbers.
+     */
+    private java.util.Map<String, CardNumber> cardNumbers = java.util.Map.of();
+
+    /**
+     * Supply the chapter numbers this render should use.
+     *
+     * @param numbers card id to number; empty or null turns numbering off
+     */
+    public void setCardNumbers(java.util.Map<String, CardNumber> numbers) {
+        this.cardNumbers = numbers == null ? java.util.Map.of() : java.util.Map.copyOf(numbers);
+    }
+
     public void setSectionBodies(java.util.Map<String, SectionBody> bodies) {
         this.sectionBodies = bodies == null ? java.util.Map.of() : java.util.Map.copyOf(bodies);
     }

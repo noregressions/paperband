@@ -8,6 +8,7 @@ import dev.noregressions.paperband.layout.SectionBody;
 import dev.noregressions.paperband.model.Block;
 import dev.noregressions.paperband.model.Card;
 import dev.noregressions.paperband.model.RenderContext;
+import dev.noregressions.paperband.number.SectionNumbering;
 import dev.noregressions.paperband.pebble.LenientMap;
 
 import java.io.IOException;
@@ -120,7 +121,9 @@ final class SectionBodies {
             appendBlocks(html, card.blocks());
             Map<String, Object> fm = card.frontmatter().values();
             return new SectionBody(html.toString(), card.title(),
-                    truthy(fm.get("cards")) || truthy(fm.get("sections")));
+                    truthy(fm.get("cards")) || truthy(fm.get("sections")),
+                    numbering(fm, file),
+                    fm.get("part_title") == null ? null : fm.get("part_title").toString());
         } catch (RuntimeException e) {
             // The body is prose, not structure: a broken one should say so and
             // stop, exactly as a broken card would.
@@ -208,6 +211,44 @@ final class SectionBodies {
      */
     private static String escape(String s) {
         return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
+    /**
+     * A section's numbering declaration: {@code part:} to share a numbering
+     * group with sibling sections, {@code numbered: false} to opt out. Absent
+     * keys mean {@link SectionNumbering#discovered()} — numbered, own group —
+     * so an existing book's output is unchanged.
+     *
+     * <p>{@code part:} on an unnumbered section is contradictory rather than
+     * merely redundant, and a book that wrote both almost certainly meant one
+     * of them, so it stops here instead of silently picking.
+     */
+    private static SectionNumbering numbering(Map<String, Object> fm, Path file) {
+        boolean numbered = !fm.containsKey("numbered") || truthy(fm.get("numbered"));
+        Object rawPart = fm.get("part");
+        if (rawPart == null) {
+            return numbered ? SectionNumbering.discovered() : SectionNumbering.unnumbered();
+        }
+        if (!numbered) {
+            throw new IllegalStateException("Section body " + file
+                    + " declares both `numbered: false` and `part: " + rawPart
+                    + "`. An unnumbered section has no part — drop one of them.");
+        }
+        Integer part = asInt(rawPart);
+        if (part == null || part < 0) {
+            throw new IllegalStateException("Section body " + file + " declares `part: "
+                    + rawPart + "`, which is not a non-negative whole number.");
+        }
+        return new SectionNumbering(true, part);
+    }
+
+    private static Integer asInt(Object v) {
+        if (v instanceof Number n) return n.intValue();
+        try {
+            return Integer.valueOf(v.toString().trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     /** Yaml truthiness, matching the rest of the pipeline: true/yes/1, or a real boolean. */

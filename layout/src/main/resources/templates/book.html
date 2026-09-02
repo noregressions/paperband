@@ -418,7 +418,13 @@
       text-decoration: none;
       padding-block: 0.15rem;
     }
+    /* One step per level. Depth 2 exists when a book groups sections into
+       parts: part, then section, then card. Without a rule for it a card
+       inside a part would sit further left than its own section, which
+       reads as a mistake rather than as nesting. */
     .toc-depth-1 a { padding-left: 1.5rem; }
+    .toc-depth-2 a { padding-left: 3rem; }
+    .toc-depth-3 a { padding-left: 4.5rem; }
     .toc-kind-divider a { font-weight: 600; margin-top: 0.6rem; }
     .toc-label { flex: 0 1 auto; }
     /* Dotted leader between label and page number, dropped to the baseline. */
@@ -604,6 +610,11 @@
        sectionFirst is the divider trigger, computed in the model with axis
        precedence — it is false whenever an axis divider fired on this same
        card — so at most one divider page still precedes any card. #}
+    {# A part divider comes first where a part spans several sections: one
+       page naming the part, then that part's first section as usual. #}
+    {% if card.partMeta is not null %}
+    {% include "_section-divider" with {"section": card.partMeta} %}
+    {% endif %}
     {% if card.sectionFirst and card.sectionMeta is not null and card.sectionMeta.landingPage %}
     {% include "_section-divider" with {"section": card.sectionMeta} %}
     {% endif %}

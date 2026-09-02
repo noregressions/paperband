@@ -1,7 +1,7 @@
 ---
 id: toc-and-index
 oneliner: "A printed table of contents and a back-of-book index, with real page numbers."
-index: [table of contents, index, page numbers, two-pass render]
+index: [table of contents, index, page numbers, two-pass render, bookmarks]
 ---
 
 # TOC and Index
@@ -114,6 +114,32 @@ numbers are exact. The build logs the second pass:
 The extra render only happens when at least one placeholder is present —
 books without `toc`/`index` build in one pass exactly as before.
 
+## PDF bookmarks
+
+The contents page has an on-screen counterpart: the bookmark tree a PDF
+viewer shows in its sidebar. It is on by default and needs no flag —
+
+```yaml
+vars:
+  pdfBookmarks: false   # opt out
+```
+
+— and it carries the book's own structure rather than a scrape of its
+headings: the contents page, every divider with its cards nested under it,
+the index, and a declared back page. Labels match the printed contents,
+numbering included. Each bookmark points at the same named destination the
+contents page points at, so a bookmark cannot land on a different page than
+the line above it, and no extra render pass is needed to write them. The
+build says what it wrote:
+
+```
+[INFO] Wrote 26 PDF bookmark(s)
+```
+
+Cards are bookmarked, headings inside them are not: Chromium emits a
+destination only for an id the document links to, and a card's own anchor is
+the only one the book links.
+
 ## Styling
 
 Both pages take as many sheets as they need and inherit the theme's colours.
@@ -129,6 +155,10 @@ different structure entirely, override the `_book-toc.html` or
 **The contents and index are PDF concepts.** The static site already has an
 index page and per-card navigation, so the `site` goal ignores both flags —
 there are no page numbers on the web.
+
+**Bookmarks and the contents page are independent.** Bookmarks appear in a
+book that prints no contents page (they are navigation, not paper), and
+`pdfBookmarks: false` leaves a printed contents page untouched.
 
 **A `?` where a number should be means the anchor didn't exist** in the
 first pass — the build warns naming it. The bundled templates only reference

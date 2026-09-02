@@ -1,5 +1,7 @@
 package dev.noregressions.paperband.layout;
 
+import dev.noregressions.paperband.number.SectionNumbering;
+
 /**
  * A section's landing-page content, written as markdown rather than as a
  * template.
@@ -27,6 +29,25 @@ package dev.noregressions.paperband.layout;
  *                  completely instead of the heading silently vanishing
  * @param withCards true when the markdown's frontmatter asked for the default
  *                  card list to follow the prose
+ * @param numbering how this section's cards are numbered, read from the same
+ *                  frontmatter — {@code part:} to share a numbering group with
+ *                  sibling sections, {@code numbered: false} to opt out
+ *                  entirely. Never null: a section that says nothing about
+ *                  numbering gets {@link SectionNumbering#discovered()}
+ * @param partTitle the name of the part this section belongs to, from
+ *                  {@code part_title:}, or null. Declared on any one section of
+ *                  the part; it titles the part's own divider page, which is
+ *                  emitted only where a part spans more than one section — a
+ *                  part of one section is already announced by that section's
+ *                  own divider, and a second page saying nearly the same thing
+ *                  is worse than none
  */
-public record SectionBody(String html, String title, boolean withCards) {
+public record SectionBody(
+        String html, String title, boolean withCards, SectionNumbering numbering,
+        String partTitle) {
+
+    public SectionBody {
+        numbering = numbering == null ? SectionNumbering.discovered() : numbering;
+        partTitle = (partTitle == null || partTitle.isBlank()) ? null : partTitle.trim();
+    }
 }

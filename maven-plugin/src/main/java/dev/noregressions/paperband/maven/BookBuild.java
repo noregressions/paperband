@@ -8,11 +8,14 @@ import dev.noregressions.paperband.config.ConfigLoader;
 import dev.noregressions.paperband.render.PageSpec;
 import dev.noregressions.paperband.include.Includes;
 import dev.noregressions.paperband.layout.LayoutEngine;
+import dev.noregressions.paperband.layout.NumberCheck;
 import dev.noregressions.paperband.layout.ThemeBundle;
 import dev.noregressions.paperband.maven.pdf.FullPageCover;
 import dev.noregressions.paperband.maven.pdf.PageRefs;
+import dev.noregressions.paperband.maven.pdf.PdfOutline;
 import dev.noregressions.paperband.maven.pdf.WatermarkApplier;
 import dev.noregressions.paperband.model.Card;
+import dev.noregressions.paperband.model.OutlineEntry;
 import dev.noregressions.paperband.model.Watermark;
 import dev.noregressions.paperband.model.PlacedPage;
 import dev.noregressions.paperband.model.Section;
@@ -345,6 +348,15 @@ final class BookBuild {
         // markdown branches on `output` where the two want different words.
         layout.setSectionBodies(SectionBodies.render(
                 bookCtx, layoutsDir, includeProviderConfig, cards, "print", target));
+        // Chapter numbers are derived from book order, so a number written into
+        // a cross-reference label is a copy, and copies drift. Checked here,
+        // before renderBook lets CardLinks rewrite the `card:` hrefs the check
+        // matches on. A no-op for a book that has not asked for numbering.
+        java.util.Map<String, dev.noregressions.paperband.model.CardNumber> numbers =
+                layout.cardNumbers(bookCtx.book().bookRoot(), bookCtx.book().sections(),
+                        cards, bookCtx.vars());
+        NumberCheck.verify(cards, numbers);
+        layout.setCardNumbers(numbers);
         String html = layoutOverride != null
                 ? layout.renderBook(cards, contexts, bookCtx, layoutOverride)
                 : layout.renderBook(cards, contexts, bookCtx);
@@ -411,6 +423,9 @@ final class BookBuild {
             log.info("Replaced the cover page with a header/footer-free render (fullPage cover)");
         }
         applyWatermark(bookCtx);
+        // Last of the PDF passes, deliberately: every step above rewrites
+        // pages or the destinations bookmarks point at.
+        applyBookmarks(bookCtx, layout.outline());
 
         log.info("Built book " + bookRoot + " -> " + output
                 + " (renderer=" + renderer.name() + describeGeometry()
@@ -695,6 +710,44 @@ final class BookBuild {
      * individual tuning parameters then override whichever fields they name on
      * whichever spec won.
      */
+    /**
+     * Write the book's bookmark tree into the finished PDF — a viewer's
+     * outline pane, built from the same structure the printed contents page
+     * is (dividers, cards, index), whether or not the book prints one.
+     *
+     * <p>On by default: a book-length PDF with no bookmarks is hard to move
+     * around in, and there is no cost to a reader who ignores the pane.
+     * {@code vars.pdfBookmarks: false} turns it off.
+     *
+     * @param ctx     the book context, whose vars carry the toggle
+     * @param entries the tree the layout engine built for this render
+     */
+    private void applyBookmarks(RenderContext ctx, List<OutlineEntry> entries) throws Exception {
+        Object declared = ctx == null ? null : ctx.vars().get("pdfBookmarks");
+        if (declared != null && !truthy(declared)) return;
+        if (entries.isEmpty()) return;
+
+        PdfOutline.Result result = PdfOutline.apply(output, entries);
+        for (String anchor : result.unresolved()) {
+            log.warn("Bookmark for #" + anchor + " matched no named destination"
+                    + " — left out of the PDF outline");
+        }
+        if (result.isEmpty()) {
+            log.warn("Wrote no PDF bookmarks: none of the book's " + entries.size()
+                    + " outline entries matched a named destination");
+        } else {
+            log.info("Wrote " + result.items() + " PDF bookmark(s)");
+        }
+    }
+
+    /** Yaml truthiness, matching the rest of the pipeline: true/yes/1, or a real boolean. */
+    private static boolean truthy(Object v) {
+        if (v instanceof Boolean b) return b;
+        if (v == null) return false;
+        String s = v.toString().trim().toLowerCase(java.util.Locale.ROOT);
+        return s.equals("true") || s.equals("yes") || s.equals("1");
+    }
+
     private void applyWatermark(RenderContext ctx) throws Exception {
         Watermark watermark = resolveWatermark(ctx);
         if (watermark == null) return;

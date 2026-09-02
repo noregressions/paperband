@@ -233,6 +233,7 @@ sections:                        # declared top-level grouping (list form)
 vars:
   subtitle: "..."                # promoted to book.subtitle (also: series, author)
   toc: true                      # printed table of contents (PDF only)
+  pdfBookmarks: false            # opt OUT of the PDF's bookmark pane (default: on)
   index: auto                    # back-of-book index; auto = frontmatter + TF-IDF terms
   indexStop: [generic, terms]    # veto auto index picks
   watermark: "DRAFT"             # or a map: {text|image, color, opacity, angle, font_size,
@@ -336,6 +337,18 @@ boosted; terms in >⅓ of cards dropped); curate with `indexStop`. Review picks 
 rendering: `mvn paperband:structure` shows each card's resolved `index:` line. Headings via
 `vars.tocTitle`/`vars.indexTitle`. In a POM-declared book, `<toc/>` is positional between
 `<section>` elements (at most one); index is `<index>auto</index>` under `<book>`.
+
+### PDF bookmarks (PDF only)
+
+On by default; `vars.pdfBookmarks: false` turns them off. The viewer's outline pane gets the
+book's own structure — the contents page, each divider with its cards nested under it, the
+index, the back page — the same entries the printed TOC is made of, built whether or not the
+book prints one. Labels carry card numbering; bookmarks point at the anchors' named
+destinations, so no second pass is needed and a bookmark can't disagree with the page it
+opens. Written as the last PDF pass (after the page-number render, the cover splice and the
+watermark). An anchor with no destination is warned about and left out — e.g. a custom
+`back:` template that doesn't carry `id="book-back"`. Block headings are not bookmarked:
+Chromium only emits destinations for ids the document links to.
 
 ### Watermarks
 

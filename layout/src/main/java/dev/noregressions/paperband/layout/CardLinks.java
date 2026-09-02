@@ -2,6 +2,7 @@ package dev.noregressions.paperband.layout;
 
 import dev.noregressions.paperband.model.Block;
 import dev.noregressions.paperband.model.Card;
+import dev.noregressions.paperband.model.CardNumber;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -74,6 +75,21 @@ public final class CardLinks {
 
     /** Ids the book holds that this build left out — a selection, or an edition. */
     private final Set<String> excluded;
+
+    /**
+     * An anchor to a {@code card:} whose label is empty ({@code [](card:x)}) or
+     * is the bare marker {@code #} ({@code [#](card:x)}), captured in three
+     * parts so the middle can be filled in.
+     */
+    private static final Pattern EMPTY_LABEL = Pattern.compile(
+            "(<a\\s[^>]*href\\s*=\\s*([\"'])card:([^\"'#\\s]*)(?:#[^\"'\\s]*)?\\2[^>]*>)"
+                    + "(\\s*#?\\s*)(</a>)");
+
+    /** The word placed before the number when a label is filled in. */
+    private static final String CHAPTER_WORD = "Chapter";
+
+    /** Card id to chapter number; empty when the book doesn't number itself. */
+    private Map<String, CardNumber> numbers = Map.of();
 
     private CardLinks(List<Card> cards, Set<String> excluded) {
         this.cards = cards == null ? List.of() : cards;
@@ -156,6 +172,56 @@ public final class CardLinks {
                 true, pageKey);
     }
 
+    /**
+     * Supply the book's chapter numbers, so a reference that writes no label
+     * gets one rendered.
+     *
+     * <p>{@code [](card:unsafe-memory-access)} renders as "Chapter 3.14", and
+     * {@code [#](card:unsafe-memory-access)} as the bare "3.14" for prose that
+     * already supplies the noun. That
+     * is the whole point of deriving numbers: a label that spelled the number
+     * itself would be a copy of computed data, and
+     * {@link NumberCheck} exists because such copies drift.
+     *
+     * <p>A label the author did write is never touched — prose stays free to
+     * name a chapter in its own words.
+     *
+     * @param numbers card id to number, from {@code LayoutEngine.cardNumbers}
+     * @return this resolver
+     */
+    public CardLinks withNumbers(Map<String, CardNumber> numbers) {
+        this.numbers = numbers == null ? Map.of() : Map.copyOf(numbers);
+        return this;
+    }
+
+    /**
+     * Fill every empty label with its target's number, before hrefs are
+     * rewritten and the {@code card:} scheme disappears.
+     *
+     * <p>An empty label whose target has no number is left empty rather than
+     * guessed at: it will render as a bare link, which is visible, and the
+     * alternative is inventing a number for a card that opted out of having
+     * one.
+     */
+    private String fillEmptyLabels(String html) {
+        if (numbers.isEmpty() || html == null || !html.contains(SCHEME)) return html;
+        Matcher m = EMPTY_LABEL.matcher(html);
+        StringBuilder out = new StringBuilder(html.length());
+        while (m.find()) {
+            CardNumber n = numbers.get(m.group(3));
+            // `[#](card:x)` asks for the number alone: prose that already
+            // supplies the noun — "Chapters 2.3 and 2.4" — must not be given a
+            // second one.
+            boolean bare = "#".equals(m.group(4).trim());
+            String label = n == null ? m.group(4)
+                    : bare ? n.label() : CHAPTER_WORD + " " + n.label();
+            m.appendReplacement(out,
+                    Matcher.quoteReplacement(m.group(1) + label + m.group(5)));
+        }
+        m.appendTail(out);
+        return out.toString();
+    }
+
     /** How a resolved reference is spelled for one output. */
     private interface Target {
         String href(String id, String fragment);
@@ -163,6 +229,7 @@ public final class CardLinks {
 
     private String resolve(String html, Target target, boolean validate, String pageKey) {
         if (html == null || !html.contains(SCHEME)) return html;
+        html = fillEmptyLabels(html);
 
         List<String> problems = new ArrayList<>();
         Matcher m = LINK.matcher(html);

@@ -26,7 +26,7 @@
    distinct "-base" name for the same reason. #}
 <article class="card{% for entry in card.axes %} {{ entry.key }}-{{ entry.value.id }}{% endfor %}{% if card.sheet %} pb-sheet-{{ card.sheet }}{% endif %}" id="card-{{ card.id }}">
   {% block header %}
-  {% if card.title %}<h1 class="card-title">{{ card.title }}</h1>{% endif %}
+  {% if card.title %}<h1 class="card-title">{% if card.number %}<span class="card-number">{{ card.number }}</span> {% endif %}{{ card.title }}</h1>{% endif %}
   {% endblock %}
 
   {% block meta %}
