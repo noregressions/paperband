@@ -76,7 +76,7 @@ The `build` goal's default phase is `process-resources`; override `<phase>` in t
 | `reportPages` | `paperband.reportPages` | `false` | Print a per-anchor page-span table after rendering. |
 | `maxPagesPerCard` | `paperband.maxPagesPerCard` | *(`vars.maxPagesPerCard`)* | Fail the build if a card runs longer. See Page Enforcement. |
 | `select` | `paperband.select` | — | Keep only cards whose `field=value` matches. Book builds only. |
-| `watermark` | `paperband.watermark` | *(`vars.watermark`)* | Stamp this text on every page. See Watermarks for the four tuning parameters. |
+| `watermark` | `paperband.watermark` | *(`vars.watermark`)* | Stamp this text on every page; `<watermarkImage>` stamps a logo instead. See Watermarks for the tuning parameters. |
 | `externalIncludeDirs` | `paperband.externalIncludeDirs` | — | Permit `{{#include}}` to read below these directories, outside the book root. |
 | `externalIncludeFiles` | `paperband.externalIncludeFiles` | — | Permit `{{#include}}` to read these specific files. |
 
@@ -466,7 +466,9 @@ describe exactly the book `build` would render.
 
 PDF post-processing — watermark stamping, and the page-span analysis behind `pages` and
 `<reportPages>` — reads and rewrites a finished PDF, so it needs PDFBox directly and lives
-in the plugin alongside the goals that use it.
+in the plugin alongside the goals that use it. The watermark *declaration* does not: it is a
+model type, because the site paints the same spec as a CSS overlay with no PDFBox anywhere
+near it.
 
 ## Watch Out
 
@@ -562,6 +564,10 @@ parameter belongs in its execution rather than the shared block, since goals rea
 one indiscriminately: `structure`'s `<outputFile>` is separate from `build`'s `<output>` for
 exactly that reason.
 
+`site` also takes the watermark parameters, spelled exactly as `build` spells them, so
+`-Dpaperband.watermark="REVIEW COPY"` marks the site and the PDF in one run. `pages:` and
+`font:` are the two it ignores — a website has no page one and no embedded fonts.
+
 ## The publish goal
 
 Builds every edition declared in the book's `publication:` block — the same content cut
@@ -609,5 +615,8 @@ mvn paperband:blocks
 outline lists exactly which cards each pattern claimed, in which section, in what order — the
 cheapest way to check a declaration without waiting for a render.
 
-`render` is the odd one out: it takes an HTML file and a renderer and nothing else, which
-makes it the way to turn an `<emitHtml>` file back into a PDF after hand-editing it.
+`render` is the odd one out: it takes an HTML file, a renderer, and the watermark
+parameters, which makes it the way to turn an `<emitHtml>` file back into a PDF after
+hand-editing it. It needs the watermark parameters because that file carries its mark as a
+screen-only overlay — the PDF's copy is stamped after rendering — so re-rendering it without
+`-Dpaperband.watermark` would quietly produce an unmarked PDF.

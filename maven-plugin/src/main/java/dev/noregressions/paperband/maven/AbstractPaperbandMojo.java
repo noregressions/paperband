@@ -362,6 +362,10 @@ public abstract class AbstractPaperbandMojo extends AbstractMojo {
             build.run();
         } catch (MojoExecutionException | MojoFailureException e) {
             throw e;
+        } catch (dev.noregressions.paperband.layout.CardLinkException e) {
+            // A cross-reference naming a card that isn't there: the book is
+            // wrong, not the build. Same kind as the page-budget check.
+            throw new MojoFailureException(e.getMessage(), e);
         } catch (Exception e) {
             throw new MojoExecutionException("Paperband build failed: " + e.getMessage(), e);
         }

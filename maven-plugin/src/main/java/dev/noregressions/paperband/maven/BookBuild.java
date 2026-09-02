@@ -11,9 +11,9 @@ import dev.noregressions.paperband.layout.LayoutEngine;
 import dev.noregressions.paperband.layout.ThemeBundle;
 import dev.noregressions.paperband.maven.pdf.FullPageCover;
 import dev.noregressions.paperband.maven.pdf.PageRefs;
-import dev.noregressions.paperband.maven.pdf.Watermark;
 import dev.noregressions.paperband.maven.pdf.WatermarkApplier;
 import dev.noregressions.paperband.model.Card;
+import dev.noregressions.paperband.model.Watermark;
 import dev.noregressions.paperband.model.PlacedPage;
 import dev.noregressions.paperband.model.Section;
 import dev.noregressions.paperband.model.RenderContext;
@@ -22,6 +22,7 @@ import dev.noregressions.paperband.render.HtmlInput;
 import dev.noregressions.paperband.render.HtmlToPdfRenderer;
 import dev.noregressions.paperband.render.Margins;
 import dev.noregressions.paperband.render.PdfMetadata;
+import dev.noregressions.paperband.render.WatermarkHtml;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -136,11 +137,15 @@ final class BookBuild {
 
     // ---- watermark ----
 
-    String watermarkText;
-    String watermarkColor;
-    Float watermarkOpacity;
-    Float watermarkAngle;
-    Integer watermarkFontSize;
+    /**
+     * The watermark the goal's own parameters declared. When set it REPLACES a
+     * {@code vars.watermark} in the book's yaml rather than merging with it, so
+     * a release build can stamp REVIEW COPY over a book whose yaml says DRAFT
+     * without inheriting the yaml's colour or angle.
+     */
+    Watermark watermarkBase;
+    /** Per-knob parameters, layered over whichever base spec won. */
+    Watermark.Overrides watermarkOverrides = Watermark.Overrides.NONE;
 
     // ---- selection (book path only) ----
 
@@ -203,7 +208,7 @@ final class BookBuild {
                 ? layout.render(card, ctx, layoutOverride)
                 : layout.render(card, ctx);
 
-        emitHtmlIfAsked(html, null);
+        emitHtmlIfAsked(html, null, ctx);
 
         HtmlToPdfRenderer renderer = Renderers.require(rendererName);
         URI baseUri = input.toAbsolutePath().getParent().toUri();
@@ -295,6 +300,11 @@ final class BookBuild {
         CardLoading.requireUniqueIds(cards, bookRoot);
 
         Selection selected = applySelection(cards, contexts, tocCardIndex, pages);
+        // Captured before the reassignment below: a card: link naming one of
+        // these is a different mistake from a misspelling (see CardLinks).
+        java.util.Set<String> excludedCardIds = new java.util.LinkedHashSet<>();
+        for (Card c : cards) excludedCardIds.add(c.id());
+        for (Card c : selected.cards()) excludedCardIds.remove(c.id());
         cards = selected.cards();
         contexts = selected.contexts();
         tocCardIndex = selected.tocCardIndex();
@@ -326,6 +336,7 @@ final class BookBuild {
         if (editionModel != null) layout.setEdition(editionModel);
         layout.setTocAt(tocCardIndex);
         layout.setPagesAt(pages);
+        layout.setExcludedCardIds(excludedCardIds);
         // The sheet must reach the layout too: per-card rotation is expressed
         // relative to it, and the CSS @page rules restate its margins.
         layout.setBookSheet(configLoader.bookPageSpec());
@@ -339,7 +350,7 @@ final class BookBuild {
                 : layout.renderBook(cards, contexts, bookCtx);
 
         URI baseUri = bookRoot.toAbsolutePath().toUri();
-        emitHtmlIfAsked(html, baseUri.toString());
+        emitHtmlIfAsked(html, baseUri.toString(), bookCtx);
 
         HtmlToPdfRenderer renderer = Renderers.require(rendererName);
         // The BOOK's sheet, not the first card's: a card may rotate its own
@@ -369,7 +380,7 @@ final class BookBuild {
                         + " — rendered as '?'");
             }
             html = refs.html();
-            emitHtmlIfAsked(html, baseUri.toString());
+            emitHtmlIfAsked(html, baseUri.toString(), bookCtx);
             renderer.render(new HtmlInput(html, baseUri, sheet, metadata, footer, header),
                     output);
             log.info("Resolved " + refs.resolved() + " page reference(s) (toc/index)"
@@ -509,10 +520,19 @@ final class BookBuild {
      * least resolve in place. The renderer receives the untouched html and
      * does its own base handling.
      */
-    private void emitHtmlIfAsked(String html, String baseUri) throws Exception {
+    private void emitHtmlIfAsked(String html, String baseUri, RenderContext ctx) throws Exception {
         if (emitHtml == null) return;
         ensureParentDir(emitHtml);
-        Files.writeString(emitHtml, baseUri == null ? html : standaloneForDebug(html, baseUri),
+        // Screen-only: this file's print path is the renderer plus the PDFBox
+        // stamp, so a visible-in-print overlay would land twice on anyone who
+        // re-rendered it with paperband:render.
+        Watermark watermark = resolveWatermark(ctx);
+        String marked = watermark == null ? html
+                : WatermarkHtml.inject(html,
+                        WatermarkHtml.overlay(watermark, watermark.image(), /*screenOnly=*/ true));
+        // Inline assets after injecting, so an image watermark travels with the
+        // file like every other local reference does.
+        Files.writeString(emitHtml, baseUri == null ? marked : standaloneForDebug(marked, baseUri),
                 StandardCharsets.UTF_8);
         log.info("Wrote intermediate HTML -> " + emitHtml);
     }
@@ -612,17 +632,29 @@ final class BookBuild {
      * whichever spec won.
      */
     private void applyWatermark(RenderContext ctx) throws Exception {
-        Watermark base = null;
-        if (watermarkText != null && !watermarkText.isBlank()) {
-            base = Watermark.withDefaults(watermarkText);
-        } else if (ctx != null) {
-            base = Watermark.fromYaml(ctx.vars().get("watermark"));
+        Watermark watermark = resolveWatermark(ctx);
+        if (watermark == null) return;
+        Path baseDir = ctx != null && ctx.book() != null ? ctx.book().bookRoot() : null;
+        if (WatermarkApplier.apply(output, watermark, baseDir, log::warn)) {
+            log.info("Applied watermark: " + watermark.describe());
         }
-        if (base == null) return;
-        Watermark watermark = base.withOverrides(
-                watermarkColor, watermarkOpacity, watermarkAngle, watermarkFontSize, null);
-        WatermarkApplier.apply(output, watermark);
-        log.info("Applied watermark: \"" + watermark.text() + "\"");
+    }
+
+    /**
+     * The watermark this build should stamp, or null for none.
+     *
+     * <p>{@link #watermarkBase} — what {@code <watermark>} /
+     * {@code <watermarkImage>} declared — wins; otherwise {@code vars.watermark}
+     * supplies it (bare string or full map). The individual tuning parameters
+     * then override whichever fields they name on whichever spec won.
+     *
+     * @param ctx the render context whose vars carry the book's declaration
+     * @return the resolved spec, or null when nothing declared one
+     */
+    private Watermark resolveWatermark(RenderContext ctx) {
+        Watermark base = watermarkBase;
+        if (base == null && ctx != null) base = Watermark.fromYaml(ctx.vars().get("watermark"));
+        return base == null ? null : base.withOverrides(watermarkOverrides);
     }
 
     // ---- helpers ----

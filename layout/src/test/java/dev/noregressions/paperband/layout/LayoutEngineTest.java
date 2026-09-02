@@ -1413,6 +1413,75 @@ class LayoutEngineTest {
         return new Card(id, path, new Frontmatter(frontmatterData), "Test Card", List.of(block));
     }
 
+    @Nested
+    @DisplayName("Site watermark")
+    class SiteWatermark {
+
+        @Test
+        void should_stamp_every_page_the_site_writes(@TempDir Path tempDir) {
+            // A book that says DRAFT has to say it on the copy people link to,
+            // not only in the PDF.
+            Map<String, String> site = renderSiteWith(tempDir, Map.of("watermark", "DRAFT"));
+
+            assertFalse(site.isEmpty());
+            for (Map.Entry<String, String> page : site.entrySet()) {
+                assertTrue(page.getValue().contains("pb-watermark"), page.getKey());
+                assertTrue(page.getValue().contains(">DRAFT<"), page.getKey());
+            }
+        }
+
+        @Test
+        void should_leave_a_book_that_declares_none_untouched(@TempDir Path tempDir) {
+            Map<String, String> site = renderSiteWith(tempDir, Map.of());
+
+            for (Map.Entry<String, String> page : site.entrySet()) {
+                assertFalse(page.getValue().contains("pb-watermark"), page.getKey());
+            }
+        }
+
+        @Test
+        void should_read_the_full_map_form(@TempDir Path tempDir) {
+            Map<String, String> site = renderSiteWith(tempDir, Map.of("watermark",
+                    Map.of("text", "SAMPLE", "color", "#aa0000", "opacity", 0.3, "tile", true)));
+
+            String index = site.get("index.html");
+            assertTrue(index.contains("#aa0000"), index);
+            assertTrue(index.contains("opacity:0.3"), index);
+            assertTrue(index.contains("pb-watermark-grid"), index);
+        }
+
+        @Test
+        void should_point_an_image_watermark_at_the_right_depth(@TempDir Path tempDir) {
+            // The site writes cards a directory down; a root-relative asset
+            // path would 404 on exactly half the pages.
+            Map<String, String> site = renderSiteWith(tempDir,
+                    Map.of("watermark", Map.of("image", "brand/logo.png")));
+
+            assertTrue(site.get("index.html").contains("src=\"assets/logo.png\""),
+                    site.get("index.html"));
+            assertTrue(site.get("cards/install.html").contains("src=\"../assets/logo.png\""),
+                    site.get("cards/install.html"));
+        }
+
+        @Test
+        void should_derive_the_url_prefix_from_the_page_key() {
+            assertEquals("", LayoutEngine.urlPrefixFor("index.html"));
+            assertEquals("../", LayoutEngine.urlPrefixFor("cards/install.html"));
+            assertEquals("../../", LayoutEngine.urlPrefixFor("a/b/c.html"));
+        }
+
+        private Map<String, String> renderSiteWith(Path tempDir, Map<String, Object> vars) {
+            LayoutEngine engine = new LayoutEngine();
+            Path install = tempDir.resolve("setup").resolve("install.md");
+            List<Card> cards = List.of(createCardAtPath("install", install));
+            List<RenderContext> contexts = List.of(createMinimalContext());
+            BookConfig book = new BookConfig(tempDir, "Test Book", List.of(), List.of(),
+                    Map.of(), List.of(), null, null);
+            return engine.renderSite(cards, contexts,
+                    new RenderContext(book, List.of(), vars, null, "web", "A4"));
+        }
+    }
+
     private Card createCardAtPath(String id, Path path) {
         Block block = new Block(
             Block.Kind.HEADING_SECTION,

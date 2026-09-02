@@ -12,6 +12,7 @@ import dev.noregressions.paperband.layout.SectionBody;
 import dev.noregressions.paperband.model.Block;
 import dev.noregressions.paperband.model.Card;
 import dev.noregressions.paperband.model.RenderContext;
+import dev.noregressions.paperband.model.Watermark;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -87,6 +88,76 @@ public class SiteMojo extends AbstractPaperbandMojo {
      */
     @Parameter(property = "paperband.siteTarget", defaultValue = "web")
     private String siteTarget;
+
+    /**
+     * The watermark to stamp, as a block — the POM spelling of the
+     * {@code vars.watermark} map:
+     *
+     * <pre>
+     * &lt;watermark&gt;
+     *   &lt;text&gt;REVIEW COPY&lt;/text&gt;
+     *   &lt;color&gt;#aa0000&lt;/color&gt;
+     *   &lt;opacity&gt;0.15&lt;/opacity&gt;
+     * &lt;/watermark&gt;
+     * </pre>
+     *
+     * <p>Replaces a {@code vars.watermark} declared in the book's yaml. The flat
+     * {@code <watermarkColor>} family below still layers over it, since those
+     * carry the {@code -D} properties — see {@link WatermarkConfig}.
+     */
+    @Parameter
+    private WatermarkConfig watermark;
+
+    /**
+     * Stamp this text across every page of the site (e.g. {@code DRAFT}).
+     * Overrides a {@code vars.watermark} declared in the book's yaml. A
+     * {@code \n} in the value breaks the stamp across lines.
+     */
+    @Parameter(property = "paperband.watermark")
+    private String watermarkText;
+
+    /**
+     * Stamp this image instead of text — a book-root-relative path. The file is
+     * copied into the site's {@code assets/} directory alongside the cover art.
+     */
+    @Parameter(property = "paperband.watermarkImage")
+    private String watermarkImage;
+
+    /** Watermark fill colour as {@code #RRGGBB}. */
+    @Parameter(property = "paperband.watermarkColor")
+    private String watermarkColor;
+
+    /** Watermark fill alpha, 0 to 1. */
+    @Parameter(property = "paperband.watermarkOpacity")
+    private Float watermarkOpacity;
+
+    /** Watermark rotation in degrees. */
+    @Parameter(property = "paperband.watermarkAngle")
+    private Float watermarkAngle;
+
+    /** Watermark font size in points; a ceiling unless {@code <watermarkFit>} is false. */
+    @Parameter(property = "paperband.watermarkFontSize")
+    private Integer watermarkFontSize;
+
+    /** Set the watermark in bold rather than regular weight. */
+    @Parameter(property = "paperband.watermarkBold")
+    private Boolean watermarkBold;
+
+    /** For an image watermark, its width as a fraction of the page width. */
+    @Parameter(property = "paperband.watermarkScale")
+    private Float watermarkScale;
+
+    /** Shrink the watermark until it fits the viewport instead of letting it overflow. */
+    @Parameter(property = "paperband.watermarkFit")
+    private Boolean watermarkFit;
+
+    /** Repeat the watermark across each page instead of centring one stamp. */
+    @Parameter(property = "paperband.watermarkTile")
+    private Boolean watermarkTile;
+
+    /** Draw the watermark underneath the page content rather than over it. */
+    @Parameter(property = "paperband.watermarkBehind")
+    private Boolean watermarkBehind;
 
     /** Book-level vars the POM's {@code <book>} declared, for the config cascade. */
     private java.util.Map<String, Object> declaredVars() {
@@ -204,6 +275,7 @@ public class SiteMojo extends AbstractPaperbandMojo {
                 ? new LayoutEngine(bookCtx.book().bookRoot(), geo.layouts(), theme)
                 : new LayoutEngine(bookCtx.book().bookRoot(), theme);
         layout.setExtraCss(stylesheetPaths());
+        layout.setWatermark(watermark(bookCtx));
         layout.setSectionBodies(SectionBodies.render(
                 bookCtx, geo.layouts(), providerConfig, cards, "site", siteTarget));
         Map<String, String> pages;
@@ -212,6 +284,10 @@ public class SiteMojo extends AbstractPaperbandMojo {
         } catch (SlotPlacementException e) {
             // A structural check, not a crash: a slot-using layout couldn't
             // place every block.
+            throw new MojoFailureException(e.getMessage(), e);
+        } catch (dev.noregressions.paperband.layout.CardLinkException e) {
+            // Likewise a content check: a card: link names a card that isn't
+            // in the book.
             throw new MojoFailureException(e.getMessage(), e);
         }
 
@@ -248,15 +324,42 @@ public class SiteMojo extends AbstractPaperbandMojo {
             written++;
         }
 
-        written += copyMatterAssets(bookCtx, output);
+        written += copyMatterAssets(bookCtx, output, watermark(bookCtx));
 
         getLog().info("Built site " + bookDir + " -> " + output
                 + " (" + written + " pages, " + cards.size() + " cards)");
     }
 
     /**
-     * Copy the images a book's {@code cover:}/{@code back:} declare into the
-     * site's {@code assets/} directory.
+     * The watermark the site should paint, or null for none.
+     *
+     * <p>Resolved here rather than left to the layout engine's own
+     * {@code vars.watermark} fallback so that the knob parameters reach a stamp
+     * the book's yaml declared: {@code -Dpaperband.watermarkOpacity=0.3} on a
+     * yaml {@code DRAFT} has to mean the same thing for the site as it does for
+     * the PDF.
+     *
+     * <p>{@code pages:} and {@code font:} have no meaning for a web page —
+     * there is no page one and no embedded font — so the site declares neither.
+     *
+     * @param bookCtx the resolved book context, for its vars
+     * @return the resolved spec, or null
+     * @throws MojoExecutionException if a parameter carries an unusable value
+     */
+    private Watermark watermark(RenderContext bookCtx) throws MojoExecutionException {
+        Watermark base = Watermarks.base(watermark, watermarkText, watermarkImage);
+        if (base == null && bookCtx != null) {
+            base = Watermark.fromYaml(bookCtx.vars().get("watermark"));
+        }
+        if (base == null) return null;
+        return base.withOverrides(Watermarks.overrides(watermark,
+                watermarkColor, watermarkOpacity, watermarkAngle, watermarkFontSize, watermarkBold,
+                watermarkScale, watermarkFit, watermarkBehind, watermarkTile, null, null));
+    }
+
+    /**
+     * Copy the images a book's {@code cover:}, {@code back:} and
+     * {@code watermark:} declare into the site's {@code assets/} directory.
      *
      * <p>The PDF resolves those images to absolute {@code file:} URIs, which a
      * served site can't follow. The site references
@@ -265,16 +368,32 @@ public class SiteMojo extends AbstractPaperbandMojo {
      *
      * @param bookCtx the resolved book context
      * @param output  the site output directory
+     * @param watermarkOverride the resolved watermark, when the book or the
+     *                          goal declared one
      * @return the number of assets copied
      * @throws IOException if a declared image exists but can't be copied
      */
-    private int copyMatterAssets(RenderContext bookCtx, Path output) throws IOException {
+    private int copyMatterAssets(RenderContext bookCtx, Path output, Watermark watermarkOverride)
+            throws IOException {
         Path bookRoot = bookCtx.book().bookRoot();
         List<dev.noregressions.paperband.model.PageMatter> matters = new ArrayList<>();
         if (bookCtx.book().cover() != null) matters.add(bookCtx.book().cover());
         if (bookCtx.book().back() != null) matters.add(bookCtx.book().back());
 
         int copied = 0;
+        // An image watermark is referenced the same way — LayoutEngine writes
+        // assets/<filename> into every page — so it needs the same copy.
+        if (watermarkOverride != null && watermarkOverride.hasImage()) {
+            Path src = bookRoot.resolve(watermarkOverride.image()).normalize();
+            if (Files.isRegularFile(src)) {
+                Path dest = output.resolve(LayoutEngine.SITE_ASSET_DIR).resolve(src.getFileName());
+                Files.createDirectories(dest.getParent());
+                Files.copy(src, dest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                copied++;
+            } else {
+                getLog().warn("watermark image not found, site pages will show no watermark: " + src);
+            }
+        }
         for (dev.noregressions.paperband.model.PageMatter matter : matters) {
             if (matter.image() == null) continue;
             Path src = bookRoot.resolve(matter.image()).normalize();

@@ -120,7 +120,7 @@ list for that reason; it is now a book-scope key of its own.)
 | `subtitle`, `series`, `author` | Cover and site-hero lines (a `cover:` block overrides them per line). `author` also comes from `<book><author>`/`<book><authors>`. | Book |
 | `page.measure` | Text line-length — overrides the theme's `--card-max-width` | Book |
 | `maxPagesPerCard` | Page-count ceiling per card; `<maxPagesPerCard>` wins | Book |
-| `watermark` | Watermark text/appearance; `<watermarkText>` wins | Book |
+| `watermark` | Watermark text or image, and its appearance; `<watermark>` wins. Marks the PDF and the site alike | Book |
 | `strapline` | Per-edition strapline, read by `paperband:publish` | Edition |
 
 ## Frontmatter keys

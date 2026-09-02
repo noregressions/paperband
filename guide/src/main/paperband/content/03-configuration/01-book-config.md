@@ -291,7 +291,7 @@ likes instead of choosing between the default grid and nothing:
 ```markdown
 ## All {{ section.count }} chapters
 
-{% for c in section.cards %}1. [{{ c.title }}]({{ c.url }})
+{% for c in section.cards %}1. [{{ c.title }}](card:{{ c.id }})
 
 {% endfor %}
 ```
@@ -300,13 +300,24 @@ likes instead of choosing between the default grid and nothing:
 |---|---|
 | `section.id` | the folder name |
 | `section.count` | how many cards it holds |
-| `section.cards` | each `{id, title, url, anchor, oneliner, frontmatter}`, in book order |
+| `section.cards` | each `{id, title, url, anchor, oneliner, frontmatter}`, in book order. Link by `id` — see below |
 | `vars` | the config cascade, as in any card |
 
-`url` is relative to the landing page and `anchor` is the in-PDF `#card-…` target, so a
-body that serves both targets links with whichever suits: `[{{ c.title }}]({{ c.url }})` on
-the site, `{{ c.anchor }}` in print. `frontmatter` gives you everything else the card declared — filter or group on
-it with ordinary Pebble.
+`frontmatter` gives you everything else the card declared — filter or group on it with
+ordinary Pebble.
+
+**Link with `card:{{ c.id }}`, not with `url` or `anchor`.** A section body renders into
+*both* outputs — the site's landing page and the PDF's divider — from this one file, so a
+link has to be right in both. `card:` is (see [Card Structure](card:card-structure)); the raw fields are not.
+`url` is always `cards/<id>.html`, which is a dead file reference in the PDF, and `anchor`
+is always `#card-<id>`, which is a dead in-page link on the site. Neither switches with the
+output — they are the two spellings, and picking one used to mean branching on `output`
+around every link.
+
+They stay in the model for a template that needs the strings themselves, and for books
+written before `card:` existed. For anything that produces a link, prose or generated list,
+reach for `card:` — it is also the only one of the three that fails the build when the card
+it names goes away.
 
 **One gotcha, and it will bite you:** Pebble eats the newline immediately after a
 `{% %}` tag. A markdown line that *ends* with a tag loses its line break, and the next line
@@ -314,10 +325,10 @@ runs on — a ten-item list collapses into one. Put something after the tag, or 
 line before the closing one:
 
 ```markdown
-{% for c in section.cards %}1. [{{ c.title }}]({{ c.url }}){% if c.oneliner %} — {{ c.oneliner }}{% endif %}
+{% for c in section.cards %}1. [{{ c.title }}](card:{{ c.id }}){% if c.oneliner %} — {{ c.oneliner }}{% endif %}
 {% endfor %}          ← broken: the line ends with {% endif %}
 
-{% for c in section.cards %}1. [{{ c.title }}]({{ c.url }})
+{% for c in section.cards %}1. [{{ c.title }}](card:{{ c.id }})
 
 {% endfor %}          ← fine: a blank line survives
 ```
@@ -342,6 +353,10 @@ rather than a title centred on a sheet: it carries `.section-divider.has-body`, 
 centring, takes the card measure, and runs onto as many sheets as the writing needs.
 
 ## Writing a custom section template
+
+A site template is free to spell the href itself, as above — it only ever renders for the
+site, so `urlPrefix` is the right answer there. Writing `href="card:{{ c.id }}"` instead
+works too, and buys the same build-time check a card's prose gets.
 
 **A custom template does not have to replace the whole page.** The shell — document head,
 stylesheet, top nav, sidebar, main column — lives in one base template, and every built-in

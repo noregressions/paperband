@@ -16,9 +16,11 @@ import dev.noregressions.paperband.model.Card;
 import dev.noregressions.paperband.model.NamedTemplates;
 import dev.noregressions.paperband.model.PlacedPage;
 import dev.noregressions.paperband.model.Section;
+import dev.noregressions.paperband.model.Watermark;
 import dev.noregressions.paperband.model.RenderContext;
 import dev.noregressions.paperband.pebble.LenientMap;
 import dev.noregressions.paperband.pebble.LenientMapExtension;
+import dev.noregressions.paperband.render.WatermarkHtml;
 
 
 import java.io.IOException;
@@ -125,6 +127,44 @@ public final class LayoutEngine {
      */
     public void setTocAt(Integer cardIndex) {
         this.tocAt = cardIndex;
+    }
+
+    /**
+     * Card ids the book holds that this build leaves out — what a
+     * {@code select:} or an edition filtered away.
+     *
+     * <p>Only used to tell a broken {@code card:} link apart from a deliberate
+     * omission. Both fail; they need different words.
+     */
+    private java.util.Set<String> excludedCardIds = java.util.Set.of();
+
+    /**
+     * Tell the engine which cards the build filtered out.
+     *
+     * @param ids the excluded card ids, or null for none
+     */
+    public void setExcludedCardIds(java.util.Set<String> ids) {
+        this.excludedCardIds = ids == null ? java.util.Set.of() : java.util.Set.copyOf(ids);
+    }
+
+    /**
+     * The watermark a goal resolved from its own parameters, when it had any.
+     * Null means "whatever the book's vars say" — see {@link #watermarked}.
+     */
+    private Watermark watermark;
+
+    /**
+     * Override the book's own {@code vars.watermark} for this render.
+     *
+     * <p>The {@code site} goal resolves {@code <watermark>} and its knob
+     * parameters the same way {@code build} does and hands the answer in, so a
+     * one-off {@code -Dpaperband.watermark="REVIEW COPY"} marks the site and the
+     * PDF alike. Left unset, the book's vars still apply.
+     *
+     * @param watermark the resolved spec, or null to fall back to vars
+     */
+    public void setWatermark(Watermark watermark) {
+        this.watermark = watermark;
     }
 
     /**
@@ -271,7 +311,9 @@ public final class LayoutEngine {
                             + locationOf(e) + ": " + explain(e), e);
         }
         checkSlots(layoutName, List.of((Map<String, Object>) model.get("card")));
-        return html;
+        // One card is a preview of one card: resolve its references to the
+        // print form, but don't check them against a book that isn't here.
+        return CardLinks.of(List.of(card)).preview(html);
     }
 
     /**
@@ -343,7 +385,7 @@ public final class LayoutEngine {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> cardModels = (List<Map<String, Object>>) model.get("cards");
         checkSlots(layoutName, cardModels);
-        return html;
+        return CardLinks.of(cards, excludedCardIds).print(html);
     }
 
     private static List<RenderContext> repeatedContexts(RenderContext ctx, int n) {
@@ -832,7 +874,60 @@ public final class LayoutEngine {
             checkSlots("site-card", List.of(cm));
         }
 
-        return out;
+        CardLinks links = CardLinks.of(cards, excludedCardIds);
+        for (Map.Entry<String, String> e : out.entrySet()) {
+            e.setValue(links.site(e.getValue(), e.getKey()));
+        }
+        return watermarked(out, bookCtx);
+    }
+
+    /**
+     * Paint the book's {@code vars.watermark} over every site page.
+     *
+     * <p>Done to the finished pages rather than through the templates so that a
+     * book with a hand-written theme, or a fully replaced {@code site-card},
+     * gets the mark as well: a {@code DRAFT} that a custom template can silently
+     * drop is worse than no watermark at all.
+     *
+     * <p>{@code pages:} is not honoured here — a site has no page one — and
+     * neither is a print-only reading of the mark: the site copy is the one that
+     * gets linked and forwarded, so if the book says DRAFT, the site says DRAFT.
+     * A theme that wants it gone can hide {@code .pb-watermark}.
+     *
+     * @param pages   the rendered pages, keyed by output-relative path
+     * @param bookCtx the book context whose vars carry the declaration
+     * @return the same map, with the overlay injected into each page
+     */
+    private Map<String, String> watermarked(Map<String, String> pages, RenderContext bookCtx) {
+        Watermark watermark = this.watermark != null
+                ? this.watermark
+                : Watermark.fromYaml(bookCtx.vars().get("watermark"));
+        if (watermark == null) return pages;
+        for (Map.Entry<String, String> e : pages.entrySet()) {
+            String imageUrl = watermark.hasImage()
+                    ? urlPrefixFor(e.getKey()) + SITE_ASSET_DIR + "/"
+                            + Path.of(watermark.image()).getFileName()
+                    : null;
+            e.setValue(WatermarkHtml.inject(e.getValue(),
+                    WatermarkHtml.overlay(watermark, imageUrl, /*screenOnly=*/ false)));
+        }
+        return pages;
+    }
+
+    /**
+     * The relative path back to the site root from an output-relative page key
+     * — the same {@code urlPrefix} the templates are handed, recovered from the
+     * key so a post-render pass doesn't need the model.
+     *
+     * @param pageKey e.g. {@code index.html} or {@code cards/intro.html}
+     * @return {@code ""} for a root page, {@code "../"} per directory below it
+     */
+    static String urlPrefixFor(String pageKey) {
+        int depth = 0;
+        for (int i = 0; i < pageKey.length(); i++) {
+            if (pageKey.charAt(i) == '/') depth++;
+        }
+        return "../".repeat(depth);
     }
 
     /** Strip a stored template path down to the bare name Pebble's loader expects (no extension). */
@@ -2241,7 +2336,11 @@ public final class LayoutEngine {
      * @param b the block
      * @return the anchor, or null
      */
-    private static String blockAnchor(Block b) {
+    // Package-private: CardLinks validates a card:id#fragment against the same
+    // rule that puts the id on the <section>. Two implementations of "what is
+    // this block's anchor" would drift, and the drift would show up as a link
+    // check that passes and a link that doesn't work.
+    static String blockAnchor(Block b) {
         if (b.id() != null && !b.id().isBlank()) return b.id();
         if (b.heading() == null) return null;
         String lower = b.heading().toLowerCase(java.util.Locale.ROOT);

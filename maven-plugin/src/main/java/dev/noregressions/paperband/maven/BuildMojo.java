@@ -116,11 +116,38 @@ public class BuildMojo extends AbstractPaperbandMojo {
     private String select;
 
     /**
+     * The watermark to stamp, as a block — the POM spelling of the
+     * {@code vars.watermark} map:
+     *
+     * <pre>
+     * &lt;watermark&gt;
+     *   &lt;text&gt;REVIEW COPY&lt;/text&gt;
+     *   &lt;color&gt;#aa0000&lt;/color&gt;
+     *   &lt;opacity&gt;0.15&lt;/opacity&gt;
+     * &lt;/watermark&gt;
+     * </pre>
+     *
+     * <p>Replaces a {@code vars.watermark} declared in the book's yaml. The flat
+     * {@code <watermarkColor>} family below still layers over it, since those
+     * carry the {@code -D} properties — see {@link WatermarkConfig}.
+     */
+    @Parameter
+    private WatermarkConfig watermark;
+
+    /**
      * Stamp this text across every page after rendering (e.g. {@code DRAFT}).
-     * Overrides a {@code vars.watermark} declared in the book's yaml.
+     * Overrides a {@code vars.watermark} declared in the book's yaml. A
+     * {@code \n} in the value breaks the stamp across lines.
      */
     @Parameter(property = "paperband.watermark")
     private String watermarkText;
+
+    /**
+     * Stamp this image instead of text — a book-root-relative path to a png,
+     * jpg or gif. Mutually exclusive with {@code <watermark>}.
+     */
+    @Parameter(property = "paperband.watermarkImage")
+    private String watermarkImage;
 
     /** Watermark fill colour as {@code #RRGGBB}. */
     @Parameter(property = "paperband.watermarkColor")
@@ -134,9 +161,40 @@ public class BuildMojo extends AbstractPaperbandMojo {
     @Parameter(property = "paperband.watermarkAngle")
     private Float watermarkAngle;
 
-    /** Watermark font size in points. */
+    /** Watermark font size in points; a ceiling unless {@code <watermarkFit>} is false. */
     @Parameter(property = "paperband.watermarkFontSize")
     private Integer watermarkFontSize;
+
+    /** Set the watermark in Helvetica-Bold rather than Helvetica. */
+    @Parameter(property = "paperband.watermarkBold")
+    private Boolean watermarkBold;
+
+    /** For an image watermark, its width as a fraction of the page width. */
+    @Parameter(property = "paperband.watermarkScale")
+    private Float watermarkScale;
+
+    /** Shrink the watermark until it fits the page instead of letting it overflow. */
+    @Parameter(property = "paperband.watermarkFit")
+    private Boolean watermarkFit;
+
+    /** Draw the watermark underneath the page content rather than over it. */
+    @Parameter(property = "paperband.watermarkBehind")
+    private Boolean watermarkBehind;
+
+    /** Repeat the watermark across each page instead of centring one stamp. */
+    @Parameter(property = "paperband.watermarkTile")
+    private Boolean watermarkTile;
+
+    /** Which pages to stamp: {@code all}, {@code first}, or {@code except-cover}. */
+    @Parameter(property = "paperband.watermarkPages")
+    private String watermarkPages;
+
+    /**
+     * TrueType font file to set the watermark in, book-root-relative. Needed
+     * only for text the built-in Helvetica can't encode (CJK, Cyrillic, Greek).
+     */
+    @Parameter(property = "paperband.watermarkFont")
+    private String watermarkFont;
 
     @Override
     public void execute() throws MojoExecutionException, org.apache.maven.plugin.MojoFailureException {
@@ -194,11 +252,11 @@ public class BuildMojo extends AbstractPaperbandMojo {
         build.layoutOverride = layoutOverride;
         build.emitHtml = emitHtml == null ? null : resolve(emitHtml);
         build.includeProviderConfig = includeProviderConfig();
-        build.watermarkText = watermarkText;
-        build.watermarkColor = watermarkColor;
-        build.watermarkOpacity = watermarkOpacity;
-        build.watermarkAngle = watermarkAngle;
-        build.watermarkFontSize = watermarkFontSize;
+        build.watermarkBase = Watermarks.base(watermark, watermarkText, watermarkImage);
+        build.watermarkOverrides = Watermarks.overrides(watermark,
+                watermarkColor, watermarkOpacity, watermarkAngle, watermarkFontSize, watermarkBold,
+                watermarkScale, watermarkFit, watermarkBehind, watermarkTile, watermarkPages,
+                watermarkFont);
         build.reportPages = reportPages;
         build.maxPagesPerCard = maxPagesPerCard;
         build.selectClauses = parseSelect();
@@ -250,4 +308,5 @@ public class BuildMojo extends AbstractPaperbandMojo {
     private Margins parsedMargins() throws MojoExecutionException {
         return resolveMargins();
     }
+
 }

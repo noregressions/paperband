@@ -284,7 +284,66 @@ can look faintly stretched. Naming a font the machine has avoids it.
 
 `mvn paperband:blocks` lists every fence type the build can render and what renders each —
 the first thing to run when a diagram came out as a code block. Writing your own renderer
-is in Extending Paperband.
+is in [Extending Paperband](card:extending).
+
+## Linking to another card
+
+Write the card's id with a `card:` scheme, in an ordinary Markdown link:
+
+```markdown
+See [the Frontmatter Reference](card:frontmatter) for every field.
+```
+
+Paperband spells it for whichever output is being built:
+
+| Written | In the PDF | On the site |
+|---|---|---|
+| `card:frontmatter` | `#card-frontmatter` | `cards/frontmatter.html`, from wherever the page sits |
+| `card:frontmatter#watch-out` | `#card-frontmatter` | `cards/frontmatter.html#watch-out` |
+
+A card's id is *both* a PDF destination and a site page — and prose can only name one of
+them. `#card-frontmatter` is a dead anchor on the site, where each card is its own
+document; `cards/frontmatter.html` is a dead file reference in the PDF, and is wrong from a
+card page anyway, which sits a directory below the landing pages. The engine always knew the
+right answer — it writes its own nav links. `card:` is how you ask for it.
+
+It stays ordinary Markdown on purpose: an editor, a previewer and a link checker all see a
+link, and there is no `{% %}` tag to eat the following newline.
+
+### It is checked
+
+A `card:` link naming a card that isn't in the book **fails the build**, in the same way an
+over-budget card does:
+
+```output
+A card link points at nothing:
+  card:frontmater in 01-card-structure.md — no card has that id. Did you mean 'frontmatter'?
+```
+
+That is the point of the form. The two hand-written spellings rot silently: rename an id and
+every reference to it dies in one output or both, and nothing tells you until a reader
+clicks. Anchors are checked too — `card:frontmatter#watchout` fails and suggests
+`watch-out`.
+
+A card that a `select:` or an edition left out gets its own message, because that is a
+different mistake from a typo:
+
+```output
+  card:beta in alpha.md — card 'beta' is in the book but this build leaves it out, so the
+  link would go nowhere here.
+```
+
+Building one card (`-Dpaperband.input=some/card.md`) doesn't check: a single-card render is
+a preview of that card, and failing it for mentioning its neighbours would break the preview
+exactly when you want it. The book build checks the same prose moments later.
+
+### Why print ignores the anchor
+
+Block anchors are slugged from the heading with no card prefix, so in one print document
+eleven cards in this guide each emit `id="watch-out"`. A fragment link would land on
+whichever came first — a wrong answer wearing a right answer's clothes. In the PDF a `card:`
+link therefore stops at the card, which is unambiguous. On the site each card is its own
+page, so the anchor is exact. The fragment is validated either way.
 
 ## Raw HTML and the content policy
 
