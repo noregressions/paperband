@@ -7,6 +7,7 @@ import dev.noregressions.paperband.config.BookPlan;
 import dev.noregressions.paperband.config.ConfigLoader;
 import dev.noregressions.paperband.render.PageSpec;
 import dev.noregressions.paperband.include.Includes;
+import dev.noregressions.paperband.include.PebbleIncludePreprocessor;
 import dev.noregressions.paperband.layout.LayoutEngine;
 import dev.noregressions.paperband.layout.NumberCheck;
 import dev.noregressions.paperband.layout.ThemeBundle;
@@ -198,8 +199,9 @@ final class BookBuild {
         BlockTemplates blockTemplates = new BlockTemplates(theme.templateLoader(),
                 layoutsDir != null ? layoutsDir : ctx.book().bookRoot().resolve("layouts"),
                 BlockRenderers.discover(log), home != null ? home : ctx.book().bookRoot());
-        MarkdownPreprocessor preprocessor = Includes.defaultPreprocessor(
-                ctx.book().bookRoot(), layoutsDir, includeProviderConfig, ctx.vars());
+        MarkdownPreprocessor preprocessor = CardLoading.preprocessorFor(
+                ctx.book().bookRoot(), layoutsDir, includeProviderConfig, ctx.vars(),
+                "print", target);
         Card card = CardLoading.load(new CardLoader(), preprocessor, input, ctx.book().cardSchema(),
                 ctx.vars(), log, blockTemplates);
 
@@ -292,8 +294,9 @@ final class BookBuild {
                 merged.putAll(editionVars);    // edition vars sit topmost by design
                 vars = merged;
             }
-            MarkdownPreprocessor preprocessor = Includes.defaultPreprocessor(
-                    bookCtx.book().bookRoot(), layoutsDir, includeProviderConfig, vars);
+            MarkdownPreprocessor preprocessor = CardLoading.preprocessorFor(
+                    bookCtx.book().bookRoot(), layoutsDir, includeProviderConfig, vars,
+                    "print", target);
             Card card = CardLoading.load(cardLoader, preprocessor, cardFile, ctx.book().cardSchema(),
                     vars, log, blockTemplates);
             cards.add(card);
@@ -303,6 +306,12 @@ final class BookBuild {
         CardLoading.requireUniqueIds(cards, bookRoot);
 
         Selection selected = applySelection(cards, contexts, tocCardIndex, pages);
+        // The whole book, before the selection narrows it. Chapter numbers are
+        // derived from this rather than from what survives: a sampler that
+        // renumbered its extracts would give the same chapter two different
+        // numbers in two editions, and its references to chapters it does not
+        // carry could not name them at all.
+        List<Card> allCards = cards;
         // Captured before the reassignment below: a card: link naming one of
         // these is a different mistake from a misspelling (see CardLinks).
         java.util.Set<String> excludedCardIds = new java.util.LinkedHashSet<>();
@@ -354,7 +363,7 @@ final class BookBuild {
         // matches on. A no-op for a book that has not asked for numbering.
         java.util.Map<String, dev.noregressions.paperband.model.CardNumber> numbers =
                 layout.cardNumbers(bookCtx.book().bookRoot(), bookCtx.book().sections(),
-                        cards, bookCtx.vars());
+                        allCards, bookCtx.vars());
         NumberCheck.verify(cards, numbers);
         layout.setCardNumbers(numbers);
         String html = layoutOverride != null

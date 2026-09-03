@@ -123,7 +123,8 @@ final class SectionBodies {
             return new SectionBody(html.toString(), card.title(),
                     truthy(fm.get("cards")) || truthy(fm.get("sections")),
                     numbering(fm, file),
-                    fm.get("part_title") == null ? null : fm.get("part_title").toString());
+                    fm.get("part_title") == null ? null : fm.get("part_title").toString(),
+                    !fm.containsKey("landing") || truthy(fm.get("landing")));
         } catch (RuntimeException e) {
             // The body is prose, not structure: a broken one should say so and
             // stop, exactly as a broken card would.

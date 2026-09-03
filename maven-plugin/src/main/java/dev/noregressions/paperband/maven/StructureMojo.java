@@ -141,8 +141,11 @@ public class StructureMojo extends AbstractPaperbandMojo {
 
     private String describeSingle(Path cardFile) throws MojoExecutionException {
         RenderContext ctx = new ConfigLoader().load(cardFile, target, pageSize, resolveMargins());
-        MarkdownPreprocessor preprocessor = Includes.defaultPreprocessor(
-                ctx.book().bookRoot(), includeProviderConfig(), ctx.vars());
+        // `structure` reports what the PRINT book contains: it is a preview of
+        // the assembled book, so a site-only passage must not appear in it.
+        MarkdownPreprocessor preprocessor = CardLoading.preprocessorFor(
+                ctx.book().bookRoot(), null, includeProviderConfig(), ctx.vars(),
+                "print", target);
         Card card = CardLoading.load(new CardLoader(), preprocessor, cardFile, ctx.book().cardSchema(),
                 ctx.vars(), getLog());
         return LayoutEngine.describeCard(card);
@@ -183,8 +186,9 @@ public class StructureMojo extends AbstractPaperbandMojo {
             if (bookCtx == null) bookCtx = ctx;
             if (cardLoader == null) cardLoader = new CardLoader(bookCtx.book().bookRoot());
             contexts.add(ctx);
-            MarkdownPreprocessor preprocessor = Includes.defaultPreprocessor(
-                    bookCtx.book().bookRoot(), providerConfig, ctx.vars());
+            MarkdownPreprocessor preprocessor = CardLoading.preprocessorFor(
+                    bookCtx.book().bookRoot(), null, providerConfig, ctx.vars(),
+                    "print", target);
             if (blockTemplates == null) {
                 blockTemplates = new BlockTemplates(null,
                         geography().layouts() != null ? geography().layouts()

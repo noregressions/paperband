@@ -189,15 +189,26 @@ class CardLinksTest {
         }
 
         @Test
-        void a_card_the_build_left_out_is_a_different_mistake_from_a_typo() {
+        void a_card_the_build_left_out_keeps_its_words_and_loses_its_link() {
+            // A `select:` build is a subset by construction, so a reference
+            // reaching outside it is expected. The prose survives; the anchor
+            // does not. Failing instead would mean a sampler could only ever
+            // carry chapters that reference nothing.
+            CardLinks selected = CardLinks.of(List.of(BOOK.get(0)), Set.of("beta"));
+
+            String html = selected.print("see <a href=\"card:beta\">Chapter 2.1</a> for more");
+
+            assertEquals("see Chapter 2.1 for more", html);
+        }
+
+        @Test
+        void a_typo_still_fails_even_when_the_build_leaves_cards_out() {
             CardLinks selected = CardLinks.of(List.of(BOOK.get(0)), Set.of("beta"));
 
             CardLinkException e = assertThrows(CardLinkException.class,
-                    () -> selected.print("<a href=\"card:beta\">B</a>"));
+                    () -> selected.print("<a href=\"card:nope\">x</a>"));
 
-            assertTrue(e.getMessage().contains("is in the book but this build leaves it out"),
-                    e.getMessage());
-            assertFalse(e.getMessage().contains("no card has that id"), e.getMessage());
+            assertTrue(e.getMessage().contains("no card has that id"), e.getMessage());
         }
 
         @Test

@@ -85,6 +85,14 @@ public final class CardLinks {
             "(<a\\s[^>]*href\\s*=\\s*([\"'])card:([^\"'#\\s]*)(?:#[^\"'\\s]*)?\\2[^>]*>)"
                     + "(\\s*#?\\s*)(</a>)");
 
+    /**
+     * A whole {@code card:} anchor, label and all — used to unwrap a link whose
+     * target this build leaves out.
+     */
+    private static final Pattern WHOLE_LINK = Pattern.compile(
+            "<a\\s[^>]*href\\s*=\\s*([\"'])card:([^\"'#\\s]*)(?:#[^\"'\\s]*)?\\1[^>]*>(.*?)</a>",
+            Pattern.DOTALL);
+
     /** The word placed before the number when a label is filled in. */
     private static final String CHAPTER_WORD = "Chapter";
 
@@ -222,6 +230,31 @@ public final class CardLinks {
         return out.toString();
     }
 
+    /**
+     * Turn every link to a card this build leaves out into its own text.
+     *
+     * <p>A {@code select:} build is a subset of the book by construction, so a
+     * cross-reference reaching outside it is expected rather than wrong — a
+     * sampler that failed on every reference to a chapter it does not carry
+     * could only ever contain leaf chapters. The prose survives, the anchor
+     * does not: "see Chapter 3.14" still reads correctly, it simply does not
+     * link anywhere in this edition.
+     *
+     * <p>A reference to an id no card has is a different thing entirely, and
+     * still fails — see {@link #check}.
+     */
+    private String unwrapExcluded(String html) {
+        if (excluded.isEmpty() || html == null || !html.contains(SCHEME)) return html;
+        Matcher m = WHOLE_LINK.matcher(html);
+        StringBuilder out = new StringBuilder(html.length());
+        while (m.find()) {
+            String replacement = excluded.contains(m.group(2)) ? m.group(3) : m.group(0);
+            m.appendReplacement(out, Matcher.quoteReplacement(replacement));
+        }
+        m.appendTail(out);
+        return out.toString();
+    }
+
     /** How a resolved reference is spelled for one output. */
     private interface Target {
         String href(String id, String fragment);
@@ -230,6 +263,7 @@ public final class CardLinks {
     private String resolve(String html, Target target, boolean validate, String pageKey) {
         if (html == null || !html.contains(SCHEME)) return html;
         html = fillEmptyLabels(html);
+        html = unwrapExcluded(html);
 
         List<String> problems = new ArrayList<>();
         Matcher m = LINK.matcher(html);
@@ -253,12 +287,9 @@ public final class CardLinks {
     /** @return a description of what's wrong with this reference, or null when it resolves */
     private String check(String id, String fragment) {
         if (!anchors.containsKey(id)) {
-            if (excluded.contains(id)) {
-                return "card:" + id + reference(id) + " — card '" + id + "' is in the book but"
-                        + " this build leaves it out, so the link would go nowhere here."
-                        + " Widen the selection, or don't link to it from a card that ships"
-                        + " without it.";
-            }
+            // Left out of this build on purpose: unwrapExcluded has already
+            // turned it into plain text, so there is nothing left to break.
+            if (excluded.contains(id)) return null;
             return "card:" + id + reference(id) + " — no card has that id."
                     + suggest(id, anchors.keySet());
         }

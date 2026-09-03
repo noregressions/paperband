@@ -5,6 +5,7 @@ import dev.noregressions.paperband.cards.CardLoader;
 import dev.noregressions.paperband.cards.MarkdownPreprocessor;
 import dev.noregressions.paperband.config.ConfigLoader;
 import dev.noregressions.paperband.include.Includes;
+import dev.noregressions.paperband.include.PebbleIncludePreprocessor;
 import dev.noregressions.paperband.layout.LayoutEngine;
 import dev.noregressions.paperband.layout.SlotPlacementException;
 import dev.noregressions.paperband.layout.ThemeBundle;
@@ -252,8 +253,9 @@ public class SiteMojo extends AbstractPaperbandMojo {
                         geo.home() != null ? geo.home() : bookCtx.book().bookRoot());
             }
             contexts.add(ctx);
-            MarkdownPreprocessor preprocessor = Includes.defaultPreprocessor(
-                    bookCtx.book().bookRoot(), geo.layouts(), providerConfig, ctx.vars());
+            MarkdownPreprocessor preprocessor = CardLoading.preprocessorFor(
+                    bookCtx.book().bookRoot(), geo.layouts(), providerConfig, ctx.vars(),
+                    "site", target);
             cards.add(CardLoading.load(cardLoader, preprocessor, cardFile, ctx.book().cardSchema(),
                     ctx.vars(), getLog(), blockTemplates));
         }

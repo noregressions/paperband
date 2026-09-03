@@ -41,10 +41,16 @@ import dev.noregressions.paperband.number.SectionNumbering;
  *                  part of one section is already announced by that section's
  *                  own divider, and a second page saying nearly the same thing
  *                  is worse than none
+ * @param landing   whether this section fronts its cards with a divider page of
+ *                  its own, from {@code landing:}. False for a section whose
+ *                  own first chapter already introduces it — a divider headed
+ *                  "Introduction" immediately before a chapter headed
+ *                  "Introduction: Migration at Scale" is a page that only says
+ *                  the next page's name
  */
 public record SectionBody(
         String html, String title, boolean withCards, SectionNumbering numbering,
-        String partTitle) {
+        String partTitle, boolean landing) {
 
     public SectionBody {
         numbering = numbering == null ? SectionNumbering.discovered() : numbering;

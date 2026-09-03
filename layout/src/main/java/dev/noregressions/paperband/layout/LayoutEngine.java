@@ -1435,9 +1435,11 @@ public final class LayoutEngine {
             m.put("minimal", NamedTemplates.MINIMAL_SECTION_TEMPLATE.equals(template));
             // Whether this group fronts its cards with a page of its own: the
             // PDF divider (book.html) and the site's <id>.html landing page.
-            // Only a declared section can opt out — a discovered folder has
-            // nowhere to say so, so it always gets one.
-            m.put("landingPage", declared == null || declared.landingPage());
+            // A declared section opts out in the declaration; a discovered
+            // folder does it with `landing: false` in its own _section.md,
+            // which is where everything else about that folder is already said.
+            m.put("landingPage", (declared == null || declared.landingPage())
+                    && (body == null || body.landing()));
             out.add(m);
         }
         return out;

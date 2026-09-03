@@ -23,9 +23,53 @@ import java.util.Map;
  * Reading one card file into a {@link Card}, shared by every goal that loads
  * cards ({@code build}, {@code site}, {@code structure}, {@code publish}).
  */
+import dev.noregressions.paperband.include.Includes;
+
+import dev.noregressions.paperband.include.PebbleIncludePreprocessor;
+
 final class CardLoading {
 
     private CardLoading() {}
+
+    /**
+     * The preprocessor a card is loaded through, with the build's identity
+     * bound into it.
+     *
+     * <p>Card markdown can branch on which output is being produced —
+     * {@code {% if output != "print" %}} keeps a "buy the full book" note on
+     * the website out of the book the reader is already holding. Section
+     * bodies have been able to do this since they were introduced (see
+     * {@code SectionBodies}); cards could not, because nothing bound the key
+     * for them.
+     *
+     * <p>This exists so that stays true of every card in every goal. Binding it
+     * at each call site instead left three of six unbound, where {@code output}
+     * was undefined and a site-only passage rendered everywhere — the failure
+     * being silent, since an undefined Pebble variable is simply not equal to
+     * {@code "print"}.
+     *
+     * @param bookRoot   content root for fragment resolution; may be null
+     * @param layoutsDir where {@code {% include %}} snippets live; may be null
+     * @param providerConfigs include-provider configuration
+     * @param vars       the card's resolved vars
+     * @param output     {@code "print"} or {@code "site"} — what markdown branches on
+     * @param target     the raw build target, e.g. {@code pdf-a4}; a book may rename it
+     * @return a preprocessor ready to load one card
+     */
+    static MarkdownPreprocessor preprocessorFor(
+            Path bookRoot, Path layoutsDir,
+            Map<String, Map<String, Object>> providerConfigs, Map<String, Object> vars,
+            String output, String target) {
+        MarkdownPreprocessor pre =
+                Includes.defaultPreprocessor(bookRoot, layoutsDir, providerConfigs, vars);
+        if (pre instanceof PebbleIncludePreprocessor pip) {
+            Map<String, Object> model = new LinkedHashMap<>();
+            model.put("output", output);
+            model.put("target", target);
+            pip.setExtraModel(model);
+        }
+        return pre;
+    }
 
     /**
      * Fail on cards sharing an id.
