@@ -81,7 +81,7 @@ dependencies:
     <dependency>
       <groupId>dev.noregressions.paperband</groupId>
       <artifactId>block-plantuml</artifactId>
-      <version>0.1.1</version>
+      <version>0.1.2</version>
     </dependency>
   </dependencies>
 </plugin>

@@ -14,12 +14,11 @@
         <module name="include" />
         <module name="paperband-archetype" />
         <module name="cards" />
+        <module name="block-plantuml" />
         <module name="render-playwright" />
         <module name="paperband-maven-plugin" />
         <module name="config" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-    </bytecodeTargetLevel>
   </component>
 </project>

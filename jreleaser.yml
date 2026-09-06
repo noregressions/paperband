@@ -9,7 +9,7 @@
 #                                          jars, stages them, UNSIGNED, to
 #                                          target/staging-deploy/ - does not
 #                                          push anywhere)
-#   mvn jreleaser:full-release -Prelease (signs every staged artifact,
+#   mvn -N jreleaser:full-release -Prelease (signs every staged artifact,
 #                                          uploads the bundle to the Central
 #                                          Publishing Portal, then tags HEAD
 #                                          as v<version> and creates the
@@ -17,7 +17,12 @@
 #                                          changelog)
 #
 # To publish to Central WITHOUT touching GitHub, run
-# `mvn jreleaser:deploy -Prelease` instead of full-release.
+# `mvn -N jreleaser:deploy -Prelease` instead of full-release.
+#
+# The -N (non-recursive) flag matters: the jreleaser plugin is configured
+# root-only (inherited=false), so without -N the reactor descends into the
+# child modules after the root succeeds and fails with "No plugin found
+# for prefix 'jreleaser'".
 #
 # IMPORTANT - where you run this from: the GitHub release step tags the
 # current git HEAD and asks the GitHub API to create a release for that
