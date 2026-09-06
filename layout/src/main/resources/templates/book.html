@@ -482,8 +482,11 @@
   <nav class="book-screen-nav" aria-label="Book contents">
     <div class="nav-book-title"><a href="#book-cover">{{ ctx.book.title | default('Book') }}</a></div>
     <ul>
-      {% if toc is not empty %}<li class="nav-divider"><a href="#book-toc">Contents</a></li>{% endif %}
+      {# The Contents entry sits where the printed contents page does: in
+         front of the card at tocAt (see the toc block below), or after the
+         last card when the marker was placed at the end. #}
       {% for card in cards %}
+        {% if toc is not empty and loop.index == tocAt %}<li class="nav-divider"><a href="#book-toc">Contents</a></li>{% endif %}
         {% for g in axisGroupings %}
           {% if card.axesFirstOf[g.axis.name] and card.axes[g.axis.name] is not null %}
           <li class="nav-divider"><a href="#axis-divider-{{ g.axis.name }}-{{ card.axes[g.axis.name].id }}">{{ card.axes[g.axis.name].label }}</a></li>
@@ -494,6 +497,7 @@
         {% endif %}
         <li class="nav-card"><a href="#card-{{ card.id }}">{{ card.title }}</a></li>
       {% endfor %}
+      {% if toc is not empty and tocAt >= (cards | length) %}<li class="nav-divider"><a href="#book-toc">Contents</a></li>{% endif %}
       {% if bookIndex is not empty %}<li class="nav-divider"><a href="#book-index">Index</a></li>{% endif %}
     </ul>
   </nav>
