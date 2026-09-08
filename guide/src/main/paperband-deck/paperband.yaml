@@ -1,0 +1,27 @@
+# The guide's companion deck: a two-slide intro to Paperband, built by the
+# same plugin, in the same reactor, from the same kind of markdown cards as
+# the guide itself. Its whole point is to be a live demo of the Slides card in
+# the Rendering section — including the `render-pptx` opt-in, which the guide's
+# pom performs exactly the way the docs tell a reader to.
+#
+# Deliberately its own book root rather than a target of the guide's: a slide
+# and a printed page want different content, not the same content branched.
+# `where:` can gate a paragraph; it cannot turn 400 words of prose into a
+# slide anyone would project.
+title: "Paperband"
+theme: deck
+
+page:
+  size: 16x9
+  # Stated, not inherited. `page.size:` replaces only the SHEET — margins keep
+  # whatever was already in force, which with no <pageSize> is A4's 20mm. Left
+  # off, this deck lays out against 150.5mm of height instead of 190.5mm and
+  # every slide's content rides high. A slide is full-bleed; the deck theme
+  # supplies its own inset.
+  margins: { top: 0, right: 0, bottom: 0, left: 0 }
+
+vars:
+  subtitle: "One markdown source, two outputs"
+  # The pairing that earns the geometry: a slide that overflows fails the
+  # build, naming the card. See Slides / The one-page budget.
+  maxPagesPerCard: 1

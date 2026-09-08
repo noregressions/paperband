@@ -16,11 +16,12 @@ own CSS above a theme.
 
 ## Built-in themes
 
-Nine themes ship with paperband: `editorial` (serif, drop caps, magazine feel — this
+Eleven themes ship with paperband: `editorial` (serif, drop caps, magazine feel — this
 guide uses it), `editorial-gold`, `classical`, `fieldguide`, `dark`, `blueprint`,
-`carded`, `herodevs`, and `workshop`. Pick one with the `theme:` key in the root
-`paperband.yaml`, or override at build time with `<theme>`; the build setting wins when
-both are given.
+`carded`, `herodevs`, `noregressions`, `workshop`, and `deck`. Pick one with the `theme:`
+key in the root `paperband.yaml`, or override at build time with `<theme>`; the build
+setting wins when both are given — and `mvn paperband:themes` lists whatever is actually
+on the classpath, which is the answer that can't go stale.
 
 `workshop` is the one built for a document with a *repeating rhythm* — a lab or workshop
 whose every step runs why → how → run → observe → establish. It keys off the block classes
@@ -29,6 +30,11 @@ follow, output to compare against, a conclusion to keep) and the repeated headin
 small-caps markers rather than headings competing with the numbered steps. It also tells
 commands from output by the fence's own language class, since a lab is mostly those two
 things.
+
+`deck` is the other theme built for a shape rather than a look: one card per 16:9 slide,
+with blocks *placed* into a fixed skeleton instead of looped in document order. It is the
+only bundled theme that uses `card.slots`, and the only one that expects a particular page
+size — see Slides.
 
 ## How CSS composes
 
@@ -121,7 +127,15 @@ reaches a theme:
   `.sidebar-section-tier-1`).
 - **Page-level classes.** PDF pages tag `<html>` with `target-{target}` and
   `size-{size}`; site pages tag `<body>` with sidebar state (`has-sidebar`,
-  `sidebar-collapsed`).
+  `sidebar-collapsed`). `{size}` is the **resolved** sheet, canonically named — `a4`,
+  `6x9`, `16x9`, or bare dimensions (`200x150mm`) for a sheet no preset covers — so it
+  follows the book's own `page.size:` rather than the `<pageSize>` a build was launched
+  with, and one sheet has one name however the slug was spelled (`7.5x9.25` reports
+  `packt`). A theme's `html.size-*` rule therefore matches the paper it is actually
+  printing on. **Check your theme has a rule for the sheet you build at:** the bundled
+  themes carry `size-a4`, `size-letter` and `size-6x9`, and nothing else — any other
+  sheet falls through to the theme's bare `html` baseline, which is where
+  `--pw-font-scale` applies.
 - **Component classes.** Fixed names for the furniture: `.card-title`, `.oneliner`,
   `.card-meta`, badge classes, `.card-grid`/`.card-item` on landing pages, `.site-nav`,
   `.site-sidebar`, and so on.

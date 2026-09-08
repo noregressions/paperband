@@ -44,6 +44,24 @@ public interface HtmlToPdfRenderer {
     }
 
     /**
+     * Whether this renderer's output is a PDF the build may post-process.
+     *
+     * <p>Four passes run <em>after</em> {@link #render} and reopen the output
+     * file with PDFBox: two-pass page-number resolution for a printed
+     * toc/index, the full-page-cover splice, the watermark stamp, and the
+     * bookmark outline. A renderer that writes something else (a .pptx, say)
+     * must return {@code false} so those passes are skipped — pointing PDFBox
+     * at a non-PDF fails the build after a successful render, which is a
+     * confusing place to fail.
+     *
+     * <p>Default is {@code true}: every renderer written before this method
+     * existed produced a PDF, and the SPI's name says so.
+     */
+    default boolean producesPdf() {
+        return true;
+    }
+
+    /**
      * Optional environment probe. Renderers that depend on external binaries
      * or downloaded assets (browser engines, native libraries, subprocess
      * tools) should report whether they are usable in the current environment.

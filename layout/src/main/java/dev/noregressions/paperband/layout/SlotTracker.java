@@ -40,9 +40,9 @@ import java.util.Set;
  *
  * <h2>Layout hints ({@link #takeWithLayout}/{@link #requireWithLayout})</h2>
  * A slot-based template already hand-writes a wrapper element per named
- * region (e.g. margin-notes' {@code <div class="mn-main">}/{@code <aside
- * class="mn-rail">}) — paperband doesn't invent the box arrangement, a
- * theme author does. What a template can't easily hand-write per build is a
+ * region (e.g. the {@code deck} theme's {@code <div class="slide-body">} /
+ * {@code <aside class="slide-aside">}) — paperband doesn't invent the box
+ * arrangement, a theme author does. What a template can't easily hand-write per build is a
  * <em>declarative</em> size preference or page-break preference that varies
  * by page config rather than being baked into theme CSS. {@code
  * takeWithLayout}/{@code requireWithLayout} take the same name argument as

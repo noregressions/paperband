@@ -33,9 +33,9 @@ com.example.render.PrinceRenderer
 ```
 
 With the jar on the plugin's classpath, `mvn paperband:renderers` lists it and `<renderer>prince</renderer>`
-selects it — `name()` is the selector, matched case-sensitively. `canRender` and
-`isAvailable` have sensible defaults (`true`); override `isAvailable` when the backend
-needs an external binary, so the `renderers` table can say so.
+selects it — `name()` is the selector, matched case-sensitively. `canRender`,
+`isAvailable` and `producesPdf` have sensible defaults (`true`); override `isAvailable`
+when the backend needs an external binary, so the `renderers` table can say so.
 
 One capability contract to know about: some page features render through in-page
 JavaScript — ` ```mermaid ` diagrams, Prism syntax highlighting — and the bundled
@@ -44,6 +44,25 @@ JavaScript — ` ```mermaid ` diagrams, Prism syntax highlighting — and the bu
 A renderer whose engine doesn't execute JavaScript will print those blocks as their
 unprocessed source; one that does should honour the same wait, or diagrams can race the
 snapshot.
+
+### When the output isn't a PDF
+
+The SPI's name is historical — what it contracts for is HTML in, one file out. A renderer
+that writes something else says so:
+
+```java
+@Override public boolean producesPdf() { return false; }
+```
+
+That `false` is not cosmetic. Four passes run *after* `render` and reopen the output file
+with PDFBox — two-pass page-number resolution for a printed toc/index, the full-page-cover
+splice, the watermark stamp, and the bookmark outline. Leave the default `true` in place
+and PDFBox is pointed at a file that isn't a PDF, so the build fails *after* a successful
+render, which is the most confusing place to fail. The page-budget check (`maxPagesPerCard`)
+sits outside that guard on purpose: it measures the DOM rather than the finished file, so a
+non-PDF renderer still gets per-card enforcement.
+
+The bundled `render-pptx` is the worked example — see Slides in the Rendering section.
 
 ## A new block renderer
 

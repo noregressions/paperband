@@ -237,8 +237,8 @@ public final class ConfigLoader {
             PageConfigResolver.Resolved page = PageConfigResolver.resolve(null, basePageSpec(size, margins));
             bookPageSpec = page.pageSpec();   // no yaml: the base IS the book's sheet
             return new RenderContext(BookConfig.empty(mdFile.toAbsolutePath()),
-                    List.of(), seedVars(extraVars), null, target, size,
-                    page.pageSpec(), page.fontScale());
+                    List.of(), seedVars(extraVars), null, target,
+                    page.pageSpec().sizeLabel(), page.pageSpec(), page.fontScale());
         }
 
         // Walk parents, collecting yamls. Order: leaf-first. A declared root
@@ -263,8 +263,8 @@ public final class ConfigLoader {
             // With a declared root, an absent yaml is expected rather than a
             // fallback: the book is described somewhere else entirely.
             return new RenderContext(BookConfig.empty(root != null ? root : startDir),
-                    List.of(), seedVars(extraVars), null, target, size,
-                    page.pageSpec(), page.fontScale());
+                    List.of(), seedVars(extraVars), null, target,
+                    page.pageSpec().sizeLabel(), page.pageSpec(), page.fontScale());
         }
 
         // Book root: declared when the caller knows it, otherwise the
@@ -395,7 +395,20 @@ public final class ConfigLoader {
             spec = new PageSpec(spec.size(), spec.margins(), cardOrientation);
         }
 
-        return new RenderContext(book, cssChain, vars, layout, target, size, spec, page.fontScale());
+        // The size a card REPORTS is the sheet it resolved to, not the slug the
+        // caller asked for. `page.size:` in the book's own yaml wins over the
+        // plugin's <pageSize>, and the reported name is what themes hang
+        // page-density type off (`html.size-6x9 { font-size: 12pt }` — see
+        // card.html/book.html). Reporting the parameter meant a book whose yaml
+        // said 6x9 was typeset with the A4 rule on a 6x9 sheet, and a custom
+        // {width, height} size matched `html.size-a4` — whose fixed font-size
+        // outranks the bare `html` rule that consumes --pw-font-scale, so the
+        // scale the resolver had just computed for it was silently dead.
+        //
+        // sizeLabel() is canonical, so an alias normalises: <pageSize>7.5x9.25
+        // reports `packt`, one name per sheet however it was spelled.
+        return new RenderContext(book, cssChain, vars, layout, target,
+                spec.sizeLabel(), spec, page.fontScale());
     }
 
     // ---- internals ----

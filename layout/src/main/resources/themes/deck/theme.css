@@ -1,0 +1,314 @@
+/* Deck — projector typography on a 16:9 sheet.
+ *
+ * Two rules here are load-bearing rather than decorative, and both were
+ * arrived at the hard way:
+ *
+ *  1. article.card uses MIN-height, never height. A fixed height makes an
+ *     overflowing card clip silently while the page-budget measurer still
+ *     reports one page, so `maxPagesPerCard: 1` passes and the slide quietly
+ *     loses its last bullets. With min-height the overflow becomes a second
+ *     page, the budget check fails, and the build tells you which card.
+ *
+ *  2. The card paints its own ground and supplies its own inset. Chromium
+ *     paints nothing into a PDF page margin, so a full-bleed slide has to be
+ *     built at zero page margins — and then every inset has to come from here.
+ *     --pw-page-margin-* is what the build actually used, so the padding below
+ *     collapses to a floor if the book does set margins.
+ */
+
+article.card {
+  min-height: var(--pw-content-height, 7.5in);
+  box-sizing: border-box;
+  padding:
+    max(0.55in, 0.9in - var(--pw-page-margin-top, 0mm))
+    max(0.7in,  1.1in - var(--pw-page-margin-right, 0mm))
+    max(0.55in, 0.9in - var(--pw-page-margin-bottom, 0mm))
+    max(0.7in,  1.1in - var(--pw-page-margin-left, 0mm));
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: #0f1720;
+  color: #f4f6f8;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+/* One dial for the whole deck's type scale. A slide is read at four metres,
+ * not forty centimetres, so the baseline is roughly 2x a book's — but no
+ * larger: the two-column case (body plus aside) is the tightest, and a
+ * three-bullet card there is close to a full slide at 22pt already.
+ *
+ * --pw-font-scale is respected so a book can still tune the deck, but on a page
+ * size the resolver doesn't recognise it also carries an auto-derived
+ * width-ratio scale — 1.61x for a 13.3in sheet, enough on its own to push every
+ * card over a one-page budget. Use the `16x9` slug and it stays unset unless the
+ * book asks for it. See the manifest. */
+html {
+  font-size: calc(22pt * var(--pw-font-scale, 1));
+}
+
+body {
+  margin: 0;
+}
+
+/* --- title --- */
+
+article.card > h1.card-title,
+article.card .card-title {
+  font-size: 1.6em;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.3em;
+  font-weight: 700;
+}
+
+article.card .card-number {
+  color: #6ee7b7;
+  margin-right: 0.35em;
+}
+
+article.card .oneliner {
+  font-size: 0.62em;
+  color: #9fb3c8;
+  margin: 0 0 0.2em;
+}
+
+/* The book meta row is chapter furniture, not slide content. */
+article.card .card-meta .tier-badge,
+article.card .card-meta .effort-badge,
+article.card .card-meta .openrewrite-badge,
+article.card .definition-table,
+article.card .applies-if {
+  display: none;
+}
+
+/* --- slot regions --- */
+
+.slide-grid {
+  display: flex;
+  gap: 1.2em;
+  align-items: flex-start;
+}
+
+/* flex-basis 0 with grow, not the default `flex: 0 1 auto`.
+ *
+ * As a shrink-to-fit flex item, .slide-body sizes to its content's intrinsic
+ * width. Prose hides that — text has no intrinsic maximum, so it fills the row
+ * anyway — but a `white-space: pre` code fence does have one, and it dragged
+ * the whole column down to the width of its longest line (222px of a 1146px
+ * row) with the figure inside it scaled to match. Latent for every text slide,
+ * then obvious on the first one with a code block.
+ *
+ * min-width: 0 goes with it: a flex item defaults to `min-width: auto`, which
+ * refuses to shrink below its content's intrinsic minimum — so a single long
+ * code line would push the region past the slide edge instead of being
+ * clipped. */
+.slide-body {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.slide-grid.has-aside .slide-body {
+  flex: 1 1 58%;
+}
+
+.slide-body {
+  /* takeWithLayout's height hint arrives as --slot-height-min/max on this
+   * element's own style attribute, and a theme is free to consume it. This one
+   * deliberately does not cap the height: a percentage max-height needs a
+   * definite parent height to resolve against, and .slide-grid is auto — so a
+   * cap here would silently do nothing on some cards and clip on others.
+   *
+   * Not clipping is also the safer default. Overflow that stays in the flow
+   * becomes a second page, which the per-card page budget catches by name;
+   * overflow hidden behind a height cap is invisible to it. Let the build fail
+   * loudly rather than ship a slide missing its last bullet.
+   *
+   * The break hint IS consumed: {'break': 'avoid-split'} emits pw-avoid-split,
+   * which the scaffold maps to break-inside: avoid. */
+  min-height: 0;
+}
+
+.slide-aside {
+  flex: 1 1 38%;
+  font-size: 0.78em;
+  color: #9fb3c8;
+  border-left: 2px solid #22303f;
+  padding-left: 0.8em;
+}
+
+/* --- block content --- */
+
+.block > h2,
+.block > h3 {
+  font-size: 0.62em;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-weight: 700;
+  color: #6ee7b7;
+  margin: 0 0 0.5em;
+}
+
+.block p {
+  line-height: 1.35;
+  margin: 0.3em 0;
+}
+
+.block ul,
+.block ol {
+  margin: 0;
+  padding-left: 1.1em;
+}
+
+.block li {
+  margin: 0.3em 0;
+  line-height: 1.35;
+}
+
+.block code {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+.block pre,
+.block pre code {
+  /* Prism's stylesheet loads in a cascade layer and sets `color: black` on
+   * code[class*="language-"]. Layered rules lose to any unlayered author rule
+   * — but only where one exists, so a theme that never states a colour here
+   * gets Prism's black text on its dark slide. Untokenised spans (a bare YAML
+   * value) are exactly the text that has no .token class to catch it. */
+  color: #e6edf3;
+}
+
+.block pre {
+  font-size: 0.62em;
+  line-height: 1.3;
+  background: #16212d;
+  padding: 0.5em 0.7em;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* --- figures: diagrams, tables, code fences ---
+ *
+ * These leave the text tier and become pictures of themselves, captured at the
+ * size they occupy here. So their CSS size IS their size on the slide: a
+ * mermaid diagram left at its intrinsic ~430px sits in the corner of a 1280px
+ * slide looking like a mistake. Give them the region's width and let them grow.
+ */
+
+.slide-body > .block svg,
+.slide-body > .block table,
+.slide-body > .block pre,
+.slide-body > .block img {
+  width: 100%;
+  max-width: 100%;
+  /* border-box, or width:100% plus the pre's own padding overflows the region
+   * by exactly that padding — and the capture is taken from the rect, so the
+   * overflow ends up in the picture. */
+  box-sizing: border-box;
+}
+
+.slide-body > .block svg {
+  /* Three separate things have to be overridden to make a diagram fill its
+   * region, and missing any one of them looks like the other two didn't work:
+   *
+   *  - display, because an SVG is inline by default and `width` has no effect
+   *    on an inline box — the rule above would silently do nothing;
+   *  - max-width with !important, because Mermaid writes a pixel cap as an
+   *    INLINE style ("max-width: 456.09375px") measured from its own content,
+   *    and an inline declaration outranks any stylesheet rule that isn't
+   *    important. This is the case !important exists for: overriding a
+   *    library's inline attribute, not winning a fight with another rule here;
+   *  - height, so the viewBox's aspect ratio survives the stretch rather than
+   *    the diagram being squashed to its original height.
+   */
+  display: block;
+  max-width: 100% !important;
+  height: auto;
+  /* A soft cap so a tall diagram doesn't push a titled card off its one page.
+   * preserveAspectRatio centres what's left, so clamping letterboxes rather
+   * than distorts.
+   *
+   * NOT vh. Both passes that see this page use a 20,000px-tall viewport — the
+   * page-budget measurer to get an unpaginated height, the figure harvest for
+   * the same reason — so `52vh` is 10,400px and caps nothing at all. It read
+   * as working right up until a full-width diagram pushed its card onto a
+   * second page. --pw-content-height is the printable height the build
+   * actually resolved, which is the only number that means anything here. */
+  max-height: calc(var(--pw-content-height, 7.5in) * 0.5);
+}
+
+/* --- tables ---
+ * A table is captured as an image, so everything about how it reads has to be
+ * decided here. Prose themes can leave borders to the reader's patience; on a
+ * slide at four metres the row rules are what make it legible. */
+
+.block table {
+  border-collapse: collapse;
+  font-size: 0.72em;
+  table-layout: auto;
+}
+
+.block table th,
+.block table td {
+  padding: 0.4em 0.7em;
+  text-align: left;
+  border-bottom: 1px solid #22303f;
+  vertical-align: top;
+}
+
+.block table th {
+  color: #6ee7b7;
+  font-size: 0.86em;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-bottom: 2px solid #35485c;
+  white-space: nowrap;
+}
+
+.block table tr:last-child td {
+  border-bottom: none;
+}
+
+/* --- syntax highlighting ---
+ * Prism's stylesheet loads in a cascade layer and is written for a light
+ * ground, so a theme that doesn't restate .token.* gets dark blue keywords on
+ * a dark slide. Every other bundled theme carries its own palette; this one
+ * shares the `dark` theme's, which was chosen for exactly this ground. */
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata                        { color: #8b949e; font-style: italic; }
+.token.punctuation                  { color: #b8c1cc; }
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted                      { color: #79c0ff; }
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted                     { color: #a5d6ff; }
+.token.operator,
+.token.entity,
+.token.url,
+.token.variable                     { color: #e6edf3; }
+.token.atrule,
+.token.attr-value,
+.token.keyword                      { color: #ff7b72; }
+.token.function,
+.token.class-name                   { color: #d2a8ff; }
+.token.regex,
+.token.important                    { color: #ffa657; }
+
+/* Speaker notes never reach the slide. Both kinds stay in the DOM so the pptx
+ * renderer can lift their text into the notes pane — display:none keeps them
+ * out of layout while leaving textContent readable. */
+.notes {
+  display: none;
+}

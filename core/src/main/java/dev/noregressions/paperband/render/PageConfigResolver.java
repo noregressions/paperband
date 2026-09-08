@@ -29,18 +29,34 @@ import java.util.Map;
  * model); it's a separate multiplier consumed by {@code LayoutEngine} to
  * drive the CSS type-scale dial ({@code html { font-size: calc(11pt *
  * var(--pw-font-scale, 1)) } }). It's deliberately nullable and conservative:
- * bundled themes already carry curated, hand-tuned font-size rules per named
- * preset (e.g. {@code html.size-6x9 { font-size: 12pt }} — not a naive ratio,
- * a legibility call for that trim size), and this resolver must not silently
- * override those with a generic formula. So {@code fontScale} resolves
- * non-null only when there's a real reason to touch the dial: an explicit
- * {@code page.fontScale} in yaml (always wins), or the resolved page size
- * isn't one of the four named presets (a4/a5/letter/6x9) at all — a genuinely
- * custom size has no curated theme rule to defer to, so an automatic default
- * (derived from page width relative to A4's) is better than nothing. For a
- * named preset with no explicit override, this returns {@code null} and
- * {@code LayoutEngine} leaves the CSS var unset, so the theme's own rule
- * applies exactly as it always has.
+ * a theme may carry a curated, hand-tuned font-size rule for a page size
+ * (e.g. {@code html.size-6x9 { font-size: 12pt }} — not a naive ratio, a
+ * legibility call for that trim), and this resolver must not silently override
+ * one with a generic formula. So {@code fontScale} resolves non-null only when
+ * there's a real reason to touch the dial: an explicit {@code page.fontScale}
+ * in yaml (always wins), or a resolved size outside
+ * {@code KNOWN_PRESETS} — a sheet nothing has been tuned for, where an
+ * automatic default (page width relative to A4's) beats nothing at all.
+ *
+ * <p>Which sheet gets which is worth stating plainly, because the three cases
+ * look alike from a book's yaml and are not:
+ *
+ * <ul>
+ *   <li><b>a4, letter, 6x9</b> — every bundled theme except {@code deck} has an
+ *       {@code html.size-*} rule. No scale; the theme's rule decides.</li>
+ *   <li><b>a5, legal, 16x9</b> — {@code KNOWN_PRESETS} too, but no bundled
+ *       theme has a rule for them, so they land on the theme's bare
+ *       {@code html} baseline unscaled. That is the intent: these are sheets
+ *       whose themes size their own type ({@code deck} does exactly this), and
+ *       a width ratio would fight them rather than help.</li>
+ *   <li><b>anything else</b> — {@code packt}, and every {@code {width, height}}
+ *       map: no rule to defer to, so the width-ratio scale applies.</li>
+ * </ul>
+ *
+ * <p>The size a build reports ({@code RenderContext.size}, and so the
+ * {@code html.size-*} class) is {@link PageSpec#sizeLabel()} of the sheet
+ * resolved here — never the caller's slug. The two must agree, or a book is
+ * laid out on one sheet and typeset for another.
  */
 public final class PageConfigResolver {
 
@@ -49,10 +65,22 @@ public final class PageConfigResolver {
     /** A4's width in mm — the reference point for the auto font-scale default. */
     private static final double REFERENCE_WIDTH_MM = 210.0;
 
-    /** The named presets bundled themes already carry curated font-size rules for. */
+    /**
+     * The sizes that must NOT get an automatic width-ratio scale — either
+     * because a theme has a curated rule for them (a4, letter, 6x9) or because
+     * the theme is expected to size its own type on them (a5, legal, 16x9).
+     * See the class javadoc for which is which; membership here is the whole
+     * of the contract, and it is about the scale, not about theme coverage.
+     */
     private static final java.util.Set<PageSize> KNOWN_PRESETS = java.util.Set.of(
             PageSize.A4, PageSize.A5, PageSize.LETTER, PageSize.LEGAL,
-            PageSize.of(6, 9, Unit.INCH));
+            PageSize.of(6, 9, Unit.INCH),
+            // 16:9 matters more than the others here. A slide is 13.3in wide
+            // because it is a slide, and the width-ratio default would hand the
+            // deck theme a 1.61x multiplier on top of a type scale already
+            // chosen for a 16:9 sheet — every card overflowing its one-page
+            // budget, for a reason nothing in the theme explains.
+            PageSize.SLIDE_16X9);
 
     public record Resolved(PageSpec pageSpec, Double fontScale) {}
 
@@ -98,8 +126,9 @@ public final class PageConfigResolver {
                 case "legal" -> PageSize.LEGAL;
                 case "6x9"   -> PageSize.of(6, 9, Unit.INCH);
                 case "packt", "7.5x9.25" -> PageSize.of(7.5, 9.25, Unit.INCH);
+                case "16x9", "slide" -> PageSize.SLIDE_16X9;
                 default -> throw new IllegalArgumentException(
-                        "page.size: unknown preset '" + s + "' (expected a4, a5, letter, legal, 6x9, packt, "
+                        "page.size: unknown preset '" + s + "' (expected a4, a5, letter, legal, 6x9, packt, 16x9, "
                         + "or a {width, height[, unit]} map)");
             };
         }

@@ -237,4 +237,85 @@ class PageSpecTest {
             );
         }
     }
+
+    @Nested
+    @DisplayName("sizeLabel")
+    class SizeLabel {
+
+        @Test
+        void names_every_preset_with_the_slug_that_parses_back() {
+            // The round trip is the contract: whatever sizeLabel() prints,
+            // forSizeName() must accept, so a log line can be pasted straight
+            // into a <pageSize> or a page.size:.
+            assertAll(
+                () -> assertEquals("a4", PageSpec.a4().sizeLabel()),
+                () -> assertEquals("a5", PageSpec.a5().sizeLabel()),
+                () -> assertEquals("letter", PageSpec.letter().sizeLabel()),
+                () -> assertEquals("6x9", PageSpec.booklet6x9().sizeLabel()),
+                () -> assertEquals("packt", PageSpec.packt().sizeLabel()),
+                () -> assertEquals("16x9", PageSpec.slide16x9().sizeLabel())
+            );
+        }
+
+        @Test
+        void every_label_it_prints_for_a_preset_round_trips() {
+            for (PageSpec spec : new PageSpec[] { PageSpec.a4(), PageSpec.a5(),
+                    PageSpec.letter(), PageSpec.booklet6x9(), PageSpec.packt(),
+                    PageSpec.slide16x9() }) {
+                assertEquals(spec.size(),
+                    PageSpec.forSizeName(spec.sizeLabel()).size(),
+                    spec.sizeLabel() + " must parse back to the size it names");
+            }
+        }
+
+        @Test
+        void names_legal_even_though_no_factory_builds_it() {
+            // page.size: legal resolves through PageConfigResolver, which has
+            // a slug forSizeName doesn't. The label still has to name it —
+            // otherwise a legal build reports itself as 8.5x14in.
+            assertEquals("legal",
+                new PageSpec(PageSize.LEGAL, Margins.standard(), Orientation.PORTRAIT)
+                    .sizeLabel());
+        }
+
+        @Test
+        void falls_back_to_dimensions_for_a_size_no_preset_covers() {
+            assertAll(
+                () -> assertEquals("200x150mm", new PageSpec(
+                    PageSize.of(200, 150, Unit.MM), Margins.standard(),
+                    Orientation.PORTRAIT).sizeLabel()),
+                () -> assertEquals("4x6in", new PageSpec(
+                    PageSize.of(4, 6, Unit.INCH), Margins.standard(),
+                    Orientation.PORTRAIT).sizeLabel()),
+                () -> assertEquals("595x842pt", new PageSpec(
+                    PageSize.of(595, 842, Unit.POINT), Margins.standard(),
+                    Orientation.PORTRAIT).sizeLabel())
+            );
+        }
+
+        @Test
+        void keeps_a_fractional_dimension_and_drops_a_trailing_zero() {
+            // 13.4in must not print as 13in, and a whole-number 300mm must
+            // not print as 300.0mm. (210x297mm is not the example to use here:
+            // that IS A4 by value, and labels itself "a4" — which the preset
+            // tests above pin.)
+            assertAll(
+                () -> assertEquals("13.4x7.5in", new PageSpec(
+                    PageSize.of(13.4, 7.5, Unit.INCH), Margins.standard(),
+                    Orientation.PORTRAIT).sizeLabel()),
+                () -> assertEquals("300x400mm", new PageSpec(
+                    PageSize.of(300.0, 400.0, Unit.MM), Margins.uniform(0, Unit.MM),
+                    Orientation.PORTRAIT).sizeLabel())
+            );
+        }
+
+        @Test
+        void ignores_margins_and_orientation_because_only_the_sheet_is_named() {
+            // A landscape A4 with hand-set margins is still an a4 sheet; the
+            // log line reports rotation and margins separately.
+            assertEquals("a4", new PageSpec(
+                PageSize.A4, Margins.uniform(3, Unit.MM), Orientation.LANDSCAPE)
+                .sizeLabel());
+        }
+    }
 }

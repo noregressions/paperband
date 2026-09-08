@@ -20,9 +20,12 @@
         <module>include</module>
         <module>layout</module>
         <module>render-playwright</module>
-        <!-- Optional block renderers. Not depended on by the plugin: a book
-             that wants one adds it to the plugin's own <dependencies>. -->
+        <!-- Optional block renderers and output renderers. Not depended on by
+             the plugin: a book that wants one adds it to the plugin's own
+             <dependencies>. render-pptx pulls Apache POI (12 jars, ~18MB),
+             which is exactly why it isn't a plugin dependency. -->
         <module>plantuml</module>
+        <module>render-pptx</module>
         <module>maven-plugin</module>
         <module>archetype</module>
     </modules>
@@ -48,6 +51,8 @@
         <!-- The MIT-licensed build of PlantUML. See plantuml/pom.xml for
              why not the default (GPL) artifact. -->
         <plantuml.version>1.2026.7</plantuml.version>
+        <poi.version>5.2.5</poi.version>
+        <log4j.version>2.24.3</log4j.version>
 
         <!-- Maven Plugin API: latest Maven-3 line release (3.9.16) rather than
              the in-progress Maven 4 line (4.0.0-*), since the plugin needs to
@@ -121,6 +126,11 @@
             <dependency>
                 <groupId>dev.noregressions.paperband</groupId>
                 <artifactId>block-plantuml</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>dev.noregressions.paperband</groupId>
+                <artifactId>render-pptx</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -213,6 +223,29 @@
                 <groupId>org.jsoup</groupId>
                 <artifactId>jsoup</artifactId>
                 <version>${jsoup.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.poi</groupId>
+                <artifactId>poi-ooxml</artifactId>
+                <version>${poi.version}</version>
+            </dependency>
+            <!-- POI logs through log4j-api. With no log4j binding on the
+                 classpath its StatusLogger prints a line beginning "ERROR" to
+                 stderr on every build, which reads like a build failure and
+                 is not one. This bridge routes POI's logging into the slf4j
+                 the rest of paperband already uses.
+                 Both halves are managed at one version on purpose: the bridge
+                 carries its own log4j-api dependency, and a bridge older than
+                 the api it is bridging is its own class of breakage. -->
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-api</artifactId>
+                <version>${log4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-to-slf4j</artifactId>
+                <version>${log4j.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>

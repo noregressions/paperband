@@ -62,8 +62,8 @@ public final class PlaywrightPageMeasurer {
      * break preference of its own) or a {@code pw-avoid-split}/{@code
      * pw-page-start} wrapper {@code div} — the hint markers {@code
      * SlotTracker.takeWithLayout}/{@code requireWithLayout} emit around one or
-     * more blocks (see margin-notes' {@code _card-body.html} for the only
-     * current example). Only <em>top-level</em> units are captured: a
+     * more blocks (see the {@code deck} theme's {@code _card-body.html} for
+     * the bundled example). Only <em>top-level</em> units are captured: a
      * {@code .block} nested inside another counted unit (whether a parent
      * block or a hint wrapper) is skipped, since it travels with its parent
      * for layout purposes and would double-count height otherwise.
@@ -159,31 +159,7 @@ public final class PlaywrightPageMeasurer {
                 Page page = ctx.newPage();
                 page.emulateMedia(new Page.EmulateMediaOptions().setMedia(Media.PRINT));
 
-                Path tempHtml = null;
-                try {
-                    if ("file".equals(baseUri.getScheme())) {
-                        Path baseDir = Path.of(baseUri);
-                        if (Files.isDirectory(baseDir)) {
-                            tempHtml = Files.createTempFile(baseDir, ".paperband-measure-", ".html");
-                            Files.writeString(tempHtml, html);
-                            page.navigate(tempHtml.toUri().toString(),
-                                    new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
-                        }
-                    }
-                    if (tempHtml == null) {
-                        page.setContent(PlaywrightRenderer.injectBase(html, baseUri.toString()),
-                                new Page.SetContentOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
-                    }
-
-                    // Match PlaywrightRenderer's settle points before reading the
-                    // DOM: fonts swap text metrics, and window.paperbandPending is
-                    // the contract for page scripts doing post-load layout work
-                    // (mermaid diagrams rendering to SVG — see _mermaid.html).
-                    // Measuring earlier would report heights the PDF pass then
-                    // contradicts.
-                    page.evaluate("() => document.fonts.ready");
-                    page.evaluate("() => Promise.all(window.paperbandPending || [])");
-
+                try (LoadedPage loaded = LoadedPage.open(page, html, baseUri, null)) {
                     Object raw = page.evaluate(
                             "() => {"
                             + "  const isUnit = el => el.classList.contains('block')"
@@ -221,8 +197,6 @@ public final class PlaywrightPageMeasurer {
                             + "  return {ids: ids, units: units, totalHeight: document.documentElement.scrollHeight};"
                             + "}");
                     return toMeasurement(raw);
-                } finally {
-                    if (tempHtml != null) Files.deleteIfExists(tempHtml);
                 }
             } finally {
                 browser.close();

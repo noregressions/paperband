@@ -3,6 +3,7 @@ package dev.noregressions.paperband.config;
 import dev.noregressions.paperband.model.BookConfig;
 import dev.noregressions.paperband.model.Section;
 import dev.noregressions.paperband.model.RenderContext;
+import dev.noregressions.paperband.render.PageSize;
 import dev.noregressions.paperband.render.Margins;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
@@ -44,7 +45,11 @@ class ConfigLoaderTest {
             assertNull(context.vars().get("author"), "but nothing a book would have declared");
             assertNull(context.layout());
             assertEquals("web", context.target());
-            assertEquals("A4", context.size());
+            // Canonical, not an echo: size() reports the sheet that resolved,
+            // named the one way PageSpec.sizeLabel() names it. "A4" in, "a4"
+            // out — the same sheet, and the same html.size-a4 hook however the
+            // caller spelled the slug.
+            assertEquals("a4", context.size());
         }
 
         @Test
@@ -57,7 +62,13 @@ class ConfigLoaderTest {
 
             assertEquals(tempDir, context.book().bookRoot());
             assertNull(context.target());
-            assertNull(context.size());
+            // No slug asked for still means a sheet was used: with no
+            // <pageSize> the base is A4, and that is what the card is laid out
+            // on, so that is what it reports. (It used to report null, which
+            // stamped no size-* class at all — a book laid out on A4 that no
+            // theme could recognise as A4.)
+            assertEquals("a4", context.size());
+            assertEquals(PageSize.A4, context.pageSpec().size());
         }
     }
 

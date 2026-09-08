@@ -221,10 +221,14 @@ final class BookBuild {
 
         ensureParentDir(output);
         renderer.render(new HtmlInput(html, baseUri, ctx.pageSpec(), metadata), output);
-        applyWatermark(ctx);
+        // Same reason as the book path: the watermark is a PDFBox pass over
+        // `output`, so a non-PDF renderer's output must not reach it.
+        if (renderer.producesPdf()) {
+            applyWatermark(ctx);
+        }
 
         log.info("Built " + input + " -> " + output
-                + " (renderer=" + renderer.name() + describeGeometry()
+                + " (renderer=" + renderer.name() + describeGeometry(ctx.pageSpec())
                 + ", blocks=" + card.blocks().size() + ")");
     }
 
@@ -394,6 +398,25 @@ final class BookBuild {
         renderer.render(new HtmlInput(html, baseUri, sheet, metadata, footer, header),
                 output);
 
+        // Everything below reopens `output` with PDFBox. A renderer that
+        // wrote something else (the pptx renderer, say) has no PDF to
+        // post-process, and pointing PDFBox at its output would fail the
+        // build after a successful render — the most confusing place to fail.
+        // The page-count check further down is deliberately outside this
+        // guard: it measures the DOM, not the PDF, so a slide deck still gets
+        // its per-card budget enforced.
+        if (!renderer.producesPdf()) {
+            log.info("Renderer '" + renderer.name() + "' does not produce a PDF;"
+                    + " skipping the PDF post-processing passes"
+                    + " (page references, cover splice, watermark, bookmarks)");
+            new PageChecks(log, reportPages, maxPagesPerCard).run(cards, html, baseUri, bookCtx);
+            log.info("Built book " + bookRoot + " -> " + output
+                    + " (renderer=" + renderer.name() + describeGeometry(sheet)
+                    + ", cards=" + cards.size()
+                    + ", blocks=" + totalBlocks + ")");
+            return;
+        }
+
         // Two-pass page numbering: a printed TOC or index renders its page
         // numbers as placeholders (the layout can't know them — Chromium
         // decides pagination), so read each anchor's real page from the PDF
@@ -437,7 +460,7 @@ final class BookBuild {
         applyBookmarks(bookCtx, layout.outline());
 
         log.info("Built book " + bookRoot + " -> " + output
-                + " (renderer=" + renderer.name() + describeGeometry()
+                + " (renderer=" + renderer.name() + describeGeometry(sheet)
                 + ", cards=" + cards.size()
                 + ", blocks=" + totalBlocks + ")");
 
@@ -790,10 +813,20 @@ final class BookBuild {
         return bookDeclaration == null ? Map.of() : bookDeclaration.declaredVars();
     }
 
-    /** The geometry half of the "Built ..." line, so a full-bleed build is visible in the log. */
-    private String describeGeometry() {
+    /**
+     * The geometry half of the "Built …" line, read off the sheet that was
+     * actually rendered rather than off {@link #pageSize}. The parameter is
+     * only the base a book's own {@code page.size:} layers over, so echoing it
+     * told the guide's 16:9 deck it had been built at A4.
+     *
+     * <p>{@code margins=} stays the parameter as written, and still appears
+     * only when a caller passed {@code <margins>} — there it is an echo of the
+     * request (so a full-bleed build is visible in the log) rather than a
+     * claim about the sheet.
+     */
+    private String describeGeometry(PageSpec sheet) {
         return ", target=" + target
-                + ", size=" + pageSize
+                + ", size=" + sheet.sizeLabel()
                 + (marginsLabel == null ? "" : ", margins=" + marginsLabel);
     }
 

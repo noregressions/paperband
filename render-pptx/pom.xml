@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>dev.noregressions.paperband</groupId>
+        <artifactId>parent</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>render-pptx</artifactId>
+    <name>Paperband :: Renderer :: PowerPoint</name>
+    <description>HTML to .pptx renderer: native, editable PowerPoint shapes from a slot-placed deck theme.</description>
+    <url>https://github.com/noregressions/paperband</url>
+
+    <dependencies>
+        <dependency>
+            <groupId>dev.noregressions.paperband</groupId>
+            <artifactId>core</artifactId>
+        </dependency>
+        <!-- The browser is the CSS engine: layout, the cascade, var()/calc()
+             and @media are all resolved by Chromium and read back as settled
+             numbers, rather than reimplemented by a stylesheet parser. -->
+        <dependency>
+            <groupId>dev.noregressions.paperband</groupId>
+            <artifactId>render-playwright</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <!-- Silences POI's "ERROR StatusLogger ... could not find a logging
+             implementation" line by giving log4j-api somewhere to go. Runtime
+             scope: nothing here compiles against it. -->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-to-slf4j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

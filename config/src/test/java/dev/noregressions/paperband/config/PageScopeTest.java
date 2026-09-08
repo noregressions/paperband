@@ -159,4 +159,88 @@ class PageScopeTest {
             assertTrue(e.getMessage().contains("chapter"), e.getMessage());
         }
     }
+
+    /**
+     * What a card says its size is. The name is not decoration: the print
+     * templates stamp it on {@code <html>} as {@code size-<name>}, and bundled
+     * themes hang page-density type off exactly that
+     * ({@code html.size-6x9 { font-size: 12pt }}). So the reported name has to
+     * follow the sheet that resolved — if it echoed the caller's slug instead,
+     * a book could be laid out on one sheet and typeset for another.
+     */
+    @Nested
+    @DisplayName("The reported size")
+    class ReportedSize {
+
+        @Test
+        void follows_the_books_yaml_rather_than_the_callers_slug(@TempDir Path dir) throws IOException {
+            // The bug this pins: <pageSize> defaults to a4, the book asks for
+            // 6x9, and the card used to report "a4" — so html.size-a4's 11pt
+            // typeset a 6x9 page that the theme has a 12pt rule for.
+            Path card = book(dir, "title: T\npage:\n  size: 6x9\n", null);
+
+            RenderContext ctx = new ConfigLoader().load(card, "pdf", "a4");
+
+            assertEquals("6x9", ctx.size());
+        }
+
+        @Test
+        void is_canonical_so_an_alias_normalises(@TempDir Path dir) throws IOException {
+            // packt and 7.5x9.25 are the same sheet; one name reaches the CSS.
+            Path card = book(dir, "title: T\npage:\n  size: 7.5x9.25\n", null);
+
+            RenderContext ctx = new ConfigLoader().load(card, "pdf", "a4");
+
+            assertEquals("packt", ctx.size());
+        }
+
+        @Test
+        void names_a_slide_deck_a_slide(@TempDir Path dir) throws IOException {
+            Path card = book(dir, "title: T\npage:\n  size: 16x9\n", null);
+
+            RenderContext ctx = new ConfigLoader().load(card, "pdf", "a4");
+
+            assertEquals("16x9", ctx.size());
+        }
+
+        @Test
+        void a_custom_sheet_reports_dimensions_and_keeps_its_font_scale(@TempDir Path dir) throws IOException {
+            // The other half of the same bug, and the worse half: a custom
+            // size used to report "a4", and html.size-a4's FIXED font-size
+            // outranks the bare html rule that consumes --pw-font-scale — so
+            // the scale the resolver computed for the odd sheet was dead on
+            // arrival. No preset name, no accidental match, scale lives.
+            Path card = book(dir,
+                    "title: T\npage:\n  size: { width: 200, height: 150, unit: mm }\n", null);
+
+            RenderContext ctx = new ConfigLoader().load(card, "pdf", "a4");
+
+            assertAll(
+                    () -> assertEquals("200x150mm", ctx.size()),
+                    () -> assertNotNull(ctx.fontScale(),
+                            "an unrecognised sheet still gets the width-ratio scale"));
+        }
+
+        @Test
+        void the_base_still_shows_through_when_the_yaml_says_nothing(@TempDir Path dir) throws IOException {
+            Path card = book(dir, "title: T\n", null);
+
+            RenderContext ctx = new ConfigLoader().load(card, "pdf", "letter");
+
+            assertEquals("letter", ctx.size());
+        }
+
+        @Test
+        void rotation_does_not_rename_the_sheet(@TempDir Path dir) throws IOException {
+            // orientation-* is its own class on <html>; a landscape A4 is
+            // still an a4 sheet and still wants A4's type rule.
+            Path card = book(dir, "title: T\n", "page:\n  orientation: landscape\n");
+
+            RenderContext ctx = new ConfigLoader().load(card, "pdf", "a4");
+
+            assertAll(
+                    () -> assertEquals("a4", ctx.size()),
+                    () -> assertEquals(Orientation.LANDSCAPE, ctx.pageSpec().orientation()));
+        }
+    }
 }

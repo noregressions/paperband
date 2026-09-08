@@ -57,6 +57,18 @@
                         <artifactId>block-plantuml</artifactId>
                         <version>${project.version}</version>
                     </dependency>
+                    <!--
+                        Same dogfooding, second helping: the guide documents
+                        the pptx renderer, so the guide builds a real deck with
+                        it. render-pptx is not a plugin dependency by default
+                        (it pulls Apache POI), and this block is precisely the
+                        opt-in the Slides card tells a reader to write.
+                    -->
+                    <dependency>
+                        <groupId>dev.noregressions.paperband</groupId>
+                        <artifactId>render-pptx</artifactId>
+                        <version>${project.version}</version>
+                    </dependency>
                 </dependencies>
 
                 <executions>
@@ -76,6 +88,28 @@
                         <configuration>
                             <outputDirectory>${project.build.directory}/guide-site</outputDirectory>
                             <clean>true</clean>
+                        </configuration>
+                    </execution>
+                    <!--
+                        The companion deck. A separate book root (its own
+                        <home>) rather than a target of the guide's, because a
+                        slide and a printed page want different content, not
+                        the same content branched.
+
+                        <renderer>pptx</renderer> is the only line that makes
+                        this a PowerPoint rather than a PDF; the 16:9 sheet and
+                        the one-page budget come from the deck's own
+                        paperband.yaml. Drop the renderer and the same two
+                        cards build as a slide-shaped PDF.
+                    -->
+                    <execution>
+                        <id>build-guide-deck</id>
+                        <phase>package</phase>
+                        <goals><goal>build</goal></goals>
+                        <configuration>
+                            <home>${project.basedir}/src/main/paperband-deck</home>
+                            <output>${project.build.directory}/paperband-intro.pptx</output>
+                            <renderer>pptx</renderer>
                         </configuration>
                     </execution>
                 </executions>

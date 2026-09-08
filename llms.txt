@@ -12,7 +12,9 @@ operational reference.
 
 Paperband (`dev.noregressions.paperband`, Apache-2.0) is a pluggable static-site and PDF
 builder for structured content — guides, runbooks, migration playbooks. One Markdown source
-produces both a printable PDF and a browsable static HTML site. It runs as a Maven plugin
+produces a printable PDF and a browsable static HTML site — and, on a 16:9 sheet with the
+`deck` theme, a slide deck (PDF, or a real `.pptx` via the optional `render-pptx` module).
+It runs as a Maven plugin
 (`paperband-maven-plugin`), so books build inside `mvn install` and CI like any other artifact.
 
 Requirements: JDK 21+, Maven 3.8+. PDF rendering uses Playwright (headless Chromium,
@@ -67,7 +69,7 @@ with `<home>`, `<content>`, `<layouts>`; legacy `<input>` walks any directory th
 <plugin>
   <groupId>dev.noregressions.paperband</groupId>
   <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.1.1</version>
+  <version>0.1.2</version>
   <executions>
     <execution>
       <goals><goal>build</goal></goals>
@@ -241,8 +243,10 @@ vars:
   contentPolicy: clean
   mermaidTheme: dark             # ```mermaid colour theme: default | dark | forest | neutral | base
   page:
-    size: 6x9                    # a4 (default) | a5 | letter | legal | 6x9 | packt | {width,height,unit}
-    margins: { top: 0, right: 0, bottom: 0, left: 0 }   # zero = full-bleed
+    size: 6x9                    # a4 (default) | a5 | letter | legal | 6x9 | packt | 16x9 | {width,height,unit}
+    margins: { top: 0, right: 0, bottom: 0, left: 0 }   # zero = full-bleed; STATE these —
+                                 #   page.size replaces the SHEET only, margins keep
+                                 #   whatever was in force (A4's 20mm with no <pageSize>)
     measure: 58rem               # text measure; overrides theme --card-max-width; `none` = full width
 ```
 
@@ -275,8 +279,11 @@ Target strings are not validated — a typo silently selects nothing.
 
 ### Themes
 
-Built-ins (9): `editorial`, `editorial-gold`, `classical`, `fieldguide`, `dark`,
-`blueprint`, `carded`, `herodevs`, `workshop` (for repeating-rhythm lab/workshop docs).
+Built-ins (11, as `BuiltInThemes.NAMES` / `mvn paperband:themes` list them): `editorial`,
+`editorial-gold`, `classical`, `fieldguide`, `dark`, `blueprint`, `carded`, `herodevs`,
+`noregressions` (IBM Plex design system, semantic colour, separate print/site layers),
+`workshop` (for repeating-rhythm lab/workshop docs), `deck` (one card per 16:9 slide;
+see Slides).
 Custom theme = a directory with `manifest.txt` (one CSS path per line; `#` comments) and
 optionally `templates/`; pass via `<themeDir>`. Same-named theme overrides a built-in.
 `<theme>none</theme>` disables theming entirely (scaffold CSS remains).
@@ -286,7 +293,8 @@ theme manifest CSS → build `<stylesheets>`. So a theme beats book CSS, and
 `<stylesheets>` beats the theme ("that theme, with my corrections").
 
 Stable CSS hooks for themes: block classes (`section.block.watch-out`), axis classes
-(`article.card.tier-1`), page classes (`target-{t}`, `size-{s}`, `has-sidebar`),
+(`article.card.tier-1`), page classes (`target-{t}`, `size-{s}` — the RESOLVED sheet, see
+Renderer and page geometry, `has-sidebar`),
 component classes (`.card-title`, `.oneliner`, `.card-grid`, `.site-nav`,
 `.section-divider`, `.book-toc`, `.book-index`), and geometry custom properties stamped on
 `<html>`: `--pw-content-height`, `--pw-page-margin-*`, `--pw-font-scale`,
@@ -315,7 +323,15 @@ listing offenders. Delete `rest()` to turn the template into a strict shape chec
 
 ### Renderer and page geometry
 
-One renderer ships: `playwright` (headless Chromium). It treats `PageSpec.size`/`margins`
+One renderer ships on the plugin's own classpath: `playwright` (headless Chromium), and it
+is the only one that produces a PDF. A renderer whose output is something else returns
+`false` from `producesPdf()`, and `BookBuild` then skips the four PDFBox passes that reopen
+the output (two-pass page numbers, full-page-cover splice, watermark, bookmarks) — pointing
+PDFBox at a non-PDF would fail the build *after* a successful render. The page-budget check
+sits deliberately outside that guard: it measures the DOM, not the file. `render-pptx` is
+the one such renderer in the repo (see Slides).
+
+Playwright treats `PageSpec.size`/`margins`
 as sole geometry authority (theme `@page` rules are ignored) and emits named PDF
 destinations for every anchor — the basis of page reporting/enforcement. Before
 snapshotting (and before measuring, so page counts agree) it waits for network-idle,
@@ -327,6 +343,79 @@ Four things inset content from the paper edge: page margin (`vars.page.margins` 
 `<margins>`), built-in horizontal safety padding `max(0mm, 8mm - margin)`, the theme's text
 measure (`--card-max-width`, retune with `vars.page.measure`), and per-page card padding
 from the theme. "Full-bleed still looks margined" is usually the measure.
+
+**The sheet has one name, and it is the resolved one.** `RenderContext.size` is
+`PageSpec.sizeLabel()` of the sheet that resolved — canonical (`7.5x9.25` reports `packt`),
+and bare dimensions (`200x150mm`) for a sheet no preset covers — never the `<pageSize>`
+slug the build was launched with, since a book's own `page.size:` wins over it. That one
+name is what the print templates stamp as `html.size-{s}`, what themes hang page-density
+type off (`html.size-6x9 { font-size: 12pt }`), what `mvn paperband:scan` prints, and what
+the `Built book …` log line reports. Before this was true, a book whose yaml said `6x9` was
+typeset by `html.size-a4`, and a custom `{width, height}` sheet matched `html.size-a4` too —
+whose fixed `font-size` outranks the bare `html` rule that consumes `--pw-font-scale`, so
+the scale computed for that odd sheet was dead on arrival.
+
+**CHECK THIS when a book builds at anything but A4/Letter/6x9** (a deck, an A5 booklet, a
+`packt` trim, any custom `{width, height}`): the bundled themes carry `html.size-a4`,
+`html.size-letter` and `html.size-6x9` rules and NOTHING else, so every other sheet is
+typeset from the theme's bare `html` baseline times `--pw-font-scale` (and a *named* preset
+gets no scale — `KNOWN_PRESETS` — so it lands on the raw baseline). If the type looks wrong
+at a new page size, that is the reason: either add an `html.size-<slug>` rule to the theme,
+or set `page.fontScale:` explicitly. The `deck` theme is the worked example — it sizes its
+own type and reads no `size-*` class at all.
+
+### Slides (16:9 decks, and `.pptx`)
+
+A deck is a page geometry + a theme + optionally a renderer — not a separate pipeline.
+Minimum book yaml:
+
+```yaml
+theme: deck
+page:
+  size: 16x9                     # 13.333x7.5in = 960x540pt = PowerPoint widescreen
+  margins: { top: 0, right: 0, bottom: 0, left: 0 }
+vars:
+  maxPagesPerCard: 1             # a slide that overflows FAILS the build
+```
+
+Use the `16x9` slug, not an equivalent map: an unrecognised size gets an auto font scale
+derived from page width (1.61x for 13.3in), which multiplies the theme's type scale until
+every card overflows. Recognition is by VALUE (`PageConfigResolver.KNOWN_PRESETS`), so an
+exact `{13.333, 7.5, inch}` map is also fine — `13.33` is not.
+
+**Authoring.** The `deck` theme places blocks into a fixed skeleton via `card.slots`
+instead of looping them. Text before the first heading (the `intro` block) is the slide
+body, so a bulleted card needs no `## Body`. `## Aside`/`## Figure` opens a second column.
+`## Notes` is speaker notes — hidden by the theme, never printed, exported to the pptx
+notes pane. `rest()` routes any block no slot claimed to the notes with a WARNing rather
+than failing; delete it from `_card-body.html` for a strict shape check.
+
+**`.pptx` output.** Optional module `render-pptx` (Apache POI XSLF; not a plugin dependency
+— add it to the plugin's `<dependencies>` like `block-plantuml`), then
+`<renderer>pptx</renderer>`. Each card's slot signature picks a stock PowerPoint layout
+(`title+body` → *Title and Content*, `title+body+aside` → *Two Content*), so cards of one
+shape share one `slideLayout` and outline view / layout switching / theme recolouring work;
+regions fill **typed placeholders**, not free text boxes. A signature with no stock layout
+fails with the fix named. Two content tiers: prose/headings/bullets → native editable text
+with resolved font, size, weight, colour; `svg, table, pre, img, figure` → a picture of
+itself captured from the same page at 2x and placed at its rect (pixel-exact, not
+editable). Code fences are pictures on purpose — highlighted spans over
+must-not-collapse whitespace do not survive a pptx text box.
+
+No CSS parser: the exporter reads `getComputedStyle` from the Chromium paperband already
+drives, so cascade, `var()`, `calc()`, `@media` and flex/grid arrive as settled numbers.
+
+**Writing a deck theme.** Give the card `min-height`, never `height` — a fixed height clips
+overflow silently while the measurer still reports one page, so `maxPagesPerCard` passes
+and the slide loses its last lines. Avoid `vh`: both measuring passes use a 20,000px-tall
+viewport, so `vh` caps nothing; size against `--pw-content-height`. A mermaid `<svg>` needs
+`display:block` (width has no effect on an inline box) and `max-width:100% !important`
+(mermaid writes a pixel cap as an inline style). Restate `.token.*` colours — Prism's sheet
+is layered and only loses where an unlayered rule competes, so a theme that states none
+gets black code on a dark slide.
+
+Live example: `guide/src/main/paperband-deck/` (two cards) → `guide/target/paperband-intro.pptx`,
+built by `mvn install -Pguide`.
 
 ### TOC and index (PDF only; `site` ignores both)
 
@@ -388,6 +477,8 @@ stamp), which is why `render` takes the parameters at all.
 `<maxPagesPerCard>` sets a global ceiling; frontmatter `max_pages` wins per card. Violation
 → exit code 3 (vs 2 = bad input/unknown renderer, 4 = slot-contract failure). Counting
 requires named destinations; without them checks are skipped WITH a warning, not failed.
+The check measures the DOM (Playwright), not the finished file, so it enforces budgets for
+non-PDF renderers (`pptx`) too.
 `mvn paperband:pages -Dpaperband.pdf=out.pdf` (`-Dpaperband.byPages=true` sorts longest
 first, `-Dpaperband.cardsOnly=true` hides furniture rows) reads the same table from any
 built PDF.
@@ -417,7 +508,7 @@ Key parameters (every one has a `-Dpaperband.<name>` property):
 | `home` / `content` / `layouts` | `src/main/paperband` / `${home}/content` / `${home}/layouts` | Book geography; each build logs the resolved values. |
 | `book` | — | POM-declared book (below). |
 | `output` | required (build) | Output PDF. `site` uses `outputDirectory` + `<clean>`. |
-| `renderer` | `playwright` | |
+| `renderer` | `playwright` | `pptx` with `render-pptx` on the plugin's `<dependencies>`. |
 | `target` | `pdf-a4` (`site`: `siteTarget`, default `web`) | Feeds `where:` predicates. |
 | `pageSize` | `a4` | Seeds base geometry; yaml `vars.page` still wins. |
 | `margins` | page size's own | CSS shorthand: `0`, `18mm`, `20 15 25 15`; units mm/cm/in/pt. |
@@ -510,9 +601,13 @@ the end naming failures.
 
 ## Extension points
 
-- **PDF renderer** — implement `dev.noregressions.paperband.render.HtmlToPdfRenderer`
-  (`name()` is the `<renderer>` selector; override `isAvailable()` for external binaries),
-  register in `META-INF/services/…HtmlToPdfRenderer` (true ServiceLoader SPI).
+- **Output renderer** — implement `dev.noregressions.paperband.render.HtmlToPdfRenderer`
+  (`name()` is the `<renderer>` selector; override `isAvailable()` for external binaries,
+  and `producesPdf()` → `false` if the output is not a PDF, which skips the PDFBox
+  post-passes), register in `META-INF/services/…HtmlToPdfRenderer` (true ServiceLoader
+  SPI). The interface name is historical — the contract is HTML in, one file out. Bundled
+  optional implementation: `render-pptx` (see Slides), installed the same way a
+  BlockRenderer is, by adding the jar to the **plugin's** `<dependencies>`.
 - **Block renderer** (`block.BlockRenderer`) — a ```` ```type ```` fence whose HTML is
   computed by a jar rather than a template. Declares `name()`, `types()` (the fence tags it
   claims), `isAvailable()`/`unavailableReason()`, and `render(BlockRequest)`; register in
@@ -549,6 +644,9 @@ the end naming failures.
 5. Exit codes: 2 bad input/unknown renderer · 3 page-budget violation · 4 slot contract.
 6. Heading before the H1, `{{ }}`-looking prose outside code spans, a fence-attribute line
    glued to the next paragraph, and renamed published `id`s are the classic authoring traps.
+7. Deck content riding high with dead space beneath → `page.size:` set without `margins:`,
+   so the sheet is 16:9 but the margins are still A4's 20mm. Check `--pw-content-height` in
+   the emitted HTML: 190.5mm is right, 150.5mm is this bug.
 
 ## Repository map (for working on Paperband itself)
 
@@ -556,6 +654,9 @@ Modules: `core` (model: cards, blocks, BookConfig, Publication, CardSchema, Page
 `cards` (parsing/transpiling), `config` (BookWalker, ConfigLoader cascade,
 PublicationLoader), `include` (fragment tag, providers/processors, containment),
 `layout` (LayoutEngine, Pebble templates, bundled themes in resources),
-`render-playwright` (the renderer), `maven-plugin` (all mojos, BookBuild, PDFBox
-post-processing), `archetype`, and `guide` — the self-documenting book at
-`guide/src/main/paperband`, built by the plugin in the same reactor (`mvn install -Pguide`).
+`render-playwright` (the renderer, plus `LoadedPage`: the shared load-and-settle helper),
+`render-pptx` (optional; POI XSLF exporter — `SlideHarvest` reads the DOM, `DeckWriter`
+builds the file, `LayoutMap` maps slot signature → slideLayout), `maven-plugin` (all mojos,
+BookBuild, PDFBox post-processing), `archetype`, and `guide` — the self-documenting book at
+`guide/src/main/paperband` plus the companion deck at `guide/src/main/paperband-deck`, both
+built by the plugin in the same reactor (`mvn install -Pguide`).

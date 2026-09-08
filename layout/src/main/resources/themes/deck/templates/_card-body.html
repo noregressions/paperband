@@ -1,0 +1,74 @@
+{# Deck theme: a slide is a fixed skeleton, so blocks are PLACED, not looped.
+
+   Touching card.slots at all switches on LayoutEngine's placement invariant —
+   every top-level block consumed, every require() matched, or the build fails
+   with SlotPlacementException naming the card and the block. That is the whole
+   reason a deck template is slot-based: an unplaced region on a slide is a bug,
+   and nobody proofreads sixty slides the way they proofread a chapter.
+
+   The region classes are also the contract with the pptx renderer: it reads
+   .slide-body / .slide-aside as the card's slot signature and picks a matching
+   PowerPoint slideLayout from it. Renaming them here changes that mapping.
+
+   Authoring shape — the body is the text BEFORE any heading, so a slide needs
+   no ceremonial "## Body":
+
+     ---
+     title: What we get for free
+     ---
+
+     - first bullet
+     - second bullet
+
+     ## Aside
+     Optional second column.
+
+     ## Notes
+     Speaker notes. Never rendered; lifted into the pptx notes pane.
+
+   rest() is the safety net, not the notes mechanism. Leftovers go to the notes
+   rather than onto the slide, marked notes--unplaced so the renderer can warn
+   about them — a heading typo that quietly relocated a visible region is worse
+   than a build error, because the slide still looks finished. A theme that
+   wants the strict behaviour instead deletes the rest() block below; the
+   invariant then fails the build on any block no slot claimed. #}
+{% extends "_card-body-base" %}
+
+{% block cardBlocks %}
+  {% set _body  = card.slots.takeWithLayout('intro', {'height': [40, 78], 'break': 'avoid-split'}) %}
+  {% set _aside = card.slots.take(['aside', 'figure']) %}
+  {% set _notes = card.slots.take('notes') %}
+  {% set _left  = card.slots.rest() %}
+
+  <div class="slide-grid{% if _aside | length > 0 %} has-aside{% endif %}">
+    <div class="slide-body {{ _body.breakClass }}" style="{{ _body.style }}">
+      {% for block in _body.blocks %}
+      {% include "_block-section" with {"block": block} %}
+      {% endfor %}
+    </div>
+
+    {% if _aside | length > 0 %}
+    <aside class="slide-aside">
+      {% for block in _aside %}
+      {% include "_block-section" with {"block": block} %}
+      {% endfor %}
+    </aside>
+    {% endif %}
+  </div>
+
+  {% if _notes | length > 0 %}
+  <div class="notes">
+    {% for block in _notes %}
+    {% include "_block-section" with {"block": block} %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if _left | length > 0 %}
+  <div class="notes notes--unplaced">
+    {% for block in _left %}
+    {% include "_block-section" with {"block": block} %}
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endblock %}

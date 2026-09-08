@@ -7,9 +7,10 @@ oneliner: "Playwright is the only HTML-to-PDF renderer paperband ships with."
 
 Paperband renders HTML to PDF through a pluggable `HtmlToPdfRenderer`, discovered via
 `ServiceLoader`. `playwright` — real Chromium, driven headless — is the only renderer
-paperband ships with. Select it with `--renderer` (`-r`, default `playwright`) and check
-availability with `mvn paperband:renderers`. Renderer choice is a build setting — there is no
-`renderer:` key in `paperband.yaml`.
+paperband ships *on the plugin's own classpath*, and the only one that produces a PDF.
+Select it with `--renderer` (`-r`, default `playwright`) and check availability with
+`mvn paperband:renderers`. Renderer choice is a build setting — there is no `renderer:` key
+in `paperband.yaml`.
 
 ## Why only one
 
@@ -42,6 +43,20 @@ download and losing the zero-dependency pure-Java fallback.
   reaching the PDF fully rendered (see Card Structure in the Authoring section). A
   rejected promise fails the render with the script's own error, so a diagram that
   doesn't parse is a build failure, not a half-drawn page.
+
+## Renderers that don't produce a PDF
+
+The SPI's name is historical: what it really contracts for is HTML in, one file out. A
+renderer whose output isn't a PDF says so by returning `false` from `producesPdf()`, and
+the build then skips the four passes that would otherwise reopen the output with PDFBox —
+two-pass page-number resolution for a printed toc/index, the full-page-cover splice, the
+watermark stamp, and the bookmark outline. Pointing PDFBox at a non-PDF would fail the
+build *after* a successful render, which is the most confusing place to fail.
+
+The page-budget check sits deliberately outside that guard: it measures the DOM rather than
+the finished file, so a non-PDF renderer still gets per-card enforcement. `render-pptx` is
+the one such renderer in the repo — an optional module, not a plugin dependency. See
+Slides.
 
 ## Setup notes
 

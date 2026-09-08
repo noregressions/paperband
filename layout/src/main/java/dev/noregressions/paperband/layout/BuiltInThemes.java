@@ -25,7 +25,8 @@ public final class BuiltInThemes {
             "herodevs",
             "editorial-gold",
             "workshop",
-            "noregressions"
+            "noregressions",
+            "deck"
     );
 
     private BuiltInThemes() {}
