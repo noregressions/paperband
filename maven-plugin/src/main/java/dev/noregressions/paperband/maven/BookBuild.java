@@ -360,7 +360,8 @@ final class BookBuild {
         // is on the site's landing page — same file, same mechanism, and the
         // markdown branches on `output` where the two want different words.
         layout.setSectionBodies(SectionBodies.render(
-                bookCtx, layoutsDir, includeProviderConfig, cards, "print", target));
+                bookCtx, layoutsDir, includeProviderConfig, cards, "print", target,
+                blockTemplates, log));
         // Chapter numbers are derived from book order, so a number written into
         // a cross-reference label is a copy, and copies drift. Checked here,
         // before renderBook lets CardLinks rewrite the `card:` hrefs the check

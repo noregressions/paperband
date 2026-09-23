@@ -6,3 +6,5 @@ axis:
 order:
   - 01-introduction
   - 02-quickstart
+  - 03-java-first
+  - 04-docs-anywhere

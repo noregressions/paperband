@@ -53,8 +53,9 @@ To put a book in a project you already have, declare the plugin there:
 
 There's no `<input>` in that block on purpose. Put the book at `src/main/paperband/`
 — `paperband.yaml` at its root, cards under `content/` — and every goal finds it without
-being told. See Organising Content for the full conventional layout, and Maven Plugin for
-the `<home>`, `<content>` and legacy `<input>` overrides when your book lives elsewhere.
+being told. [Java-first Layout](card:java-first) walks through that layout, and
+[Docs Where They Already Are](card:docs-anywhere) covers `<content>`, `<book>` and the
+legacy `<input>` for a book whose Markdown lives somewhere else.
 
 `mvn package` now builds the book along with the rest of the project. Every goal also runs
 on its own, without an execution, which is how the examples throughout this guide are

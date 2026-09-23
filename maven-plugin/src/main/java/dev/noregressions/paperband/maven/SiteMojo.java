@@ -280,7 +280,8 @@ public class SiteMojo extends AbstractPaperbandMojo {
         layout.setExtraCss(stylesheetPaths());
         layout.setWatermark(watermark(bookCtx));
         layout.setSectionBodies(SectionBodies.render(
-                bookCtx, geo.layouts(), providerConfig, cards, "site", siteTarget));
+                bookCtx, geo.layouts(), providerConfig, cards, "site", siteTarget,
+                blockTemplates, getLog()));
         Map<String, String> pages;
         try {
             pages = layout.renderSite(cards, contexts, bookCtx);

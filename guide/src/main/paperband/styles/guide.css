@@ -75,3 +75,27 @@ figure.filetree pre {
   border-radius: 0;
   padding: 0.4rem 0 0.4rem 1rem;
 }
+
+/* ── Index: the two setup paths (content/_section.md) side by side ──────── */
+.paperband-site .section-body.book-body {
+  max-width: var(--pb-landing-max-width, 74rem);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem 1.5rem;
+}
+@media (max-width: 48rem) {
+  .paperband-site .section-body.book-body { grid-template-columns: 1fr; }
+}
+.paperband-site .book-body > section.block.intro { grid-column: 1 / -1; }
+.paperband-site .book-body > section.block:not(.intro) {
+  border: 1px solid #d8dee6;
+  border-top: 4px solid var(--guide-accent);
+  border-radius: 4px;
+  padding: 0.25rem 1.25rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+}
+.paperband-site .book-body > section.block:not(.intro) > p:last-child {
+  margin-top: auto;
+  font-weight: 600;
+}

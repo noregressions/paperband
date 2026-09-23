@@ -10,6 +10,7 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="layout" />
+        <module name="render-pptx" />
         <module name="core" />
         <module name="include" />
         <module name="paperband-archetype" />
@@ -20,5 +21,8 @@
         <module name="config" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="cli" target="21" />
+    </bytecodeTargetLevel>
   </component>
 </project>

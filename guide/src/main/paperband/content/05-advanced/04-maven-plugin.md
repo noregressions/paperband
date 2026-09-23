@@ -24,8 +24,9 @@ oneliner: "Ten goals: build, site, publish, and the inspection goals around them
 | `blocks` | List the ```` ```type ```` fences this build can render, and what renders each | *(invoke directly)* |
 
 Every goal runs standalone as well as from an execution — `mvn paperband:structure
--Dpaperband.input=book` needs no POM edit — and every parameter has a `-D` property, so a
-bound execution can be overridden from the command line.
+-Dpaperband.input=book` needs no POM edit — and every parameter has a `-D` property that
+fills it whenever the POM leaves it unset. See Overriding from the command line below for
+the one case that catches people out.
 
 ## Add the plugin
 
@@ -92,10 +93,26 @@ many pages — so the text still has room to breathe. See Themes / Full-bleed th
 Like `pageSize`, this parameter seeds the *base* geometry: a `vars.page.margins` block in
 the book's own yaml still wins over it.
 
-Exactly one of `input` and `book` must be configured — the first walks a directory tree,
-the second declares the structure outright. Every other parameter also has a `-D` property,
-so a bound execution can be overridden from the command line without editing the
-`pom.xml`.
+At most one of `content`, `input` and a card-selecting `book` may be configured — the first
+two walk a directory tree, the third declares the structure outright — and none is needed
+for a book at the conventional `src/main/paperband`.
+
+### Overriding from the command line
+
+A `-D` property fills a parameter the POM doesn't set. It does **not** replace one the POM
+does: Maven gives an explicit `<configuration>` value precedence over the property, so with
+`<theme>editorial</theme>` in the POM, `-Dpaperband.theme=dark` is silently ignored.
+
+To keep a value overridable, declare it as a POM property instead of a plugin parameter:
+
+```xml
+<properties>
+  <paperband.theme>editorial</paperband.theme>
+</properties>
+```
+
+The build uses `editorial`, and `mvn package -Dpaperband.theme=dark` gets `dark`, because a
+command-line property wins over a POM property of the same name.
 
 ## Declare the book in the POM
 

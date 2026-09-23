@@ -354,8 +354,10 @@ mvn paperband:structure</code></pre>
             </tbody>
         </table>
 
-        <p>Every parameter has a <code>-D</code> property, so a bound execution can be
-        overridden from the command line.</p>
+        <p>Every parameter has a <code>-D</code> property, which fills it whenever the POM
+        leaves it unset. A value set explicitly in the plugin's <code>&lt;configuration&gt;</code>
+        wins over the command line, so declare a value you want to override as a
+        <code>&lt;properties&gt;</code> entry (<code>&lt;paperband.theme&gt;</code>) instead.</p>
     </section>
 
     <section>
