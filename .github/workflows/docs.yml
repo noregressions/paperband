@@ -1,0 +1,90 @@
+# Builds the documentation site and publishes it to GitHub Pages.
+#
+# The guide is written in Paperband and rendered by Paperband, so this workflow
+# builds the plugin from the commit being published and then runs it against
+# guide/src/main/paperband. The docs can't drift from the code: a `{% fragment %}`
+# pulls its example straight out of the source file it quotes, and a broken
+# cross-reference fails the build rather than shipping.
+#
+# That is also why there's no `paths:` filter. A change anywhere in the source
+# can change a fragment the guide quotes, so every push to main re-renders.
+#
+# Pages must be set to deploy from GitHub Actions for this to take effect:
+# Settings -> Pages -> Build and deployment -> Source: GitHub Actions.
+name: docs
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deployment finish rather than cancelling it — a half-published
+# site is worse than a slightly stale one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # Chromium is ~300 MB and the PDF render is the only thing that needs it.
+      - name: Cache Playwright's Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ms-playwright-${{ hashFiles('pom.xml') }}
+          restore-keys: ms-playwright-
+
+      - name: Install the plugin into the local repository
+        run: mvn -B install -DskipTests -Dmaven.javadoc.skip=true
+
+      # Playwright downloads Chromium on first use but not the system libraries
+      # it links against, and a runner image without them fails at render time
+      # with a missing-shared-object error rather than a useful message.
+      - name: Install Chromium and its system libraries
+        run: |
+          mvn -B -q -pl render-playwright dependency:build-classpath \
+            -Dmdep.outputFile="$PWD/playwright-cp.txt"
+          java -cp "$(cat playwright-cp.txt)" \
+            com.microsoft.playwright.CLI install --with-deps chromium
+
+      # The -Pguide profile is what puts the guide module in the reactor. This
+      # renders all three outputs: the site, the PDF and the pptx deck.
+      - name: Build the guide
+        run: mvn -B -Pguide -pl guide package -DskipTests
+
+      - name: Assemble the site
+        run: |
+          mkdir -p site
+          cp index.html llms.txt .nojekyll site/
+          cp -R guide/target/guide-site site/guide
+          cp guide/target/guide.pdf site/guide.pdf
+          cp guide/target/paperband-intro.pptx site/paperband-intro.pptx
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

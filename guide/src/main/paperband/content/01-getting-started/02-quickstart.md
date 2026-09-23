@@ -1,6 +1,6 @@
 ---
 id: quickstart
-oneliner: "Build and run Paperband from source in five minutes."
+oneliner: "Go from an empty directory to a rendered PDF and site."
 ---
 
 # Quickstart
@@ -11,11 +11,29 @@ oneliner: "Build and run Paperband from source in five minutes."
 |---|---|
 | JDK 21+ | Must be a JDK (not JRE) — Maven needs `javac` |
 | Maven 3.8+ | Standard Maven install |
-| Playwright | The only renderer; downloads ~300 MB Chromium on first use |
+| Playwright | The only PDF renderer; downloads ~300 MB Chromium on first use |
+
+## Start from the archetype
+
+The archetype scaffolds a working book — a POM wired to the plugin, a `paperband.yaml`,
+and one card — so you can see a PDF before you learn any of the configuration:
+
+```bash
+mvn archetype:generate \
+  -DarchetypeGroupId=dev.noregressions.paperband \
+  -DarchetypeArtifactId=paperband-archetype \
+  -DarchetypeVersion=0.1.2 \
+  -DgroupId=com.example -DartifactId=my-guide
+cd my-guide
+mvn package
+```
+
+The PDF lands in `target/`. Add more `.md` files under `src/main/paperband/` and run
+`mvn package` again.
 
 ## Add the plugin
 
-Paperband builds books from Maven. Declare the plugin in the project that holds your book:
+To put a book in a project you already have, declare the plugin there:
 
 ```xml
 <plugin>
@@ -26,7 +44,6 @@ Paperband builds books from Maven. Declare the plugin in the project that holds 
     <execution>
       <goals><goal>build</goal></goals>
       <configuration>
-        <input>${project.basedir}/book</input>
         <output>${project.build.directory}/book.pdf</output>
       </configuration>
     </execution>
@@ -34,51 +51,68 @@ Paperband builds books from Maven. Declare the plugin in the project that holds 
 </plugin>
 ```
 
-The plugin shares the parent's version. The parent POM version:
+There's no `<input>` in that block on purpose. Put the book at `src/main/paperband/`
+— `paperband.yaml` at its root, cards under `content/` — and every goal finds it without
+being told. See Organising Content for the full conventional layout, and Maven Plugin for
+the `<home>`, `<content>` and legacy `<input>` overrides when your book lives elsewhere.
 
-{% fragment "../../../../../../pom.xml:version-declaration" %}
-
-`mvn package` now builds the book as part of the build. Every goal can also be invoked
-directly, without an execution, which is how the examples throughout this guide are
+`mvn package` now builds the book along with the rest of the project. Every goal also runs
+on its own, without an execution, which is how the examples throughout this guide are
 written.
+
+## Build your first book
+
+From a module whose book sits at the conventional location, the goals take no arguments:
+
+```bash
+# PDF
+mvn paperband:build -Dpaperband.output=out.pdf
+
+# Static site
+mvn paperband:site -Dpaperband.outputDirectory=out-site
+```
+
+Point them somewhere else with `-Dpaperband.input=`, which walks any directory that has a
+`paperband.yaml` at its root. Cards are the `.md` files found recursively beneath it.
+
+## Explore what's available
+
+Three goals answer questions about a book without rendering it, which makes them the
+cheapest way to check your config did what you meant:
+
+```bash
+# Cards, sections, axes, page budgets and the index terms auto picked
+mvn paperband:structure
+
+# One card's parsed frontmatter, resolved id and block list
+mvn paperband:scan -Dpaperband.input=path/to/card.md
+
+# Discovered renderers, and whether each one works in this environment
+mvn paperband:renderers
+
+# Built-in themes, plus any found under <themeDir>
+mvn paperband:themes
+```
 
 ## Building from source
 
+The plugin is on Maven Central, so most readers never need this. To work on Paperband
+itself, or to try an unreleased change:
+
 ```bash
-git clone https://github.com/gruff-dev/paperband.git
+git clone https://github.com/noregressions/paperband.git
 cd paperband
 mvn -DskipTests install
 ```
 
-That installs the plugin into your local repository, ready for the POM above to resolve.
-
-## Build your first book
-
-```bash
-# PDF
-mvn paperband:build -Dpaperband.input=path/to/your-book -Dpaperband.output=out.pdf
-
-# Static site
-mvn paperband:site -Dpaperband.input=path/to/your-book -Dpaperband.outputDirectory=out-site
-```
-
-A "book" is any directory containing a `paperband.yaml` at its root. Cards are any
-`.md` files found recursively under it.
-
-## Explore what's available
-
-```bash
-# List discovered renderers and whether each is available in your environment
-mvn paperband:renderers
-
-# List all themes (built-in and any under <themeDir>)
-mvn paperband:themes
-```
+That installs the plugin into your local repository, where the POM above resolves it.
+Add `-Pguide` to build this guide too — the PDF, the static site and the deck all land
+under `guide/target/`.
 
 ## Watch Out
 
 The first Playwright render downloads headless Chromium to `~/.cache/ms-playwright/`.
-In a CI environment without internet access, pre-cache it (or point
-`PLAYWRIGHT_BROWSERS_PATH` at an existing download) before the first build. Syntax
-highlighting and ` ```mermaid ` diagrams additionally load their libraries from the CDN
-at render time, so those need network on every build that uses them.
+In CI without internet access, pre-cache it (or point `PLAYWRIGHT_BROWSERS_PATH` at an
+existing download) before the first build. Syntax highlighting and ` ```mermaid `
+diagrams load their libraries from a CDN at render time, so those need network on every
+build that uses them.

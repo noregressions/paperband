@@ -32,7 +32,7 @@ declared order.
 This guide documents Paperband **by using Paperband to build it**. Every card is both
 the documentation and a live demonstration: the rendered PDF and static site you are
 reading were produced by running the plugin's `build` and `site` goals on the source
-in `guide/guide/`.
+in `guide/src/main/paperband/`.
 
 Excerpts pulled from the actual project source via `{% fragment %}` tags are current
 at build time — if the source drifts, the next build catches it.

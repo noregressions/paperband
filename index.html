@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Paperband | Markdown to PDF & Web</title>
-    <meta name="description" content="A Java-based engine for turning Markdown files into beautiful PDFs and websites.">
+    <title>Paperband | Markdown to PDF, site and slides</title>
+    <meta name="description" content="A Maven plugin that renders one set of Markdown files as a print-ready PDF, a browsable static site, and a slide deck.">
     <style>
         :root {
             --bg-color: #fdfdfc; /* Off-white paper look */
@@ -12,6 +12,7 @@
             --accent-color: #d96c4a; /* Rubber band orange/red */
             --code-bg: #f1f1ef;
             --border-color: #e0e0e0;
+            --muted: #666;
             --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
         }
@@ -67,6 +68,7 @@
             display: flex;
             gap: 1rem;
             justify-content: center;
+            flex-wrap: wrap;
         }
 
         .btn {
@@ -110,6 +112,10 @@
             margin-bottom: 1.5rem;
         }
 
+        h3 {
+            margin-bottom: 0.3rem;
+        }
+
         .features {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -140,13 +146,77 @@
             font-size: 0.9em;
         }
 
+        pre code {
+            background: none;
+            padding: 0;
+            font-size: inherit;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 0.6rem 0.8rem;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        th {
+            border-bottom: 2px solid var(--accent-color);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        td code {
+            white-space: nowrap;
+        }
+
+        a {
+            color: var(--accent-color);
+        }
+
+        .doc-links {
+            list-style: none;
+            padding: 0;
+        }
+
+        .doc-links li {
+            padding: 0.6rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .doc-links a {
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        .doc-links a:hover {
+            text-decoration: underline;
+        }
+
+        .doc-links span {
+            color: var(--muted);
+        }
+
+        .note {
+            border-left: 4px solid var(--border-color);
+            padding: 0.2rem 0 0.2rem 1rem;
+            color: var(--muted);
+        }
+
         footer {
             text-align: center;
             margin-top: 4rem;
             padding-top: 2rem;
             border-top: 2px dashed var(--border-color);
             font-size: 0.9rem;
-            color: #666;
+            color: var(--muted);
         }
 
         footer a {
@@ -160,35 +230,63 @@
     <header>
         <h1>paperband</h1>
         <div class="tagline">Held together by paperband.</div>
-        <p>A fast, Java-powered engine to convert your Markdown into beautiful PDFs and static websites.</p>
-        
+        <p>A Maven plugin that renders one set of Markdown files as a print-ready PDF,
+        a browsable static site, and a slide deck.</p>
+
         <div class="hero-buttons">
-            <a href="https://github.com/noregressions/paperband" class="btn btn-primary">View on GitHub</a>
-            <a href="#quickstart" class="btn btn-secondary">Quick Start</a>
+            <a href="guide/" class="btn btn-primary">Read the guide</a>
+            <a href="#quickstart" class="btn btn-secondary">Quick start</a>
+            <a href="https://github.com/noregressions/paperband" class="btn btn-secondary">GitHub</a>
         </div>
     </header>
 
     <section>
-        <h2>Why Paperband?</h2>
+        <h2>What it does</h2>
+        <p>Paperband is for content that has to exist twice: a guide that gets printed and
+        also browsed, a runbook that lives on a wiki and in an onboarding pack, a migration
+        playbook that becomes a conference talk. Writing it twice means it drifts. Paperband
+        takes one source tree and renders it as many ways as you need.</p>
+
         <div class="features">
             <div class="feature">
-                <h3>Write Once</h3>
-                <p>Focus on your content using standard <code>Markdown</code>. Let the engine handle the complex layout and typesetting rules.</p>
+                <h3>Cards, not pages</h3>
+                <p>Each Markdown file is a <em>card</em>. Its <code>##</code> headings become
+                named blocks, and the heading text turns into a CSS class, so a theme can
+                style a "Watch out" section differently from an intro without you marking
+                anything up.</p>
             </div>
             <div class="feature">
-                <h3>Export Anywhere</h3>
-                <p>Generate print-ready PDFs and responsive HTML websites from the exact same source files in one build.</p>
+                <h3>Three outputs, one source</h3>
+                <p>A PDF with a table of contents, cross-reference page numbers and a
+                back-of-book index. A static site with sidebar navigation. A 16:9 deck, as
+                PDF or as a real <code>.pptx</code>.</p>
             </div>
             <div class="feature">
-                <h3>Java Native</h3>
-                <p>Built for the JVM. A Maven plugin, so a book builds the way the rest of your project does — same reactor, same phases, same CI.</p>
+                <h3>Builds like the rest of your project</h3>
+                <p>It's a Maven plugin, so a book builds in the same reactor, the same
+                phases and the same CI as everything else. Broken cross-references fail the
+                build rather than shipping.</p>
             </div>
         </div>
     </section>
 
     <section id="quickstart">
-        <h2>Quick Start</h2>
-        <p>Add the plugin to the project that holds your book:</p>
+        <h2>Quick start</h2>
+
+        <p>Needs a JDK 21+ and Maven 3.8+. The archetype scaffolds a working book, so you
+        can see a PDF before learning any configuration:</p>
+
+        <pre><code>mvn archetype:generate \
+  -DarchetypeGroupId=dev.noregressions.paperband \
+  -DarchetypeArtifactId=paperband-archetype \
+  -DarchetypeVersion=0.1.2 \
+  -DgroupId=com.example -DartifactId=my-guide
+
+cd my-guide
+mvn package</code></pre>
+
+        <p>The PDF lands in <code>target/</code>. To put a book in a project you already
+        have, declare the plugin there instead:</p>
 
         <pre><code>&lt;plugin&gt;
     &lt;groupId&gt;dev.noregressions.paperband&lt;/groupId&gt;
@@ -198,28 +296,133 @@
         &lt;execution&gt;
             &lt;goals&gt;&lt;goal&gt;build&lt;/goal&gt;&lt;/goals&gt;
             &lt;configuration&gt;
-                &lt;input&gt;${project.basedir}/docs&lt;/input&gt;
                 &lt;output&gt;${project.build.directory}/book.pdf&lt;/output&gt;
             &lt;/configuration&gt;
         &lt;/execution&gt;
     &lt;/executions&gt;
 &lt;/plugin&gt;</code></pre>
 
-        <p><code>mvn package</code> now builds the book. Every goal also runs on its own,
-        no execution needed:</p>
+        <p>There's no <code>&lt;input&gt;</code> in that block on purpose. Put the book at
+        <code>src/main/paperband/</code> — <code>paperband.yaml</code> at its root, cards
+        under <code>content/</code> — and every goal finds it without being told:</p>
 
-        <pre><code># Generate a PDF
-mvn paperband:build -Dpaperband.input=docs/ -Dpaperband.output=build/book.pdf
+        <pre><code>src/main/paperband/
+  paperband.yaml     ← title, theme, axes, css, vars
+  content/           ← the cards, at any folder depth
+  layouts/           ← optional Pebble template overrides
+  styles/            ← optional css</code></pre>
 
-# Generate a website
-mvn paperband:site -Dpaperband.input=docs/ -Dpaperband.outputDirectory=build/html
+        <p><code>mvn package</code> now builds the book. Every goal also runs on its own, no
+        execution needed:</p>
 
-# Check what a book contains, without rendering it
-mvn paperband:structure -Dpaperband.input=docs/</code></pre>
+        <pre><code># PDF
+mvn paperband:build -Dpaperband.output=target/book.pdf
+
+# Static site
+mvn paperband:site -Dpaperband.outputDirectory=target/site
+
+# What's in the book, without rendering it
+mvn paperband:structure</code></pre>
+
+        <p class="note">The first PDF render downloads headless Chromium (~300 MB) to
+        <code>~/.cache/ms-playwright/</code>. On CI without internet, pre-cache it or point
+        <code>PLAYWRIGHT_BROWSERS_PATH</code> at an existing copy — a missing Chromium fails
+        the build, there's no fallback renderer. The site goal doesn't need it.</p>
+    </section>
+
+    <section>
+        <h2>Goals</h2>
+
+        <p>Four goals produce something; the rest answer questions about a book so you can
+        check your configuration without paying for a render.</p>
+
+        <table>
+            <thead>
+                <tr><th>Goal</th><th>What it does</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>build</code></td><td>Render the book to a PDF, or to a deck with <code>&lt;renderer&gt;pptx&lt;/renderer&gt;</code></td></tr>
+                <tr><td><code>site</code></td><td>Render the book to a static HTML site</td></tr>
+                <tr><td><code>render</code></td><td>Turn an already-generated HTML file into a PDF</td></tr>
+                <tr><td><code>publish</code></td><td>Build every edition declared in the book's <code>publication:</code> block</td></tr>
+                <tr><td><code>structure</code></td><td>List cards, sections, axes, page budgets and the auto-picked index terms</td></tr>
+                <tr><td><code>scan</code></td><td>Show one card's frontmatter, resolved id and block list</td></tr>
+                <tr><td><code>themes</code></td><td>List built-in themes and any of your own</td></tr>
+                <tr><td><code>renderers</code></td><td>List renderers and whether each one works here</td></tr>
+                <tr><td><code>blocks</code></td><td>List the registered block renderers</td></tr>
+                <tr><td><code>pages</code></td><td>Check cards against their page budgets</td></tr>
+            </tbody>
+        </table>
+
+        <p>Every parameter has a <code>-D</code> property, so a bound execution can be
+        overridden from the command line.</p>
+    </section>
+
+    <section>
+        <h2>Beyond the basics</h2>
+
+        <div class="features">
+            <div class="feature">
+                <h3>Diagrams</h3>
+                <p><code>```mermaid</code> renders in the browser. <code>```plantuml</code>
+                renders server-side when you add the optional <code>block-plantuml</code>
+                module to the plugin's classpath.</p>
+            </div>
+            <div class="feature">
+                <h3>Includes and fragments</h3>
+                <p><code>{% fragment %}</code> pulls a named anchor out of a real source file
+                at build time, so an example in the docs can't drift from the code it quotes.</p>
+            </div>
+            <div class="feature">
+                <h3>Targets and conditionals</h3>
+                <p>Branch content on the output profile with <code>where:</code> predicates —
+                a paragraph that belongs in the printed book but not on the web.</p>
+            </div>
+            <div class="feature">
+                <h3>Axes and sections</h3>
+                <p>Group cards by a categorical dimension you declare (tier, subsystem). Each
+                value gets a PDF divider, a site landing page and a nav entry.</p>
+            </div>
+            <div class="feature">
+                <h3>Watermarks</h3>
+                <p>Stamp "DRAFT" or a logo across the PDF, with a screen-only variant that
+                disappears when the page is printed.</p>
+            </div>
+            <div class="feature">
+                <h3>Page budgets</h3>
+                <p>Declare that a card must fit on one page. The build fails when it doesn't,
+                which catches a runbook that quietly grew a second sheet.</p>
+            </div>
+            <div class="feature">
+                <h3>Editions</h3>
+                <p>A <code>publication:</code> block cuts the same content several ways — a
+                full guide, a mini guide, a client edition — each with its own theme, page
+                size and card selection, from one <code>publish</code> goal.</p>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>Documentation</h2>
+
+        <p>The guide is written in Paperband and built by Paperband — the site you'd read it
+        on, the PDF you'd print, and the deck are all produced from the same cards by the
+        plugin's own goals. It is the reference and the worked example at once.</p>
+
+        <ul class="doc-links">
+            <li><a href="guide/">The Paperband guide</a> <span>— the full reference, as a site</span></li>
+            <li><a href="guide.pdf">guide.pdf</a> <span>— the same book, printed, with a table of contents and index</span></li>
+            <li><a href="paperband-intro.pptx">paperband-intro.pptx</a> <span>— two slides, built by the pptx renderer</span></li>
+            <li><a href="llms.txt">llms.txt</a> <span>— the whole thing condensed into one file for an LLM</span></li>
+            <li><a href="https://github.com/noregressions/paperband">Source on GitHub</a> <span>— issues, and the guide's Markdown</span></li>
+        </ul>
     </section>
 
     <footer>
-        <p>Open source and maintained by <a href="https://github.com/noregressions">noregressions</a>. Licensed under Apache 2.0</p>
+        <p>Latest release 0.1.2, on
+        <a href="https://central.sonatype.com/artifact/dev.noregressions.paperband/paperband-maven-plugin">Maven Central</a>.
+        Open source and maintained by <a href="https://github.com/noregressions">noregressions</a>.
+        Licensed under Apache 2.0.</p>
     </footer>
 
 </body>

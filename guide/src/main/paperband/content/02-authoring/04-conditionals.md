@@ -6,7 +6,7 @@ oneliner: "Substitute vars and gate sections with real Pebble {{ vars.x }} / {% 
 # Vars and Conditionals
 
 Every card body is evaluated as a Pebble template before Markdown parsing, alongside
-`{% fragment %}` resolution (see [Includes](03-includes)) — both run in the same pass.
+`{% fragment %}` resolution (see [Includes](card:includes)) — both run in the same pass.
 This means real Pebble syntax works directly in card prose: variable interpolation and
 `{% if %}` conditionals, scoped under a `vars` map.
 
