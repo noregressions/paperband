@@ -1,5 +1,5 @@
 ---
-id: java-first
+id: start-a-new-book
 oneliner: "A book inside a Maven project, at src/main/paperband, found by convention with no configuration."
 index: [src/main/paperband, convention, archetype]
 ---
@@ -11,7 +11,7 @@ The book goes in `src/main/paperband/`, where every goal finds it without `<inpu
 `<home>` or `<content>`, in the same way Maven finds `src/main/java`.
 
 This guide uses this layout. It requires JDK 21+ and Maven 3.8+; see
-[Before You Start](card:quickstart).
+[Before You Start](card:before-you-start).
 
 ## From nothing to a PDF
 
@@ -84,13 +84,6 @@ mvn paperband:structure
 mvn paperband:scan -Dpaperband.input=src/main/paperband/content/01-introduction.md
 ```
 
-## Adding a book to a project you already have
-
-No archetype is needed. Create `src/main/paperband/content/` in the module, optionally add
-a `paperband.yaml` beside `content/` for the title and theme, and declare the plugin with
-only an output (see The POM, below). `mvn package` then builds the book with the rest of
-the module.
-
 ## The layout
 
 ```filetree
@@ -157,31 +150,10 @@ mvn paperband:build -Dpaperband.output=target/my-guide.pdf
 mvn paperband:site  -Dpaperband.outputDirectory=target/site
 ```
 
-## A module that is only a book
+## Other layouts
 
-When a module only builds documentation, give it `pom` packaging. This skips the compile,
-test and jar steps, and Maven's "JAR will be empty" warning, while still running the plugin
-executions bound to `package`. This guide's module uses it:
-
-```xml
-<artifactId>guide</artifactId>
-<packaging>pom</packaging>
-```
-
-## Moving the whole home
-
-`<home>` moves the conventional location. `content/`, `layouts/` and `paperband.yaml` are
-then looked up under the new directory:
-
-```xml
-<configuration>
-  <home>${project.basedir}/src/main/handbook</home>
-</configuration>
-```
-
-This lets one module build two books. This guide's slide deck is a second home at
-`src/main/paperband-deck`, built by an execution that sets only `<home>`, `<output>` and
-`<renderer>`. See [Slides](card:slides).
+To add a book to a project that already exists, give a documentation-only module `pom`
+packaging, or keep two books in one module, see [Place a Book in a Project](card:place-a-book).
 
 ## Watch Out
 

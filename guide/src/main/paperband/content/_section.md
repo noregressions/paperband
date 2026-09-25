@@ -9,7 +9,9 @@ static site and a slide deck. It is intended for content published in more than 
 such as a guide that is both printed and browsed, or a runbook kept on a wiki and in an
 onboarding pack. All outputs are rendered from the same files.
 
-Both setups need JDK 21+ and Maven 3.8+. Choose one based on where the Markdown lives.
+New to Paperband? [Your First Book](card:your-first-book) builds a book step by step, from the
+first PDF to a site and a slide deck. To set up a real project, choose one of the two
+setups below, based on where the Markdown lives. Both need JDK 21+ and Maven 3.8+.
 
 ## :folder-plus: Start a new book {.path}
 
@@ -29,7 +31,7 @@ mvn package
 `mvn package` writes `target/my-guide.pdf` and a static site in `target/site/`. Cards
 are `.md` files in `src/main/paperband/content/`.
 
-[Start a new book →](card:java-first)
+[Start a new book →](card:start-a-new-book)
 
 ## :folder-open: Use the Markdown you already have {.path}
 
@@ -55,7 +57,7 @@ mvn paperband:build \
   -Dpaperband.output=target/docs.pdf
 ```
 
-[Use the Markdown you already have →](card:docs-anywhere)
+[Use the Markdown you already have →](card:use-existing-markdown)
 
 ## What else it does {.features}
 
@@ -68,9 +70,9 @@ mvn paperband:build \
   [Card Structure](card:card-structure).
 - **Icons.** `:name:` draws one of 2,000 bundled icons, or your own. See [Icons](card:icons).
 - **Tables from data.** Rows as YAML, markup from a loop, a print layout of its own. See
-  [Tables from Data](card:data-tables).
+  [Tables from Data](card:tables-from-data).
 - **Variants of one source.** Branch content on the output ([Targets](card:targets)),
-  group cards along axes you declare ([Book Configuration](card:book-config#axes)), and
+  group cards along axes you declare ([Book Configuration](card:book-configuration#axes)), and
   publish several editions from one `publication:` block
   ([Maven Plugin](card:maven-plugin#the-publish-goal)).
 - **Build-time checks.** A broken cross-reference, an unknown icon, or a card over its page

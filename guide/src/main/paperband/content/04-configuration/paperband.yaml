@@ -1,4 +1,4 @@
-title: "Configuration"
+title: "Reference: Configuration"
 
 axis:
   section: configuration
@@ -9,3 +9,4 @@ order:
   - 03-organising-content
   - 04-toc-and-index
   - 05-config-reference
+  - 06-key-index

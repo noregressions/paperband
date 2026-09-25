@@ -8,8 +8,9 @@
    bundled index's card-count row is left out; the sidebar already lists the
    sections, and a count says nothing a newcomer needs.
 
-   The two buttons name card pages by id. `card:` links only work in markdown,
-   so if java-first or docs-anywhere is ever renamed, change them here too. #}
+   The buttons name card pages by id. `card:` links only work in markdown, so
+   if one of these cards is renamed, change it here and add the old address to
+   guide/redirects.txt. #}
 {% extends "_site-page" %}
 
 {% block content %}
@@ -20,8 +21,9 @@
   {% if book.series %}<p class="home-tagline">{{ book.series }}</p>{% endif %}
   {% if book.subtitle %}<p class="home-lede">{{ book.subtitle }}</p>{% endif %}
   <nav class="home-actions" aria-label="Get started">
-    <a class="btn btn-primary" href="{{ urlPrefix }}cards/java-first.html">Start a new book</a>
-    <a class="btn btn-secondary" href="{{ urlPrefix }}cards/docs-anywhere.html">Use the Markdown you have</a>
+    <a class="btn btn-primary" href="{{ urlPrefix }}cards/your-first-book.html">Take the tutorial</a>
+    <a class="btn btn-secondary" href="{{ urlPrefix }}cards/start-a-new-book.html">Start a new book</a>
+    <a class="btn btn-secondary" href="{{ urlPrefix }}cards/use-existing-markdown.html">Use existing Markdown</a>
     <a class="btn btn-secondary" href="https://github.com/noregressions/paperband">GitHub</a>
   </nav>
 </header>

@@ -1,5 +1,5 @@
 ---
-id: config-reference
+id: configuration-reference
 oneliner: "Every place config lives, every key it can carry, and what wins when two places disagree."
 index: [configuration, precedence, scope]
 ---
@@ -7,7 +7,7 @@ index: [configuration, precedence, scope]
 # Configuration Reference
 
 Where configuration can be written, what each place accepts, and which wins when two
-places set the same thing. [Config Cascade](card:config-cascade) explains the model; this
+places set the same thing. [Configuration Cascade](card:configuration-cascade) explains the model; this
 page is the full list.
 
 ## Where config lives
@@ -23,7 +23,7 @@ holds *within* a scope; see Who wins, key by key, below.
 | **POM** — `<book>` element | Book-level config declared outside the book | Book |
 | **Book root `paperband.yaml`** | The book: title, axes, theme, page, cover, sections… | Book |
 | **Folder `paperband.yaml`** | Per-subtree: vars, css, layout, axis, orientation, structure | Card |
-| **Card frontmatter** | Per-card: `id`, `title`, `oneliner`, `effort`, `max_pages`, `verify`, `index`, axis values ([Frontmatter Reference](card:frontmatter)) | Card |
+| **Card frontmatter** | Per-card: `id`, `title`, `oneliner`, `effort`, `max_pages`, `verify`, `index`, axis values ([Frontmatter Reference](card:frontmatter-reference)) | Card |
 
 Editions are declared in a `publication:` block in the book root's `paperband.yaml`, read
 only by `paperband:publish`. It describes the builds to run and does not participate in
@@ -53,13 +53,14 @@ Two general rules follow from the table. For book-scope keys, a POM declaration 
 the root yaml; for card-scope keys, a deeper yaml wins over the POM. A `-D` property fills
 a POM parameter only when the `<configuration>` doesn't set it.
 
-Setting a book-scope key in a folder yaml is an error, and the message names the file.
+A folder yaml that sets `theme`, `axes`, `cover`, `back`, `header`, `footer`, `sidebar`, `cardSchema`, `publication`, and `page.size`, `page.margins` or `page.fontScale` fails the build, and the message names the file. A
+folder's `title` labels its section, and its `sections:` groups its subfolders.
 
 ## Book-scope keys
 
 Read from the book's own `paperband.yaml` (or `<home>/paperband.yaml` under a split
-geography). The first table is book-only: a folder that sets one of these keys is an
-error. The second is read at book level and also cascades, so a folder may extend or
+geography). The first table is read at book level only; see the rule above for what a folder yaml
+may not set. The second is read at book level and also cascades, so a folder may extend or
 override it.
 
 | Key | What | POM equivalent |
@@ -200,6 +201,10 @@ In the POM, the element's presence is the opt-in:
 ```
 
 PDF builds ignore it. A folder yaml declaring it is an error.
+
+The same key controls the navigation sidebar in an `<emitHtml>` file, which is on by
+default: `sidebar: false` (or `enabled: false`) turns it off there as well. A book that
+doesn't mention `sidebar` gets the emitted file's sidebar and no site sidebar.
 
 The previous spelling (`vars.sidebar`, `vars.sidebar_collapsed`,
 `vars.sidebar_sections_collapsed`) still works and is deprecated.

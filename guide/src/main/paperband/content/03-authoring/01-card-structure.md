@@ -267,26 +267,26 @@ installed on the build machine.
 
 `mvn paperband:blocks` lists every fence type the build can render and what renders each.
 Run it when a diagram renders as a code block. Writing your own renderer
-is in [Extending Paperband](card:extending).
+is in [Extending Paperband](card:extending-paperband).
 
 ## Linking to another card
 
 Write the card's id with a `card:` scheme, in an ordinary Markdown link:
 
 ```markdown
-See [the Frontmatter Reference](card:frontmatter) for every field.
+See [the Frontmatter Reference](card:frontmatter-reference) for every field.
 ```
 
 Paperband spells it for whichever output is being built:
 
 | Written | In the PDF | On the site |
 |---|---|---|
-| `card:frontmatter` | `#card-frontmatter` | `cards/frontmatter.html`, from wherever the page sits |
-| `card:frontmatter#watch-out` | `#card-frontmatter` | `cards/frontmatter.html#watch-out` |
+| `card:icons` | `#card-icons` | `cards/icons.html`, from wherever the page sits |
+| `card:icons#watch-out` | `#card-icons` | `cards/icons.html#watch-out` |
 
 A card's id is both a PDF destination and a site page, and a hand-written link can only
-use one form. `#card-frontmatter` does not resolve on the site, where each card is a
-separate document; `cards/frontmatter.html` does not resolve in the PDF, and is also wrong
+use one form. `#card-icons` does not resolve on the site, where each card is a
+separate document; `cards/icons.html` does not resolve in the PDF, and is also wrong
 from a card page, which is one directory below the landing pages. `card:` resolves to the
 correct form for each output.
 
@@ -299,10 +299,10 @@ A `card:` link to a card that isn't in the book fails the build:
 
 ```output
 A card link points at nothing:
-  card:frontmater in 01-card-structure.md — no card has that id. Did you mean 'frontmatter'?
+  card:icnos in 01-card-structure.md — no card has that id. Did you mean 'icons'?
 ```
 
-Anchors are also checked: `card:frontmatter#watchout` fails and suggests `watch-out`.
+Anchors are also checked: `card:icons#watchout` fails and suggests `watch-out`.
 
 A link to a card that a `select:` or an edition excludes gets a separate message:
 

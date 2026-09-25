@@ -1,15 +1,15 @@
 ---
-id: docs-anywhere
+id: use-existing-markdown
 oneliner: "Point the plugin at Markdown that lives anywhere: a docs folder, a readme per service, another tool's source."
 index: [existing docs, content root]
 ---
 
-# Use the Markdown You Already Have
+# Use Existing Markdown
 
 Use this setup when the Markdown already exists, for example in `docs/`, in one readme
 per service, or in a folder a static site generator also reads. The files stay where they
 are, and the POM tells the plugin where to find them. It requires JDK 21+ and Maven 3.8+;
-see [Before You Start](card:quickstart).
+see [Before You Start](card:before-you-start).
 
 ## From your docs to a PDF
 
@@ -50,7 +50,7 @@ without rendering. Each `.md` file is a card and each subfolder a section;
 
 Existing Markdown builds without edits: frontmatter is optional, and a card's id comes from
 its path. To build the book on every `mvn package`, bind the goals in
-`<executions>` as shown under [One folder](card:docs-anywhere#one-folder-content), below.
+`<executions>` as shown under [One folder](card:use-existing-markdown#one-folder-content), below.
 
 ## One folder, or files all over
 

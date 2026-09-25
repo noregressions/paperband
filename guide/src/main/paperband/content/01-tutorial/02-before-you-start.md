@@ -1,5 +1,5 @@
 ---
-id: quickstart
+id: before-you-start
 oneliner: "What you need installed, which way in to take, and the goals that inspect a book."
 ---
 
@@ -16,17 +16,16 @@ Maven Central on first use.
 | Maven 3.8+ | Standard Maven install |
 | Playwright | The only PDF renderer; downloads ~300 MB Chromium on first use |
 
-## Two ways in
-
-The setup depends on where the Markdown will live:
+## Where to go next
 
 | If… | Read |
 |---|---|
-| The docs are new, or can live inside the project | [Start a New Book](card:java-first): the archetype, and a book at `src/main/paperband/` found by convention |
-| The Markdown already exists and stays where it is | [Use the Markdown You Already Have](card:docs-anywhere): one `<content>` line, or glob patterns for files spread across the project |
+| You are new to Paperband | [Your First Book](card:your-first-book): a step-by-step tutorial, from the first PDF to a site and a slide deck |
+| The docs are new, or can live inside the project | [Start a New Book](card:start-a-new-book): the archetype, and a book at `src/main/paperband/` found by convention |
+| The Markdown already exists and stays where it is | [Use Existing Markdown](card:use-existing-markdown): one `<content>` line, or glob patterns for files spread across the project |
 
-Both produce the same kind of book and use the same goals. The rest of the guide applies
-to both.
+Both setups produce the same kind of book and use the same goals. The How-to Guides cover
+specific tasks; the Reference sections describe every setting.
 
 ## Check the environment
 

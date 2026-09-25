@@ -8,16 +8,18 @@ axes:
   - name: section
     title: "Guide Section"
     values:
-      - id: getting-started
-        label: "Getting Started"
+      - id: tutorial
+        label: "Tutorial"
+      - id: how-to
+        label: "How-to Guides"
       - id: authoring
-        label: "Authoring"
+        label: "Reference: Authoring"
       - id: configuration
-        label: "Configuration"
+        label: "Reference: Configuration"
       - id: rendering
-        label: "Rendering"
+        label: "Reference: Rendering"
       - id: advanced
-        label: "Advanced"
+        label: "Reference: Advanced"
 
 # The book's sheet. Book scope: one book is printed on one page size, so this
 # is read from THIS file only — a folder yaml may set page.orientation (which

@@ -1,5 +1,5 @@
 ---
-id: data-tables
+id: tables-from-data
 oneliner: "Write a big table's rows once as YAML, build the markup with a Pebble loop, and give print its own layout."
 index: [tables, rowspan, thead, macros]
 ---

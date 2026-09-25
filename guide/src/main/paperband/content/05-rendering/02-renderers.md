@@ -35,7 +35,7 @@ pure-Java fallback.
   in `page:`, not in CSS.
 - Per-card rotation, via a named `@page` rule: a card whose folder declares
   `page.orientation` gets every sheet it occupies rotated, inside the same single render
-  pass. See [Config Cascade](card:config-cascade).
+  pass. See [Configuration Cascade](card:configuration-cascade).
 - Page JavaScript runs before the snapshot. The renderer waits for network-idle, then
   `document.fonts.ready`, then every promise a page script has pushed into
   `window.paperbandPending`. This is how ` ```mermaid ` diagrams are fully rendered
@@ -47,7 +47,7 @@ pure-Java fallback.
 
 `pptx` writes a slide deck instead of a PDF, and a book can add other renderers. How a
 renderer declares its output, and which PDF-only steps are skipped for it, is covered in
-[Extending Paperband](card:extending).
+[Extending Paperband](card:extending-paperband).
 
 ## Setup notes
 

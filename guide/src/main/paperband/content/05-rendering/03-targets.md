@@ -50,7 +50,7 @@ enforced enum.
 | `16x9`, `slide` | 13.333×7.5in | PowerPoint's widescreen slide (960×540pt). Zero margins, like `a5`; the theme supplies the inset. See [Slides](card:slides) |
 
 A size outside this list works too, via `page.size: { width, height, unit }` — see
-[Book Configuration](card:book-config) and [Config Cascade](card:config-cascade) for the full `page:` block (margins, orientation,
+[Book Configuration](card:book-configuration) and [Configuration Cascade](card:configuration-cascade) for the full `page:` block (margins, orientation,
 fontScale, measure) and for why `size` and `margins` are **book scope**: they are read from
 the book's own `paperband.yaml` only, and a folder that sets them fails the build. The named
 presets above, except `packt`, have per-theme `font-size` rules. Any other size gets an
@@ -116,7 +116,7 @@ order:
 Plain-string entries are always included; only map entries carry conditions. To gate
 prose inside a card rather than the whole card, branch in the card body: it sees `target`
 (the raw build target) and `output` (`print` or `site`), as in
-`{% if output == 'print' %}`. See [Tables from Data](card:data-tables) for an example.
+`{% if output == 'print' %}`. See [Tables from Data](card:tables-from-data) for an example.
 
 ## Watch Out
 

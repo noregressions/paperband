@@ -1,5 +1,5 @@
 ---
-id: book-config
+id: book-configuration
 oneliner: "The root paperband.yaml declares the book: title, axes, CSS, vars, and targets."
 index: [paperband.yaml, axes, vars]
 ---
@@ -12,7 +12,7 @@ default `theme`, the declared build `targets`, the book's `page` geometry, and t
 declared `sections`.
 
 These are **book scope**: read from this file and no other. Setting one in a folder's
-`paperband.yaml` fails the build. See [Config Cascade](card:config-cascade) for the scope model and for how the
+`paperband.yaml` fails the build. See [Configuration Cascade](card:configuration-cascade) for the scope model and for how the
 Maven plugin's `<book>` element layers on top.
 
 ## `page`
@@ -33,7 +33,7 @@ write one in the book stylesheet: it would win on cascade order, while the conte
 height would still be computed from this block.
 
 `orientation` is the single key here that a folder *may* also set: it rotates that folder's
-cards without changing the book's paper. See [Config Cascade](card:config-cascade).
+cards without changing the book's paper. See [Configuration Cascade](card:configuration-cascade).
 
 ## `axes`
 
@@ -403,7 +403,7 @@ Don't name your file the same as the template it extends: a same-named override 
 | Key | What |
 |---|---|
 | `section` | this section: `id`, `label`, `count`, `landingTemplate`, `minimal`, `landingPage`, `cards` |
-| `cards` | its cards, each `{id, title, oneliner, axes, effort, subsystem}` |
+| `cards` | its cards, each `{id, title, oneliner, axes, effort}` |
 | `book` | `title`, `subtitle`, `series`, `author`, `vars`, `cover`, `back`, `header`, `footer` |
 | `sections` | every section's meta, for cross-links |
 | `navEntries` / `sidebarEntries` | the nav model (the shell passes these to the partials) |

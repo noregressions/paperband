@@ -136,7 +136,7 @@ A declared section behaves as one group everywhere a discovered one would: one P
 one site landing page (`<id>.html`), one nav and sidebar entry. `id` defaults to a slug of
 the title (`"Foundations"` → `foundations`); declare it to keep the URL stable if the
 title changes. `landing.template` accepts the same presets and paths a section
-folder's own override does (see [Book Configuration](card:book-config)).
+folder's own override does (see [Book Configuration](card:book-configuration)).
 
 `landing: false` removes a declared section's page. The section still groups and orders
 its folders and labels its cards in the nav and sidebar, but no PDF divider precedes its

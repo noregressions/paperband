@@ -67,28 +67,11 @@ jobs:
       - name: Build the guide
         run: mvn -B -Pguide -pl guide package -DskipTests
 
-      # The guide IS the site: its landing page is the home page, built by
-      # Paperband from guide/src/main/paperband/content/_section.md like every
-      # other page. The downloads sit beside it at the root.
-      #
-      # The guide used to live under /guide/. Every page it had there gets a
-      # stub that forwards to the same page at the root, keeping the #fragment,
-      # so links made to the old addresses still land.
+      # The guide is the site, with the downloads beside it, plus forwarding
+      # pages for renamed cards (guide/redirects.txt) and for the /guide/
+      # addresses the guide was first published under.
       - name: Assemble the site
-        run: |
-          mkdir -p site
-          cp -R guide/target/guide-site/. site/
-          cp llms.txt .nojekyll site/
-          cp guide/target/guide.pdf site/guide.pdf
-          cp guide/target/paperband-intro.pptx site/paperband-intro.pptx
-          (cd guide/target/guide-site && find . -name '*.html') | while read -r page; do
-            page="${page#./}"
-            up="../$(echo "$page" | sed -e 's|[^/]*/|../|g' -e 's|[^/]*$||')"
-            mkdir -p "site/guide/$(dirname "$page")"
-            printf '<!DOCTYPE html><meta charset="utf-8"><title>Moved</title>\n<link rel="canonical" href="%s%s">\n<meta http-equiv="refresh" content="0; url=%s%s">\n<script>location.replace("%s%s" + location.hash)</script>\n<p>This page has moved to <a href="%s%s">%s%s</a>.</p>\n' \
-              "$up" "$page" "$up" "$page" "$up" "$page" "$up" "$page" "$up" "$page" \
-              > "site/guide/$page"
-          done
+        run: guide/assemble-site.sh site
 
       - uses: actions/upload-pages-artifact@v3
         with:

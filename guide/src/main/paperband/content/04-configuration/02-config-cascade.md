@@ -1,5 +1,5 @@
 ---
-id: config-cascade
+id: configuration-cascade
 oneliner: "Root, folder, and card config layers merge — innermost wins, CSS chains root-first."
 ---
 
@@ -38,7 +38,9 @@ It is read from the book's own `paperband.yaml` and nowhere else: `title`, `axes
 `theme`, `sections`, `cardSchema`, `cover`, `back`, `header`, `footer`, `page`, `sidebar`,
 and the book-wide `sections.landing.template` default.
 
-A book-scope key set in a folder yaml fails the build. See Page geometry, below.
+In a folder yaml, `title` has a different meaning: it labels that folder's section. A
+folder's `sections:` groups its own subfolders. A folder yaml that sets `theme`, `axes`, `cover`, `back`, `header`, `footer`, `sidebar`, `cardSchema`, `publication`, and `page.size`, `page.margins` or `page.fontScale` fails the
+build, naming the file. See Page geometry, below.
 
 `css`, `vars` and `targets` are card scope that starts at the book root: the root sets
 them, and folders extend or override them. Config Reference lists every key with its scope

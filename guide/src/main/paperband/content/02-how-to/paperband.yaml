@@ -1,0 +1,19 @@
+title: "How-to Guides"
+
+axis:
+  section: how-to
+
+order:
+  - 01-start-a-new-book
+  - 02-use-existing-markdown
+  - 03-place-a-book
+  - 04-tables-from-data
+  - 05-i-want-to
+  - 06-troubleshooting
+
+# Sample data for the live table in Tables from Data (04-tables-from-data.md).
+vars:
+  demoFormats:
+    - { icon: file-text, name: "Technical article", reach: 3, depth: 4 }
+    - { icon: mic,       name: "Conference talk",   reach: 4, depth: 3 }
+    - { icon: mail,      name: "Newsletter",        reach: 3, depth: 3 }

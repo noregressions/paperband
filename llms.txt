@@ -7,6 +7,9 @@
 It condenses the full guide, published at https://noregressions.github.io/paperband/
 (source: `guide/src/main/paperband/content/`). Consult that for prose depth; this file is
 the operational reference. The same site serves `guide.pdf` and this file (`llms.txt`).
+The guide is in three parts: a Tutorial (`cards/your-first-book.html`), How-to Guides
+(setup paths, tasks, `cards/i-want-to.html`, `cards/troubleshooting.html`) and Reference
+(Authoring, Configuration with an A–Z `cards/key-index.html`, Rendering, Advanced).
 
 ## What Paperband is
 
@@ -278,11 +281,13 @@ Per-key merge rules:
 | `layout` | Last non-null wins |
 | `targets` | Last non-empty list replaces wholesale |
 
-Book-scope keys (read from the book's own `paperband.yaml` only; setting one in a folder
-yaml fails the build): `title`, `axes`, `theme`, `sections`, `cardSchema`, `cover`,
-`back`, `header`, `footer`, `page` (except `page.orientation`, which cascades and rotates
-that folder's cards), `sidebar`, the book-wide `sections.landing.template`, and
-`publication`.
+Book-scope keys (read from the book's own `paperband.yaml` only): `title`, `axes`, `theme`,
+`sections`, `cardSchema`, `cover`, `back`, `header`, `footer`, `page` (except
+`page.orientation`, which cascades and rotates that folder's cards), `sidebar`, the
+book-wide `sections.landing.template`, and `publication`. A folder yaml that sets `theme`,
+`axes`, `cover`, `back`, `header`, `footer`, `sidebar`, `cardSchema`, `publication`, or
+`page.size`/`margins`/`fontScale` FAILS the build naming the file; a folder's `title`
+labels its section and its `sections:` groups its subfolders.
 Folder-local, non-cascading keys: `order`, `include`, `sort`, `where`, `ignore`.
 
 ### Root `paperband.yaml` shape
@@ -320,7 +325,7 @@ page:                            # book scope (vars.page is a deprecated alias)
   orientation: portrait          # portrait | landscape; a folder yaml may set this alone
   measure: 58rem                 # text measure → --card-max-width (theme and theme-less
                                  #   scaffold, PDF and site); `none` = full width
-sidebar: true                    # static-site navigation sidebar
+sidebar: true                    # site navigation sidebar; false also hides the emitHtml one
 ```
 
 Undeclared axis values still get landing pages (generated label + default palette colour).
@@ -593,7 +598,7 @@ beats a POM property.
 | `pageSize` | `a4` | Seeds base geometry; yaml `page:` still wins. |
 | `margins` | page size's own | CSS shorthand: `0`, `18mm`, `20 15 25 15`; units mm/cm/in/pt. |
 | `theme` / `themeDir` / `stylesheets` | book's `theme:` / — / — | Build `theme` overrides yaml; `none` disables. `stylesheets` are inlined after the theme (corrections without `!important`); declare per execution to keep them off another book. |
-| `emitHtml` | — | Also write the pre-render HTML — standalone (local images inlined as data: URIs) with a screen-only nav sidebar (opt out: `vars.sidebar: false`; separate from the site's top-level `sidebar:` key). |
+| `emitHtml` | — | Also write the pre-render HTML — standalone (local images inlined as data: URIs) with a screen-only nav sidebar, on by default (off with the book's `sidebar: false`, the same key as the site sidebar; the deprecated `vars.sidebar: false` also works). |
 | `reportPages` / `maxPagesPerCard` | `false` / `vars.maxPagesPerCard` | |
 | `select` | — | Keep only cards matching `field=value` (book builds). |
 | `watermark` / `watermarkImage` | `vars.watermark` | Plus `watermarkColor/Opacity/Angle/FontSize/Bold/Scale/Fit/Behind/Tile/Pages/Font`. `site` takes all but Pages/Font; `render` takes all. |
@@ -742,5 +747,10 @@ PDFBox passes; size presets recognised by value are `PageConfigResolver.KNOWN_PR
 `archetype`, and `guide` — the self-documenting book at
 `guide/src/main/paperband` plus the companion deck at `guide/src/main/paperband-deck`, both
 built by the plugin in the same reactor (`mvn install -Pguide`). `.github/workflows/docs.yml`
-publishes that site at the Pages root (old `/guide/…` URLs redirect). `examples/` holds
-standalone example books outside the reactor (`effectiveness-map`: a data-driven table).
+publishes that site at the Pages root via `guide/assemble-site.sh`, which also writes
+forwarding pages for renamed cards (`guide/redirects.txt`, one `old new` line each) and for
+the original `/guide/…` URLs. `examples/` holds
+standalone example books outside the reactor: `kitchen-sink` (every major feature once,
+each file annotated with the card that explains it) and `effectiveness-map` (a data-driven
+table). `maven-plugin`'s `GuideKeyIndexTest` fails the build when the guide's Key Index
+names a yaml key or POM parameter the code doesn't read.

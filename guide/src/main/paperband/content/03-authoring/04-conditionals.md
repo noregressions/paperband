@@ -1,5 +1,5 @@
 ---
-id: conditionals
+id: vars-and-conditionals
 oneliner: "Substitute vars and gate sections with real Pebble {{ vars.x }} / {% if vars.x %}."
 ---
 

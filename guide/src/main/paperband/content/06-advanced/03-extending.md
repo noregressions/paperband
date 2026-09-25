@@ -1,5 +1,5 @@
 ---
-id: extending
+id: extending-paperband
 oneliner: "Add renderers and block renderers via ServiceLoader; content providers, fragment processors, and themes too."
 ---
 

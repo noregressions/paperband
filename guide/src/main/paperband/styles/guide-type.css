@@ -64,6 +64,21 @@ section.block.check > h2 {
   margin: 0.5rem 0 0.5rem;
 }
 
+/* The Key Index is a seven-column table of code. Left to size itself, its
+   unbreakable cells made it wider than the page, and Chromium then shrinks
+   the whole PDF, every page, to fit the widest element. Fixed layout and
+   wrapping code keep it inside the measure on paper and on screen. */
+#card-key-index table { table-layout: fixed; width: 100%; font-size: 0.8rem; }
+#card-key-index th, #card-key-index td { overflow-wrap: anywhere; vertical-align: top; }
+#card-key-index td code { white-space: normal; overflow-wrap: anywhere; }
+#card-key-index th:nth-child(1) { width: 15%; }
+#card-key-index th:nth-child(2) { width: 9%; }
+#card-key-index th:nth-child(3) { width: 7%; }
+#card-key-index th:nth-child(4) { width: 15%; }
+#card-key-index th:nth-child(5) { width: 9%; }
+#card-key-index th:nth-child(6) { width: 30%; }
+#card-key-index th:nth-child(7) { width: 15%; }
+
 /* Print sizes are rem of an 11pt root, so the same scale holds on paper;
    only the top margin tightens, since a page has less room than a screen. */
 @media print {
@@ -71,4 +86,23 @@ section.block.check > h2 {
   /* workshop tints the page; Chromium leaves a PDF's margins unpainted, so
      the tint would print as a rectangle inside a white border. */
   html, body, body.site { background: #fff; }
+
+  /* Section divider pages (the guide's sections are an axis). The template
+     paints the axis colour across the whole page inline, and workshop has
+     no rules for it, so dark text and link-blue sat on saturated red. Here
+     the page is plain: the title large, a rule under it, the card list in
+     ink. The badge repeats the axis name and raw id ("Guide Section
+     tutorial") and is dropped. */
+  .tier-divider { background: #fff !important; color: var(--ws-ink, #1b2028); }
+  .tier-divider .tier-badge-lg { display: none; }
+  .tier-divider h1 {
+    font-size: 2.6rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid var(--ws-ink, #1b2028);
+    margin-bottom: 0.6rem;
+  }
+  .tier-divider .tier-count { color: var(--ws-ink-soft, #565f6b); opacity: 1; }
+  .tier-divider .tier-toc a { color: inherit; text-decoration: none; }
 }

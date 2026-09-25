@@ -1,5 +1,5 @@
 ---
-id: frontmatter
+id: frontmatter-reference
 title: "Frontmatter Reference"
 oneliner: "Every frontmatter field a card can set, and what each one does."
 effort: S
@@ -13,7 +13,7 @@ optional. This card's own frontmatter sets most of them:
 
 ```yaml
 ---
-id: frontmatter
+id: frontmatter-reference
 title: "Frontmatter Reference"
 oneliner: "Every frontmatter field a card can set, and what each one does."
 effort: S
@@ -38,10 +38,10 @@ body are rendered rather than used as the title. The `effort` value appears as t
 | `max_pages` | integer | — | Page-count ceiling for this card. The build fails (exit 3) if the rendered card is longer. Overrides `<maxPagesPerCard>`. See [Page Enforcement](card:page-enforcement). |
 | `verify` | boolean | `true` | `false` hides every `check`-classed block in the card, at any nesting depth. |
 | `index` | list or string | — | Back-of-book index terms for this card. See [TOC and Index](card:toc-and-index). |
-| *axis name* | any | — | The card's value for a declared axis, such as `tier: 1` for an axis named `tier`. Overrides the folder's `axis:` binding. See [Book Configuration](card:book-config#axes). |
+| *axis name* | any | — | The card's value for a declared axis, such as `tier: 1` for an axis named `tier`. Overrides the folder's `axis:` binding. See [Book Configuration](card:book-configuration#axes). |
 
 A section body (`_section.md`) takes a different set of fields, such as `cards:` and
-`landing:`; see [Book Configuration](card:book-config).
+`landing:`; see [Book Configuration](card:book-configuration).
 
 ## Custom fields
 
