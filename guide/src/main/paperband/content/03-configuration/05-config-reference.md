@@ -6,9 +6,8 @@ index: [configuration, precedence, scope]
 
 # Configuration Reference
 
-The complete surface: **where** configuration can be written, **what** each place accepts,
-and **which wins** when two of them speak. Config Cascade explains the model; this is the
-exhaustive list.
+Where configuration can be written, what each place accepts, and which wins when two
+places set the same thing. Config Cascade explains the model; this page is the full list.
 
 ## Where config lives
 
@@ -32,25 +31,25 @@ It is its own file with its own keys and does not participate in this cascade.
 
 > **The POM outranks the root yaml. Depth outranks the POM.**
 
-Both halves are needed because the two scopes want opposite things:
+The two rules apply to different scopes:
 
 | Scope | Rule | Why |
 |---|---|---|
-| **Book** | POM `<book>` wins over the root yaml, field by field | One book has one title, one cover, one sheet. A declaration beats a default, and the POM is the file you just edited. |
+| **Book** | POM `<book>` wins over the root yaml, field by field | One book has one title, one cover, one sheet; the POM declaration takes precedence over the yaml. |
 | **Card** | Built-ins → root yaml → POM `<book><vars>` → folder yamls (deepening) → frontmatter | A build-declared var must reach every card *and* stay overridable per folder. |
 | **Geography** | POM only; yaml never participates | `paperband.yaml` declares what the book *is*; the POM declares *where* it is. |
 | **Geometry base** | `<pageSize>`/`<margins>` seed the base; the book's `page:` block wins | The POM knob exists for books with no yaml to edit. |
 
-Book scope has no depth, so there the two halves coincide and the POM simply wins.
+Book scope has no depth, so there the POM wins.
 
-Setting a **book-scope key in a folder yaml is an error**, not a silent override. It names
-the offending file.
+Setting a book-scope key in a folder yaml is an error, and the message names the file.
 
 ## Book-scope keys
 
 Read from the book's own `paperband.yaml` (or `<home>/paperband.yaml` under a split
-geography). The first block is **book-only** — a folder that sets one is an error. The
-second block is read at book level *and* cascades, so a folder may extend or override it.
+geography). The first table is book-only: a folder that sets one of these keys is an
+error. The second is read at book level and also cascades, so a folder may extend or
+override it.
 
 | Key | What | POM equivalent |
 |---|---|---|
@@ -68,9 +67,9 @@ Book-level entry points for keys that also cascade:
 
 | Key | What | POM equivalent |
 |---|---|---|
-| `css` | Book-wide stylesheet chain, applied first; folders append to it | `<stylesheets>`, applied *last* — a different layer, not the same one |
+| `css` | Book-wide stylesheet chain, applied first; folders append to it | `<stylesheets>`, applied last, as a separate layer |
 | `vars` | Free-form values seeded at the book level; folders override per key | `<book><vars>` |
-| `targets` | Declared build targets. Carried for documentation — nothing enforces the list, so a `<target>` outside it simply matches no `where:` condition. | — |
+| `targets` | Declared build targets, for documentation only. The list is not enforced; a `<target>` outside it matches no `where:` condition. | — |
 
 ## Card-scope keys
 
@@ -89,8 +88,8 @@ Cascade from the book root down; the innermost declaration wins.
 
 ## Structure keys
 
-Folder-level, and outside the value cascade entirely — each folder declares its own. Full
-treatment in Organising Content.
+Folder-level and outside the value cascade: each folder declares its own. See Organising
+Content.
 
 | Key | What |
 |---|---|
@@ -104,13 +103,13 @@ Precedence: `sections:` beats `include:`, which beats `order:`.
 
 ## Vars that behave as configuration
 
-These live in `vars` — so they cascade — but the engine reads them as switches rather than
-as template values. Easy to miss, because nothing else marks them out.
+These live in `vars`, so they cascade, but the engine reads them as switches rather than
+as template values.
 
-Each is read from the **book context**, which is the context of whichever card the build
-walked first. Setting one in a folder yaml is therefore either a no-op or a whole-book
-switch, decided by walk order — so set them at the book root. (`sidebar` used to be in this
-list for that reason; it is now a book-scope key of its own.)
+Each is read from the book context, which is the context of the first card the build
+walks. Setting one in a folder yaml therefore either has no effect or applies to the whole
+book, depending on walk order; set them at the book root. (`sidebar` was previously in this
+list; it is now a book-scope key.)
 
 | Var | What it does | Read at |
 |---|---|---|
@@ -132,10 +131,10 @@ Per card, in the `---` block. Everything not listed is free-form metadata reacha
 
 | Key | What |
 |---|---|
-| `id` | Stable identity — `#card-<id>` in the PDF, `cards/<id>.html` on the site. Defaults to the file basename. |
+| `id` | Stable identity: `#card-<id>` in the PDF, `cards/<id>.html` on the site. Defaults to a slug of the card's path within the book: `api/endpoints.md` → `api-endpoints`. |
 | `title` | Card title, overriding the first H1 |
 | `oneliner` | Short summary for site tiles and section landing pages |
-| *axis name* | This card's value for a declared axis — beats the folder's `axis:` binding |
+| *axis name* | This card's value for a declared axis; overrides the folder's `axis:` binding |
 
 ## The `<book>` element's children
 
@@ -147,8 +146,8 @@ The complete set, for the book-scope layer declared in the POM:
 
 `<sections>`/`<includes>` select cards; the rest is book config. An element that only
 carries config (no `<sections>`, no `<includes>`) leaves structure to the directory tree,
-so a book can declare its title and cover in the POM and still be walked. Full element
-reference in Maven Plugin.
+so a book can declare its title and cover in the POM and still be walked. The full element
+reference is in Maven Plugin.
 
 ## POM-only parameters
 
@@ -159,7 +158,7 @@ No yaml equivalent: they describe the build, not the book.
 | `<home>`, `<content>`, `<layouts>` | Geography — where the book's pieces live |
 | `<input>` / `<book>` | Card selection: walk a directory, or declare it |
 | `<output>`, `<outputDirectory>`, `<clean>` | Where output goes |
-| `<renderer>` | Renderer id. There is deliberately no `renderer:` yaml key. |
+| `<renderer>` | Renderer id. There is no `renderer:` yaml key. |
 | `<target>`, `<siteTarget>` | Build target driving `where:` predicates |
 | `<externalIncludeDirs>`, `<externalIncludeFiles>` | Allow-list for includes above the book root |
 | `<stylesheets>` | Build-owned CSS, inlined last |
@@ -168,8 +167,7 @@ No yaml equivalent: they describe the build, not the book.
 
 ## The site sidebar
 
-Structure rather than a setting, so it is book scope — the site has a sidebar on every page
-or on none:
+The sidebar is book scope: the site has one on every page or on none:
 
 ```yaml
 sidebar: true                 # shorthand
@@ -180,9 +178,8 @@ sidebar:                      # or, for the open/closed behaviour
   sectionsCollapsed: true     # start each section's card list shut (default true)
 ```
 
-Note `sectionsCollapsed` defaults the *opposite* way to the other two: a sidebar listing
-every card of every section at once is a wall of links, so it behaves like a table of
-contents that opens what you need.
+`sectionsCollapsed` defaults to `true`, unlike the other two, so each section's card list
+starts closed.
 
 In the POM, the element's presence is the opt-in:
 
@@ -193,13 +190,12 @@ In the POM, the element's presence is the opt-in:
 </book>
 ```
 
-PDF builds ignore it entirely. A folder yaml declaring it is an error.
+PDF builds ignore it. A folder yaml declaring it is an error.
 
-The previous spelling — `vars.sidebar`, `vars.sidebar_collapsed`,
-`vars.sidebar_sections_collapsed` — still works and is deprecated. It put a whole-site
-switch on the per-card `vars` channel, where the site only ever read the copy belonging to
-the first card walked: a folder that set it either did nothing or changed the entire site,
-decided by walk order alone.
+The previous spelling (`vars.sidebar`, `vars.sidebar_collapsed`,
+`vars.sidebar_sections_collapsed`) still works and is deprecated. As a per-card var, it was
+read only from the first card walked, so a folder that set it either had no effect or
+changed the whole site, depending on walk order.
 
 ## Unknown configuration is an error
 
@@ -209,9 +205,8 @@ Maven's own reaction to a POM element no parameter matches is a warning:
 [WARNING] Parameter 'sidebar' is unknown for plugin 'paperband-maven-plugin:site'
 ```
 
-In a build printing hundreds of lines that is indistinguishable from silence — the element
-looks configured, nothing reads it, and the symptom arrives much later as "that setting
-doesn't work". Paperband fails the build instead, and says what to write:
+The element appears configured but nothing reads it. Paperband fails the build instead,
+with the correct form:
 
 ```
 execution 'build-guide-site' <configuration>: <sidebar> is not a Paperband plugin
@@ -225,15 +220,15 @@ Three checks Maven doesn't already make:
 |---|---|
 | An element no goal knows | Rejected, with a `Did you mean <…>?` suggestion or the list of what's valid there |
 | A parameter belonging to a **different** goal, on an execution that doesn't run it | Rejected, naming the goal it belongs to |
-| A boolean that isn't `true`/`false` | Rejected — Plexus converts anything else to `false` silently, so `<fullPage>yes</fullPage>` would quietly do nothing |
+| A boolean that isn't `true`/`false` | Rejected. Plexus converts any other value to `false`, so `<fullPage>yes</fullPage>` would have no effect |
 
-Plugin-level `<configuration>` is checked more leniently than an execution's, deliberately:
-it is shared by *every* goal, so a `<book>` declared once for `build` and `site` is also
-handed to `renderers`, which has no such parameter. An element some goal accepts is legal
-there; only one no goal knows is a typo.
+Plugin-level `<configuration>` is checked more leniently than an execution's, because it
+is shared by every goal: a `<book>` declared once for `build` and `site` is also passed to
+`renderers`, which has no such parameter. An element that any goal accepts is allowed
+there; only an element no goal knows is rejected.
 
-Unknown *nested* elements (inside `<book>`, `<cover>`, `<axis>`) and unparseable numbers
-were already hard errors from Maven's own configurator — those need nothing extra.
+Unknown nested elements (inside `<book>`, `<cover>`, `<axis>`) and unparseable numbers are
+already errors in Maven's configurator.
 
 ## Check
 
@@ -242,13 +237,12 @@ mvn paperband:scan -Dpaperband.input=path/to/card.md
 ```
 
 Prints the fully resolved context for one card — book root, title, target, size, layout,
-CSS chain in load order, merged vars, axis values, and the resolved sheet — so you can see
-what the layers actually produced rather than inferring it:
+CSS chain in load order, merged vars, axis values, and the resolved sheet:
 
 ```
 === CONTEXT ===
 book root : .../src/main/paperband
-title     : Paperband Guide
+title     : Paperband
 target    : pdf-a4
 size      : a4
 layout    : <none>
@@ -258,6 +252,6 @@ page      : 210×297mm portrait, margins 20 18 20 18 (mm), content height 257mm
 The `page` line is the *card's* effective sheet: the book's geometry, plus this card's own
 rotation if its folder declared `page.orientation`.
 
-`scan` resolves the same geography and the same `<book>` overlay a build does, so a book
-whose config lives in the POM reports its real title, cover and vars rather than only what
-the yaml happens to say. Pass `-Dpaperband.input=` the card; the POM supplies the rest.
+`scan` resolves the same geography and `<book>` overlay as a build, so a book whose config
+is in the POM reports its title, cover and vars from there. Pass the card as
+`-Dpaperband.input=`; the POM supplies the rest.

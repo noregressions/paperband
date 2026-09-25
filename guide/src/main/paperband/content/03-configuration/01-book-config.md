@@ -11,9 +11,9 @@ card: the book `title`, categorical `axes`, the base `css` chain, free-form `var
 default `theme`, the declared build `targets`, the book's `page` geometry, and the book's
 declared `sections`.
 
-These are **book scope**: read from this file and no other. A folder's `paperband.yaml`
-that sets one is an error, not a quiet override — see Config Cascade for the full scope
-model and for how the Maven plugin's `<book>` element layers on top.
+These are **book scope**: read from this file and no other. Setting one in a folder's
+`paperband.yaml` fails the build. See Config Cascade for the scope model and for how the
+Maven plugin's `<book>` element layers on top.
 
 ## `page`
 
@@ -28,17 +28,17 @@ page:
 ```
 
 `size` and `margins` seed from the plugin's `<pageSize>`/`<margins>`, and this block wins
-over them. Margins declared here are emitted as the book's CSS `@page` rule, so don't also
-write one in your book stylesheet — two rules for one thing, and the CSS one would win on
-cascade order while the content-box height still described this one.
+over them. Margins declared here are emitted as the book's CSS `@page` rule. Don't also
+write one in the book stylesheet: it would win on cascade order, while the content-box
+height would still be computed from this block.
 
 `orientation` is the single key here that a folder *may* also set: it rotates that folder's
 cards without changing the book's paper. See Config Cascade.
 
 ## `axes`
 
-`axes` declares any number of categorical axes, each independent of the others. A book
-with no axes at all is fine — cards just fall back to folder-based "sections".
+`axes` declares any number of categorical axes, each independent of the others. With no
+axes, cards are grouped by folder into sections.
 
 ```yaml
 axes:
@@ -60,10 +60,9 @@ axes:
         label: "Edge Subsystem"
 ```
 
-Each value's `id`/`label` are required-ish (an id with no label falls back to
-`"{axis title} {id}"`); everything else under a value (e.g. `color`) is free-form metadata.
-`color` is the one key paperband's own templates read; anything else is available to
-custom theme templates but otherwise ignored.
+Each value needs an `id`; a value with no `label` falls back to `"{axis title} {id}"`.
+Other keys under a value are free-form metadata. The bundled templates read only `color`;
+custom templates can read the rest.
 
 A card joins an axis's value either through its own frontmatter field of the same name:
 
@@ -84,7 +83,7 @@ axis:
 ```
 
 Frontmatter wins when both are present. A card can belong to zero, one, or several axes'
-values at once — each declared axis is tracked completely independently. Every declared
+values at once; each axis is tracked independently. Every declared
 axis (with at least one declared value) automatically gets: a site landing page per value
 (`{axisName}-{valueId}.html`), a PDF divider page before the first card of each contiguous
 run of that value (stacked with other axes' dividers, in `axes:` declaration order, when a
@@ -92,9 +91,8 @@ card starts a new run on more than one axis at once), nav/sidebar entries, and a
 `{axisName}-{valueId}` CSS class on every card that has a value for it.
 
 A value a card uses but that isn't listed under the axis's `values:` still gets its own
-landing page (with a generated label and a colour from the default palette) rather than
-being silently dropped — useful while iterating on a book's structure before every value
-is finalized in the yaml.
+landing page, with a generated label and a colour from the default palette, so a card
+can use a value before the yaml declares it.
 
 Cards with no value on any declared axis are grouped by their top-level folder name
 instead ("sections") and get their own landing pages alongside the axis-value pages.
@@ -135,8 +133,8 @@ A section's landing page normally renders with the built-in `site-section` templ
 this is overridable in three places, most specific first:
 
 1. **A declared section's own template.** A section declared in the book yaml or the POM
-   carries its own, because it can span several folders and no one of them speaks for the
-   group — a declared section never consults a folder yaml at all:
+   carries its own, because it can span several folders. A declared section never reads a
+   folder yaml:
 
    ```yaml
    sections:
@@ -176,8 +174,8 @@ this is overridable in three places, most specific first:
 Template paths are relative to the book's `layouts/` directory, extension stripped — a
 leading `layouts/` is accepted and dropped, so write the path as the file sits on disk.
 Subdirectories work: `layouts/sections/scanners.html` loads exactly that. A theme's
-template overrides are searched first, the bundled templates last. If neither `landing` is
-set, the built-in template is used, same as before this override existed.
+template overrides are searched first, the bundled templates last. If none is set, the
+built-in template is used.
 
 Instead of a path, `template:` also accepts a **named preset** — no file needed:
 
@@ -193,21 +191,18 @@ landing:
   template: minimal
 ```
 
-A `template:` value that isn't one of these names is treated as a file path, same as
-above. Named presets and file-path overrides can be mixed freely across a book's
-sections — some folders can use `minimal`, others their own custom template, others
-nothing at all (falling through to the book default, then the built-in template).
+A `template:` value that isn't one of these names is treated as a file path. Presets and
+file paths can be mixed across a book's sections; a section that sets neither falls through
+to the book default, then the built-in template.
 
-`minimal` is worth one note: it is not only a site preset. The PDF's section divider has no
-HTML template of its own to dispatch on, so it reads the resolved choice and scales itself
-down to match — title only, no count or contents. Choosing `minimal` therefore changes
-**both** targets. A custom file path only changes the site; the divider keeps its default.
+`minimal` also affects the PDF. The section divider has no template of its own, so it reads
+the resolved choice and renders the title only, with no count or contents. A custom file
+path changes only the site; the divider keeps its default.
 
 ## Section content in markdown
 
-Most "customise the section page" needs are writing, not layout. For that, don't write a
-template at all — put a markdown file in the section folder and it **becomes** that
-section's landing page content:
+To add text to a section's landing page, put a markdown file in the section folder. It
+becomes that section's landing page content:
 
 ```markdown
 <!-- content/02-tools/_section.md -->
@@ -221,28 +216,28 @@ then the scanners, then the runtime diagnostics once something actually fails.
 {% if vars.audience == "internal" %}Start with the flag audit.{% endif %}
 ```
 
-It goes through **exactly the pipeline a card gets**, so `{{ vars.x }}`, `{% if %}`,
+It goes through the same pipeline as a card, so `{{ vars.x }}`, `{% if %}`,
 `{% for %}`, `{% include %}` and `{% fragment %}` all work, along with block templates and
 the content policy.
 
 | File | Notes |
 |---|---|
 | `_section.md` | The explicit spelling; wins when both are present |
-| `README.md` | Works too — card discovery already skips readmes, and a readme *is* documentation about the directory |
+| `README.md` | Also accepted; card discovery already skips readmes |
 
 Neither is loaded as a card, so the section's card count and card list are unaffected.
 
 ### The book has one too
 
-The content root is the outermost section, so `content/_section.md` is the **book's** own —
-no second filename and no second rule. It renders as the site index's body, and in the PDF
+The content root is the outermost section, so `content/_section.md` is the book's own
+body. It renders as the site index's body, and in the PDF
 as front matter between the cover and the first card. It replaces the index's stat rows and
 section grid; `sections: true` in its frontmatter asks for them back.
 
 ### Both targets, one file
 
-A section body renders on the site's landing page **and** on the PDF's section divider —
-the same writing, not two copies. Where the two want different words, branch on `output`:
+A section body renders on the site's landing page and on the PDF's section divider. To
+vary the text between them, branch on `output`:
 
 ```markdown
 # The Tools
@@ -261,13 +256,13 @@ Browse them below — start with `jdeps`.
 | `output` | `print` or `site` — what to branch on |
 | `target` | the raw build target (`pdf-a4`, `web`), which a book may rename |
 
-On the divider a body replaces the card count and printed contents, exactly as it replaces
-the card grid on the site.
+On the divider a body replaces the card count and printed contents, as it replaces the
+card grid on the site.
 
-### It replaces, it doesn't decorate
+### Keeping the card list
 
-The card list is the **default** content — what a section shows when it has nothing of its
-own to say. Writing a `_section.md` replaces it. To keep the list as well, ask for it:
+The card list is a section page's default content. A `_section.md` replaces it; to keep
+the list as well, set `cards: true`:
 
 ```markdown
 ---
@@ -279,14 +274,12 @@ cards: true
 Prose, and then the usual card list beneath it.
 ```
 
-That holds even for a book with a custom landing template: the rule is about the section,
-not about who draws the list, so the test wraps the `cards` block's *invocation* rather
-than its contents.
+This also applies with a custom landing template: the check wraps the `cards` block's
+invocation, not its contents.
 
 ### Laying the cards out yourself
 
-The section's own cards are in scope as `section`, so the markdown can list them however it
-likes instead of choosing between the default grid and nothing:
+The section's own cards are in scope as `section`, so the markdown can list them itself:
 
 ```markdown
 ## All {{ section.count }} chapters
@@ -303,26 +296,21 @@ likes instead of choosing between the default grid and nothing:
 | `section.cards` | each `{id, title, url, anchor, oneliner, frontmatter}`, in book order. Link by `id` — see below |
 | `vars` | the config cascade, as in any card |
 
-`frontmatter` gives you everything else the card declared — filter or group on it with
-ordinary Pebble.
+`frontmatter` holds everything else the card declared, for filtering or grouping in
+Pebble.
 
 **Link with `card:{{ c.id }}`, not with `url` or `anchor`.** A section body renders into
-*both* outputs — the site's landing page and the PDF's divider — from this one file, so a
-link has to be right in both. `card:` is (see [Card Structure](card:card-structure)); the raw fields are not.
-`url` is always `cards/<id>.html`, which is a dead file reference in the PDF, and `anchor`
-is always `#card-<id>`, which is a dead in-page link on the site. Neither switches with the
-output — they are the two spellings, and picking one used to mean branching on `output`
-around every link.
+both outputs, and `card:` resolves correctly in each (see [Card Structure](card:card-structure)).
+`url` is always `cards/<id>.html`, which does not resolve in the PDF, and `anchor` is always
+`#card-<id>`, which does not resolve on the site.
 
-They stay in the model for a template that needs the strings themselves, and for books
-written before `card:` existed. For anything that produces a link, prose or generated list,
-reach for `card:` — it is also the only one of the three that fails the build when the card
-it names goes away.
+`url` and `anchor` remain in the model for templates that need the strings, and for books
+written before `card:` existed. `card:` is also the only form that fails the build when the
+card it names is missing.
 
-**One gotcha, and it will bite you:** Pebble eats the newline immediately after a
-`{% %}` tag. A markdown line that *ends* with a tag loses its line break, and the next line
-runs on — a ten-item list collapses into one. Put something after the tag, or leave a blank
-line before the closing one:
+**Pebble removes the newline immediately after a `{% %}` tag.** A markdown line that ends
+with a tag loses its line break and joins the next line, so a list collapses into one item.
+Put text after the tag, or leave a blank line before the closing tag:
 
 ```markdown
 {% for c in section.cards %}1. [{{ c.title }}](card:{{ c.id }}){% if c.oneliner %} — {{ c.oneliner }}{% endif %}
@@ -335,30 +323,29 @@ line before the closing one:
 
 ### Other details
 
-The `# Heading` becomes the **section's label** when the folder declares no `title:` — one
-file then describes the section completely. (The markdown loader hoists a leading `#` out
-of the body, so without that rule it would be written and silently dropped.)
+The `# Heading` becomes the section's label when the folder declares no `title:`. (The
+loader removes a leading `#` from the body, so it is used as the label rather than
+rendered.)
 
-Only folder-backed sections can have one. An axis value is a label spanning the whole book
-with no directory of its own, so there's nowhere to put the file. Declared sections that
-span several folders don't pick one up either — bodies are keyed by folder name.
+Only folder-backed sections can have a body. Axis values have no directory, and declared
+sections that span several folders don't pick one up, because bodies are keyed by folder
+name.
 
 The wrapper is `.section-body`, and inside it the body's headings carry the same
-`<section class="block …">` wrappers a card's do — so a theme styles a section body and a
-chapter with one set of rules, and the two read as the same book. The hero above it is page
-chrome, not content; override the `hero` block to drop it.
+`<section class="block …">` wrappers a card's do, so one set of theme rules styles both.
+The hero above it is page chrome, not content; override the `hero` block to drop it.
 
-The PDF divider renders the same body. A divider that has one is set as a page of prose
-rather than a title centred on a sheet: it carries `.section-divider.has-body`, drops the
-centring, takes the card measure, and runs onto as many sheets as the writing needs.
+The PDF divider renders the same body. A divider with a body is laid out as prose rather
+than a centred title: it carries `.section-divider.has-body`, drops the centring, takes the
+card measure, and runs onto as many sheets as needed.
 
 ## Writing a custom section template
 
-A site template is free to spell the href itself, as above — it only ever renders for the
-site, so `urlPrefix` is the right answer there. Writing `href="card:{{ c.id }}"` instead
-works too, and buys the same build-time check a card's prose gets.
+A site template can build the href itself with `urlPrefix`, since it only renders for the
+site. `href="card:{{ c.id }}"` also works, and adds the same build-time check a card's prose
+gets.
 
-**A custom template does not have to replace the whole page.** The shell — document head,
+A custom template does not have to replace the whole page. The shell — document head,
 stylesheet, top nav, sidebar, main column — lives in one base template, and every built-in
 site page extends it. Override only the block you care about:
 
@@ -378,9 +365,8 @@ site page extends it. Override only the block you care about:
 {% endblock %}
 ```
 
-That is the whole file. Everything else is inherited, which matters beyond brevity: a page
-that hardcodes the shell stops tracking it, so a new sidebar option or theme hook silently
-passes it by.
+That is the whole file; everything else is inherited. A page that copies the shell instead
+stops receiving changes to it, such as new sidebar options or theme hooks.
 
 Every site page works this way, not just section landings. Extend the page you want to
 change and override one block:
@@ -409,9 +395,9 @@ A block you don't mention keeps its built-in contents, and an empty block remove
 `site-section-minimal` is nothing but `{% extends "site-section" %}` with an empty `cards`
 block.
 
-Don't name your file the same as the template it extends — a same-named override resolves
-`{% extends %}` to itself and recurses. Name it for what it is (`sectionLanding.html`), not
-for what it replaces.
+Don't name your file the same as the template it extends: a same-named override resolves
+`{% extends %}` to itself and recurses. Use a different name, such as
+`sectionLanding.html`.
 
 ### What the template is given
 
@@ -429,7 +415,6 @@ for what it replaces.
 | `page` | `{kind: "section", id}` — lets the partials mark the active row |
 | `urlPrefix` | `""` on a landing page (`"../"` on card pages) |
 
-Style your own classes from the book's CSS chain, or the POM's `<stylesheets>` — they're
-yours, not the theme's.
+Style custom classes from the book's CSS chain or the POM's `<stylesheets>`.
 
 Axis values work identically: extend `site-tier` and override its `cards` or `hero` block.

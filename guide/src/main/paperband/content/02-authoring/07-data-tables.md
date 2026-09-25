@@ -6,14 +6,12 @@ index: [tables, rowspan, thead, macros]
 
 # Tables from Data
 
-Some tables are really datasets: dozens of rows sharing one shape, a score per column, groups
-of rows under a label. Written out by hand, every row is a copy of the one above it, and every
-change is a search-and-replace. Paperband's answer is to split the table three ways. The rows
-go in YAML, a Pebble loop in the card turns them into markup, and CSS owns the look.
+For a table with many rows of the same shape, keep the rows in YAML, generate the markup
+with a Pebble loop in the card, and put the styling in CSS.
 
 The repository has a full worked example in `examples/effectiveness-map`: a 28-row scoring
 matrix with three row groups, nine scored columns, a legend and a grid of tiles, ported from a
-hand-written HTML page. This card walks through the pattern it uses.
+hand-written HTML page. This card describes the pattern it uses.
 
 ## The three files
 
@@ -27,10 +25,10 @@ src/main/paperband/
     table.css            ← the look, screen and print
 ```
 
-The split isn't only tidiness. The content policy strips inline `style=` attributes and
-`<style>` blocks from cards (see [Card Structure](card:card-structure#raw-html-and-the-content-policy)),
-so an HTML table that carries its look inline can't be pasted in as it stands. Classes survive,
-so the markup names what each cell *is* and the stylesheet decides how that looks.
+The content policy strips inline `style=` attributes and `<style>` blocks from cards (see
+[Card Structure](card:card-structure#raw-html-and-the-content-policy)), so an HTML table
+styled inline can't be pasted in unchanged. Classes are kept: give cells classes and style
+them in the stylesheet.
 
 ## The data
 
@@ -48,12 +46,11 @@ vars:
     - { icon: mic,       name: "Conference talk",   scores: [4, 3] }
 ```
 
-Nested lists and maps are fine here. It's the POM's `<vars>` that only takes flat strings.
+Nested lists and maps are supported here. The POM's `<vars>` takes flat strings only.
 
 ## The markup
 
-A Markdown pipe table can't carry a class on a cell, a row that spans columns, or a cell that
-spans rows. So the loop emits HTML, which a card may contain:
+A Markdown pipe table can't carry cell classes or spanning cells, so the loop emits HTML:
 
 ```html
 <table class="scores">
@@ -70,9 +67,9 @@ spans rows. So the loop emits HTML, which a card may contain:
 </table>
 ```
 
-The `:{{ f.icon }}:` references become inline SVG icons once the page is built, including
-inside hand-written table cells like these (see [Icons](card:icons)). Here is the same loop run
-over the three rows declared in this folder's own `paperband.yaml`:
+The `:{{ f.icon }}:` references become inline SVG icons, including inside hand-written table
+cells (see [Icons](card:icons)). The same loop, run over three rows declared in this folder's
+`paperband.yaml`:
 
 <table class="data-table-demo">
 <thead><tr><th>Format</th><th>:users: Reach</th><th>:book-open: Depth</th></tr></thead>
@@ -85,37 +82,34 @@ over the three rows declared in this folder's own `paperband.yaml`:
 
 ## Whitespace
 
-Two passes see the card in turn. Pebble runs first, then Markdown parses what Pebble left, and
-Markdown is strict about where HTML stops. Three rules keep the two out of each other's way:
+Pebble runs first, then Markdown parses the result. Markdown ends an HTML block at the first
+blank line, which gives three rules:
 
-- **Keep the table itself free of blank lines.** Markdown ends an HTML block at the first
-  blank line. Use `{%-` inside the table: the `-` trims the whitespace in front of the tag,
-  so a loop emits one compact block.
+- **Keep the table itself free of blank lines.** Use `{%-` inside the table: the `-` trims
+  the whitespace in front of the tag, so a loop emits one compact block.
 - **Leave two blank lines after a closing tag that Markdown follows.** Pebble removes the
   newline straight after a `{% endif %}` or `{% endfor %}`, so a single blank line there
-  becomes none, and the heading that follows is swallowed into the HTML block as literal
-  text.
+  becomes none, and the heading that follows is parsed as part of the HTML block and
+  printed as literal text.
 - **Never put a trimming tag straight after a heading.** `{#-` and `{%-` trim newlines too,
   so a trimming comment on the line after `## The map` joins the whole table onto the
   heading's line. Start the block with a plain `{#` or `{%`.
 
-When a table comes out wrong, the generated markup is the first thing to look at.
-`-Dpaperband.emitHtml=target/book.html` on a `build` writes the page as the renderer sees it.
+To inspect the generated markup, run `build` with `-Dpaperband.emitHtml=target/book.html`,
+which writes the page as the renderer receives it.
 
-## Print wants a different table
+## A separate layout for print
 
-On screen a group of rows usually gets its label in a cell spanning those rows
-(`rowspan`). On paper that breaks: a spanning cell's text stays on the page where the group
-started, so a group that runs onto the next page arrives with an empty label column and no
-column headers to say what the scores mean.
+On screen a group of rows usually has its label in a cell spanning those rows (`rowspan`).
+In print, a spanning cell's text stays on the page where the group started, so a group that
+continues onto the next page has an empty label column there.
 
-What does repeat is a table's `<thead>`: Chromium prints it again at the top of every page the
-table continues onto. So in print, make each group its own table and put the group's name in
-the `<thead>` as a band beneath the column headers. Every page a group reaches then says which
-group it is and what each column holds.
+Chromium repeats a table's `<thead>` at the top of each page the table continues onto. In
+print, make each group its own table, with the group's name as a band row in the `<thead>`
+beneath the column headers. Each page then shows the group name and the column headers.
 
-A card knows which output it's being built for. `output` is `print` for the PDF and `site` for
-the static site, so one card can emit both layouts from the same data:
+The `output` variable is `print` for the PDF and `site` for the static site, so one card can
+emit both layouts from the same data:
 
 ```html
 {% macro rowCells(r) %}
@@ -140,14 +134,12 @@ the static site, so one card can emit both layouts from the same data:
 {% endif %}
 ```
 
-Put the cells both layouts share in a macro, as `rowCells` is here, so the two versions can't
-drift apart.
+Put cells shared by both layouts in a macro, such as `rowCells` here.
 
 ## Lining the tables up
 
-Separate tables size their columns separately, so a print layout of several group tables
-comes out ragged unless every table is told the same widths. Give each one the same
-`<colgroup>` and a fixed layout:
+Separate tables size their columns independently. Give each table the same `<colgroup>` and
+a fixed layout so the columns align:
 
 ```css
 @media print {
@@ -158,14 +150,13 @@ comes out ragged unless every table is told the same widths. Give each one the s
 }
 ```
 
-Percentages keep the columns in line at any page size. `break-inside: avoid` on the rows keeps
-a row from splitting across a page, which is safe once no cell spans rows. With a `rowspan`
-in the table, the same rule makes the whole group unbreakable, and a group too tall for the
-space left jumps to the next page, leaving a gap behind it.
+Percentages keep the columns aligned at any page size. `break-inside: avoid` keeps each row
+on one page. Don't combine it with `rowspan`: the rule then applies to the whole group, and a
+group that doesn't fit the remaining space moves to the next page, leaving a gap.
 
 ## The page
 
-A table with a dozen columns wants the long edge of the sheet and all of its width:
+A wide table needs landscape orientation and the full text width:
 
 ```yaml
 # src/main/paperband/paperband.yaml
@@ -176,22 +167,20 @@ page:
   measure: none              # the text measure would cap the table's width too
 ```
 
-On screen, let the table keep a comfortable minimum width and scroll sideways inside a
-wrapper (`overflow: auto`) on narrow windows, with those rules under `@media screen` so they
-never reach the PDF.
+On screen, give the table a minimum width inside a wrapper with `overflow: auto`, so it
+scrolls horizontally in narrow windows. Put those rules under `@media screen` so they don't
+apply to the PDF.
 
 ## Watch Out
 
-**An icon reference needs its colons clear of the words around it.**
-`:{{ f.icon }}:{{ f.name }}` produces `:mic:Conference`, where the closing colon touches a
-letter, so it stays literal text. Put a space or a tag between them, as the examples above
-do.
+An icon reference's colons must not touch adjacent text. `:{{ f.icon }}:{{ f.name }}`
+produces `:mic:Conference`, which stays literal text. Put a space or a tag between them.
 
-**Don't reach for emoji in cells.** They drop out of the PDF inside bold text, and on a CI
-machine usually drop out entirely. Use icon references; the Icons card explains why.
+Use icon references rather than emoji in cells; emoji are unreliable in the PDF (see
+[Icons](card:icons)).
 
 ## Check
 
-Build the PDF and look at a page where a group breaks. It should open with the column headers
-and the group's band. For the site, the same card builds the single-table layout, which you
-can confirm in the site's `cards/<id>.html`.
+Build the PDF and open a page where a group breaks: it should start with the column headers
+and the group's band. On the site, the same card builds the single-table layout, in the
+site's `cards/<id>.html`.

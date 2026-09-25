@@ -7,7 +7,7 @@ oneliner: "Substitute vars and gate sections with real Pebble {{ vars.x }} / {% 
 
 Every card body is evaluated as a Pebble template before Markdown parsing, alongside
 `{% fragment %}` resolution (see [Includes](card:includes)) — both run in the same pass.
-This means real Pebble syntax works directly in card prose: variable interpolation and
+Pebble syntax therefore works directly in card prose: variable interpolation and
 `{% if %}` conditionals, scoped under a `vars` map.
 
 ## Where vars come from
@@ -28,8 +28,8 @@ vars:
 {{ vars.product_name }}
 ```
 
-Renders the value as text, substituted before Markdown parsing runs — so it can sit
-inside headings, list items, or anywhere else in the body.
+Renders the value as text before Markdown parsing, so it works in headings, list items
+and anywhere else in the body.
 
 ## Conditional sections
 
@@ -41,33 +41,25 @@ This only appears when `show_advanced` is true.
 {% endif %}
 ```
 
-When the condition is false, the entire guarded region — including any headings inside
-it — is removed from the source before block-splitting happens, so it never becomes a
-card block at all. There's no leftover empty section or CSS class to hide.
+When the condition is false, the guarded region, including any headings inside it, is
+removed before block-splitting, so it produces no card block.
 
 ## Leniency on undeclared vars
 
 Referencing a `vars` key that was never set (`{% if vars.never_declared %}`) resolves
-to null/false rather than throwing. This is deliberate: a card author shouldn't need to
-know every book's full `vars:` set to write a guarded section defensively. Only a genuine
-Pebble syntax error — not a missing key — fails the build.
+to null/false rather than throwing, so a card can guard a section on a var that some
+books don't set. Only a Pebble syntax error, not a missing key, fails the build.
 
 ## How this composes with includes
 
-Fragment resolution and vars/conditionals run in a **single** Pebble evaluate call, not
-two sequential passes. That's a hard requirement, not an implementation detail worth
-knowing: a Pebble parse evaluates every construct it finds in the document, so a
-fragment-only pass with no `vars` context would also encounter `{{ vars.x }}` and
-`{% if vars.x %}` and silently resolve them wrong (undefined `vars` → null → conditionals
-read as false) before a hypothetical second pass ever ran. A card that both pulls in a
-`{% fragment %}` and gates a section behind `{% if vars.x %}` works correctly because
-there's only one pass, with both extensions and the `vars` context registered together.
+Fragment resolution and vars/conditionals run in a single Pebble evaluation, with both
+extensions and the `vars` context registered together. A Pebble parse evaluates every
+construct in the document, so a separate fragment-only pass would resolve `{{ vars.x }}`
+and `{% if vars.x %}` with no `vars` context, as null and false. With one pass, a card can
+combine a `{% fragment %}` with sections gated by `{% if vars.x %}`.
 
 ## Watch Out
 
-Masking works the same way it does for `{% fragment %}`: frontmatter, fenced code blocks,
-and inline code spans are protected from evaluation, so this page can show
-`{{ vars.product_name }}` and `{% if vars.x %}` as literal examples without paperband
-trying to evaluate them. Anywhere else, a stray `{{ }}` or `{% %}`-looking span has to be
-valid Pebble syntax, or wrapped in a fenced code block, an inline code span, or Pebble's
-own `{% verbatim %}` tag.
+As with `{% fragment %}`, frontmatter, fenced code blocks and inline code spans are not
+evaluated. Anywhere else, a `{{ }}` or `{% %}`-looking span must be valid Pebble syntax, or
+be wrapped in a fenced code block, an inline code span, or Pebble's `{% verbatim %}` tag.

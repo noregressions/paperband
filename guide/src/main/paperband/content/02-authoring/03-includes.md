@@ -6,12 +6,9 @@ index: [includes, fragments, snippets]
 
 # Includes
 
-The `{% fragment %}` tag embeds content from an external file into a card. It's a real
-Pebble tag, evaluated in a pre-pass before Markdown parsing, so the inserted content is
-processed as Markdown like any other card text — headings, lists, and code fences all
-work. (Earlier drafts of this guide used a `{{#include ...}}` regex-based directive;
-that's been replaced by this tag — same underlying file/anchor resolution, a real parser
-on top of it.)
+The `{% fragment %}` tag embeds content from another file into a card. It is a Pebble tag
+evaluated before Markdown parsing, so the inserted content is processed as Markdown like
+the rest of the card: headings, lists and code fences all work.
 
 ## Anchor syntax
 
@@ -22,18 +19,17 @@ source file. The comment style (`//`, `#`, `<!-- -->`) is ignored by the pattern
 {% fragment "path/to/file.java:AnchorName" %}
 ```
 
-Here is the tag's own grammar, pulled live from the source:
+The tag's grammar, included from its source file:
 
 {% fragment "../../../../../../include/src/main/java/dev/noregressions/paperband/include/FragmentTokenParser.java:fragment-tag-grammar" %}
 
-The first argument is the reference — any Pebble expression, not just a quoted literal.
-Everything after a comma is a `name=value` pair: `as="<type>"` sets the return type,
-every other name is forwarded as a provider/processor attribute.
+The first argument is the reference, which can be any Pebble expression. Each argument
+after a comma is a `name=value` pair: `as="<type>"` sets the return type, and every other
+name is passed to the provider or processor as an attribute.
 
 ## Whole-file include
 
-Omit the selector to include the entire file. Useful for small config files where an
-anchor would be noise:
+Omit the selector to include the whole file, for example a small config file:
 
 ```
 {% fragment "styles/guide.css" %}
@@ -61,28 +57,25 @@ By default the return type is inferred from the file extension (`.java` → code
 
 Includes expand in a single pre-pass before flexmark sees the source:
 
-1. Frontmatter, fenced code blocks, and inline code spans are masked out first, so a
-   card that *shows* `{% fragment %}` syntax as a literal example (like this page) isn't
-   itself evaluated.
-2. The rest of the body is evaluated as a real Pebble template; every `{% fragment %}`
-   tag is replaced with its fetched, processed content.
+1. Frontmatter, fenced code blocks and inline code spans are masked, so literal examples
+   of `{% fragment %}` syntax, like those on this page, are not evaluated.
+2. The rest of the body is evaluated as a Pebble template; each `{% fragment %}` tag is
+   replaced with its fetched, processed content.
 3. The masked regions are restored, and the result is parsed by flexmark as ordinary
    Markdown.
 
-A fragment's content is spliced **verbatim** — Pebble syntax inside it, including another
-`{% fragment %}`, survives as literal text. When the included file should *evaluate*, use
-`{% include %}` (below). The single-pass evaluation also means any *other* stray
-`{{ }}`/`{% %}`-looking text outside a code fence has to be valid Pebble syntax — wrap a
-literal example in a fenced code block, an inline code span, or Pebble's own
-`{% verbatim %}` tag if it isn't already one.
+A fragment's content is inserted verbatim: Pebble syntax inside it, including another
+`{% fragment %}`, stays literal text. To evaluate the included file, use `{% include %}`
+(below). Any other `{{ }}`/`{% %}`-like text outside code must be valid Pebble syntax;
+wrap literal examples in a fenced code block, an inline code span, or Pebble's
+`{% verbatim %}` tag.
 
 ## `{% include %}` — live Pebble snippets
 
-Where `{% fragment %}` embeds *content*, `{% include %}` embeds a *template*: a reusable
-Pebble file that evaluates with the card's `vars` in scope and can take parameters.
-Names resolve against the book's `layouts/` directory — the same place every other
-declared template lives — with `.html` appended when the name has no extension, or the
-exact file when it has one (`snippets/note.md`):
+`{% fragment %}` embeds content; `{% include %}` embeds a template, a Pebble file that is
+evaluated with the card's `vars` in scope and can take parameters. Names resolve against
+the book's `layouts/` directory, with `.html` appended when the name has no extension, or
+the exact file when it has one (`snippets/note.md`):
 
 ```
 {% include "snippets/warning" %}
@@ -102,20 +95,20 @@ exact file when it has one (`snippets/note.md`):
 ```
 
 An included snippet is parsed by the same engine as the card, so it can use
-`{% fragment %}`, `vars`, and conditionals itself. Two things to keep straight:
+`{% fragment %}`, `vars` and conditionals.
 
-- **Masking does not extend into snippets.** A card's own fenced code blocks are
-  protected from evaluation; a snippet is a real template, so a fenced *example* of
-  Pebble syntax inside one needs `{% verbatim %}`. Rule of thumb: `{% include %}` for
-  live templates, `{% fragment %}` for verbatim content.
-- **No cycle detection.** A snippet that includes itself (directly or around a loop)
-  fails the build with a recursion error naming the card.
+- **Masking does not apply inside snippets.** A card's fenced code blocks are not
+  evaluated, but a snippet is a template, so a fenced example of Pebble syntax inside one
+  needs `{% verbatim %}`. Use `{% include %}` for templates and `{% fragment %}` for
+  verbatim content.
+- **Include cycles are not detected in advance.** A snippet that includes itself,
+  directly or through a loop, fails the build with a recursion error naming the card.
 
 ## Watch Out
 
-The two tags resolve paths differently. A `{% fragment %}` reference is relative to the
-**card file's directory** first, then the book root; an `{% include %}` name is always
-relative to **`layouts/`**. Either way, a missing file or a missing anchor hard-fails the
-build with the source location of the offending directive — there is no silent fallback.
+The two tags resolve paths differently. A `{% fragment %}` reference is resolved relative
+to the card file's directory first, then the book root; an `{% include %}` name is always
+relative to `layouts/`. A missing file or anchor fails the build, reporting the location of
+the directive.
 
 Absolute paths are used verbatim and bypass all resolution.

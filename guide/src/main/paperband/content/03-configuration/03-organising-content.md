@@ -6,14 +6,14 @@ oneliner: "Discovery, `order:`, `include:`, and `sections:` — how much of the 
 # Organising Content
 
 By default a book's shape is **discovered**: every folder under the book root is walked and
-every `.md` file becomes a card, alphabetically. Filename prefixes (`01-`, `02-`) are the
-whole ordering mechanism, and a file dropped into a folder appears in the next build.
+every `.md` file becomes a card, in alphabetical order. Filename prefixes (`01-`, `02-`)
+control ordering, and a file added to a folder appears in the next build.
 
 ## Where the book lives: the POM decides
 
-The POM is the sole authority on *where* the book's pieces are; `paperband.yaml`
-declares *what* the book is (title, theme, axes, vars, sections) and never moves a
-root. Explicit parameters win, and the convention fills whatever the POM doesn't say:
+The POM decides *where* the book's pieces are; `paperband.yaml` declares *what* the
+book is (title, theme, axes, vars, sections) and never moves a root. Explicit parameters
+win, and the convention supplies whatever the POM doesn't set:
 
 ```filetree
 src/main/paperband/        ← <home>: the default for everything below
@@ -23,24 +23,24 @@ src/main/paperband/        ← <home>: the default for everything below
   styles/                  ← the css chain's files (css: paths resolve against home)
 ```
 
-A book laid out like this needs no `<configuration>` at all — every goal defaults to
-it, the way `src/main/java` never needs declaring. This guide is itself laid out this
-way, and every build logs the resolved geography in one line
+A book laid out like this needs no `<configuration>`: every goal defaults to it, as
+`src/main/java` needs no declaration. This guide uses this layout, and every build logs
+the resolved geography in one line
 (`book geography: home=…, content=…, layouts=…`).
 
 For an **existing project** whose content lives elsewhere, override the pieces
 individually: `<content>docs</content>` walks that directory as the book (everything
 there is content by declaration, so `.html` files are cards), while `home` keeps the
-book's own assets tidy in `src/main/paperband`. For content *scattered* across the
+book's own assets in `src/main/paperband`. For content *scattered* across the
 project — one `TRACE.md` per service, say — use `<book>` with glob `<sections>`
 instead of `<content>`; the home still supplies `paperband.yaml`, `layouts/` and
-`styles/`. Build output never leaks in: `target/` and `node_modules/` are never
-candidates for a glob, whatever the pattern says.
+`styles/`. `target/` and `node_modules/` are never matched by a glob, whatever the
+pattern.
 
-Legacy spellings keep working: `<input>` walks a directory the old way (a `content/`
+Legacy spellings still work: `<input>` walks a directory the old way (a `content/`
 wrapper inside it is detected, root-level `layouts/`/`styles/` are skipped), and a
-self-contained book whose yaml sits in its content root keeps its own config — an
-empty home never shadows it.
+self-contained book whose yaml sits in its content root keeps its own config; an empty
+home does not override it.
 
 ## `ignore:` — keep files out of the book
 
@@ -54,15 +54,13 @@ ignore:
 ```
 
 An `ignore:` applies to the subtree beneath the yaml that declares it, so a folder can
-hide its own drafts without the book root knowing. It filters discovery *and* declared
-lists — an `order:`/`include:` entry that an `ignore:` also matches is skipped with a
-warning naming the contradiction. (POM-declared books have `<excludes>` for the same
+exclude its own drafts. It filters discovery and declared lists: an `order:`/`include:`
+entry that an `ignore:` also matches is skipped with a warning. (POM-declared books have `<excludes>` for the same
 job.)
 
-That's the right default for a book whose folders are already in reading order, and the
-wrong one as soon as you want a card list that doesn't match the disk. Four keys move the
-dial from discovery towards declaration, and because they all answer the same question —
-*what does this directory emit, and in what order* — exactly one applies per folder:
+Discovery suits a book whose folders are already in reading order. To declare a card
+list that differs from the disk, use one of four keys. Each answers the same question
+(what this directory emits, and in what order), so exactly one applies per folder:
 
 | Key | Meaning | Unlisted files |
 |---|---|---|
@@ -72,11 +70,11 @@ dial from discovery towards declaration, and because they all answer the same qu
 | `sort:` | Order by frontmatter field instead of filename | Sorted, not dropped |
 
 Precedence runs top to bottom: `sections:` wins over `include:`, which wins over `order:`.
-Declaring a losing key alongside a winning one is a mistake rather than a merge, and warns
-on stderr.
+Declaring a lower-precedence key alongside a higher one does not merge them; it logs a
+warning on stderr.
 
-Each folder decides independently, so a book root can declare `sections:` over its folders
-while one folder pins an exact card list and its sibling just lets its cards be found.
+Each folder decides independently, so a book root can declare `sections:` while one folder
+lists its cards exactly and a sibling uses discovery.
 
 ## `order:` — declare the front, discover the rest
 
@@ -88,9 +86,8 @@ order:
 ```
 
 Those two come first, in that order; everything else in the folder is appended
-alphabetically, and a warning names the leftovers — drift between the disk and a declared
-order is usually an oversight rather than an intent. Entries resolve to a subdirectory of
-that name first, then `<name>.md`.
+alphabetically, and a warning names the unlisted files. Entries resolve to a subdirectory
+of that name first, then `<name>.md`.
 
 ## `include:` — declare everything
 
@@ -104,26 +101,20 @@ include:
   - 01-introduction
 ```
 
-The folder emits two cards, quickstart first, and a `99-scratch.md` sitting beside them
-stays out of the book entirely — no warning, because exclusion is the declared intent. A
-file added to the folder later stays out until it's listed, which is the point: the card
-list is a decision, not a consequence of what's on disk.
+The folder emits two cards, quickstart first. A `99-scratch.md` beside them is excluded
+without a warning, and a file added later stays out until it is listed.
 
-The other direction is not tolerated: a listed entry that resolves to nothing — no
-subdirectory of that name, no card file — **fails the build** naming the entry and the
-folder. The list is the declaration, so a reference to nothing is a typo or a stale list,
-and a silently thinner book is the worst way to find out. (`order:` entries only warn:
-that list is a soft front-of-folder preference, and discovery still emits everything that
-exists.)
+A listed entry that resolves to nothing (no subdirectory of that name, no card file) fails
+the build, naming the entry and the folder. `order:` entries only warn, because discovery
+still emits every file that exists.
 
 `sort:` has nothing left to order under `include:` and is ignored.
 
 ## `sections:` — declare the book's top-level structure
 
-Without `sections:`, top-level grouping is discovered too: each top-level folder becomes its
-own section, labelled from that folder's own `title:`. `sections:` instead names several
-folders and gives the group one title, so a single divider page fronts a run of folders
-that belong together:
+Without `sections:`, each top-level folder becomes its own section, labelled from that
+folder's `title:`. `sections:` groups several folders under one title, so one divider page
+precedes them:
 
 ```yaml
 # book root paperband.yaml
@@ -143,13 +134,13 @@ sections:
 
 A declared section behaves as one group everywhere a discovered one would: one PDF divider page,
 one site landing page (`<id>.html`), one nav and sidebar entry. `id` defaults to a slug of
-the title (`"Foundations"` → `foundations`); declare it explicitly when you want a stabler
-URL than the title gives. `landing.template` accepts the same presets and paths a section
+the title (`"Foundations"` → `foundations`); declare it to keep the URL stable if the
+title changes. `landing.template` accepts the same presets and paths a section
 folder's own override does (see Book Configuration).
 
-A declared section can also opt out of having a page at all with `landing: false` — it still
-groups and orders its folders, and still labels its cards in the nav and sidebar, but no
-PDF divider fronts its first card and no `<id>.html` is written (the Maven plugin's
+`landing: false` removes a declared section's page. The section still groups and orders
+its folders and labels its cards in the nav and sidebar, but no PDF divider precedes its
+first card and no `<id>.html` is written (the Maven plugin's
 equivalent is `<section><landingPage>false</landingPage></section>`):
 
 ```yaml
@@ -171,9 +162,8 @@ sections:
 
 ## Mixing declaration and discovery
 
-The two dials are independent, so the common shape is a declared skeleton over discovered
-cards — the root says which folders group together, each folder decides how much of its
-own content it spells out:
+Section grouping and card listing are independent. A common setup declares sections at the
+root and lets each folder decide how much of its content to list:
 
 ```
 paperband.yaml            sections: → Foundations [01-getting-started, 02-authoring]
@@ -190,24 +180,22 @@ paperband.yaml            sections: → Foundations [01-getting-started, 02-auth
   01-glossary.md
 ```
 
-Folders no declaration claims keep behaving as discovered sections, so adding `sections:` doesn't
-force you to enumerate the whole book — declare the grouping that matters and leave the
-rest alone.
+Folders no declaration claims remain discovered sections, so `sections:` need not list the
+whole book.
 
 ## Declaring it outside the book
 
-Every key above lives in a `paperband.yaml`, so the declaration travels with the content.
-The Maven plugin can instead declare the whole structure in the POM and select each section's
-cards by glob — `services/*/TRACE.md` and friends — which reaches shapes no directory
-layout expresses, like two sections drawing different files out of one folder. See the Maven
-Plugin page in the Advanced section.
+Every key above lives in a `paperband.yaml`, alongside the content. The Maven plugin can
+instead declare the structure in the POM and select each section's cards by glob
+(`services/*/TRACE.md`), which supports layouts a directory tree cannot express, such as two
+sections drawing different files from one folder. See the Maven Plugin page in the Advanced
+section.
 
 ## Watch Out
 
-Declared and discovered sections share one id namespace, because a declared id is used exactly
-where a discovered one's would be. Two declarations can't claim the same folder (its cards would have no
-single group to report), and duplicate section ids are rejected — both fail the build at config
-parse time rather than silently reshaping the book.
+Declared and discovered sections share one id namespace. Two declarations cannot claim the
+same folder, and duplicate section ids are rejected; both fail the build at config parse
+time.
 
 A declared section's `folders:` are resolved relative to the folder that declares `sections:`, like any
 `order:` entry. In a book that keeps its cards under a `content/` wrapper, put `sections:` in
@@ -219,6 +207,5 @@ A declared section's `folders:` are resolved relative to the folder that declare
 mvn paperband:structure -Dpaperband.input=path/to/book
 ```
 
-The structure dump shows the resolved grouping and card order — dividers, sections, and
-the cards under each — so you can confirm what a declaration produced without rendering a
-PDF.
+The structure dump shows the resolved grouping and card order (dividers, sections and the
+cards under each) without rendering a PDF.

@@ -7,14 +7,10 @@ index: [watermarks, PDFBox]
 # Watermarks
 
 A watermark overlays text such as `DRAFT` or `SAMPLE`, or an image such as a client logo, on
-the pages of a book. One declaration marks both outputs: the PDF gets a PDFBox post-pass on
-the finished file, so it behaves identically under every renderer, never disturbs the
-rendered content underneath, and preserves the named destinations that page-count
-enforcement relies on; the site gets the same mark as a CSS overlay on every page it writes.
-
-That parity is the point. A book whose yaml says `DRAFT` used to produce a stamped PDF and a
-clean-looking site, which is the wrong way round — the site is the copy that gets linked and
-forwarded.
+the pages of a book. One declaration marks both outputs. The PDF gets a PDFBox post-pass on
+the finished file, so it behaves the same under every renderer, leaves the rendered content
+unchanged, and preserves the named destinations that page-count enforcement uses. The site
+gets the same mark as a CSS overlay on every page.
 
 ## Declaring in yaml
 
@@ -40,8 +36,7 @@ vars:
     pages: except-cover
 ```
 
-An unknown key is an error rather than a shrug: a misspelled `opacty:` that silently stamped
-at the default would be found by whoever printed the proof, which is late.
+An unknown key, such as a misspelt `opacty:`, fails the build.
 
 ## The options
 
@@ -105,15 +100,14 @@ on — so a one-off stamp needs no POM edit. `build`, `site` and `render` all ta
 </plugin>
 ```
 
-The element names are the yaml keys, so a declaration moves between the two by hand with no
-translation table. The one difference Maven forces is `<fontSize>` for yaml's `font_size`:
-elements bind to field names, and a field can't be called `font_size`.
+The element names are the yaml keys, with one exception: `<fontSize>` for yaml's
+`font_size`, because Maven binds elements to field names and a field can't be called
+`font_size`.
 
-`<pages>` and `<font>` mean nothing to a website, and the `site` goal quietly ignores them
-rather than refusing the block — which is what lets one shared `<watermark>` feed both goals.
-The flat spellings are the exception: `<watermarkPages>` and `<watermarkFont>` are not
-parameters of `site` at all, so those two belong in the PDF execution rather than the shared
-block. Inside `<watermark>` they can sit anywhere.
+The `site` goal ignores `<pages>` and `<font>`, so one shared `<watermark>` block serves both
+goals. The flat parameters `<watermarkPages>` and `<watermarkFont>` are not parameters of
+`site`, so put those two in the PDF execution, not the shared block. Inside `<watermark>`
+they can go anywhere.
 
 A misspelled key inside the block is still an error:
 
@@ -132,34 +126,31 @@ A bare string works, exactly as it does in the yaml:
 
 ### Retuning from the command line
 
-Alongside the block, each key also exists as a flat parameter carrying the `-D` property —
-`<watermarkColor>`, `<watermarkOpacity>`, and so on, with `<watermarkText>` for the text.
-**The block is the declaration; the flat parameters are the overrides**, and they win:
+Each key also exists as a flat parameter with a `-D` property: `<watermarkColor>`,
+`<watermarkOpacity>` and so on, with `<watermarkText>` for the text. The flat parameters
+override the block:
 
 ```bash
 # the POM's block says REVIEW COPY at 0.15; this run says otherwise
 mvn package -Dpaperband.watermark="DRAFT" -Dpaperband.watermarkOpacity=0.4
 ```
 
-That is the same layering the yaml gets, one rung further out. All three channels compose in
-a fixed order — the book's `vars.watermark`, then the POM's block, then the flat parameters —
-so a book can say `DRAFT`, a module restyle it, and one run retune that.
+The three sources apply in a fixed order: the book's `vars.watermark`, then the POM's block,
+then the flat parameters.
 
 ### POM or yaml?
 
-Prefer the yaml when the mark belongs to the book (a manuscript that is a draft until it
-isn't), and the POM when it belongs to the build (this module always ships review copies).
-The yaml also travels with the book to anyone who builds it without your POM.
+Use the yaml when the mark belongs to the book, and the POM when it belongs to the build (for
+example, a module that always ships review copies). The yaml also applies when the book is
+built without your POM.
 
 ## Fitting
 
-`font_size` is a ceiling, not a promise: a stamp too wide for the paper is shrunk until its
-rotated bounding box sits inside the page, down to a floor of 8pt. A 46-character phrase
-declared at 96pt lands at about 28pt on A4 — visible, diagonal, and on the page, which is
-what the author meant.
+`font_size` is a maximum. A stamp too wide for the page is shrunk until its rotated bounding
+box fits, down to 8pt. A 46-character phrase declared at 96pt renders at about 28pt on A4.
 
-Turn it off with `fit: false` when the size matters more than the fit; the stamp is then
-drawn exactly as declared and may run off the edge. Long text is better broken than shrunk:
+`fit: false` draws the stamp exactly as declared, and it may run off the edge. For long text,
+use a line break instead of relying on shrinking:
 
 ```yaml
 vars:
@@ -167,30 +158,26 @@ vars:
     text: "SAMPLE COPY\nNOT FOR RESALE"
 ```
 
-Both spellings of a line break work — a real newline as above, and the literal two
-characters `\n`, which is what a single-quoted yaml scalar and a `-Dpaperband.watermark=...`
-command line actually deliver.
+Both a real newline, as above, and the literal characters `\n` work. The literal form is
+what a single-quoted yaml scalar and a `-Dpaperband.watermark=...` command line deliver.
 
 ## Which pages
 
-`pages: except-cover` leaves page one alone. A cover is usually a designed page — a
-full-bleed image, a title block — and a `DRAFT` stamp across it is the one place the mark
-reads as damage rather than as status. `pages: first` is the opposite case: a stamp on the
-title page only.
+`pages: except-cover` skips page one, for books whose cover is a designed page. `pages: first`
+stamps the first page only.
 
-The site ignores `pages` entirely. A website has no page one, and no cover to protect.
+The site ignores `pages`.
 
 ## Over or under
 
-By default the stamp is drawn over the page content. At the default opacity of 0.12 that is
-invisible; crank it up for a proof and the body text starts to sit under grey. `behind: true`
-prepends the overlay instead, so the content paints over it.
+By default the stamp is drawn over the page content. At the default opacity of 0.12 this does
+not affect legibility; at higher opacities the text sits under grey. `behind: true` draws
+the overlay first, so the content paints over it.
 
 ## Tiling
 
-`tile: true` repeats the stamp in a 3 × 4 grid across each page rather than centring one, the
-conventional look for a licensing mark. Each copy is fitted to its own cell, so tiling makes
-the individual stamps smaller rather than overlapping them.
+`tile: true` repeats the stamp in a 3 × 4 grid across each page instead of one centred stamp.
+Each copy is fitted to its own cell, so tiled stamps are smaller and do not overlap.
 
 ## Image watermarks
 
@@ -203,16 +190,15 @@ vars:
 ```
 
 The path resolves against the book root. For the site the file is copied into `assets/`
-alongside the cover art, and referenced at the right depth from every page. A missing image
-is a warning, not a build failure — a rendered book without its logo beats no book at all.
+alongside the cover art. A missing image produces a warning, not a build failure.
 
-There is no "logo plus wording" mode: a watermark is text or an image, and a logo with
-wording in it is an image.
+A watermark is either text or an image. For a logo with wording, use an image that contains
+the wording.
 
 ## Text Helvetica can't set
 
-The default font is Type1 Helvetica, which needs no embedding and keeps the PDF the size it
-was. Helvetica is WinAnsi-encoded, so it cannot set CJK, Cyrillic or Greek. Point `font:` at
+The default font is Type1 Helvetica, which needs no embedding and does not increase the PDF's
+size. Helvetica is WinAnsi-encoded, so it cannot set CJK, Cyrillic or Greek. Point `font:` at
 a TrueType file that covers the characters:
 
 ```yaml
@@ -222,8 +208,8 @@ vars:
     font: fonts/ArialUnicode.ttf
 ```
 
-Without it the build warns, names the characters it couldn't set, and renders unmarked
-rather than throwing away a book that otherwise rendered:
+Without it the build warns, names the characters it couldn't set, and produces an unmarked
+PDF:
 
 ```output
 [WARNING] watermark text contains '기', '밀', '자', '료', which the watermark font cannot
@@ -231,15 +217,15 @@ encode — no watermark applied. Point the watermark's 'font:' key at a TrueType
 covers those characters.
 ```
 
-The site needs none of this: a browser has its own fonts, so `font:` is a PDF-only key.
+`font:` is PDF only; the site uses the browser's fonts.
 
 ## Precedence
 
-`<watermark>` on the build **replaces** the yaml declaration entirely — when it's set, the
-yaml map isn't consulted at all, so a release build can stamp `REVIEW COPY` over a book
-whose yaml says `DRAFT` without inheriting the yaml's colour or angle. The per-knob
-parameters (`<watermarkColor>` and friends) then layer over whichever base was chosen,
-yaml or build. Setting only knob parameters with no text anywhere produces no watermark.
+`<watermark>` on the build replaces the yaml declaration entirely: when it is set, the yaml
+map is not read, so a build can stamp `REVIEW COPY` over a book whose yaml says `DRAFT`
+without inheriting the yaml's colour or angle. The per-setting parameters
+(`<watermarkColor>` and the rest) then apply over whichever base was chosen. Setting only
+those parameters, with no text anywhere, produces no watermark.
 
 ```bash
 # yaml says DRAFT; this build says otherwise
@@ -254,8 +240,8 @@ A successful application prints what it stamped after rendering:
 
 ## Per edition
 
-An edition is the natural home for a watermark: `publication:` merges each edition's `vars`
-over the defaults, so one source can cut a clean release and a marked review copy.
+`publication:` merges each edition's `vars` over the defaults, so one source can produce an
+unmarked release and a marked review copy.
 
 ```yaml
 publication:
@@ -270,12 +256,12 @@ publication:
 
 ## The emitted HTML
 
-`<emitHtml>` writes the pre-render HTML with the watermark as a **screen-only** overlay: you
-see it when you open the file, and it disappears when the page is printed. That file's print
-path is the renderer plus the PDFBox stamp, so a mark visible in print would land twice.
+`<emitHtml>` writes the pre-render HTML with the watermark as a screen-only overlay, visible
+when the file is opened and hidden when it is printed. The PDF gets its mark from the PDFBox
+stamp, so a print-visible overlay would apply it twice.
 
-It also means re-rendering that file produces an unmarked PDF unless you say otherwise —
-which is why `paperband:render` takes the watermark parameters too:
+Re-rendering that file therefore produces an unmarked PDF unless the watermark parameters are
+passed to `paperband:render`:
 
 ```bash
 mvn paperband:render -Dpaperband.input=out.html -Dpaperband.output=out.pdf -Dpaperband.watermark=DRAFT
@@ -283,12 +269,10 @@ mvn paperband:render -Dpaperband.input=out.html -Dpaperband.output=out.pdf -Dpap
 
 ## Watch Out
 
-The site overlay is `position: fixed` and `pointer-events: none`, so it never affects layout
-or swallows a click, and it is hidden from assistive technology. It carries the class
-`pb-watermark`; a theme that wants it gone on the web can hide that class, and a theme that
-wants it different can restyle it.
+The site overlay is `position: fixed` and `pointer-events: none`, so it does not affect layout
+or intercept clicks, and it is hidden from assistive technology. It carries the class
+`pb-watermark`, which a theme can hide or restyle.
 
-Vertical centring is approximate (it nudges by a quarter of the font size rather than
-measuring cap height), which is invisible at watermark opacities but worth knowing if you
-crank opacity up for proofs. On the site, so is the width: CSS cannot measure a string, so
-the fitted size is computed from an estimate of about 0.7em per character.
+Vertical centring is approximate: it offsets by a quarter of the font size rather than
+measuring cap height, which can show at high opacities. On the site the fitted width is also
+approximate, because CSS cannot measure a string; it assumes about 0.7em per character.

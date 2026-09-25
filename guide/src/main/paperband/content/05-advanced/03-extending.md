@@ -6,10 +6,9 @@ oneliner: "Add renderers and block renderers via ServiceLoader; content provider
 # Extending Paperband
 
 Paperband has five extension points: PDF renderers, block renderers, include content
-providers, include fragment processors, and themes. They differ in how they're discovered —
-renderers and block renderers are true `ServiceLoader` SPIs found from the classpath; the
-two include interfaces are registered explicitly in code today; themes are just
-directories.
+providers, include fragment processors, and themes. Renderers and block renderers are
+`ServiceLoader` SPIs discovered from the classpath; the two include interfaces are
+registered explicitly in code; themes are directories.
 
 ## A new PDF renderer
 
@@ -33,43 +32,40 @@ com.example.render.PrinceRenderer
 ```
 
 With the jar on the plugin's classpath, `mvn paperband:renderers` lists it and `<renderer>prince</renderer>`
-selects it — `name()` is the selector, matched case-sensitively. `canRender`,
-`isAvailable` and `producesPdf` have sensible defaults (`true`); override `isAvailable`
-when the backend needs an external binary, so the `renderers` table can say so.
+selects it. `name()` is the selector, matched case-sensitively. `canRender`,
+`isAvailable` and `producesPdf` default to `true`; override `isAvailable` when the backend
+needs an external binary, so the `renderers` table reports it.
 
-One capability contract to know about: some page features render through in-page
-JavaScript — ` ```mermaid ` diagrams, Prism syntax highlighting — and the bundled
-`playwright` renderer waits for the promises page scripts push into
-`window.paperbandPending` before snapshotting (see Renderers in the Rendering section).
-A renderer whose engine doesn't execute JavaScript will print those blocks as their
-unprocessed source; one that does should honour the same wait, or diagrams can race the
-snapshot.
+Some page features render through in-page JavaScript: ` ```mermaid ` diagrams and Prism
+syntax highlighting. The bundled `playwright` renderer waits for the promises page scripts
+push into `window.paperbandPending` before snapshotting (see Renderers in the Rendering
+section). A renderer whose engine doesn't execute JavaScript prints those blocks as
+unprocessed source; one that does should honour the same wait, or diagrams may be captured
+before they finish rendering.
 
 ### When the output isn't a PDF
 
-The SPI's name is historical — what it contracts for is HTML in, one file out. A renderer
-that writes something else says so:
+The SPI's name is historical; the contract is HTML in, one file out. A renderer that writes
+something other than a PDF declares it:
 
 ```java
 @Override public boolean producesPdf() { return false; }
 ```
 
-That `false` is not cosmetic. Four passes run *after* `render` and reopen the output file
-with PDFBox — two-pass page-number resolution for a printed toc/index, the full-page-cover
-splice, the watermark stamp, and the bookmark outline. Leave the default `true` in place
-and PDFBox is pointed at a file that isn't a PDF, so the build fails *after* a successful
-render, which is the most confusing place to fail. The page-budget check (`maxPagesPerCard`)
-sits outside that guard on purpose: it measures the DOM rather than the finished file, so a
-non-PDF renderer still gets per-card enforcement.
+Four passes run after `render` and reopen the output file with PDFBox: page-number
+resolution for a printed TOC and index, the full-page-cover splice, the watermark stamp, and
+the bookmark outline. With the default `true`, PDFBox is given a file that isn't a PDF and
+the build fails after the render has succeeded. The page-budget check (`maxPagesPerCard`)
+measures the DOM rather than the finished file, so it still runs for a non-PDF renderer.
 
 The bundled `render-pptx` is the worked example — see Slides in the Rendering section.
 
 ## A new block renderer
 
-A block template (`layouts/blocks/<type>.html`) can rearrange the text a fence captured. It
-cannot *compute* anything — and a diagram has to be drawn. That is what
-`dev.noregressions.paperband.block.BlockRenderer` is for: a fence type whose HTML is
-produced by a jar, at build time.
+A block template (`layouts/blocks/<type>.html`) can rearrange the text a fence captured, but
+cannot compute anything, such as drawing a diagram.
+`dev.noregressions.paperband.block.BlockRenderer` handles that case: a fence type whose HTML
+is produced by a jar at build time.
 
 ```java
 public final class DotBlockRenderer implements BlockRenderer {
@@ -106,10 +102,9 @@ dependencies:
 </plugin>
 ```
 
-`mvn paperband:blocks` then lists every type the build can render and what renders it, and
-each build logs the renderers it found. Both exist for the same reason: a fence that came
-out as a code block did so because nothing claimed the type, and that is otherwise
-invisible.
+`mvn paperband:blocks` lists every type the build can render and what renders it, and each
+build logs the renderers it found. A fence that renders as a plain code block is one whose
+type nothing claimed.
 
 ### What a renderer declares
 
@@ -122,9 +117,8 @@ invisible.
 | `render(BlockRequest)` | the replacement HTML; `null` declines, an exception fails the build |
 
 `BlockRequest` carries the fence text, its info-line classes and id, the card's whole `vars`
-cascade, the card's path — and `config()`, which is `vars.<name>` for this renderer. That
-last one is why settings need no new plumbing: they cascade per folder and per card like
-every other var.
+cascade, the card's path, and `config()`, which is `vars.<name>` for this renderer. Renderer
+settings therefore cascade per folder and per card like any other var.
 
 ### Precedence
 
@@ -134,26 +128,23 @@ Three things can claim a fence type, and they are tried in this order:
 2. a registered `BlockRenderer`,
 3. the bundled `blocks/<type>.html`.
 
-Author beats jar beats default. The first rung is what makes a module safe to install — a
-book can override one diagram by hand without uninstalling anything. The third is what lets
-a module claim a type paperband already ships (a server-side `mermaid`, say).
+A book can therefore override one type by hand without removing a module, and a module can
+claim a type paperband already ships (for example, a server-side `mermaid`).
 
 ### Watch Out
 
-Whatever a renderer returns is re-parsed as HTML and spliced into the card, so it must be
-self-contained. Inline SVG is exempt from the content policy (a `fill` inside a picture *is*
-the picture, not smuggled presentation) — but `<script>` and `on*` handlers are stripped
-from it regardless, and no renderer should be emitting either.
+A renderer's output is re-parsed as HTML and inserted into the card, so it must be
+self-contained. Inline SVG is exempt from the content policy, except that `<script>` and
+`on*` handlers are stripped.
 
 Wrap a picture in `<figure class="diagram">` (or `plantuml`) and the base stylesheet sizes
-it for you in both outputs: centred, capped at the column, scaled rather than squashed when
-it has to shrink, and never sliced across a page break. A renderer that invents its own
-wrapper class gets none of that and has to ask the book for CSS.
+it in both outputs: centred, capped at the column width, scaled proportionally, and kept on
+one page. A renderer that uses its own wrapper class gets none of this and needs book CSS.
 
 ## A new content provider
 
 `dev.noregressions.paperband.include.ContentProvider` supplies content to `fragment` include
-directives from a new source — git or HTTP, say, alongside the built-in `file` provider.
+directives from a new source, such as git or HTTP, alongside the built-in `file` provider.
 The provider is chosen by a scheme prefix on the reference (`git:some/path@ref`);
 references with no scheme go to `file`:
 
@@ -182,14 +173,13 @@ public final class CsvTableProcessor implements FragmentProcessor {
 }
 ```
 
-**Registration caveat:** unlike renderers, providers and processors are *not* discovered
-from `META-INF/services/` — the include pipeline is wired with explicit lists (see
-`Includes.defaultProviders()` / `defaultProcessors()`), so today a new implementation
-means adding it to that wiring rather than just dropping a jar on the classpath.
-ServiceLoader discovery for these is planned once more than one provider exists.
+Unlike renderers, providers and processors are not discovered from `META-INF/services/`.
+The include pipeline uses explicit lists (`Includes.defaultProviders()` /
+`defaultProcessors()`), so a new implementation must be added there; a jar on the classpath
+is not enough. ServiceLoader discovery is planned once more than one provider exists.
 
 ## A new theme
 
-No code at all: a directory containing a `manifest.txt` and the CSS files it lists,
-passed via `<themeDir>`. See Themes in the Rendering section for the full walkthrough,
+A theme needs no code: it is a directory containing a `manifest.txt` and the CSS files it
+lists, passed via `<themeDir>`. See Themes in the Rendering section for the full walkthrough,
 including template overrides.

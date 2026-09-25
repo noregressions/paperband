@@ -38,12 +38,11 @@ It is read from the book's own `paperband.yaml` and nowhere else: `title`, `axes
 `theme`, `sections`, `cardSchema`, `cover`, `back`, `header`, `footer`, `page`, `sidebar`,
 and the book-wide `sections.landing.template` default.
 
-A book-scope key set in a folder yaml is an **error**, not a silent win or a silent loss.
-That matters most for `page` — see below.
+A book-scope key set in a folder yaml fails the build. See Page geometry, below.
 
-`css`, `vars` and `targets` sit in both: the book root is where they start, and folders
-extend or override them from there. They're card scope with a book-level entry point, not
-a third kind of thing. Config Reference lists every key with its scope and precedence.
+`css`, `vars` and `targets` are card scope that starts at the book root: the root sets
+them, and folders extend or override them. Config Reference lists every key with its scope
+and precedence.
 
 Folder-level `order:`, `include:`, `sort:`, and `where:` are in neither cascade: they
 control which cards a folder emits and in what sequence, and each folder declares its own
@@ -51,22 +50,18 @@ independently (see Organising Content).
 
 ## Where the POM fits
 
-A build tool can declare book config too — the Maven plugin's `<book>` element. The rule
-has two halves, because the two scopes want opposite things:
+The Maven plugin's `<book>` element can also declare book config. The rule differs by
+scope:
 
 > **The POM outranks the root yaml. Depth outranks the POM.**
 
-For **book scope** the POM simply wins, field by field: a declaration beats a default, and
-the POM is the file you just edited. Fields stay independent — declaring `<title>` doesn't
-clear a yaml-declared `cover`.
+For **book scope** the POM wins, field by field. Fields stay independent: declaring
+`<title>` doesn't clear a yaml-declared `cover`.
 
 For **card scope** the POM's `<book><vars>` enters the cascade *at the book's own level* —
-above the built-ins, below any folder. So a folder yaml still overrides a POM-declared var,
-exactly as it overrides a root-yaml one. A build-declared var has to reach every card, and
-it has to stay overridable per folder; a rule that just said "the POM always wins" would
-break the second half.
-
-Book scope has no depth, so there the two halves coincide and the POM wins outright.
+above the built-ins, below any folder. A folder yaml still overrides a POM-declared var,
+as it overrides a root-yaml one, so a build-declared var reaches every card and stays
+overridable per folder.
 
 Geography — `<home>`, `<content>`, `<layouts>` — is POM-only in both scopes. `paperband.yaml`
 declares what the book *is*; the POM declares *where* it is.
@@ -84,12 +79,11 @@ page:
 ```
 
 `size`, `margins` and `fontScale` in a folder yaml raise a build error naming the file.
-They used to half-apply — the card's CSS content box changed while the physical sheet did
-not, so the card was laid out for a page it was never printed on — and the outcome depended
-on which card the build happened to walk first.
+Applied per folder, they would change a card's CSS content box without changing the sheet
+it prints on.
 
-`orientation` is the exception, and only because it isn't really one: it describes a
-**block's** sheets rather than the book's, so it cascades like any other card-scope key.
+`orientation` is the exception: it applies to a folder's cards rather than the whole book,
+so it cascades like any other card-scope key.
 
 ```yaml
 # content/appendices/paperband.yaml — these cards print sideways
@@ -97,13 +91,10 @@ page:
   orientation: landscape
 ```
 
-Every card in that folder gets its whole run of pages rotated — the run, not one page:
-Paperband addresses cards, never pages, and a card is always a whole number of sheets. The
-book's paper stays the same; only its rotation changes.
+Every page of each card in that folder is rotated; a card is always a whole number of
+sheets. The book's paper size is unchanged.
 
 `page:` was previously spelled `vars.page`, which still works as a deprecated alias.
-Geometry riding inside `vars` is exactly what made it uncheckable — a member of a cascading
-map can't be scoped without special-casing it.
 
 ## A three-level cascade, worked
 
@@ -141,8 +132,8 @@ Resolving for `gc-tuning.md`:
 - CSS chain → `styles/base.css` then `internals.css`, in that order (root first, so the
   folder's rules win on equal specificity)
 - The `tier` axis → the folder's `axis: {tier: 2}` binding cascades to every card in the
-  folder, but this card's **frontmatter `tier: 1` wins for axis classification** — a
-  card's own frontmatter field always beats the folder binding when both are present
+  folder, but this card's frontmatter `tier: 1` wins for axis classification: a card's
+  own frontmatter field beats the folder binding when both are present
 
 ## Built-in vars
 
@@ -158,5 +149,4 @@ mvn paperband:scan -Dpaperband.input=path/to/card.md
 ```
 
 The scan output includes the fully resolved context for that card — book root, CSS chain
-in load order, merged vars, and axis values — so you can see exactly what the cascade
-produced without running a build.
+in load order, merged vars, and axis values — without rendering the book.

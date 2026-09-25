@@ -5,8 +5,8 @@ oneliner: "Ten goals: build, site, publish, and the inspection goals around them
 
 # Maven Plugin
 
-`paperband-maven-plugin` is how Paperband runs: a book builds as part of `mvn install`
-(or any phase you bind it to), in the same reactor and CI as the rest of the project.
+Paperband runs as `paperband-maven-plugin`. A book builds as part of `mvn install`, or any
+phase its goals are bound to, in the same reactor and CI as the rest of the project.
 
 ## Goals
 
@@ -18,15 +18,15 @@ oneliner: "Ten goals: build, site, publish, and the inspection goals around them
 | `structure` | Dump the resolved structure — sections, cards, blocks — without rendering | `process-resources` |
 | `pages` | Page-span report read from a rendered PDF | `verify` |
 | `scan` | One card's parsed frontmatter, blocks and resolved config | *(invoke directly)* |
-| `render` | One HTML file straight to PDF, no card pipeline in the way | *(invoke directly)* |
+| `render` | One HTML file straight to PDF, bypassing the card pipeline | *(invoke directly)* |
 | `renderers` | List the renderers this build can reach | *(invoke directly)* |
 | `themes` | List the themes `<theme>` can name | *(invoke directly)* |
 | `blocks` | List the ```` ```type ```` fences this build can render, and what renders each | *(invoke directly)* |
 
-Every goal runs standalone as well as from an execution — `mvn paperband:structure
--Dpaperband.input=book` needs no POM edit — and every parameter has a `-D` property that
-fills it whenever the POM leaves it unset. See Overriding from the command line below for
-the one case that catches people out.
+Every goal runs standalone as well as from an execution (`mvn paperband:structure
+-Dpaperband.input=book` needs no POM edit), and every parameter has a `-D` property that
+fills it when the POM leaves it unset. See Overriding from the command line below for how
+`-D` interacts with POM values.
 
 ## Add the plugin
 
@@ -83,25 +83,24 @@ The `build` goal's default phase is `process-resources`; override `<phase>` in t
 
 ### Full-bleed builds
 
-`<margins>0</margins>` renders with no page margin at all, which is what a theme whose
-ground is the paper (`blueprint`, `dark`, `carded`, `fieldguide`, …) needs: Chromium paints
-nothing into a PDF page margin, so any margin shows up as a white border around every page,
-and zero is the only way a coloured ground reaches the trim edge. The bundled themes supply
-their own insets in that case — including on the continuation pages of a card that spans
-many pages — so the text still has room to breathe. See Themes / Full-bleed themes.
+`<margins>0</margins>` renders with no page margin. Themes with a coloured page background
+(`blueprint`, `dark`, `carded`, `fieldguide`, …) need this: Chromium paints nothing into a PDF
+page margin, so any margin appears as a white border around every page. The bundled themes
+supply their own insets in that case, including on the continuation pages of a multi-page
+card. See Themes / Full-bleed themes.
 
-Like `pageSize`, this parameter seeds the *base* geometry: a `vars.page.margins` block in
-the book's own yaml still wins over it.
+Like `pageSize`, this parameter sets the base geometry; a `vars.page.margins` block in the
+book's own yaml overrides it.
 
-At most one of `content`, `input` and a card-selecting `book` may be configured — the first
-two walk a directory tree, the third declares the structure outright — and none is needed
-for a book at the conventional `src/main/paperband`.
+At most one of `content`, `input` and a card-selecting `book` may be configured. The first
+two walk a directory tree; the third declares the structure. None is needed for a book at
+the conventional `src/main/paperband`.
 
 ### Overriding from the command line
 
-A `-D` property fills a parameter the POM doesn't set. It does **not** replace one the POM
-does: Maven gives an explicit `<configuration>` value precedence over the property, so with
-`<theme>editorial</theme>` in the POM, `-Dpaperband.theme=dark` is silently ignored.
+A `-D` property fills a parameter the POM doesn't set. It does not replace one the POM does:
+Maven gives an explicit `<configuration>` value precedence over the property, so with
+`<theme>editorial</theme>` in the POM, `-Dpaperband.theme=dark` has no effect.
 
 To keep a value overridable, declare it as a POM property instead of a plugin parameter:
 
@@ -116,10 +115,10 @@ command-line property wins over a POM property of the same name.
 
 ## Declare the book in the POM
 
-`<input>` hands a directory to the book walker and lets the folder layout decide the rest —
-see Organising Content for the `paperband.yaml` keys that steer it. `<book>` is the other
-end of that dial: the sections, their titles and their card lists are stated in the POM, and
-the cards are selected by glob rather than by where they sit.
+`<input>` passes a directory to the book walker, and the folder layout determines the
+structure (see Organising Content for the `paperband.yaml` keys that control it). With
+`<book>`, the sections, their titles and their card lists are declared in the POM, and cards
+are selected by glob rather than by location.
 
 ```xml
 <configuration>
@@ -157,39 +156,38 @@ the cards are selected by glob rather than by where they sit.
 </configuration>
 ```
 
-That builds a three-section book: one card pulled out of each service directory under a single
-"Execution Traces" divider, then everything under `docs/` (minus drafts) under "Reference",
-then the appendix cards as a group with no divider of their own. No directory layout
-expresses that first section — the trace cards' own folders say nothing about the grouping.
+This builds a three-section book: one card from each service directory under a single
+"Execution Traces" divider, then everything under `docs/` except drafts under "Reference",
+then the appendix cards as a group with no divider. The first section cannot be expressed
+as a directory layout, because the trace cards' folders don't group them.
 
 | Element | Notes |
 |---|---|
-| `root` | Book root. Patterns resolve against it. **Defaults to the conventional geography** — the `content/` wrapper if there is one, else `src/main/paperband`, else the module basedir — so a `<book>` that carries only config doesn't move the book. Declare it only for a book that lives somewhere else. |
+| `root` | Book root. Patterns resolve against it. Defaults to the conventional geography: the `content/` wrapper if there is one, else `src/main/paperband`, else the module basedir, so a `<book>` that carries only config doesn't move the book. Declare it only for a book that lives elsewhere. |
 | `sections` | Ordered list of `section` elements. |
 | `section/id` | Section id — becomes `<id>.html` on the static site. Defaults to a slug of `title`. |
 | `section/title` | Shown on the divider and landing page. |
 | `section/landingTemplate` | Preset name or template path, exactly as a section folder's own `landing.template`. |
 | `section/where` | Pebble predicate over `target`; false skips the whole section. |
-| `section/includes` | Glob patterns selecting the section's cards, in emission order. An `.html` file becomes a card only for a pattern that itself ends in `.html` (`pages/*.html`) — a bare sweep never claims one, and warns when it would have. |
+| `section/includes` | Glob patterns selecting the section's cards, in emission order. An `.html` file becomes a card only for a pattern that itself ends in `.html` (`pages/*.html`); a broader pattern never claims one, and warns when it would have. |
 | `section/excludes` | Glob patterns removing what an include matched. |
 | `section/sort` | Comma-separated frontmatter fields, `-` for descending — the `sort:` key's semantics. |
-| `section/landingPage` | Whether the section gets a page of its own — `true` by default. See below. |
+| `section/landingPage` | Whether the section gets a page of its own. `true` by default. See below. |
 
-Order is entirely declared: sections in order, then each section's `include` patterns in order,
+Order is fully declared: sections in order, then each section's `include` patterns in order,
 then matches within one pattern by `sort` or, with no `sort`, by path. A file is emitted
-once — the first section to match it claims it — so overlapping patterns narrow rather than
+once, by the first section that matches it, so overlapping patterns narrow rather than
 duplicate.
 
-Two sections may draw *different* files out of the *same* folder, which is the thing
-`sections:` in a `paperband.yaml` can't express: a yaml declaration claims whole folders, while a
-POM-declared section claims the individual cards its patterns matched.
+Two sections may take different files from the same folder, which `sections:` in a
+`paperband.yaml` cannot express: a yaml declaration claims whole folders, while a
+POM-declared section claims the individual cards its patterns match.
 
 ## Declaring the whole book
 
 A book normally describes itself: a `paperband.yaml` at its root carries the title, cover,
-theme and vars, and the directory layout supplies the structure. The POM can take over
-both, which leaves a clean three-way split — **structure in XML, content in markdown,
-appearance in CSS**:
+theme and vars, and the directory layout supplies the structure. The POM can declare both,
+giving a split of structure in XML, content in markdown, and appearance in CSS:
 
 ```xml
 <configuration>
@@ -229,44 +227,43 @@ appearance in CSS**:
 </configuration>
 ```
 
-That book needs no `paperband.yaml` at all. It's the natural shape for **generated**
-content — cards written by tooling, structure selected by pattern — where there's no
-sensible owner for a config file sitting among the output.
+That book needs no `paperband.yaml`. This suits generated content: the cards are written
+by tooling, and the configuration stays in the POM rather than in the generated output.
 
 | Element | Notes |
 |---|---|
 | `book/title` | Book title, for the cover and the PDF metadata. |
-| `book/cover`, `book/back` | A full-page `<image>`, a `<template>`, and/or the cover's own text: `<text>true</text>` overlays the standard title/subtitle/series/author block on the image, and `<title>`, `<subtitle>`, `<series>`, `<author>` elements override individual lines (each inherits the book's value when unset). `<fullPage>true</fullPage>` (cover only) fills the sheet trim edge to trim edge — the first page loses its margins, the image scales to cover it, and any running header/footer is suppressed on that page. Templates live in the book's `layouts/` — see below. The `site` goal renders the same declaration as the index hero, copying a declared image into the site's `assets/`, so one `cover:` serves both targets. |
+| `book/cover`, `book/back` | A full-page `<image>`, a `<template>`, and/or the cover's own text: `<text>true</text>` overlays the standard title/subtitle/series/author block on the image, and `<title>`, `<subtitle>`, `<series>`, `<author>` elements override individual lines (each inherits the book's value when unset). `<fullPage>true</fullPage>` (cover only) fills the sheet edge to edge: the first page has no margins, the image scales to cover it, and any running header/footer is suppressed on that page. Templates live in the book's `layouts/` (see below). The `site` goal renders the same declaration as the index hero, copying a declared image into the site's `assets/`. |
 | `book/header`, `book/footer` | Running fixtures, same `<image>`/`<template>` shape. |
 | `book/sectionLandingTemplate` | Default landing/divider template for sections that name none — a preset (`minimal`) or a path. |
 | `book/author` | The book's author, for the cover. |
-| `book/sidebar` | The static site's navigation sidebar. The element's presence is the opt-in — `<sidebar/>` is enough; `<enabled>false</enabled>` turns one off from a profile. `<collapsed>` starts the sidebar shut, `<sectionsCollapsed>` (default true) starts each section's card list shut. Ignored by `build`. |
+| `book/sidebar` | The static site's navigation sidebar. The element's presence enables it (`<sidebar/>` is enough); `<enabled>false</enabled>` turns it off from a profile. `<collapsed>` starts the sidebar collapsed, `<sectionsCollapsed>` (default true) starts each section's card list collapsed. Ignored by `build`. |
 | `book/authors` | Several authors: `<authors><author>A</author><author>B</author></authors>`. Templates get `book.authors` as a list and `book.author` rendered as "A and B", so a theme written for one author still shows both. Declaring both `<author>` and `<authors>` is an error. |
-| `book/sections/toc` | An empty `<toc/>` between `<section>` elements renders the printed table of contents at that point in the book — first for the traditional spot up front, last for contents-at-the-back. It always lists the whole book, with real page numbers from a second render pass, and at most one is allowed (two markers fail the build). See TOC and Index. |
-| `book/sections/page` | `<page><template>matrix</template></page>` between `<section>` elements renders a generated page at that point — a Pebble template with the **whole book model** in scope. Any number of markers is fine. See Generated pages below. |
+| `book/sections/toc` | An empty `<toc/>` between `<section>` elements renders the printed table of contents at that point: first for contents at the front, last for contents at the back. It lists the whole book, with page numbers from a second render pass. At most one is allowed; two markers fail the build. See TOC and Index. |
+| `book/sections/page` | `<page><template>matrix</template></page>` between `<section>` elements renders a generated page at that point: a Pebble template with the whole book model in scope. Any number of markers is allowed. See Generated pages below. |
 | `book/index` | `true` renders a back-of-book index from each card's `index:` frontmatter terms; `auto` additionally extracts each card's distinctive terms from its text. Anything else is an error. See TOC and Index. |
 | `book/vars` | Book-level template vars (`subtitle`, `series`, …). Flat strings only — see Watch Out. |
 | `book/axes` | Declared axes: `name` (the frontmatter key cards use), `title`, and `values` of `id`/`label`/`color`. Declared axes replace a yaml `axes:` wholesale. |
 
-An axis value's `<id>` is a string, where a yaml one keeps its native type. That costs
-nothing: every comparison between an axis value and a card's frontmatter runs both sides
-through `String.valueOf` first, so `<id>1</id>` matches a card declaring `tier: 1`.
+An axis value's `<id>` is a string, where a yaml one keeps its native type. Comparisons
+between an axis value and a card's frontmatter convert both sides with `String.valueOf`, so
+`<id>1</id>` matches a card declaring `tier: 1`.
 
-`<book>` doesn't have to select cards. Declare config with no `<sections>` or `<includes>` and
-the cards come from walking `<root>`, exactly as `<input>` would — so a book can take its
-title and cover from the POM while keeping its structure in the directory tree.
+`<book>` doesn't have to select cards. With no `<sections>` or `<includes>`, the cards come
+from walking `<root>`, as `<input>` would, so a book can take its title and cover from the
+POM while keeping its structure in the directory tree.
 
 ### Layouts without a theme
 
-A theme supplies two things: stylesheets, and template overrides. `<stylesheets>` replaces
-the first. The second was never theme-only — the book's own **`layouts/` directory** sits
-in the template loader chain, ahead of the bundled defaults and behind a theme's overrides:
+A theme supplies stylesheets and template overrides. `<stylesheets>` replaces the first.
+For the second, the book's own `layouts/` directory is in the template loader chain, ahead
+of the bundled defaults and behind a theme's overrides:
 
 ```
 theme overrides  →  <bookRoot>/layouts/  →  bundled templates
 ```
 
-So with no theme, drop a file in `layouts/` named after whatever you want to replace:
+With no theme, put a file in `layouts/` named after the template to replace:
 
 | File in `layouts/` | Replaces |
 |---|---|
@@ -278,13 +275,12 @@ So with no theme, drop a file in `layouts/` named after whatever you want to rep
 | `_tier-divider.html` | axis-value divider pages |
 | anything else | any bundled template, by its own name |
 
-Everything a theme could override, a book can — the recursion resolves through the same
+A book can override any template a theme can. Recursive includes resolve through the same
 chain, so an overridden `_block-section.html` is used at every depth.
 
-Templates named from config — `<cover><template>`, `<sectionLandingTemplate>`, an axis's
-`<landingTemplate>`, and `<layout>` — are paths **relative to `layouts/`**, extension
-stripped. A leading `layouts/` is accepted and dropped, since that's the file as it sits on
-disk:
+Templates named from config (`<cover><template>`, `<sectionLandingTemplate>`, an axis's
+`<landingTemplate>`, and `<layout>`) are paths relative to `layouts/`, without the
+extension. A leading `layouts/` is accepted and dropped:
 
 | Declared | Loads |
 |---|---|
@@ -297,77 +293,67 @@ A path that resolves nowhere fails the build and names every place it looked.
 
 ### theme=none
 
-`<theme>none</theme>` turns theming off, whatever the book's yaml asked for. It's needed
-because an unset `<theme>` *falls back* to the book's own — without `none` the build can
-replace one theme with another but never with nothing. With no theme, the built-in scaffold
-still supplies the structural CSS (divider pages, page geometry, code blocks) and colours
-inherit, so what you get is plain rather than broken — the right base for a `<stylesheets>`
-layer of your own. `none` is therefore a reserved name: a theme directory containing a
-bundle called `none` can't be selected.
+`<theme>none</theme>` turns theming off, whatever the book's yaml declares. An unset
+`<theme>` falls back to the book's own, so without `none` the build could replace one theme
+with another but not remove it. With no theme, the built-in scaffold still supplies the
+structural CSS (divider pages, page geometry, code blocks) and colours inherit, giving a
+plain base for your own `<stylesheets>`. `none` is a reserved name: a theme bundle called
+`none` in a theme directory can't be selected.
 
 ### Where declared CSS sits in the cascade
 
-`<stylesheets>` are inlined **after** the theme, making them the strongest layer:
+`<stylesheets>` are inlined after the theme, so they take precedence over it:
 
 ```
 book's own css: chain  →  theme  →  <stylesheets>
 ```
 
-That ordering earns its keep beyond the themeless case: theme CSS is inlined after a book's
-own, so a book can't override a bundled theme's rule without `!important`. A build-declared
-stylesheet can. `<theme>blueprint</theme>` plus one stylesheet means "that theme, with my
-corrections".
+Theme CSS is inlined after a book's own, so a book can't override a bundled theme's rule
+without `!important`; a build-declared stylesheet can. `<theme>blueprint</theme>` plus one
+stylesheet applies that theme with local overrides.
 
 ### Precedence
 
-Two rules, and they deliberately differ:
-
-- **Anything inside `<book>` wins over the yaml.** It's a declaration, not a default, and
-  the POM is the file you just edited. Declared `<sections>` also replace a yaml `sections:`,
-  with a warning.
-- **Build geometry outside `<book>` seeds the base.** `<margins>` and `<pageSize>` set the
-  starting point and a `vars.page` block in the yaml can still tune it, matching how
-  `--page-size` always behaved.
+- Anything inside `<book>` overrides the yaml. Declared `<sections>` also replace a yaml
+  `sections:`, with a warning.
+- Build geometry outside `<book>` sets the base. `<margins>` and `<pageSize>` set the
+  starting point, and a `vars.page` block in the yaml can still adjust it.
 
 ### Card ids and what a pattern claims
 
 A card's id is the PDF's `#card-<id>` destination and the site's `cards/<id>.html` page.
-Undeclared, it's derived from the card's path within the book, slugified —
-`scenarios/S01-spring-node/TRACE.md` → `scenarios-s01-spring-node-trace`. That's unique per
-file, so a book whose every scenario file is called `TRACE.md` needs no hand-written ids;
-and it depends on that card's own path alone, so adding or renaming a *different* card can
-never change this one's URL. Declare `id:` in frontmatter for something shorter.
+Undeclared, it is derived from the card's path within the book, slugified:
+`scenarios/S01-spring-node/TRACE.md` → `scenarios-s01-spring-node-trace`. This is unique per
+file, so files that share a name such as `TRACE.md` need no hand-written ids, and it depends
+only on that card's own path, so changes to other cards don't change it. Declare `id:` in
+frontmatter for a shorter id.
 
-An `<include>` pattern that matches **no card files at all fails the build**, naming the
-section and the pattern — a dead pattern is a broken reference (a typo, a moved folder),
-and continuing would ship a silently thinner book. Legitimately-empty stays legal: a
-pattern whose matches were all claimed by an earlier section (the documented narrowing)
-or removed by the section's own `<excludes>` did find its files, and only draws the
-empty-section warning. A `<where>`-skipped section's patterns are never evaluated at all.
+An `<include>` pattern that matches no card files fails the build, naming the section and
+the pattern. A pattern whose matches were all claimed by an earlier section, or removed by
+the section's own `<excludes>`, is not an error; it produces an empty-section warning. The
+patterns of a `<where>`-skipped section are not evaluated.
 
-Two rules about what a pattern actually claims are worth knowing — and when they leave a
-pattern with nothing, the failure message says which rule bit:
+Two rules limit what a pattern claims, and when either leaves a pattern empty, the failure
+message names the rule:
 
-- **`README.md` is claimed only by a pattern that names it.** `scenarios/*/README.md` means
-  those files and gets them. A wildcard sweep — `**`, `scenarios/**/*.md` — leaves readmes
-  out, which is what stops a book swallowing every readme under `node_modules`.
-- **A `.yaml` card needs the book root to declare a `cardSchema:`.** Without one, a pattern
+- `README.md` is claimed only by a pattern that names it. `scenarios/*/README.md` matches
+  those files; a wildcard such as `**` or `scenarios/**/*.md` excludes readmes, including
+  any under `node_modules`.
+- A `.yaml` card requires the book root to declare a `cardSchema:`. Without one, a pattern
   naming a yaml file matches nothing.
 
 ## Section pages
 
-Every named section gets a page of its own, generated for you: a full-page divider before its
-first card in the PDF, and an `<id>.html` landing page on the static site — the same
-treatment a discovered section folder gets, titled from `<title>` and rendered by
-`<landingTemplate>`. That's the default; nothing needs declaring to get it.
+By default every named section gets a generated page: a full-page divider before its first
+card in the PDF, and an `<id>.html` landing page on the static site, titled from `<title>`
+and rendered by `<landingTemplate>`, as for a discovered section folder.
 
-The divider takes a sheet to itself — forced page break on both sides, the section title and
-its table of contents centred on the page — and stands to the full printable height, which
-it reads from `--pw-content-height` rather than any fixed page size, so it stays one sheet
-at every page size and margin setting. Themes restyle it through the `.section-divider`
-class (the built-in look is deliberately plain: sections have no colour concept the way
-axis values do). For a divider showing the title alone, dead centre with no card count or
-contents list, use `<landingTemplate>minimal</landingTemplate>`.
+The divider occupies its own sheet, with page breaks on both sides and the section title and
+table of contents centred. Its height is read from `--pw-content-height` rather than a fixed
+page size, so it stays one sheet at every page size and margin setting. Themes restyle it
+through the `.section-divider` class; the built-in style is plain, because sections have no
+colour as axis values do. For a divider with the title only, use
+`<landingTemplate>minimal</landingTemplate>`.
 
 Set `<landingPage>false</landingPage>` on a section to suppress it:
 
@@ -381,30 +367,26 @@ Set `<landingPage>false</landingPage>` on a section to suppress it:
 </section>
 ```
 
-The section still exists — it claims its cards, orders them, and labels the group in the
-site's nav, sidebar and index. What goes away is the page itself and every link into it:
-no divider in the PDF (the section's first card follows straight on from the previous section's
-last), no `<id>.html` on the site, and the group's label renders as plain text rather than
-a dead link. The cards keep their own pages either way.
+The section still claims its cards, orders them, and labels the group in the site's nav,
+sidebar and index. Only the page and the links to it are removed: there is no divider in the
+PDF (the section's first card follows the previous section's last), no `<id>.html` on the
+site, and the group's label renders as plain text. The cards keep their own pages.
 
-Use it for a run of cards that belongs together for ordering and labelling but doesn't
-warrant a page break — a short appendix, a single-card section, or a section whose first card
-is already its own title page. For a page that's present but plainer, reach for
-`<landingTemplate>minimal</landingTemplate>` instead: title only, no card count or
-table of contents.
+Use it for cards grouped for ordering and labelling that don't need a page break, such as a
+short appendix, a single-card section, or a section whose first card is its own title page.
+For a plainer page instead of none, use `<landingTemplate>minimal</landingTemplate>`: title
+only, no card count or table of contents.
 
 Only a declared section can decline a page. Discovered section folders always get one.
 
 ## Generated pages
 
-A card is loaded before the book is assembled, so a card template only ever sees `vars` —
-it can't list the other cards, count a section, or summarise the book it sits in. A
-`<page>` marker can: it names a Pebble template that renders **after** everything is
-known, with the same model `book.html` itself sees — `cards`, `sections`,
-`axisGroupings`, `book`, `vars` — placed at the marker's position in the flow.
-Like `<toc/>`, the marker is positional: it sits directly under `<sections>`, *between*
-`<section>` elements, never inside one (a nested `<page>` fails the build with a message
-saying so):
+A card is loaded before the book is assembled, so a card template sees only `vars`: it
+can't list other cards, count a section, or summarise the book. A `<page>` marker names a
+Pebble template that renders after the book is assembled, with the same model `book.html`
+sees (`cards`, `sections`, `axisGroupings`, `book`, `vars`), placed at the marker's position.
+Like `<toc/>`, the marker sits directly under `<sections>`, between `<section>` elements,
+never inside one; a nested `<page>` fails the build:
 
 ```xml
 <sections>
@@ -422,21 +404,20 @@ saying so):
 </table>
 ```
 
-The template name resolves against `layouts/` like every other declared template (theme
-overrides first). The page takes a sheet of its own — forced break on both sides, the
-full printable height to lay out — and gets a named PDF destination (`book-page-0`,
-`book-page-1`, …) so it shows up in `paperband:pages`. Position arithmetic matches
-`<toc/>`: skipped and empty sections cost nothing, and a `-Dpaperband.cards` selection
-keeps the page before the first kept card that followed it.
+The template name resolves against `layouts/` like every other declared template, theme
+overrides first. The page occupies its own sheet, with page breaks on both sides and the
+full printable height, and gets a named PDF destination (`book-page-0`, `book-page-1`, …)
+so it appears in `paperband:pages`. Positioning matches `<toc/>`: skipped and empty sections
+are not counted, and a `-Dpaperband.cards` selection keeps the page before the first kept
+card that followed it.
 
-Use a `<page>` for pages *derived from* the book; content someone writes belongs in a
-card. (Themes have a related hook, `_book-front`, which renders between the cover and
-the first card without any POM declaration — a `<page>` is the positioned, book-declared
-version of the same idea.)
+Use a `<page>` for pages derived from the book; written content belongs in a card. Themes
+have a related hook, `_book-front`, which renders between the cover and the first card
+without a POM declaration.
 
-For the plain "just glob me these files" case, put the patterns straight on `<book>` and
-skip `<sections>`. The cards are emitted in pattern order and grouped by their own folders,
-exactly as walked cards are:
+To select files without sections, put the patterns directly on `<book>` and omit
+`<sections>`. The cards are emitted in pattern order and grouped by their own folders, as
+walked cards are:
 
 ```xml
 <book>
@@ -448,79 +429,75 @@ exactly as walked cards are:
 ```
 
 Patterns are `glob:` patterns (`*` stops at a `/`, `**` crosses it, `{a,b}` alternates),
-matched against each card's path relative to `<root>`. As everywhere else in Maven, a
-whole-segment `**/` matches *zero* or more directories, so `docs/**/*.md` finds
-`docs/overview.md` as well as `docs/api/v2/types.md`. Only card files can ever match —
-`.md` except `README.md`, plus `.yaml` when the book declares a `cardSchema:` — so a
-deliberately broad pattern won't drag in stray text files.
+matched against each card's path relative to `<root>`. As elsewhere in Maven, a
+whole-segment `**/` matches zero or more directories, so `docs/**/*.md` finds
+`docs/overview.md` as well as `docs/api/v2/types.md`. Only card files match (`.md` except
+`README.md`, plus `.yaml` when the book declares a `cardSchema:`), so a broad pattern does
+not include other text files.
 
 ## Run it
 
-Bound in your `pom.xml`, it runs with the rest of the build:
+When bound in the `pom.xml`, the goal runs with the rest of the build:
 
 ```bash
 mvn install
 ```
 
-Or invoke the goal directly without binding it to a lifecycle phase at all — useful for a
-one-off render, or for CI steps that shouldn't produce a PDF on every build:
+Or invoke the goal directly without binding it to a lifecycle phase, for a one-off render or
+for CI steps that shouldn't produce a PDF on every build:
 
 ```bash
 mvn paperband:build -Dpaperband.input=guide -Dpaperband.output=guide.pdf
 ```
 
 `paperband` is the plugin's goal prefix, derived from the `paperband-maven-plugin`
-artifactId, so that short form works; the fully-qualified
-`dev.noregressions.paperband:paperband-maven-plugin:build` works too.
+artifactId. The fully qualified `dev.noregressions.paperband:paperband-maven-plugin:build`
+also works.
 
 ## Where the pipeline lives
 
 The plugin depends only on the library modules (`core`, `cards`, `config`, `layout`,
-`include`, `render-playwright`), and the goals are thin: `build` and `publish` both drive
-one `BookBuild`, so an edition build and a plain build can't drift apart, and `build`,
-`site` and `structure` share one card-selection step, which is what lets `structure`
-describe exactly the book `build` would render.
+`include`, `render-playwright`), and the goals are thin. `build` and `publish` both use one
+`BookBuild`, so edition builds and plain builds behave the same. `build`, `site` and
+`structure` share one card-selection step, so `structure` describes the book `build` would
+render.
 
-PDF post-processing — watermark stamping, and the page-span analysis behind `pages` and
-`<reportPages>` — reads and rewrites a finished PDF, so it needs PDFBox directly and lives
-in the plugin alongside the goals that use it. The watermark *declaration* does not: it is a
-model type, because the site paints the same spec as a CSS overlay with no PDFBox anywhere
-near it.
+PDF post-processing (watermark stamping, and the page-span analysis behind `pages` and
+`<reportPages>`) reads and rewrites a finished PDF, so it uses PDFBox and lives in the
+plugin. The watermark declaration is a model type, because the site renders the same spec as
+a CSS overlay without PDFBox.
 
 ## Watch Out
 
-**A repeated singular element is an error, not a merge.** Maven maps configuration onto
-fields, so two `<author>` elements set one field twice and the second wins — the build
-succeeds with one of two authors on the cover and nothing said. Any `<book>` element that
-can only be declared once (`<title>`, `<author>`, `<root>`, …) now fails the build when it
-appears twice, naming it. Elements meant to repeat — `<section>`, `<axis>`, `<author>` inside
-`<authors>` — are unaffected.
+**A repeated singular element is an error.** Maven maps configuration onto fields, so two
+`<author>` elements would set one field twice and the second would win. Any `<book>` element
+that can be declared only once (`<title>`, `<author>`, `<root>`, …) fails the build when it
+appears twice, naming it. Repeating elements (`<section>`, `<axis>`, `<author>` inside
+`<authors>`) are unaffected.
 
-**Axes and declared sections compete for the divider slot.** A card is never in both an axis group and
-a section, so declaring an axis over cards that also belong to declared sections replaces the section
-divider pages with axis dividers — the cards regroup by axis value. Declare axes when the
-axis *is* the structure you want; leave them out when the sections are. Check which you got
-with `mvn paperband:structure` before rendering.
+**Axes and declared sections both produce dividers.** A card is never in both an axis group
+and a section, so declaring an axis over cards that belong to declared sections replaces the
+section dividers with axis dividers, and the cards regroup by axis value. Declare axes only
+when the axis is the intended structure. Check the result with `mvn paperband:structure`
+before rendering.
 
-`<book><vars>` takes **flat string values only**. Maven's configurator maps
-`<vars><author>Name</author></vars>` onto a string map cleanly and nested structures
-badly, so the nested config that matters has typed parameters instead — `<margins>`,
-`<pageSize>`, `<maxPagesPerCard>`. Anything genuinely nested belongs in a `paperband.yaml`,
-which is better at it.
+**`<book><vars>` takes flat string values only.** Maven's configurator maps
+`<vars><author>Name</author></vars>` onto a string map but handles nested structures
+poorly, so nested settings have typed parameters instead: `<margins>`, `<pageSize>`,
+`<maxPagesPerCard>`. Put other nested config in a `paperband.yaml`.
 
-`<book><root>` has to *be* the book root — the directory whose `paperband.yaml` carries the
-title, css, theme and vars. That side of the config is still resolved from each card's own
-parent chain, not from the `<book>` element, so a pattern reaching outside the root would
-match cards that belong to a different book.
+**`<book><root>` must be the book root**: the directory whose `paperband.yaml` carries the
+title, css, theme and vars. That config is resolved from each card's own parent chain, not
+from the `<book>` element, so a pattern reaching outside the root would match cards that
+belong to a different book.
 
-The `playwright` renderer needs headless Chromium on first use — see the Watch Out in
-Before You Start. A Maven build with no internet access (an offline CI runner, say) needs
-Chromium pre-cached before the goal runs.
+The `playwright` renderer downloads headless Chromium on first use (see Before You Start).
+A build with no internet access, such as an offline CI runner, needs Chromium pre-cached.
 
 ## The site goal
 
-The same book, as a browsable static site — an index, a landing page per section or axis
-value, and a page per card with prev/next navigation:
+The `site` goal renders the same book as a static site: an index, a landing page per section
+or axis value, and a page per card with prev/next navigation:
 
 ```xml
 <execution>
@@ -533,11 +510,10 @@ value, and a page per card with prev/next navigation:
 </execution>
 ```
 
-`<clean>` clears the `cards/` subtree first, so a card removed from the book stops being
-served from a stale page. This goal's build target is `<siteTarget>` and defaults to `web`
-rather than the `pdf-a4` the others use, since target-scoped content is usually written to
-distinguish exactly that. `<book>` works here too, so one declaration feeds both the PDF
-and the site — put it in the plugin's own `<configuration>` and both goals read it:
+`<clean>` clears the `cards/` subtree first, so pages for cards removed from the book are
+deleted. This goal's build target is `<siteTarget>`, which defaults to `web` rather than
+`pdf-a4`. `<book>` works here too; put it in the plugin's own `<configuration>` and both
+goals read it:
 
 ```xml
 <plugin>
@@ -576,19 +552,18 @@ and the site — put it in the plugin's own `<configuration>` and both goals rea
 </plugin>
 ```
 
-Each execution then contributes only what's its own — where the output goes. A goal-specific
-parameter belongs in its execution rather than the shared block, since goals read the shared
-one indiscriminately: `structure`'s `<outputFile>` is separate from `build`'s `<output>` for
-exactly that reason.
+Each execution then sets only its output location. Put goal-specific parameters in their
+execution rather than the shared block, because every goal reads the shared block; this is
+why `structure`'s `<outputFile>` is separate from `build`'s `<output>`.
 
-`site` also takes the watermark parameters, spelled exactly as `build` spells them, so
-`-Dpaperband.watermark="REVIEW COPY"` marks the site and the PDF in one run. `pages:` and
-`font:` are the two it ignores — a website has no page one and no embedded fonts.
+`site` takes the same watermark parameters as `build`, so
+`-Dpaperband.watermark="REVIEW COPY"` marks the site and the PDF in one run. It ignores
+`pages:` and `font:`.
 
 ## The publish goal
 
-Builds every edition declared in the book's `publication:` block — the same content cut
-several ways without an execution per cut:
+`publish` builds every edition declared in the book's `publication:` block, without an
+execution per edition:
 
 ```xml
 <execution>
@@ -600,16 +575,16 @@ several ways without an execution per cut:
 </execution>
 ```
 
-Everything describing an artefact — theme, size, output path, card selection, vars, page
-contract — lives in the yaml. The POM contributes only session settings: `<renderer>`,
+Everything describing an edition (theme, size, output path, card selection, vars, page
+limits) is in the yaml. The POM supplies only session settings: `<renderer>`,
 `<emitHtmlDirectory>`, `<editions>` to build a subset, and `<set>` for one-off overrides
 (`defaults.theme=carded`, `editions.mini.vars.audience=manager`). Editions build in
-declaration order; one failing doesn't stop the rest, and the goal fails at the end naming
-those that did.
+declaration order; a failure doesn't stop the rest, and the goal fails at the end naming
+the editions that failed.
 
 ## Inspection goals
 
-None of these render a book, and all four are usually run directly rather than bound:
+None of these render a book, and they are usually run directly rather than bound:
 
 ```bash
 # What does this declaration actually produce?
@@ -628,12 +603,10 @@ mvn paperband:themes -Dpaperband.themeDir=mythemes
 mvn paperband:blocks
 ```
 
-`structure` takes the same `<book>` element `build` does, which is the point of it: the
-outline lists exactly which cards each pattern claimed, in which section, in what order — the
-cheapest way to check a declaration without waiting for a render.
+`structure` takes the same `<book>` element as `build`, and lists which cards each pattern
+claimed, in which section and in what order, without rendering.
 
-`render` is the odd one out: it takes an HTML file, a renderer, and the watermark
-parameters, which makes it the way to turn an `<emitHtml>` file back into a PDF after
-hand-editing it. It needs the watermark parameters because that file carries its mark as a
-screen-only overlay — the PDF's copy is stamped after rendering — so re-rendering it without
-`-Dpaperband.watermark` would quietly produce an unmarked PDF.
+`render` takes an HTML file, a renderer and the watermark parameters, and turns an
+`<emitHtml>` file back into a PDF, for example after editing it. The emitted file carries its
+watermark as a screen-only overlay and the PDF's mark is stamped after rendering, so
+re-rendering without `-Dpaperband.watermark` produces an unmarked PDF.

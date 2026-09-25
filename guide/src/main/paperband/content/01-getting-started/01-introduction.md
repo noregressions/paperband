@@ -5,10 +5,9 @@ oneliner: "What Paperband is and the problem it solves."
 
 # Introduction
 
-Paperband turns structured Markdown files into PDFs and static sites from the same source.
-It is designed for teams that produce guides, runbooks, or migration playbooks — content
-that must exist as both a printable reference and a browsable website without the author
-duplicating content.
+Paperband renders structured Markdown files as PDFs and static sites from the same source.
+It is intended for guides, runbooks and migration playbooks that must be available as both
+a printable reference and a website, without maintaining two copies.
 
 ## The card model
 
@@ -29,16 +28,15 @@ declared order.
 
 ## What this guide is
 
-This guide documents Paperband **by using Paperband to build it**. Every card is both
-the documentation and a live demonstration: the rendered PDF and static site you are
-reading were produced by running the plugin's `build` and `site` goals on the source
-in `guide/src/main/paperband/`.
+This guide is built with Paperband. The PDF and static site are produced by running the
+plugin's `build` and `site` goals on `guide/src/main/paperband/`, so each card also
+demonstrates the features it describes.
 
-Excerpts pulled from the actual project source via `{% fragment %}` tags are current
-at build time — if the source drifts, the next build catches it.
+Excerpts included with `{% fragment %}` are read from the project source at build time, so
+they match the current code.
 
 ## Check
 
 Run `mvn paperband:scan -Dpaperband.input=path/to/card.md` to inspect any card's parsed structure: frontmatter
-fields, resolved id, block list, and a snippet of each block's rendered HTML. A good first
-step before committing to a full book build.
+fields, resolved id, block list, and a snippet of each block's rendered HTML. Use it to check a card before
+building the whole book.

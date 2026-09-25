@@ -16,7 +16,7 @@ mvn paperband:build -Dpaperband.input=mybook -Dpaperband.output=out.pdf -Dpaperb
 ```
 
 `<maxPagesPerCard>` is the global ceiling. A card can carry its own budget in
-frontmatter, which **wins over the flag** for that card:
+frontmatter, which overrides the flag for that card:
 
 ```yaml
 ---
@@ -26,9 +26,8 @@ max_pages: 5
 ```
 
 Cards with neither limit are reported but never enforced. On violation the build prints
-each offender with its count, limit, and where the limit came from, then exits with code
-`3` — distinct from `2` (bad input / unknown renderer), so CI can tell "book too long"
-apart from "build broken".
+each offending card with its count, its limit and the limit's source, then exits with code
+`3`. Code `2` means bad input or an unknown renderer, so CI can distinguish the two.
 
 ## The report
 
@@ -45,7 +44,7 @@ card          quick-fix           7      3     2*
 
 A starred limit came from `<maxPagesPerCard>`; an unstarred one from that card's own
 frontmatter. Axis dividers, section dividers, the cover, and the back page each get a row
-of their own kind, so the table doubles as a map of the book's physical structure. The same table is available any time from an already-built PDF, without
+of their own kind. The same table can be produced from an already-built PDF, without
 rebuilding:
 
 ```bash
@@ -53,17 +52,17 @@ mvn paperband:pages -Dpaperband.pdf=out.pdf -Dpaperband.byPages=true # sort long
 mvn paperband:pages -Dpaperband.pdf=out.pdf -Dpaperband.cardsOnly=true # hide cover/divider/back rows
 ```
 
-## How counting works — and what it requires
+## How counting works
 
 Page counts come from the PDF's **named destinations**. The book template plants a hidden
 anchor for the cover, the back page, every axis and section divider, and every card;
 when the renderer turns those anchors into PDF destinations, each element's span is the
 distance to the next anchor's page.
 
-This is the catch: **the renderer must emit named destinations.** Chromium does, so the
-only renderer paperband ships with (`playwright`) supports the whole feature. If a PDF
-somehow has no destinations, `build` prints a warning and **skips the checks without
-failing** — so a passing build means "not checked", not "within budget", in that case.
+The renderer must emit named destinations. Chromium does, so the bundled `playwright`
+renderer supports the feature. If a PDF has no destinations, `build` prints a warning and
+skips the checks without failing; in that case a passing build means the cards were not
+checked.
 
 ## Check
 

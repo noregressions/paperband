@@ -8,19 +8,18 @@ max_pages: 2
 verify: true
 ---
 
-YAML frontmatter sits between `---` delimiters at the very start of the file, before
-the body. It is parsed by SnakeYAML, so all YAML types work: strings, booleans,
-integers, lists, and nested maps. This card uses every field it documents in its own
-frontmatter — including `title:`, which is why it has no `#` heading of its own: a card
-that declares a title doesn't need to repeat it as a heading, and any heading it does
-write is rendered rather than swallowed.
+YAML frontmatter is placed between `---` delimiters at the start of the file. It is parsed
+by SnakeYAML, so all YAML types are supported: strings, booleans, integers, lists and nested
+maps. This card sets every field it documents, including `title:`, so it has no `#` heading.
+When `title:` is set, headings in the body are rendered instead of being used as the
+title.
 
 ## Field reference
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `id` | string | path within the book, slugified | Stable identifier. Becomes the PDF named-destination anchor and the site URL slug, so it's unique per card by construction — `scenarios/S01-spring-node/TRACE.md` → `scenarios-s01-spring-node-trace`. Declare one for a shorter URL; change with care after publishing. |
-| `title` | string | first H1 | Card title. With `title:` set, no heading is consumed — the first `#` stays a heading in the body. Without it, the first `#` names the card and isn't repeated. |
+| `id` | string | path within the book, slugified | Stable identifier, used as the PDF named-destination anchor and the site URL slug. The default is unique per card: `scenarios/S01-spring-node/TRACE.md` → `scenarios-s01-spring-node-trace`. Declare one for a shorter URL. Changing it after publishing breaks existing links. |
+| `title` | string | first H1 | Card title. With `title:` set, the first `#` stays a heading in the body. Without it, the first `#` becomes the title and is not repeated. |
 | `oneliner` | string | — | Short summary line shown in card meta and index listings. |
 | `effort` | string | — | Size estimate (`XS` / `S` / `M` / `L` / `XL`). Rendered as a badge. |
 | `tags` | list | — | Free-form tag list. Reserved for future filtering and index generation. |
@@ -33,16 +32,16 @@ write is rendered rather than swallowed.
 
 Any YAML key not in the table above is preserved in the card's frontmatter map and
 available to Pebble templates as `card.frontmatter.get("yourKey")`. There is no schema
-validation — unknown keys are silently carried through.
+validation; unknown keys are kept as they are.
 
 ## Watch Out
 
-The `id` field is load-bearing once published. PDF named destinations and site URLs are
-derived from it. Renaming a published card breaks inbound links and PDF bookmarks unless
-you redirect the old slug.
+PDF named destinations and site URLs are derived from `id`. Changing the id of a published
+card breaks inbound links and PDF bookmarks unless the old URL is redirected.
 
-If `id` is not set, the card's filename stem is used (e.g. `02-frontmatter.md` → id
-`02-frontmatter`). Prefer explicit ids for anything you expect to link to externally.
+If `id` is not set, it is derived from the card's path within the book, slugified
+(`api/endpoints.md` → `api-endpoints`), so moving or renaming the file changes it. Set an
+explicit id for any card you expect to link to externally.
 
 ## Check
 
@@ -50,5 +49,5 @@ If `id` is not set, the card's filename stem is used (e.g. `02-frontmatter.md` �
 mvn paperband:scan -Dpaperband.input=path/to/card.md
 ```
 
-The first line of scan output shows the resolved `id` — useful for confirming the id
-before you publish and distribute links.
+The first line of scan output shows the resolved `id`. Use it to confirm the id before
+publishing links to the card.

@@ -8,8 +8,7 @@
 </head>
 <body>
 
-<p>This page is itself an <code>.html</code> card — the same card concept as every
-markdown page in this guide, written in HTML's own idiom. The <code>&lt;head&gt;</code>
+<p>This page is an <code>.html</code> card. The <code>&lt;head&gt;</code>
 is the frontmatter: <code>&lt;title&gt;</code> names the card the way
 <code>title:</code> does, and each <code>&lt;meta name content&gt;</code> becomes a
 frontmatter field, so axis values, <code>index:</code> terms and <code>sort:</code>
@@ -24,11 +23,11 @@ fields all work. Numeric and boolean content is typed the way yaml would type it
 
 <h2>Where an HTML card is allowed</h2>
 
-<p>Location decides, so generated HTML can never sneak into a book:</p>
+<p>Whether an <code>.html</code> file is a card depends on where it is:</p>
 
 <ul>
   <li><b>Walked books</b>: an <code>.html</code> under the <code>content/</code>
-      wrapper is a card — everything there is authored by definition. A book without
+      wrapper is a card, because everything there is content. A book without
       the wrapper keeps markdown-only discovery.</li>
   <li><b>POM-declared books</b>: the include pattern itself must end in
       <code>.html</code> (<code>pages/*.html</code>, <code>interstitial.html</code>).
@@ -37,26 +36,23 @@ fields all work. Numeric and boolean content is typed the way yaml would type it
 
 <h2>Same pipeline, same rules</h2>
 
-<p>The body goes down exactly the pipeline a markdown card's rendered body does:
+<p>The body goes through the same pipeline as a markdown card's rendered body:
 headings split it into blocks (this <code>h2</code> opened one), the content policy
 strips presentation the theme should own, and the card gets a TOC entry, section
 membership and a site page like any other. A card with no <code>&lt;title&gt;</code>
-takes its name from the first <code>h1</code>, which is then consumed — exactly the
-markdown rule.</p>
+takes its name from the first <code>h1</code>, which is then consumed, as in
+markdown.</p>
 
-<p>Pebble works here too — this card was processed by the same pass:
-the book's version is {{ vars.version }}. The protected regions follow the syntax:
-where markdown masks fences and backticks, an HTML card masks
-<code>&lt;pre&gt;</code> blocks, <code>&lt;code&gt;</code> spans and comments, which
-is why the literal <code>{{ vars.version }}</code> in this sentence survived as an
-example instead of being evaluated.</p>
+<p>Pebble works here too: the book's version is {{ vars.version }}. Where markdown
+masks fences and backticks, an HTML card masks <code>&lt;pre&gt;</code> blocks,
+<code>&lt;code&gt;</code> spans and comments, so the literal
+<code>{{ vars.version }}</code> in this sentence is not evaluated.</p>
 
 <h2>Watch Out</h2>
 
 <p>An HTML card is still <i>content</i>: the content policy applies unchanged, so
 inline <code>style=</code> and <code>&lt;style&gt;</code> blocks are stripped under
-the default <code>clean</code> policy. Structure in the card, appearance in the
-theme — whichever syntax the card is written in.</p>
+the default <code>clean</code> policy.</p>
 
 </body>
 </html>
