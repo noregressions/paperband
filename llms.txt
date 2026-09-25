@@ -78,16 +78,15 @@ project use a card-selecting `<book>` with glob `<includes>` instead. At most on
 
 ## Quick start
 
-New book from the archetype (generates `src/main/paperband/paperband.yaml` and
+New book from the archetype (0.1.3+; generates `src/main/paperband/paperband.yaml`,
 `src/main/paperband/content/01-introduction.md`, and a POM binding `build` and `site` to
-`package`; archetype 0.1.2 on Central still generates the older layout, with the card
-directly in `src/main/paperband/` and an `<input>`):
+`package`):
 
 ```bash
 mvn archetype:generate -DarchetypeGroupId=dev.noregressions.paperband \
-  -DarchetypeArtifactId=paperband-archetype -DarchetypeVersion=0.1.2 \
+  -DarchetypeArtifactId=paperband-archetype -DarchetypeVersion=0.1.3 \
   -DgroupId=com.example -DartifactId=my-guide
-cd my-guide && mvn package    # target/my-guide.pdf; newer archetypes also target/site/
+cd my-guide && mvn package    # target/my-guide.pdf and target/site/
 ```
 
 Existing project, book at the conventional location:
@@ -96,7 +95,7 @@ Existing project, book at the conventional location:
 <plugin>
   <groupId>dev.noregressions.paperband</groupId>
   <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.1.2</version>
+  <version>0.1.3</version>
   <executions>
     <execution>
       <goals><goal>build</goal></goals>
@@ -130,7 +129,7 @@ lands on the card, because block anchors are heading slugs with no card prefix a
 across cards in one document. Ordinary markdown, so previewers and link checkers see a link.
 
 CHECKED against the book being built: an unknown id or an unknown block anchor FAILS the
-build (MojoFailureException, like the page budget), naming the file, aggregating every
+build, naming the file, aggregating every
 broken reference, and suggesting near misses. A card excluded by `select:`/an edition gets a
 distinct message. A single-card build (`-Dpaperband.input=card.md`) resolves but does not
 check — it has no book to check against. Block anchors come from the block's `{#id}` or its
@@ -145,8 +144,7 @@ slugged heading, the same rule the templates render.
 | `id` | string | path-in-book, slugified | Stable identifier → PDF anchor + site URL. Load-bearing once published. |
 | `title` | string | first H1 | With `title:` set, no heading is consumed; without it the first `#` becomes the title and is not repeated. |
 | `oneliner` | string | — | Summary line shown in card meta and listings. |
-| `effort` | string | — | `XS`/`S`/`M`/`L`/`XL` badge. |
-| `tags` | list | — | Free-form; reserved for filtering. |
+| `effort` | string | — | Rendered as an "Effort" badge under the title (conventionally `XS`–`XL`). |
 | `max_pages` | int | — | Per-card page budget; build fails (exit 3) if exceeded. Wins over `<maxPagesPerCard>`. |
 | `verify` | bool | `true` | `false` suppresses `check`-classed blocks at every nesting depth. |
 | `index` | list/string | — | Back-of-book index terms for this card. |
@@ -407,15 +405,14 @@ listing offenders. Delete `rest()` to turn the template into a strict shape chec
 ### Renderer and page geometry
 
 One renderer ships on the plugin's own classpath: `playwright` (headless Chromium), and it
-is the only one that produces a PDF. A renderer whose output is something else returns
-`false` from `producesPdf()`, and `BookBuild` then skips the four PDFBox passes that reopen
-the output (two-pass page numbers, full-page-cover splice, watermark, bookmarks) — pointing
-PDFBox at a non-PDF would fail the build *after* a successful render. The page-budget check
-sits deliberately outside that guard: it measures the DOM, not the file. `render-pptx` is
-the one such renderer in the repo (see Slides).
+is the only one that produces a PDF. A renderer whose output is something else declares so
+(`producesPdf()` → `false`), and the PDF-only post-processing is skipped for it: two-pass
+page numbers, the full-page-cover splice, the watermark stamp and bookmarks. The page-budget
+check measures the DOM, not the file, so it still applies. `render-pptx` is the one such
+renderer in the repo (see Slides).
 
-Playwright treats `PageSpec.size`/`margins`
-as sole geometry authority (theme `@page` rules are ignored) and emits named PDF
+Playwright takes the sheet size and margins only from the book's page settings (theme
+`@page` rules are ignored) and emits named PDF
 destinations for every anchor — the basis of page reporting/enforcement. Before
 snapshotting (and before measuring, so page counts agree) it waits for network-idle,
 `document.fonts.ready`, and every promise page scripts push into
@@ -427,22 +424,17 @@ Four things inset content from the paper edge: page margin (`page.margins` /
 measure (`--card-max-width`, retune with `page.measure`), and per-page card padding
 from the theme. "Full-bleed still looks margined" is usually the measure.
 
-**The sheet has one name, and it is the resolved one.** `RenderContext.size` is
-`PageSpec.sizeLabel()` of the sheet that resolved — canonical (`7.5x9.25` reports `packt`),
-and bare dimensions (`200x150mm`) for a sheet no preset covers — never the `<pageSize>`
-slug the build was launched with, since a book's own `page.size:` wins over it. That one
-name is what the print templates stamp as `html.size-{s}`, what themes hang page-density
-type off (`html.size-6x9 { font-size: 12pt }`), what `mvn paperband:scan` prints, and what
-the `Built book …` log line reports. Before this was true, a book whose yaml said `6x9` was
-typeset by `html.size-a4`, and a custom `{width, height}` sheet matched `html.size-a4` too —
-whose fixed `font-size` outranks the bare `html` rule that consumes `--pw-font-scale`, so
-the scale computed for that odd sheet was dead on arrival.
+**The sheet's size name is the resolved one**: canonical (`7.5x9.25` reports `packt`),
+bare dimensions (`200x150mm`) for a sheet no preset covers, and never the `<pageSize>` slug
+when the book's own `page.size:` overrides it. That name is what print templates stamp as
+`html.size-{s}`, what themes hang page-density type off (`html.size-6x9 { font-size:
+12pt }`), what `mvn paperband:scan` prints, and what the `Built book …` log line reports.
 
 **CHECK THIS when a book builds at anything but A4/Letter/6x9** (a deck, an A5 booklet, a
 `packt` trim, any custom `{width, height}`): the bundled themes carry `html.size-a4`,
 `html.size-letter` and `html.size-6x9` rules and NOTHING else, so every other sheet is
 typeset from the theme's bare `html` baseline times `--pw-font-scale` (and a *named* preset
-gets no scale — `KNOWN_PRESETS` — so it lands on the raw baseline). If the type looks wrong
+gets no scale, so it lands on the raw baseline). If the type looks wrong
 at a new page size, that is the reason: either add an `html.size-<slug>` rule to the theme,
 or set `page.fontScale:` explicitly. The `deck` theme is the worked example — it sizes its
 own type and reads no `size-*` class at all.
@@ -463,7 +455,7 @@ vars:
 
 Use the `16x9` slug, not an equivalent map: an unrecognised size gets an auto font scale
 derived from page width (1.61x for 13.3in), which multiplies the theme's type scale until
-every card overflows. Recognition is by VALUE (`PageConfigResolver.KNOWN_PRESETS`), so an
+every card overflows. Recognition is by value, so an
 exact `{13.333, 7.5, inch}` map is also fine — `13.33` is not.
 
 **Authoring.** The `deck` theme places blocks into a fixed skeleton via `card.slots`
@@ -525,7 +517,7 @@ Chromium only emits destinations for ids the document links to.
 ### Watermarks
 
 `vars.watermark` (string or map) or `-Dpaperband.watermark=...`. One declaration marks BOTH
-outputs: the PDF via a PDFBox post-pass (preserves named destinations), the site via a
+outputs: the PDF via a post-render stamp (preserves named destinations), the site via a
 `position:fixed; pointer-events:none` CSS overlay injected into every page before
 `</body>` (class `pb-watermark` — a theme can restyle or hide it). `build`, `site` and
 `render` all take the parameters; `publish` picks them up per edition through `vars`.
@@ -551,7 +543,7 @@ carries the `-D` properties. Three channels compose in a fixed order: `vars.wate
 the POM block, then the flat params. The block REPLACES a yaml declaration's subject; a
 block with only knobs retunes a yaml-declared stamp. `site` ignores `<pages>`/`<font>` inside
 the block, but does NOT declare the flat `<watermarkPages>`/`<watermarkFont>` — put those two
-in the build execution. `<emitHtml>` carries the overlay as screen-only (its print path is the PDFBox
+in the build execution. `<emitHtml>` carries the overlay as screen-only (its print path is the post-render
 stamp), which is why `render` takes the parameters at all.
 
 ### Page enforcement
@@ -745,7 +737,9 @@ PublicationLoader), `include` (fragment tag, providers/processors, containment),
 `render-playwright` (the renderer, plus `LoadedPage`: the shared load-and-settle helper),
 `render-pptx` (optional; POI XSLF exporter — `SlideHarvest` reads the DOM, `DeckWriter`
 builds the file, `LayoutMap` maps slot signature → slideLayout), `maven-plugin` (all mojos,
-BookBuild, PDFBox post-processing), `archetype`, and `guide` — the self-documenting book at
+BookBuild, PDFBox post-processing: a renderer with `producesPdf()` → `false` skips its four
+PDFBox passes; size presets recognised by value are `PageConfigResolver.KNOWN_PRESETS`),
+`archetype`, and `guide` — the self-documenting book at
 `guide/src/main/paperband` plus the companion deck at `guide/src/main/paperband-deck`, both
 built by the plugin in the same reactor (`mvn install -Pguide`). `.github/workflows/docs.yml`
 publishes that site at the Pages root (old `/guide/…` URLs redirect). `examples/` holds

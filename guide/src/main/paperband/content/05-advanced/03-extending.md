@@ -58,7 +58,7 @@ the bookmark outline. With the default `true`, PDFBox is given a file that isn't
 the build fails after the render has succeeded. The page-budget check (`maxPagesPerCard`)
 measures the DOM rather than the finished file, so it still runs for a non-PDF renderer.
 
-The bundled `render-pptx` is the worked example — see Slides in the Rendering section.
+The bundled `render-pptx` is the worked example — see [Slides](card:slides).
 
 ## A new block renderer
 
@@ -96,7 +96,7 @@ dependencies:
     <dependency>
       <groupId>dev.noregressions.paperband</groupId>
       <artifactId>block-plantuml</artifactId>
-      <version>0.1.2</version>
+      <version>0.1.3</version>
     </dependency>
   </dependencies>
 </plugin>
@@ -181,5 +181,5 @@ is not enough. ServiceLoader discovery is planned once more than one provider ex
 ## A new theme
 
 A theme needs no code: it is a directory containing a `manifest.txt` and the CSS files it
-lists, passed via `<themeDir>`. See Themes in the Rendering section for the full walkthrough,
+lists, passed via `<themeDir>`. See [Themes](card:themes) for the full walkthrough,
 including template overrides.

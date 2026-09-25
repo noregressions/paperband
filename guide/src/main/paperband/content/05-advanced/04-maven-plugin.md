@@ -38,7 +38,7 @@ The plugin shares the parent's version. The parent POM version:
 <plugin>
   <groupId>dev.noregressions.paperband</groupId>
   <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.1.2</version>
+  <version>0.1.3</version>
   <executions>
     <execution>
       <goals><goal>build</goal></goals>
@@ -64,7 +64,7 @@ The `build` goal's default phase is `process-resources`; override `<phase>` in t
 | `layouts` | `paperband.layouts` | ${home}/layouts | The book's templates: `{% include %}` snippets, `<page>` templates, overrides. |
 | `book` | — | — | A book whose structure is declared in the POM and whose cards are selected by glob. Mutually exclusive with `input`; see below. |
 | `output` | `paperband.output` | *(required)* | Output PDF file. |
-| `renderer` | `paperband.renderer` | `playwright` | See Renderers in the Rendering section. |
+| `renderer` | `paperband.renderer` | `playwright` | See [Renderers](card:renderers). |
 | `target` | `paperband.target` | `pdf-a4` | Build target, e.g. `pdf-a4`, `pdf-6x9`. |
 | `pageSize` | `paperband.pageSize` | `a4` | Page size slug, e.g. `a4`, `letter`, `6x9`. |
 | `margins` | `paperband.margins` | *(the page size's own)* | Page margins, CSS-style shorthand: `0`, `18mm`, `20mm 15mm`, `20 15 25 15`. Units `mm` (default), `cm`, `in`, `pt`. See Full-bleed builds below. |
@@ -87,7 +87,7 @@ The `build` goal's default phase is `process-resources`; override `<phase>` in t
 (`blueprint`, `dark`, `carded`, `fieldguide`, …) need this: Chromium paints nothing into a PDF
 page margin, so any margin appears as a white border around every page. The bundled themes
 supply their own insets in that case, including on the continuation pages of a multi-page
-card. See Themes / Full-bleed themes.
+card. See [Themes](card:themes#full-bleed-themes).
 
 Like `pageSize`, this parameter sets the base geometry; a `vars.page.margins` block in the
 book's own yaml overrides it.
@@ -454,19 +454,6 @@ mvn paperband:build -Dpaperband.input=guide -Dpaperband.output=guide.pdf
 artifactId. The fully qualified `dev.noregressions.paperband:paperband-maven-plugin:build`
 also works.
 
-## Where the pipeline lives
-
-The plugin depends only on the library modules (`core`, `cards`, `config`, `layout`,
-`include`, `render-playwright`), and the goals are thin. `build` and `publish` both use one
-`BookBuild`, so edition builds and plain builds behave the same. `build`, `site` and
-`structure` share one card-selection step, so `structure` describes the book `build` would
-render.
-
-PDF post-processing (watermark stamping, and the page-span analysis behind `pages` and
-`<reportPages>`) reads and rewrites a finished PDF, so it uses PDFBox and lives in the
-plugin. The watermark declaration is a model type, because the site renders the same spec as
-a CSS overlay without PDFBox.
-
 ## Watch Out
 
 **A repeated singular element is an error.** Maven maps configuration onto fields, so two
@@ -519,7 +506,7 @@ goals read it:
 <plugin>
   <groupId>dev.noregressions.paperband</groupId>
   <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.1.2</version>
+  <version>0.1.3</version>
 
   <!-- Shared by every goal: what the book is, and how it renders. -->
   <configuration>

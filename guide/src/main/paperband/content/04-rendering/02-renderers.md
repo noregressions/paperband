@@ -5,9 +5,9 @@ oneliner: "Playwright is the only HTML-to-PDF renderer paperband ships with."
 
 # Renderers
 
-Paperband renders HTML to PDF through a pluggable `HtmlToPdfRenderer`, discovered via
-`ServiceLoader`. `playwright` — real Chromium, driven headless — is the only renderer
-paperband ships *on the plugin's own classpath*, and the only one that produces a PDF.
+Paperband renders a book's HTML through a renderer. `playwright` (headless Chromium) is the only
+renderer on the plugin's own classpath, and the only one that produces a PDF; `pptx` is an
+optional add-on (see [Slides](card:slides)).
 Select a renderer with `<renderer>` in the POM or `-Dpaperband.renderer` (default
 `playwright`), and check availability with
 `mvn paperband:renderers`. The renderer is a build setting; there is no `renderer:` key in
@@ -27,34 +27,27 @@ pure-Java fallback.
   in Chromium.
 - Named destinations in the output PDF. Every anchor paperband writes (cover, back,
   dividers, cards) becomes a PDF destination, which page-count reporting and enforcement
-  use (see Page Enforcement in the Advanced section).
-- One source of page geometry. The resolved `PageSpec` sets the sheet: its size is passed
-  to Chromium, and its margins are emitted as the book's `@page` rule. Chromium applies a
-  CSS `@page` margin over `Page.pdf()`'s margin options, so both come from the same
-  `PageSpec`. A book stylesheet that declares its own `@page { margin }` wins on cascade
-  order while `--pw-content-height` still describes the resolved margins, so the content
-  box no longer matches the printed page. Set margins in `page:`, not in CSS.
+  use (see [Page Enforcement](card:page-enforcement)).
+- One source of page geometry. The book's `page:` settings give the sheet size passed to
+  Chromium and the book's `@page` margin rule. A stylesheet with its own
+  `@page { margin }` overrides that rule while `--pw-content-height` still describes the
+  configured margins, so the content box no longer matches the printed page. Set margins
+  in `page:`, not in CSS.
 - Per-card rotation, via a named `@page` rule: a card whose folder declares
   `page.orientation` gets every sheet it occupies rotated, inside the same single render
-  pass. See Config Cascade.
+  pass. See [Config Cascade](card:config-cascade).
 - Page JavaScript runs before the snapshot. The renderer waits for network-idle, then
   `document.fonts.ready`, then every promise a page script has pushed into
   `window.paperbandPending`. This is how ` ```mermaid ` diagrams are fully rendered
-  before the PDF is written (see Card Structure in the Authoring section). A rejected
+  before the PDF is written (see [Card Structure](card:card-structure)). A rejected
   promise fails the render with the script's error, so a diagram that doesn't parse fails
   the build.
 
 ## Renderers that don't produce a PDF
 
-The SPI's name is historical: the contract is HTML in, one file out. A renderer whose
-output isn't a PDF returns `false` from `producesPdf()`, and the build skips the four passes
-that reopen the output with PDFBox: two-pass page-number resolution for a printed
-toc/index, the full-page-cover splice, the watermark stamp, and the bookmark outline.
-Without this, PDFBox would fail on the non-PDF output after the render had succeeded.
-
-The page-budget check is outside that guard: it measures the DOM rather than the finished
-file, so a non-PDF renderer still gets per-card enforcement. `render-pptx` is the only such
-renderer in the repo, an optional module rather than a plugin dependency. See Slides.
+`pptx` writes a slide deck instead of a PDF, and a book can add other renderers. How a
+renderer declares its output, and which PDF-only steps are skipped for it, is covered in
+[Extending Paperband](card:extending).
 
 ## Setup notes
 

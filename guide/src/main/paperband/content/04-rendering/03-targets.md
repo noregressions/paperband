@@ -47,10 +47,10 @@ enforced enum.
 | `legal` | 8.5×14in | `page.size` only — no `<pageSize>` slug yet |
 | `6x9` | 6×9in | Standard trade-paperback trim |
 | `packt`, `7.5x9.25` | 7.5×9.25in | Packt Publishing's paperback trim: close to A4's width, shorter |
-| `16x9`, `slide` | 13.333×7.5in | PowerPoint's widescreen slide (960×540pt). Zero margins, like `a5`; the theme supplies the inset. See Slides |
+| `16x9`, `slide` | 13.333×7.5in | PowerPoint's widescreen slide (960×540pt). Zero margins, like `a5`; the theme supplies the inset. See [Slides](card:slides) |
 
 A size outside this list works too, via `page.size: { width, height, unit }` — see
-Book Configuration / Config Cascade for the full `page:` block (margins, orientation,
+[Book Configuration](card:book-config) and [Config Cascade](card:config-cascade) for the full `page:` block (margins, orientation,
 fontScale, measure) and for why `size` and `margins` are **book scope**: they are read from
 the book's own `paperband.yaml` only, and a folder that sets them fails the build. The named
 presets above, except `packt`, have per-theme `font-size` rules. Any other size gets an
@@ -71,8 +71,7 @@ which lets its automatic font scale apply: a theme's `html.size-a4 { font-size: 
 would otherwise outrank the `html` rule that reads the scale.
 
 The bundled themes carry `size-a4`, `size-letter` and `size-6x9` rules only. Any other sheet
-is typeset from the theme's `html` baseline, multiplied by `--pw-font-scale` where set. See
-Themes / Stable CSS hooks.
+is typeset from the theme's `html` baseline, multiplied by `--pw-font-scale` where set. See [Themes](card:themes#what-theme-css-can-target).
 
 ## Where a page's insets come from
 

@@ -46,7 +46,7 @@ and precedence.
 
 Folder-level `order:`, `include:`, `sort:`, and `where:` are in neither cascade: they
 control which cards a folder emits and in what sequence, and each folder declares its own
-independently (see Organising Content).
+independently (see [Organising Content](card:organising-content)).
 
 ## Where the POM fits
 

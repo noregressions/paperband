@@ -136,7 +136,7 @@ A declared section behaves as one group everywhere a discovered one would: one P
 one site landing page (`<id>.html`), one nav and sidebar entry. `id` defaults to a slug of
 the title (`"Foundations"` → `foundations`); declare it to keep the URL stable if the
 title changes. `landing.template` accepts the same presets and paths a section
-folder's own override does (see Book Configuration).
+folder's own override does (see [Book Configuration](card:book-config)).
 
 `landing: false` removes a declared section's page. The section still groups and orders
 its folders and labels its cards in the nav and sidebar, but no PDF divider precedes its
@@ -188,8 +188,7 @@ whole book.
 Every key above lives in a `paperband.yaml`, alongside the content. The Maven plugin can
 instead declare the structure in the POM and select each section's cards by glob
 (`services/*/TRACE.md`), which supports layouts a directory tree cannot express, such as two
-sections drawing different files from one folder. See the Maven Plugin page in the Advanced
-section.
+sections drawing different files from one folder. See [Maven Plugin](card:maven-plugin).
 
 ## Watch Out
 

@@ -28,24 +28,18 @@ The setup depends on where the Markdown will live:
 Both produce the same kind of book and use the same goals. The rest of the guide applies
 to both.
 
-## Explore what's available
+## Check the environment
 
-These goals report on a book without rendering it, so they are the fastest way to check
-configuration:
+Before a project exists, run the plugin by its full coordinates. `renderers` reports
+whether the PDF renderer works on this machine:
 
 ```bash
-# Cards, sections, axes, page budgets and the index terms auto picked
-mvn paperband:structure
-
-# One card's parsed frontmatter, resolved id and block list
-mvn paperband:scan -Dpaperband.input=path/to/card.md
-
-# Discovered renderers, and whether each one works in this environment
-mvn paperband:renderers
-
-# Built-in themes, plus any found under <themeDir>
-mvn paperband:themes
+mvn dev.noregressions.paperband:paperband-maven-plugin:0.1.3:renderers
 ```
+
+Inside a project that declares the plugin, the short form (`mvn paperband:renderers`)
+works. The goals that describe a book, `structure` and `scan`, need a book to exist; each
+path above runs them after its first build.
 
 ## Building from source
 

@@ -13,7 +13,8 @@ Pebble syntax therefore works directly in card prose: variable interpolation and
 ## Where vars come from
 
 `vars:` in any `paperband.yaml` along the book's config cascade, plus a handful of
-built-ins (`build_date`, `build_year`, and similar — see `BuiltInVars`). Inner-most
+built-ins: `build_date`, `build_date_long`, `build_year`, `build_month_year` and
+`build_iso`. Inner-most
 config wins, same as the rest of the cascade.
 
 ```yaml

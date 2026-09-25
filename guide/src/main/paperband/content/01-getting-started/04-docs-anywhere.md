@@ -19,7 +19,7 @@ see [Before You Start](card:quickstart).
 <plugin>
   <groupId>dev.noregressions.paperband</groupId>
   <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.1.2</version>
+  <version>0.1.3</version>
   <configuration>
     <content>docs</content>
   </configuration>
@@ -33,8 +33,16 @@ mvn paperband:build -Dpaperband.output=target/docs.pdf
 mvn paperband:site  -Dpaperband.outputDirectory=target/site
 ```
 
-The first PDF build downloads headless Chromium, so it needs internet access once. The
-site goal does not need a browser.
+The first PDF build downloads headless Chromium (about 300 MB), so it needs internet access
+once. The site goal does not need a browser. The build has worked when the log shows the
+folder it read and what it wrote:
+
+```
+[INFO] book geography: home=(none), content=…/docs, layouts=(derived)
+[INFO] Built book …/docs -> …/target/docs.pdf (renderer=playwright, target=pdf-a4, size=a4, cards=2, blocks=3)
+```
+
+`cards=` is the number of Markdown files found.
 
 **3. Check the result.** `mvn paperband:structure` lists every section and card found,
 without rendering. Each `.md` file is a card and each subfolder a section;
@@ -42,7 +50,7 @@ without rendering. Each `.md` file is a card and each subfolder a section;
 
 Existing Markdown builds without edits: frontmatter is optional, and a card's id comes from
 its path. To build the book on every `mvn package`, bind the goals in
-`<executions>` as shown under One folder, below.
+`<executions>` as shown under [One folder](card:docs-anywhere#one-folder-content), below.
 
 ## One folder, or files all over
 
@@ -59,7 +67,7 @@ The setting depends on how the files are arranged:
 <plugin>
   <groupId>dev.noregressions.paperband</groupId>
   <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.1.2</version>
+  <version>0.1.3</version>
   <configuration>
     <content>docs</content>
   </configuration>

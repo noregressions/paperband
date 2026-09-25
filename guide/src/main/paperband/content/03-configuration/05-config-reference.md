@@ -7,12 +7,13 @@ index: [configuration, precedence, scope]
 # Configuration Reference
 
 Where configuration can be written, what each place accepts, and which wins when two
-places set the same thing. Config Cascade explains the model; this page is the full list.
+places set the same thing. [Config Cascade](card:config-cascade) explains the model; this
+page is the full list.
 
 ## Where config lives
 
 Six places, outermost first. Later rows are more specific, but "more specific wins" only
-holds *within* a scope — see Priority below.
+holds *within* a scope; see Who wins, key by key, below.
 
 | Where | Carries | Scope |
 |---|---|---|
@@ -22,25 +23,35 @@ holds *within* a scope — see Priority below.
 | **POM** — `<book>` element | Book-level config declared outside the book | Book |
 | **Book root `paperband.yaml`** | The book: title, axes, theme, page, cover, sections… | Book |
 | **Folder `paperband.yaml`** | Per-subtree: vars, css, layout, axis, orientation, structure | Card |
-| **Card frontmatter** | Per-card: id, title, axis values, oneliner | Card |
+| **Card frontmatter** | Per-card: `id`, `title`, `oneliner`, `effort`, `max_pages`, `verify`, `index`, axis values ([Frontmatter Reference](card:frontmatter)) | Card |
 
-A seventh exists for multi-book repos: `publication.yaml`, read by `paperband:publish`.
-It is its own file with its own keys and does not participate in this cascade.
+Editions are declared in a `publication:` block in the book root's `paperband.yaml`, read
+only by `paperband:publish`. It describes the builds to run and does not participate in
+this cascade; see [Maven Plugin](card:maven-plugin#the-publish-goal).
 
-## Priority
+## Who wins, key by key
 
-> **The POM outranks the root yaml. Depth outranks the POM.**
+When a key can be set in more than one place, this table gives the order, weakest first.
+A key not listed has one source.
 
-The two rules apply to different scopes:
+| Key | Order (weakest → strongest) |
+|---|---|
+| `theme` | root yaml `theme:` → `<theme>` (`none` turns theming off) |
+| Stylesheets | root yaml `css:` chain → theme CSS → `<stylesheets>` (all are applied; later rules win on equal specificity) |
+| Sheet size | `<pageSize>` → root yaml `page.size` |
+| Margins | size preset's margins → `<margins>` → root yaml `page.margins` |
+| `page.orientation` | root yaml → folder yaml (innermost wins) |
+| `title`, `cover`, `back`, `header`, `footer`, `sidebar`, `axes`, `index` | root yaml → `<book>` element |
+| `sections` | root yaml → `<book><sections>` (replaces the yaml list, with a warning) |
+| `vars` | built-ins → root yaml → `<book><vars>` → folder yamls (innermost wins) |
+| `css`, `layout`, `axis` | root yaml → folder yamls (innermost wins); card frontmatter beats a folder `axis:` binding |
+| Page budget | `vars.maxPagesPerCard` → `<maxPagesPerCard>` → card `max_pages` |
+| Watermark | `vars.watermark` → POM `<watermark>` block → flat `<watermarkText>`, `<watermarkColor>`, … |
+| `renderer`, `target`, `output`, geography (`home`, `content`, `layouts`) | POM or `-D` only; the yaml has no equivalent |
 
-| Scope | Rule | Why |
-|---|---|---|
-| **Book** | POM `<book>` wins over the root yaml, field by field | One book has one title, one cover, one sheet; the POM declaration takes precedence over the yaml. |
-| **Card** | Built-ins → root yaml → POM `<book><vars>` → folder yamls (deepening) → frontmatter | A build-declared var must reach every card *and* stay overridable per folder. |
-| **Geography** | POM only; yaml never participates | `paperband.yaml` declares what the book *is*; the POM declares *where* it is. |
-| **Geometry base** | `<pageSize>`/`<margins>` seed the base; the book's `page:` block wins | The POM knob exists for books with no yaml to edit. |
-
-Book scope has no depth, so there the POM wins.
+Two general rules follow from the table. For book-scope keys, a POM declaration wins over
+the root yaml; for card-scope keys, a deeper yaml wins over the POM. A `-D` property fills
+a POM parameter only when the `<configuration>` doesn't set it.
 
 Setting a book-scope key in a folder yaml is an error, and the message names the file.
 
@@ -108,8 +119,7 @@ as template values.
 
 Each is read from the book context, which is the context of the first card the build
 walks. Setting one in a folder yaml therefore either has no effect or applies to the whole
-book, depending on walk order; set them at the book root. (`sidebar` was previously in this
-list; it is now a book-scope key.)
+book, depending on walk order; set them at the book root.
 
 | Var | What it does | Read at |
 |---|---|---|
@@ -146,8 +156,7 @@ The complete set, for the book-scope layer declared in the POM:
 
 `<sections>`/`<includes>` select cards; the rest is book config. An element that only
 carries config (no `<sections>`, no `<includes>`) leaves structure to the directory tree,
-so a book can declare its title and cover in the POM and still be walked. The full element
-reference is in Maven Plugin.
+so a book can declare its title and cover in the POM and still be walked. The full element reference is in [Maven Plugin](card:maven-plugin).
 
 ## POM-only parameters
 
@@ -193,9 +202,7 @@ In the POM, the element's presence is the opt-in:
 PDF builds ignore it. A folder yaml declaring it is an error.
 
 The previous spelling (`vars.sidebar`, `vars.sidebar_collapsed`,
-`vars.sidebar_sections_collapsed`) still works and is deprecated. As a per-card var, it was
-read only from the first card walked, so a folder that set it either had no effect or
-changed the whole site, depending on walk order.
+`vars.sidebar_sections_collapsed`) still works and is deprecated.
 
 ## Unknown configuration is an error
 

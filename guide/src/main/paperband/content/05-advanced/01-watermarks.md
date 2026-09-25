@@ -1,14 +1,13 @@
 ---
 id: watermarks
 oneliner: "Stamp text, or a logo, across the PDF and the site."
-index: [watermarks, PDFBox]
+index: [watermarks, DRAFT stamp]
 ---
 
 # Watermarks
 
 A watermark overlays text such as `DRAFT` or `SAMPLE`, or an image such as a client logo, on
-the pages of a book. One declaration marks both outputs. The PDF gets a PDFBox post-pass on
-the finished file, so it behaves the same under every renderer, leaves the rendered content
+the pages of a book. One declaration marks both outputs. The PDF is stamped after rendering, on the finished file, so it behaves the same under every renderer, leaves the rendered content
 unchanged, and preserves the named destinations that page-count enforcement uses. The site
 gets the same mark as a CSS overlay on every page.
 
@@ -67,7 +66,7 @@ on — so a one-off stamp needs no POM edit. `build`, `site` and `render` all ta
 <plugin>
   <groupId>dev.noregressions.paperband</groupId>
   <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.1.2</version>
+  <version>0.1.3</version>
 
   <!-- Shared by every goal below: one declaration, both outputs marked. -->
   <configuration>
@@ -257,8 +256,7 @@ publication:
 ## The emitted HTML
 
 `<emitHtml>` writes the pre-render HTML with the watermark as a screen-only overlay, visible
-when the file is opened and hidden when it is printed. The PDF gets its mark from the PDFBox
-stamp, so a print-visible overlay would apply it twice.
+when the file is opened and hidden when it is printed. The PDF gets its mark from the post-render stamp, so a print-visible overlay would apply it twice.
 
 Re-rendering that file therefore produces an unmarked PDF unless the watermark parameters are
 passed to `paperband:render`:

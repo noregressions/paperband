@@ -12,7 +12,7 @@ default `theme`, the declared build `targets`, the book's `page` geometry, and t
 declared `sections`.
 
 These are **book scope**: read from this file and no other. Setting one in a folder's
-`paperband.yaml` fails the build. See Config Cascade for the scope model and for how the
+`paperband.yaml` fails the build. See [Config Cascade](card:config-cascade) for the scope model and for how the
 Maven plugin's `<book>` element layers on top.
 
 ## `page`
@@ -33,7 +33,7 @@ write one in the book stylesheet: it would win on cascade order, while the conte
 height would still be computed from this block.
 
 `orientation` is the single key here that a folder *may* also set: it rotates that folder's
-cards without changing the book's paper. See Config Cascade.
+cards without changing the book's paper. See [Config Cascade](card:config-cascade).
 
 ## `axes`
 
@@ -111,8 +111,7 @@ sections:
 ```
 
 A declared section is one group wherever a discovered one would be: one divider, one
-landing page, one nav entry. Folders no declaration claims stay discovered sections. See
-Organising Content for the full treatment, alongside the folder-level `order:`,
+landing page, one nav entry. Folders no declaration claims stay discovered sections. See [Organising Content](card:organising-content) for the full treatment, alongside the folder-level `order:`,
 `include:`, and `sort:` keys.
 
 `sections:` also has a map form, for books that need the declared list *and* the
@@ -404,13 +403,13 @@ Don't name your file the same as the template it extends: a same-named override 
 | Key | What |
 |---|---|
 | `section` | this section: `id`, `label`, `count`, `landingTemplate`, `minimal`, `landingPage`, `cards` |
-| `cards` | its cards, each `{id, title, oneliner, axes, effort, openrewrite, subsystem}` |
+| `cards` | its cards, each `{id, title, oneliner, axes, effort, subsystem}` |
 | `book` | `title`, `subtitle`, `series`, `author`, `vars`, `cover`, `back`, `header`, `footer` |
 | `sections` | every section's meta, for cross-links |
 | `navEntries` / `sidebarEntries` | the nav model (the shell passes these to the partials) |
-| `stats` | `{total, openrewrite}` |
+| `stats` | `{total, byAxis}` |
 | `css` / `cssImports` | the composed stylesheet (the shell emits it) |
-| `htmlClass` / `measure` | the `<html>` hooks — see Themes / print and site layers |
+| `htmlClass` / `measure` | the `<html>` hooks — see [Themes](card:themes#print-and-site-layers) |
 | `sidebar`, `sidebar_collapsed`, `sidebar_sections_collapsed` | sidebar state |
 | `page` | `{kind: "section", id}` — lets the partials mark the active row |
 | `urlPrefix` | `""` on a landing page (`"../"` on card pages) |

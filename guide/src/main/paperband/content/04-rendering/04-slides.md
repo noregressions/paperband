@@ -98,8 +98,7 @@ crossed the boundary:
 ```
 {.fs--1}
 
-The check measures the DOM rather than the finished file (see Page Enforcement in the
-Advanced section), so it works the same whether you are producing a PDF or a `.pptx`.
+The check measures the DOM rather than the finished file (see [Page Enforcement](card:page-enforcement)), so it works the same whether you are producing a PDF or a `.pptx`.
 
 ## PowerPoint output
 
@@ -111,12 +110,12 @@ jars), so a book adds it explicitly:
 <plugin>
   <groupId>dev.noregressions.paperband</groupId>
   <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.1.2</version>
+  <version>0.1.3</version>
   <dependencies>
     <dependency>
       <groupId>dev.noregressions.paperband</groupId>
       <artifactId>render-pptx</artifactId>
-      <version>0.1.2</version>
+      <version>0.1.3</version>
     </dependency>
   </dependencies>
 </plugin>

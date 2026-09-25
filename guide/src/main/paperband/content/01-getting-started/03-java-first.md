@@ -22,7 +22,7 @@ configured and one starter card:
 mvn archetype:generate \
   -DarchetypeGroupId=dev.noregressions.paperband \
   -DarchetypeArtifactId=paperband-archetype \
-  -DarchetypeVersion=0.1.2 \
+  -DarchetypeVersion=0.1.3 \
   -DgroupId=com.example -DartifactId=my-guide
 cd my-guide
 ```
@@ -33,10 +33,32 @@ cd my-guide
 mvn package
 ```
 
-The PDF is written to `target/my-guide.pdf`. The first build downloads headless Chromium,
-so it needs internet access once.
+The first build downloads headless Chromium (about 300 MB) to render the PDF, so it needs
+internet access once. The build has worked when the log shows both outputs:
 
-**3. Write.** Replace the starter card and add cards. Each `.md` file under
+```
+[INFO] Built book …/my-guide/src/main/paperband/content -> …/my-guide/target/my-guide.pdf (renderer=playwright, target=pdf-a4, size=a4, cards=1, blocks=4)
+[INFO] Built site …/my-guide/src/main/paperband/content -> …/my-guide/target/site (2 pages, 1 cards)
+```
+
+and the project contains:
+
+```filetree
+my-guide/
+  pom.xml
+  README.md
+  src/main/paperband/
+    paperband.yaml               ← the book's title and theme
+    content/
+      01-introduction.md         ← the starter card
+  target/
+    my-guide.pdf                 ← the book as a PDF
+    site/
+      index.html                 ← the book as a static site
+      cards/introduction.html
+```
+
+**3. Write.** Replace the starter card and add your own. Each `.md` file under
 `src/main/paperband/content/` is a card, built in filename order, and each subfolder is a
 section. A card is Markdown with an H1 title:
 
@@ -50,14 +72,17 @@ Two steps, and a check at the end.
 …
 ```
 
-Run `mvn package` again. For the same book as a website, run
-`mvn paperband:site -Dpaperband.outputDirectory=target/site` and open
-`target/site/index.html`.
+Run `mvn package` again to rebuild `target/my-guide.pdf` and `target/site/`.
 
-Archetype 0.1.2 generates an older layout: the starter card is directly in
-`src/main/paperband/`, and the POM sets that folder with `<input>`. That layout still builds.
-To convert it, create `src/main/paperband/content/`, move the `.md` files into it, and delete
-the `<input>` line. Later archetype releases generate this layout and a site execution.
+**4. Inspect it.** Two goals describe the book without rendering it:
+
+```bash
+# Every section and card, in build order
+mvn paperband:structure
+
+# One card's frontmatter, id and blocks
+mvn paperband:scan -Dpaperband.input=src/main/paperband/content/01-introduction.md
+```
 
 ## Adding a book to a project you already have
 
@@ -95,22 +120,24 @@ cards. Templates and stylesheets are therefore never picked up as cards.
 
 ## The POM
 
+The archetype generates this plugin block:
+
 ```xml
 <plugin>
   <groupId>dev.noregressions.paperband</groupId>
   <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.1.2</version>
+  <version>0.1.3</version>
   <executions>
     <execution>
-      <id>pdf</id>
+      <id>build-guide-pdf</id>
       <phase>package</phase>
       <goals><goal>build</goal></goals>
       <configuration>
-        <output>${project.build.directory}/book.pdf</output>
+        <output>${project.build.directory}/${project.artifactId}.pdf</output>
       </configuration>
     </execution>
     <execution>
-      <id>site</id>
+      <id>build-guide-site</id>
       <phase>package</phase>
       <goals><goal>site</goal></goals>
       <configuration>
@@ -126,9 +153,8 @@ Each execution sets only its output location. `mvn package` builds both. On the 
 line, the goals need only the output:
 
 ```bash
-mvn paperband:build -Dpaperband.output=target/book.pdf
+mvn paperband:build -Dpaperband.output=target/my-guide.pdf
 mvn paperband:site  -Dpaperband.outputDirectory=target/site
-mvn paperband:structure
 ```
 
 ## A module that is only a book

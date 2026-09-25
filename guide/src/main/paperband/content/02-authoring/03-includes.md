@@ -55,14 +55,13 @@ By default the return type is inferred from the file extension (`.java` → code
 
 ## How the preprocessor runs
 
-Includes expand in a single pre-pass before flexmark sees the source:
+Includes expand in a single pre-pass before the Markdown is parsed:
 
 1. Frontmatter, fenced code blocks and inline code spans are masked, so literal examples
    of `{% fragment %}` syntax, like those on this page, are not evaluated.
 2. The rest of the body is evaluated as a Pebble template; each `{% fragment %}` tag is
    replaced with its fetched, processed content.
-3. The masked regions are restored, and the result is parsed by flexmark as ordinary
-   Markdown.
+3. The masked regions are restored, and the result is parsed as ordinary Markdown.
 
 A fragment's content is inserted verbatim: Pebble syntax inside it, including another
 `{% fragment %}`, stays literal text. To evaluate the included file, use `{% include %}`

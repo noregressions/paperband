@@ -10,7 +10,7 @@ A theme is a directory with a `manifest.txt` listing its CSS files, plus an opti
 `templates/` directory of Pebble overrides. Built-in themes ship on the classpath; custom
 themes are discovered via `<themeDir>`. Theme CSS loads after user CSS, so the theme wins
 on conflicts. List available themes with `mvn paperband:themes`. `<theme>none</theme>`
-turns theming off, overriding the book's yaml; see the Maven Plugin section for why it
+turns theming off, overriding the book's yaml; see [Maven Plugin](card:maven-plugin) for why it
 needs a reserved name, and for how `<stylesheets>` layers your own CSS above a theme.
 
 ## Built-in themes
@@ -30,7 +30,7 @@ class.
 
 `deck` lays out one card per 16:9 slide, with blocks *placed* into a fixed skeleton
 instead of looped in document order. It is the only bundled theme that uses `card.slots`,
-and the only one that expects a particular page size; see Slides.
+and the only one that expects a particular page size; see [Slides](card:slides).
 
 ## How CSS composes
 
@@ -126,7 +126,7 @@ reaches a theme:
 - **Page geometry, as CSS custom properties.** PDF pages stamp the build's real geometry
   on `<html>`: `--pw-content-height` (printable height), `--pw-page-margin-top` /
   `-right` / `-bottom` / `-left` (the page margins), and `--pw-font-scale`. Use these
-  rather than hardcoding a page size; see Full-bleed themes below.
+  rather than hardcoding a page size; see [Full-bleed themes](card:themes#full-bleed-themes) below.
 
 ## Full-bleed themes
 
@@ -158,7 +158,7 @@ than by a centred measure). A custom theme needs only the two rules above.
 
 ## Part pages
 
-A part or section divider is a full page, centred (see Organising Content). Themes style it
+A part or section divider is a full page, centred (see [Organising Content](card:organising-content)). Themes style it
 through `.section-divider`, with `.section-divider .tier-divider-inner` as the centred
 title block — the divider itself is the page-sized flex container, so put backgrounds,
 frames and rules on the inner element rather than on `.section-divider`. Every bundled
@@ -166,7 +166,7 @@ theme styles it; the built-in fallback inherits the book's colours, so a theme t
 style it still renders a legible page.
 
 For a divider showing the title alone, a part can ask for the `minimal` preset — see
-Organising Content and the Maven plugin's `<landingTemplate>`.
+[Organising Content](card:organising-content) and the Maven plugin's `<landingTemplate>`.
 
 ## How axis colours reach CSS
 

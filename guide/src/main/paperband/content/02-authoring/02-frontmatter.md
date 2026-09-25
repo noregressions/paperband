@@ -1,47 +1,59 @@
 ---
 id: frontmatter
 title: "Frontmatter Reference"
-oneliner: "Every supported frontmatter field, demonstrated in the card that documents them."
+oneliner: "Every frontmatter field a card can set, and what each one does."
 effort: S
-tags: [authoring, yaml, reference]
+index: [frontmatter, card id]
 max_pages: 2
 verify: true
 ---
 
-YAML frontmatter is placed between `---` delimiters at the start of the file. It is parsed
-by SnakeYAML, so all YAML types are supported: strings, booleans, integers, lists and nested
-maps. This card sets every field it documents, including `title:`, so it has no `#` heading.
-When `title:` is set, headings in the body are rendered instead of being used as the
-title.
+Frontmatter is YAML between `---` delimiters at the start of a card. Every field is
+optional. This card's own frontmatter sets most of them:
+
+```yaml
+---
+id: frontmatter
+title: "Frontmatter Reference"
+oneliner: "Every frontmatter field a card can set, and what each one does."
+effort: S
+index: [frontmatter, card id]
+max_pages: 2
+verify: true
+---
+```
+
+Because it sets `title:`, the card has no `#` heading; with `title:` set, headings in the
+body are rendered rather than used as the title. The `effort` value appears as the
+"Effort: S" badge under the title, and the `oneliner` as the line beneath it.
 
 ## Field reference
 
-| Field | Type | Default | Description |
+| Field | Type | Default | Effect |
 |---|---|---|---|
-| `id` | string | path within the book, slugified | Stable identifier, used as the PDF named-destination anchor and the site URL slug. The default is unique per card: `scenarios/S01-spring-node/TRACE.md` → `scenarios-s01-spring-node-trace`. Declare one for a shorter URL. Changing it after publishing breaks existing links. |
-| `title` | string | first H1 | Card title. With `title:` set, the first `#` stays a heading in the body. Without it, the first `#` becomes the title and is not repeated. |
-| `oneliner` | string | — | Short summary line shown in card meta and index listings. |
-| `effort` | string | — | Size estimate (`XS` / `S` / `M` / `L` / `XL`). Rendered as a badge. |
-| `tags` | list | — | Free-form tag list. Reserved for future filtering and index generation. |
-| `max_pages` | integer | — | Post-render page-count ceiling. Build fails (exit 3) if this card exceeds the limit. |
-| `verify` | boolean | `true` | When `false`, the `check` block is suppressed from the rendered output. |
-| `tier` | integer | — | Numeric tier when using the tier axis (1–3). Drives tier dividers and colour-coding in the PDF. |
-| `openrewrite` | boolean | — | When `true`, renders an OpenRewrite badge in card metadata. |
+| `id` | string | path within the book, slugified | The PDF named-destination anchor (`#card-<id>`) and the site page (`cards/<id>.html`). The default is unique per card: `scenarios/S01-spring-node/TRACE.md` → `scenarios-s01-spring-node-trace`. |
+| `title` | string | first H1 | The card title. With `title:` set, the first `#` stays a heading in the body. Without it, the first `#` becomes the title and is not repeated. |
+| `oneliner` | string | — | Summary line shown under the title, on section landing pages and in site tiles. |
+| `effort` | string | — | Rendered as an "Effort" badge under the title (conventionally `XS` to `XL`). |
+| `max_pages` | integer | — | Page-count ceiling for this card. The build fails (exit 3) if the rendered card is longer. Overrides `<maxPagesPerCard>`. See [Page Enforcement](card:page-enforcement). |
+| `verify` | boolean | `true` | `false` hides every `check`-classed block in the card, at any nesting depth. |
+| `index` | list or string | — | Back-of-book index terms for this card. See [TOC and Index](card:toc-and-index). |
+| *axis name* | any | — | The card's value for a declared axis, such as `tier: 1` for an axis named `tier`. Overrides the folder's `axis:` binding. See [Book Configuration](card:book-config#axes). |
+
+A section body (`_section.md`) takes a different set of fields, such as `cards:` and
+`landing:`; see [Book Configuration](card:book-config).
 
 ## Custom fields
 
-Any YAML key not in the table above is preserved in the card's frontmatter map and
-available to Pebble templates as `card.frontmatter.get("yourKey")`. There is no schema
-validation; unknown keys are kept as they are.
+Any other key is kept in the card's frontmatter map and is available to templates as
+`card.frontmatter.yourKey`, which is null when the key is absent. Custom keys are not
+validated.
 
 ## Watch Out
 
-PDF named destinations and site URLs are derived from `id`. Changing the id of a published
-card breaks inbound links and PDF bookmarks unless the old URL is redirected.
-
-If `id` is not set, it is derived from the card's path within the book, slugified
-(`api/endpoints.md` → `api-endpoints`), so moving or renaming the file changes it. Set an
-explicit id for any card you expect to link to externally.
+The PDF anchor and the site URL both come from `id`, so changing the id of a published card
+breaks inbound links and PDF bookmarks. Without an `id`, moving or renaming the file changes
+it. Set an explicit `id` on any card that other people will link to.
 
 ## Check
 
@@ -49,5 +61,4 @@ explicit id for any card you expect to link to externally.
 mvn paperband:scan -Dpaperband.input=path/to/card.md
 ```
 
-The first line of scan output shows the resolved `id`. Use it to confirm the id before
-publishing links to the card.
+The output includes the resolved `id`.

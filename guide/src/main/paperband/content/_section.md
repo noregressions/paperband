@@ -20,13 +20,14 @@ convention, as Maven finds `src/main/java`. The archetype creates the project:
 mvn archetype:generate \
   -DarchetypeGroupId=dev.noregressions.paperband \
   -DarchetypeArtifactId=paperband-archetype \
-  -DarchetypeVersion=0.1.2 \
+  -DarchetypeVersion=0.1.3 \
   -DgroupId=com.example -DartifactId=my-guide
 cd my-guide
 mvn package
 ```
 
-The PDF is written to `target/`. Add cards as `.md` files under `src/main/paperband/`.
+`mvn package` writes `target/my-guide.pdf` and a static site in `target/site/`. Cards
+are `.md` files in `src/main/paperband/content/`.
 
 [Start a new book →](card:java-first)
 
@@ -40,7 +41,7 @@ and set the content directory:
 <plugin>
   <groupId>dev.noregressions.paperband</groupId>
   <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.1.2</version>
+  <version>0.1.3</version>
   <configuration>
     <content>docs</content>
   </configuration>
@@ -88,5 +89,5 @@ same cards on every push.
 - [paperband-intro.pptx](paperband-intro.pptx): two slides, built by the pptx renderer
 - [llms.txt](llms.txt): the whole reference condensed into one file for an LLM
 - [Source on GitHub](https://github.com/noregressions/paperband): issues, and this guide's Markdown
-- [Maven Central](https://central.sonatype.com/artifact/dev.noregressions.paperband/paperband-maven-plugin): latest release 0.1.2, Apache 2.0
+- [Maven Central](https://central.sonatype.com/artifact/dev.noregressions.paperband/paperband-maven-plugin): latest release 0.1.3, Apache 2.0
 {% endif %}
