@@ -1,0 +1,164 @@
+# The map's data. Everything the table, legend and outlet tiles show lives
+# here, and 01-map.md turns it into markup; styles/map.css owns the look.
+#
+# Icons are names from the bundled Lucide set (https://lucide.dev/icons);
+# the card writes each as a :name: reference, which the build draws in as
+# inline SVG. A book can add its own under src/main/paperband/icons/.
+vars:
+  # Score scale, for the legend. "-" in a row means not applicable.
+  scale:
+    - { score: "4", label: "Very strong" }
+    - { score: "3", label: "Strong" }
+    - { score: "2", label: "Useful" }
+    - { score: "1", label: "Weak / indirect" }
+    - { score: "-", label: "Not applicable" }
+  # The scored columns, in order. Each row's `scores` list follows this order.
+  metrics:
+    - { icon: users, label: "Reach" }
+    - { icon: message-circle, label: "Engagement" }
+    - { icon: book-open, label: "Depth" }
+    - { icon: trophy, label: "Authority" }
+    - { icon: shield-check, label: "Trust" }
+    - { icon: target, label: "Conversion" }
+    - { icon: repeat, label: "Retention" }
+    - { icon: lightbulb, label: "Feedback" }
+    - { icon: recycle, label: "Reusability" }
+  groups:
+    - id: source
+      icon: file-text
+      label: "Source assets"
+      blurb: "Original material that generates new evidence or unique value."
+      rows:
+        - { icon: file-search, name: "Research report / study",
+            desc: "Original research and analysis",
+            scores: [4, 3, 4, 4, 4, 2, 1, 1, 3],
+            best: "Major authority moments, media, talks" }
+        - { icon: chart-column, name: "Survey / benchmark / data release",
+            desc: "Original data, statistics, benchmarks",
+            scores: [4, 3, 4, 4, 4, 2, 1, 1, 4],
+            best: "Shareable data, PR, analyst interest" }
+        - { icon: calculator, name: "Interactive tool / calculator",
+            desc: "Assessment, risk calculator, EOL detector",
+            scores: [4, 4, 4, 3, 3, 3, 2, 2, 4],
+            best: "Product relevance, lead generation, repeat use" }
+        - { icon: code-xml, name: "Sample project / reference implementation",
+            desc: "Code samples, reference architectures",
+            scores: [3, 3, 4, 4, 4, 2, 1, 1, 4],
+            best: "Developer trust, practical adoption" }
+        - { icon: search, name: "Customer study / analysis",
+            desc: "Deep customer or market insight",
+            scores: [4, 3, 4, 4, 4, 3, 2, 2, 3],
+            best: "Real-world evidence, sales conversations" }
+        - { icon: graduation-cap, name: "Workshop / training session",
+            desc: "Hands-on, small group, interactive",
+            scores: [3, 4, 3, 4, 4, 3, 2, 2, 3],
+            best: "Deep engagement, feedback, learning" }
+        - { icon: messages-square, name: "Community discussion / roundtable",
+            desc: "Facilitated discussion with practitioners",
+            scores: [3, 4, 3, 3, 3, 2, 3, 3, 3],
+            best: "Insight, relationship building" }
+    - id: primary
+      icon: presentation
+      label: "Primary assets"
+      blurb: "Standalone content experiences with clear audiences."
+      rows:
+        - { icon: mic, name: "Major conference talk",
+            desc: "Keynote or main conference session",
+            scores: [4, 4, 3, 4, 3, 3, 1, 1, 3],
+            best: "Authority, reach, industry credibility" }
+        - { icon: users, name: "User group / meetup talk",
+            desc: "Local or virtual community session",
+            scores: [3, 4, 3, 3, 3, 2, 2, 2, 3],
+            best: "Community engagement, local relationships" }
+        - { icon: speech, name: "Panel / fireside chat",
+            desc: "Discussion with other experts",
+            scores: [3, 4, 3, 3, 3, 2, 2, 2, 3],
+            best: "Borrowed audience, shared credibility" }
+        - { icon: circle-play, name: "Webinar (live or on-demand)",
+            desc: "Structured online session with registration",
+            scores: [4, 4, 3, 3, 3, 3, 2, 2, 4],
+            best: "Education, lead generation, product interest" }
+        - { icon: radio, name: "Livestream / live discussion",
+            desc: "Informal live video (e.g. LinkedIn, YouTube)",
+            scores: [3, 4, 2, 3, 3, 2, 2, 3, 3],
+            best: "Real-time engagement, Q&A, reach" }
+        - { icon: podcast, name: "Podcast / interview",
+            desc: "Guest on external or internal podcast",
+            scores: [3, 4, 3, 3, 3, 2, 2, 2, 4],
+            best: "Borrowed audience, trust, deep discussion" }
+        - { icon: file-text, name: "Technical article / tutorial",
+            desc: "In-depth technical how-to",
+            scores: [3, 3, 4, 4, 4, 2, 2, 2, 4],
+            best: "Search, developer education, evergreen value" }
+        - { icon: book-marked, name: "Practical guide / playbook",
+            desc: "Actionable guide, checklist or framework",
+            scores: [3, 3, 4, 4, 4, 3, 2, 2, 4],
+            best: "Practical help, adoption, conversions" }
+        - { icon: lightbulb, name: "Opinion / industry analysis",
+            desc: "Viewpoint, trends or commentary",
+            scores: [4, 3, 3, 4, 4, 3, 2, 2, 3],
+            best: "Thought leadership, industry debate" }
+        - { icon: flask-conical, name: "Demo",
+            desc: "Product or technical demonstration",
+            scores: [3, 4, 3, 3, 3, 4, 2, 2, 3],
+            best: "Show capability, drive product interest" }
+        - { icon: clipboard-list, name: "Case study",
+            desc: "Detailed customer story",
+            scores: [3, 3, 4, 4, 4, 4, 2, 2, 4],
+            best: "Trust, conversion, real-world validation" }
+        - { icon: quote, name: "Customer interview / testimonial",
+            desc: "Customer conversation (lighter than case study)",
+            scores: [3, 3, 3, 4, 4, 3, 2, 2, 4],
+            best: "Trust, relatability, social proof" }
+    - id: derivative
+      icon: megaphone
+      label: "Derivative / amplification assets"
+      blurb: "Shorter or adapted formats that extend the reach and life of source and primary assets."
+      rows:
+        - { icon: share-2, name: "Short social post",
+            desc: "Text, image or link (e.g. LinkedIn, X)",
+            scores: [4, 3, 2, 2, 2, 2, 1, 1, 3],
+            best: "Reach, keep topics active, drive traffic" }
+        - { icon: clapperboard, name: "Short-form video / clip",
+            desc: "30–90 second clip, highlights",
+            scores: [4, 4, 2, 2, 2, 3, 1, 1, 3],
+            best: "Reach, engagement, multi-channel reuse" }
+        - { icon: chart-pie, name: "Infographic / diagram",
+            desc: "Visual summary or data visualisation",
+            scores: [4, 3, 2, 3, 3, 2, 1, 1, 4],
+            best: "Explain complex ideas, high shareability" }
+        - { icon: mail, name: "Newsletter",
+            desc: "Curated updates, insights and links",
+            scores: [3, 3, 3, 3, 3, 3, 4, 2, 3],
+            best: "Retention, nurture, drive traffic and action" }
+        - { icon: rocket, name: "Product announcement / launch",
+            desc: "New product, feature or service",
+            scores: [4, 3, 3, 3, 3, 4, 2, 1, 3],
+            best: "Awareness, product interest, broad reach" }
+        - { icon: scroll-text, name: "Release notes / product update",
+            desc: "Ongoing product communication",
+            scores: [3, 2, 3, 3, 3, 3, 4, 2, 3],
+            best: "Keep existing users informed and engaged" }
+        - { icon: library, name: "Documentation / FAQ / knowledge base",
+            desc: "Help, explanations, common questions",
+            scores: [3, 2, 4, 3, 3, 3, 3, 2, 4],
+            best: "Support adoption, reduce friction, evergreen" }
+        - { icon: newspaper, name: "Press release / news item",
+            desc: "Formal announcement",
+            scores: [4, 2, 3, 3, 3, 3, 2, 1, 3],
+            best: "Announce genuine news, wider media reach" }
+        - { icon: briefcase, name: "Media / analyst briefing",
+            desc: "Proactive outreach and briefings",
+            scores: [3, 3, 3, 4, 4, 3, 2, 2, 3],
+            best: "Analyst and media coverage, credibility" }
+  outlets:
+    - { icon: globe, name: "website / blog", desc: "Owned, evergreen, searchable" }
+    - { icon: users, name: "Developer communities", desc: "e.g. Foojay, DEV.to, Stack Overflow" }
+    - { icon: smartphone, name: "Social platforms", desc: "e.g. LinkedIn, X, YouTube, TikTok" }
+    - { icon: mail, name: "Email / newsletter", desc: "Direct to subscribers" }
+    - { icon: calendar-days, name: "Conferences / events", desc: "Industry and community" }
+    - { icon: users-round, name: "User groups / meetups", desc: "Local or virtual" }
+    - { icon: podcast, name: "Podcasts", desc: "Internal or external" }
+    - { icon: newspaper, name: "Media / analysts", desc: "Journalists, analysts, publications" }
+    - { icon: handshake, name: "Partner channels", desc: "Vendors, cloud platforms, ecosystem" }
+    - { icon: git-branch, name: "Open-source communities", desc: "GitHub, projects, foundations" }
