@@ -1,5 +1,5 @@
 title: "Paperband"
-theme: editorial
+theme: workshop
 
 # The section axis makes vars.section available in each card's template context.
 # Note: static-site section grouping is driven by folder path (LayoutEngine.sectionIdFor),

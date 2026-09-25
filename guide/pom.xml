@@ -79,6 +79,12 @@
                         <goals><goal>build</goal></goals>
                         <configuration>
                             <output>${project.build.directory}/guide.pdf</output>
+                            <!-- After the theme, so it corrects workshop's type
+                                 without !important. Not on the deck, which has
+                                 its own theme. See styles/guide-type.css. -->
+                            <stylesheets>
+                                <stylesheet>${project.basedir}/src/main/paperband/styles/guide-type.css</stylesheet>
+                            </stylesheets>
                         </configuration>
                     </execution>
                     <execution>
@@ -87,6 +93,12 @@
                         <goals><goal>site</goal></goals>
                         <configuration>
                             <outputDirectory>${project.build.directory}/guide-site</outputDirectory>
+                            <!-- After the theme, so it corrects workshop's type
+                                 without !important. Not on the deck, which has
+                                 its own theme. See styles/guide-type.css. -->
+                            <stylesheets>
+                                <stylesheet>${project.basedir}/src/main/paperband/styles/guide-type.css</stylesheet>
+                            </stylesheets>
                             <clean>true</clean>
                         </configuration>
                     </execution>
