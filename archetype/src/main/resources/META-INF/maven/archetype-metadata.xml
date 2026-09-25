@@ -60,9 +60,12 @@
         </fileSet>
 
         <!-- The starter card: deliberately not filtered, per the Markdown/"##"
-             warning above. Kept generic (no per-project text) instead. -->
+             warning above. Kept generic (no per-project text) instead. It sits
+             in content/, the conventional content root: everything there is a
+             card, and the book's own config, layouts/ and styles/ stay beside
+             it in src/main/paperband. -->
         <fileSet filtered="false" packaged="false" encoding="UTF-8">
-            <directory>src/main/paperband</directory>
+            <directory>src/main/paperband/content</directory>
             <includes>
                 <include>*.md</include>
             </includes>

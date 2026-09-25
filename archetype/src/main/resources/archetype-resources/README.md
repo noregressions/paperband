@@ -6,22 +6,29 @@ A [Paperband](https://github.com/noregressions/paperband) guide, scaffolded from
 ## Layout
 
     src/main/paperband/
-      paperband.yaml     - book root config: title, theme, shared vars
-      01-introduction.md - a card - add more .md files here
-    pom.xml               - wires paperband-maven-plugin to `mvn package`
+      paperband.yaml       - the book: title, theme, shared vars
+      content/
+        01-introduction.md - a card - add more .md files here
+    pom.xml                 - wires paperband-maven-plugin to `mvn package`
 
-See [Paperband's guide](https://github.com/noregressions/paperband) for the full
-authoring reference (frontmatter, includes, conditionals, themes, targets, page sizes).
+Everything under `content/` is a card, and each subfolder of it becomes a section.
+Templates (`layouts/`) and stylesheets (`styles/`) go beside `content/`, not in it.
 
 ## Build
 
     mvn package
 
-Renders `src/main/paperband/` to a PDF under `target/`, named after this project's
-artifactId. First run downloads headless Chromium for the `playwright` renderer —
-make sure the machine has internet access at least once before building offline
-(e.g. in CI).
+Renders the book to `target/<artifactId>.pdf` and to a static site in `target/site/`.
+The first PDF build downloads headless Chromium for the `playwright` renderer, so make
+sure the machine has internet access at least once before building offline (e.g. in
+CI). The site needs no browser.
 
-To re-render without a full `mvn package`:
+The goals also run on their own, with no arguments beyond where the output goes:
 
-    mvn paperband:build -Dpaperband.input=src/main/paperband -Dpaperband.output=target/guide.pdf
+    mvn paperband:build -Dpaperband.output=target/book.pdf
+    mvn paperband:site  -Dpaperband.outputDirectory=target/site
+    mvn paperband:structure
+
+See the [Paperband guide](https://noregressions.github.io/paperband/) for the full
+authoring reference: frontmatter, includes, conditionals, icons, themes, targets and
+page sizes.
