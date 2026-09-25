@@ -55,7 +55,7 @@ import java.util.regex.Pattern;
  * it. {@code ::name:} is the escape, and renders as a literal {@code :name:}.
  *
  * <p><strong>Resolution</strong> walks the book's own {@code icons/<name>.svg}
- * (beside its {@code layouts/}) and then the bundled
+ * (in the book's home, set by {@link LayoutEngine#setIconsDir}) and then the bundled
  * <a href="https://lucide.dev">Lucide</a> set, so a book can add names or
  * replace a bundled drawing. An unknown name fails the build, with a
  * suggestion: a typo would otherwise ship as literal text.

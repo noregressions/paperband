@@ -209,6 +209,7 @@ final class BookBuild {
                 ? new LayoutEngine(ctx.book().bookRoot(), layoutsDir, theme)
                 : new LayoutEngine(ctx.book().bookRoot(), theme);
         layout.setExtraCss(stylesheets);
+        layout.setIconsDir(iconsDir(ctx.book().bookRoot()));
         String html = layoutOverride != null
                 ? layout.render(card, ctx, layoutOverride)
                 : layout.render(card, ctx);
@@ -349,6 +350,7 @@ final class BookBuild {
                 ? new LayoutEngine(bookCtx.book().bookRoot(), layoutsDir, theme)
                 : new LayoutEngine(bookCtx.book().bookRoot(), theme);
         layout.setExtraCss(stylesheets);
+        layout.setIconsDir(iconsDir(bookCtx.book().bookRoot()));
         if (editionModel != null) layout.setEdition(editionModel);
         layout.setTocAt(tocCardIndex);
         layout.setPagesAt(pages);
@@ -834,5 +836,10 @@ final class BookBuild {
     private static void ensureParentDir(Path file) throws Exception {
         Path parent = file.toAbsolutePath().getParent();
         if (parent != null) Files.createDirectories(parent);
+    }
+
+    /** The book's own icons: {@code ${home}/icons}, or {@code <bookRoot>/icons} with no home. */
+    private Path iconsDir(Path bookRoot) {
+        return home != null ? home.resolve("icons") : bookRoot == null ? null : bookRoot.resolve("icons");
     }
 }

@@ -43,13 +43,14 @@ Unknown icon:
 
 ## Your own icons
 
-Put an SVG file in `icons/` beside the book's `layouts/`, which for a conventional book is
-`src/main/paperband/icons/`. The file's name is the icon's name: `icons/logo.svg` answers
+Put an SVG file in `icons/` in the book's home, beside `paperband.yaml`: for a
+conventional book, `src/main/paperband/icons/`. A book with no home keeps `icons/` at its
+root. The file's name is the icon's name: `icons/logo.svg` answers
 to `:logo:`. A file with the same name as a bundled icon replaces that icon.
 
 ```filetree
 src/main/paperband/
-  layouts/
+  paperband.yaml
   icons/
     logo.svg        ← :logo:
     users.svg       ← :users:, replacing Lucide's

@@ -218,10 +218,22 @@ public final class LayoutEngine {
     }
 
     /**
-     * The book's icon resolver — its own {@code icons/} beside {@code layouts/},
-     * then the bundled set. Lazily built: most pages carry no reference at all.
+     * The book's icon resolver — its own {@code icons/}, then the bundled set.
+     * Lazily built: most pages carry no reference at all.
      */
     private Icons icons;
+
+    /**
+     * Where the book's own icons live. The build passes {@code ${home}/icons}
+     * (or {@code <bookRoot>/icons} for a book with no home), so icons are found
+     * whether or not the book has a {@code layouts/} directory. Left unset, the
+     * directory beside {@code layouts/} is used.
+     *
+     * @param dir the icons directory; one that doesn't exist means none
+     */
+    public void setIconsDir(Path dir) {
+        this.icons = new Icons(dir);
+    }
 
     private Icons icons() {
         if (icons == null) {
