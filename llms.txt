@@ -4,9 +4,9 @@
 > ("cards"), run as a Maven plugin. This file is a single, self-contained reference an LLM
 > (or a new human) can read to understand what Paperband can do and how to drive it.
 
-It condenses the full guide
-(`guide/src/main/paperband/content/`) — consult that for prose depth; this file is the
-operational reference.
+It condenses the full guide, published at https://noregressions.github.io/paperband/
+(source: `guide/src/main/paperband/content/`). Consult that for prose depth; this file is
+the operational reference. The same site serves `guide.pdf` and this file (`llms.txt`).
 
 ## What Paperband is
 
@@ -61,9 +61,36 @@ src/main/paperband/          ← <home>: default root every goal assumes
 
 A book laid out like this needs no `<configuration>` at all. Override pieces individually
 with `<home>`, `<content>`, `<layouts>`; legacy `<input>` walks any directory the old way.
-`target/` and `node_modules/` are never walked.
+`target/` and `node_modules/` are never walked. A home without `content/` is walked the
+legacy way (`layouts/`, `styles/` skipped by name). An explicit path is taken as declared:
+a missing one fails the build rather than falling back. Every goal logs one line:
+`book geography: home=…, content=…, layouts=…`.
+
+Markdown that already lives elsewhere (existing docs): set `<content>docs</content>` in the
+plugin's shared `<configuration>` (relative paths resolve against the module basedir; an
+absolute `${project.basedir}/../docs` reaches outside the module). Everything under it is a
+card; subfolders are sections; `README.md` and `_section.md` are not cards. `paperband.yaml`
+is optional: taken from the home (`src/main/paperband/paperband.yaml`) if present, else the
+content root's own, else none (untitled book). Frontmatter is optional and the id derives
+from the path (`api/endpoints.md` → `api-endpoints`). For cards scattered across the
+project use a card-selecting `<book>` with glob `<includes>` instead. At most one of
+`<content>`, `<input>` and a card-selecting `<book>` may be configured.
 
 ## Quick start
+
+New book from the archetype (generates `src/main/paperband/paperband.yaml` and
+`src/main/paperband/content/01-introduction.md`, and a POM binding `build` and `site` to
+`package`; archetype 0.1.2 on Central still generates the older layout, with the card
+directly in `src/main/paperband/` and an `<input>`):
+
+```bash
+mvn archetype:generate -DarchetypeGroupId=dev.noregressions.paperband \
+  -DarchetypeArtifactId=paperband-archetype -DarchetypeVersion=0.1.2 \
+  -DgroupId=com.example -DartifactId=my-guide
+cd my-guide && mvn package    # target/my-guide.pdf; newer archetypes also target/site/
+```
+
+Existing project, book at the conventional location:
 
 ```xml
 <plugin>
@@ -175,6 +202,24 @@ else that looks like `{{ }}`/`{% %}` must be valid Pebble or wrapped in `{% verb
   `vars` keys read as null/false — never an error; only real Pebble syntax errors fail.
 - Built-in vars (seeded first, so yaml can override them for reproducible builds):
   `build_date`, `build_date_long`, `build_year`, `build_month_year`, `build_iso`.
+- Besides `vars`, a card body sees `output` (`print` for the PDF/deck, `site` for the static
+  site) and `target` (the raw build target). `{% if output == 'print' %}…{% endif %}` emits
+  different content per output from one card.
+- Pebble/Markdown whitespace: Pebble removes the newline directly after a tag, and `{%-`,
+  `{#-` trim preceding whitespace including newlines. Markdown ends a raw-HTML block at the
+  first blank line and does not parse Markdown inside it. So: keep generated HTML free of
+  blank lines (use `{%-` inside loops); leave two blank lines after a closing tag that
+  Markdown follows (else the next heading is absorbed into the HTML block as text); never
+  put a trimming tag on the line after a heading (it joins the following content onto the
+  heading line).
+- Tables from data (pattern): rows as nested `vars` in a folder `paperband.yaml`, a Pebble
+  `{% for %}` loop emitting an HTML `<table>` with classes (the content policy strips inline
+  styles), CSS in the book's `css:` chain. For print, a `rowspan` group label does not
+  repeat on a new page; emit one table per group with the group name as a band row in its
+  `<thead>` (Chromium repeats `<thead>` on each page), branch on `output`, share cells via
+  `{% macro %}`, and align tables with a shared `<colgroup>` + `table-layout: fixed`.
+  `tr { break-inside: avoid }` is safe only without `rowspan`. Worked example:
+  `examples/effectiveness-map/` in the repository.
 
 ### HTML and YAML cards
 
@@ -197,6 +242,29 @@ survive (the sanctioned styling route), and table-cell `align` from GFM `---:` s
 `strict` fails the build on the same findings; `allow` passes verbatim. Fenced/inline code
 is never touched. Style content by naming meaning: `> text {.warning}` + a CSS rule.
 
+### Icons (`:name:`)
+
+`:name:` in text becomes an inline SVG (`<svg class="icon icon-<name>">`, 1em, drawn in
+`currentColor`). Names: the book's `icons/<name>.svg` (in the book home, beside
+`paperband.yaml`: `src/main/paperband/icons/`; `<bookRoot>/icons/` with no home) first, then the bundled Lucide set (2,118 icons, ISC;
+names as on https://lucide.dev/icons). A book file replaces a bundled icon of the same
+name. An unknown name FAILS the build, quoting the context and suggesting near names. A
+book SVG containing `<script>`, an `on*=` handler or `<foreignObject>` fails the build.
+
+Syntax: `[a-z][a-z0-9]*(-[a-z0-9]+)*` between colons; neither colon may touch a letter,
+digit, underscore or colon (`group:artifact:goal`, `Foo::bar:`, `10:30:45`, `:a:b:` are
+not references; adjacent icons need a space). `::name:` renders a literal `:name:`.
+`vars: { icons: false }` disables references for the book.
+
+Runs on each finished page (after templates and `card:` resolution), so it works in raw
+HTML, template output, headings, titles, oneliners, section bodies and running
+headers/footers. Skipped: `head`, `title`, `script`, `style`, `pre`, `code`, `textarea`,
+existing `svg`, attribute values, comments, and any element classed `no-icons` (the
+back-of-book index uses it). On pptx slides an icon in running text is omitted (slide prose
+is native text); icons inside tables/figures survive in those pictures. Emoji are not a
+substitute: headless Chromium drops colour-emoji glyphs in bold text and CI images usually
+lack an emoji font.
+
 ## Configuration
 
 ### The cascade (root → folder → card)
@@ -212,8 +280,11 @@ Per-key merge rules:
 | `layout` | Last non-null wins |
 | `targets` | Last non-empty list replaces wholesale |
 
-Root-only keys (do not cascade): `title`, `axes`, `theme`, `sections`, `cardSchema`,
-`cover`, `back`, book-wide `sections.landing.template`, `publication`.
+Book-scope keys (read from the book's own `paperband.yaml` only; setting one in a folder
+yaml fails the build): `title`, `axes`, `theme`, `sections`, `cardSchema`, `cover`,
+`back`, `header`, `footer`, `page` (except `page.orientation`, which cascades and rotates
+that folder's cards), `sidebar`, the book-wide `sections.landing.template`, and
+`publication`.
 Folder-local, non-cascading keys: `order`, `include`, `sort`, `where`, `ignore`.
 
 ### Root `paperband.yaml` shape
@@ -242,12 +313,16 @@ vars:
                                  #   bold, scale, fit, behind, tile, pages, font}
   contentPolicy: clean
   mermaidTheme: dark             # ```mermaid colour theme: default | dark | forest | neutral | base
-  page:
-    size: 6x9                    # a4 (default) | a5 | letter | legal | 6x9 | packt | 16x9 | {width,height,unit}
-    margins: { top: 0, right: 0, bottom: 0, left: 0 }   # zero = full-bleed; STATE these —
+  icons: false                   # turn off :name: icon references (default: on)
+page:                            # book scope (vars.page is a deprecated alias)
+  size: 6x9                      # a4 (default) | a5 | letter | legal | 6x9 | packt | 16x9 | {width,height,unit}
+  margins: { top: 0, right: 0, bottom: 0, left: 0 }   # zero = full-bleed; STATE these —
                                  #   page.size replaces the SHEET only, margins keep
                                  #   whatever was in force (A4's 20mm with no <pageSize>)
-    measure: 58rem               # text measure; overrides theme --card-max-width; `none` = full width
+  orientation: portrait          # portrait | landscape; a folder yaml may set this alone
+  measure: 58rem                 # text measure → --card-max-width (theme and theme-less
+                                 #   scaffold, PDF and site); `none` = full width
+sidebar: true                    # static-site navigation sidebar
 ```
 
 Undeclared axis values still get landing pages (generated label + default palette colour).
@@ -270,9 +345,17 @@ Plus: `title:` (section display label), `axis: {name: value}` (binds every card 
 `landing: {template: <preset-or-path>}` (this section's landing/divider template —
 presets `default` | `minimal`, or a path relative to `layouts/`).
 
+**Section bodies.** A `_section.md` (or `README.md`; `_section.md` wins) in a section's
+folder is that section's landing-page content on the site and its divider content in the
+PDF. It goes through the card pipeline (Pebble with `section.{id,count,cards}` in scope,
+each card carrying `frontmatter`; block templates; content policy) but is not a card. The
+content root's `_section.md` is the book's: the site index body and PDF front matter. A
+body replaces the default card list / section grid; frontmatter `cards: true` (section) or
+`sections: true` (book) keeps it. Link with `card:<id>`, not `url`/`anchor`.
+
 `order:` entries can be maps with target predicates:
 `- { id: interactive-demos, where: "target == 'web'" }` — false skips the card/subtree.
-Note: `target` is visible only in `where:` predicates; card bodies see only `vars`.
+A card body can also branch on `target`/`output` itself (see Includes and templating).
 Target strings are not validated — a typo silently selects nothing.
 
 ## Rendering
@@ -339,9 +422,9 @@ snapshotting (and before measuring, so page counts agree) it waits for network-i
 `window.paperbandPending` — the contract that gets JS-rendered content (mermaid diagrams)
 into the PDF finished; a rejected promise fails the render with the script's error.
 
-Four things inset content from the paper edge: page margin (`vars.page.margins` /
+Four things inset content from the paper edge: page margin (`page.margins` /
 `<margins>`), built-in horizontal safety padding `max(0mm, 8mm - margin)`, the theme's text
-measure (`--card-max-width`, retune with `vars.page.measure`), and per-page card padding
+measure (`--card-max-width`, retune with `page.measure`), and per-page card padding
 from the theme. "Full-bleed still looks margined" is usually the measure.
 
 **The sheet has one name, and it is the resolved one.** `RenderContext.size` is
@@ -500,20 +583,25 @@ Goal prefix `paperband`. Ten goals:
 | `themes` | List themes (`-Dpaperband.themeDir=` to include custom) | direct |
 | `blocks` | List ```` ```type ```` fences the build can render, and what renders each | direct |
 
-Key parameters (every one has a `-Dpaperband.<name>` property):
+Key parameters (every one has a `-Dpaperband.<name>` property). A `-D` property fills a
+parameter the POM leaves unset; it does NOT override a value set explicitly in the plugin's
+`<configuration>` (Maven gives that precedence). To keep a value overridable from the
+command line, declare it as a POM property instead
+(`<paperband.theme>editorial</paperband.theme>` under `<properties>`): a command-line `-D`
+beats a POM property.
 
 | Parameter | Default | Notes |
 |---|---|---|
-| `input` | — | Card file or book directory (legacy spelling; wrapper detection). Mutually exclusive with `book`. |
-| `home` / `content` / `layouts` | `src/main/paperband` / `${home}/content` / `${home}/layouts` | Book geography; each build logs the resolved values. |
+| `input` | — | Card file or book directory (legacy spelling; wrapper detection). Mutually exclusive with `content` and `book`. |
+| `home` / `content` / `layouts` | `src/main/paperband` / `${home}/content` / `${home}/layouts` | Book geography; each build logs the resolved values. `content` excludes `input` and a card-selecting `book`. |
 | `book` | — | POM-declared book (below). |
 | `output` | required (build) | Output PDF. `site` uses `outputDirectory` + `<clean>`. |
 | `renderer` | `playwright` | `pptx` with `render-pptx` on the plugin's `<dependencies>`. |
 | `target` | `pdf-a4` (`site`: `siteTarget`, default `web`) | Feeds `where:` predicates. |
-| `pageSize` | `a4` | Seeds base geometry; yaml `vars.page` still wins. |
+| `pageSize` | `a4` | Seeds base geometry; yaml `page:` still wins. |
 | `margins` | page size's own | CSS shorthand: `0`, `18mm`, `20 15 25 15`; units mm/cm/in/pt. |
-| `theme` / `themeDir` / `stylesheets` | book's `theme:` / — / — | Build `theme` overrides yaml; `none` disables. |
-| `emitHtml` | — | Also write the pre-render HTML — standalone (local images inlined as data: URIs) with a screen-only nav sidebar (opt out: `vars.sidebar: false`). |
+| `theme` / `themeDir` / `stylesheets` | book's `theme:` / — / — | Build `theme` overrides yaml; `none` disables. `stylesheets` are inlined after the theme (corrections without `!important`); declare per execution to keep them off another book. |
+| `emitHtml` | — | Also write the pre-render HTML — standalone (local images inlined as data: URIs) with a screen-only nav sidebar (opt out: `vars.sidebar: false`; separate from the site's top-level `sidebar:` key). |
 | `reportPages` / `maxPagesPerCard` | `false` / `vars.maxPagesPerCard` | |
 | `select` | — | Keep only cards matching `field=value` (book builds). |
 | `watermark` / `watermarkImage` | `vars.watermark` | Plus `watermarkColor/Opacity/Angle/FontSize/Bold/Scale/Fit/Behind/Tile/Pages/Font`. `site` takes all but Pages/Font; `render` takes all. |
@@ -639,7 +727,7 @@ the end naming failures.
    unvalidated and fail silently on typos.
 3. Wrong appearance → view-source the emitted HTML (`<emitHtml>`): every inlined sheet has
    a `/* === theme:name path === */` marker; remember cascade order book css → theme →
-   `<stylesheets>`, and `vars.page.measure` for "margins that won't go away".
+   `<stylesheets>`, and `page.measure` for "margins that won't go away".
 4. Card too long → `mvn paperband:pages -Dpaperband.pdf=… -Dpaperband.byPages=true`.
 5. Exit codes: 2 bad input/unknown renderer · 3 page-budget violation · 4 slot contract.
 6. Heading before the H1, `{{ }}`-looking prose outside code spans, a fence-attribute line
@@ -659,4 +747,6 @@ PublicationLoader), `include` (fragment tag, providers/processors, containment),
 builds the file, `LayoutMap` maps slot signature → slideLayout), `maven-plugin` (all mojos,
 BookBuild, PDFBox post-processing), `archetype`, and `guide` — the self-documenting book at
 `guide/src/main/paperband` plus the companion deck at `guide/src/main/paperband-deck`, both
-built by the plugin in the same reactor (`mvn install -Pguide`).
+built by the plugin in the same reactor (`mvn install -Pguide`). `.github/workflows/docs.yml`
+publishes that site at the Pages root (old `/guide/…` URLs redirect). `examples/` holds
+standalone example books outside the reactor (`effectiveness-map`: a data-driven table).
