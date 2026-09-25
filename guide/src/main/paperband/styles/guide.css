@@ -76,42 +76,181 @@ figure.filetree pre {
   padding: 0.4rem 0 0.4rem 1rem;
 }
 
-/* ── Index: the landing page (content/_section.md) ──────────────────────
- * The two getting-started paths ({.path}) sit side by side as panels; the
- * intro, the feature list and the downloads run the full width above and
- * below them. Site only: in the PDF the same file is plain front matter. */
-.paperband-site .section-body.book-body {
-  max-width: var(--pb-landing-max-width, 74rem);
+/* ── Home page (layouts/site-index.html + content/_section.md) ────────────
+ * The site's front door keeps the look of the hand-written page it
+ * replaced: off-white paper, ink, the rubber-band orange, a system sans, and
+ * the paperband strip across the top of the banner. Everything is scoped to
+ * .home, so the rest of the guide keeps the editorial theme. Site only: in
+ * the PDF, _section.md is plain front matter and none of this applies. */
+.home {
+  --home-ink: #2c2c2c;
+  --home-accent: #d96c4a;
+  --home-muted: #666;
+  --home-line: #e0e0e0;
+  --home-code: #f1f1ef;
+  --home-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --home-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  max-width: 62rem;
+  margin: 0 auto;
+  padding: 0 2rem 4rem;
+  font-family: var(--home-sans);
+  color: var(--home-ink);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+.home section.block p,
+.home section.block li { font-family: var(--home-sans); font-size: 1rem; color: var(--home-ink); }
+
+/* Banner */
+.home-hero {
+  position: relative;
+  text-align: center;
+  margin-top: 1.5rem;
+  padding: 3.5rem 0 3rem;
+  border-bottom: 2px dashed var(--home-line);
+}
+.home-hero::before {                 /* the paperband */
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 150px;
+  height: 6px;
+  background: var(--home-accent);
+  border-radius: 0 0 4px 4px;
+}
+.home-hero h1 {
+  font-family: var(--home-sans);
+  font-style: normal;
+  font-size: 3.5rem;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1.1;
+  margin: 0;
+}
+.home-tagline {
+  font-size: 1.5rem;
+  font-style: italic;
+  font-weight: 500;
+  color: var(--home-accent);
+  margin: 0.5rem 0 0;
+}
+.home-lede { font-size: 1.1rem; max-width: 36rem; margin: 1rem auto 0; }
+.home-actions {
+  margin-top: 2rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.home .btn {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+.home .btn-primary { background: var(--home-ink); color: #fdfdfc; border: 2px solid var(--home-ink); }
+.home .btn-primary:hover { background: var(--home-accent); border-color: var(--home-accent); transform: translateY(-2px); }
+.home .btn-secondary { border: 2px solid var(--home-ink); color: var(--home-ink); }
+.home .btn-secondary:hover { background: var(--home-ink); color: #fdfdfc; }
+
+/* Body: the intro, then the two ways in side by side, then the rest */
+.home .section-body.book-body {
+  max-width: none;
+  padding: 2.5rem 0 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem 1.5rem;
+  gap: 1.5rem 2rem;
 }
 @media (max-width: 48rem) {
-  .paperband-site .section-body.book-body { grid-template-columns: 1fr; }
+  .home .section-body.book-body { grid-template-columns: 1fr; }
+  .home-hero h1 { font-size: 2.6rem; }
 }
-.paperband-site .book-body > section.block { grid-column: 1 / -1; }
-.paperband-site .book-body > section.block.path {
+.home .book-body > section.block { grid-column: 1 / -1; margin: 0; }
+.home section.block.intro p { font-size: 1.1rem; }
+.home section.block.intro p:first-of-type::first-letter {   /* no drop cap here */
+  float: none; font: inherit; color: inherit; margin: 0;
+}
+.home section.block > h2,
+.home-browse > h2 {
+  font-family: var(--home-sans);
+  font-style: normal;
+  font-variant: normal;
+  letter-spacing: normal;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--home-ink);
+  border-top: none;
+  display: inline-block;
+  border-bottom: 3px solid var(--home-accent);
+  padding: 0 0 0.3rem;
+  margin: 1.5rem 0 1rem;
+}
+
+/* The two paths */
+.home .book-body > section.block.path {
   grid-column: auto;
   min-width: 0;                      /* let a wide code block scroll, not stretch */
-  border: 1px solid #d8dee6;
-  border-top: 4px solid var(--guide-accent);
-  border-radius: 4px;
-  padding: 0.25rem 1.25rem 0.75rem;
   display: flex;
   flex-direction: column;
+  background: #fff;
+  border: 1px solid var(--home-line);
+  border-top: 4px solid var(--home-accent);
+  border-radius: 6px;
+  padding: 0.25rem 1.5rem 1.25rem;
 }
-.paperband-site .book-body > section.block.path pre { overflow-x: auto; }
-.paperband-site .book-body > section.block.path > h2 .icon { color: var(--guide-accent); }
-.paperband-site .book-body > section.block.path > p:last-child {
-  margin-top: auto;
-  font-weight: 600;
+.home .book-body > section.block.path > h2 {
+  font-size: 1.3rem;
+  border-bottom: none;
+  margin: 1rem 0 0.25rem;
 }
-.paperband-site .book-body > section.block.features ul {
-  columns: 2 22rem;
-  column-gap: 2rem;
-  padding-left: 1.1rem;
+.home .book-body > section.block.path > h2 .icon { color: var(--home-accent); }
+.home .book-body > section.block.path > p:last-child { margin-top: auto; }
+.home .book-body > section.block.path > p:last-child a {
+  font-weight: 700;
+  color: var(--home-accent);
+  text-decoration: none;
 }
-.paperband-site .book-body > section.block.features li {
-  break-inside: avoid;
-  margin-bottom: 0.6rem;
+.home .book-body > section.block.path > p:last-child a:hover { text-decoration: underline; }
+
+/* Code, the old page's way: paper-grey with the band down its left edge */
+.home pre {
+  background: var(--home-code);
+  border: none;
+  border-left: 4px solid var(--home-accent);
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  font-size: 0.8rem;
 }
+.home code { font-family: var(--home-mono); background: var(--home-code); }
+.home section.block a { color: #b4502f; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+.home section.block a:hover { color: var(--home-accent); }
+.home pre code { background: none; padding: 0; }
+
+/* What else it does: feature tiles, the bold lead as each tile's title */
+.home section.block.features ul {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1.5rem 2rem;
+}
+.home section.block.features li { margin: 0; }
+.home section.block.features li > strong:first-child {
+  display: block;
+  color: var(--home-accent);
+  font-size: 1.05rem;
+  margin-bottom: 0.2rem;
+}
+
+/* Downloads */
+.home section.block.downloads ul { padding-left: 1.2rem; }
+.home section.block.downloads li { margin-bottom: 0.3rem; }
+
+/* Browse the guide */
+.home-browse { margin-top: 1.5rem; }
+.home-browse .tier-grid { margin-top: 0.5rem; }

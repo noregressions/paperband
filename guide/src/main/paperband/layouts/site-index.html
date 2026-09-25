@@ -1,0 +1,53 @@
+{# The guide's home page: the site's front door, so it gets a banner of its
+   own rather than the theme's generic index hero. Overrides the bundled
+   site-index by name (a book's layouts/ sits ahead of the bundled templates),
+   and extends the shared shell so the nav, sidebar and CSS chain still apply.
+
+   What's here: the banner, then the book body - content/_section.md, the
+   intro and the two ways in - then a grid of the guide's sections. The
+   bundled index's card-count row is left out; the sidebar already lists the
+   sections, and a count says nothing a newcomer needs.
+
+   The two buttons name card pages by id. `card:` links only work in markdown,
+   so if java-first or docs-anywhere is ever renamed, change them here too. #}
+{% extends "_site-page" %}
+
+{% block content %}
+<div class="home">
+
+<header class="home-hero">
+  <h1>{{ book.title | default('paperband') | lower }}</h1>
+  {% if book.series %}<p class="home-tagline">{{ book.series }}</p>{% endif %}
+  {% if book.subtitle %}<p class="home-lede">{{ book.subtitle }}</p>{% endif %}
+  <nav class="home-actions" aria-label="Get started">
+    <a class="btn btn-primary" href="{{ urlPrefix }}cards/java-first.html">Start a new book</a>
+    <a class="btn btn-secondary" href="{{ urlPrefix }}cards/docs-anywhere.html">Use the Markdown you have</a>
+    <a class="btn btn-secondary" href="https://github.com/noregressions/paperband">GitHub</a>
+  </nav>
+</header>
+
+{% if bookBody %}
+<div class="section-body book-body">{{ bookBody | raw }}</div>
+{% endif %}
+
+<section class="home-browse">
+  <h2>Browse the guide</h2>
+  <div class="tier-grid">
+    {% for e in navEntries %}
+    {% if e.url is not null %}
+    <a class="tier-box section-box" href="{{ e.url }}"{% if e.color %} style="border-left: 4px solid {{ e.color }}"{% endif %}>
+      <span class="tier-box-label"{% if e.color %} style="color: {{ e.color }}"{% endif %}>{{ e.label }}</span>
+      <span class="tier-box-count">{{ e.count }} card{% if e.count != 1 %}s{% endif %} →</span>
+    </a>
+    {% else %}
+    <div class="tier-box section-box section-box-unlinked">
+      <span class="tier-box-label">{{ e.label }}</span>
+      <span class="tier-box-count">{{ e.count }} card{% if e.count != 1 %}s{% endif %}</span>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+</section>
+
+</div>
+{% endblock %}

@@ -49,8 +49,12 @@ to look:
 </plugin>
 ```
 
-Then `mvn paperband:build -Dpaperband.output=target/docs.pdf`. Plain Markdown builds as it
-is, with no frontmatter required.
+Then build it. Plain Markdown builds as it is, with no frontmatter required:
+
+```bash
+mvn paperband:build \
+  -Dpaperband.output=target/docs.pdf
+```
 
 [Use the Markdown you already have →](card:docs-anywhere)
 
