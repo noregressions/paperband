@@ -196,7 +196,7 @@ article.card .applies-if {
  * slide looking like a mistake. Give them the region's width and let them grow.
  */
 
-.slide-body > .block svg,
+.slide-body > .block svg:not(.icon),
 .slide-body > .block table,
 .slide-body > .block pre,
 .slide-body > .block img {
@@ -208,7 +208,7 @@ article.card .applies-if {
   box-sizing: border-box;
 }
 
-.slide-body > .block svg {
+.slide-body > .block svg:not(.icon) {
   /* Three separate things have to be overridden to make a diagram fill its
    * region, and missing any one of them looks like the other two didn't work:
    *

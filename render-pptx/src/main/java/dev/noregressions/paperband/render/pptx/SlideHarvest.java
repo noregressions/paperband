@@ -82,9 +82,13 @@ final class SlideHarvest {
      * for why {@code pre} is on this list.
      *
      * <p>{@code svg} covers both diagram renderers: Mermaid and PlantUML both
-     * land as inline SVG in the card body.
+     * land as inline SVG in the card body. A {@code :name:} icon is an inline
+     * SVG too, and is excluded: it sits inside a line of text, which becomes
+     * native PowerPoint text that can't hold a picture, so capturing it would
+     * float a picture over text laid out without room for it. An icon inside
+     * a table or figure still travels with that picture.
      */
-    static final String FIGURE_SELECTOR = "svg, table, pre, img, figure";
+    static final String FIGURE_SELECTOR = "svg:not(.icon), table, pre, img, figure";
 
     /** Elements that become native text runs. */
     static final String TEXT_SELECTOR = "p, li, h2, h3, h4, h5, h6, blockquote";

@@ -413,7 +413,7 @@ table.definition-table td:first-child { width: 8rem; color: var(--nr-muted); }
 
 /* ── Figures ─────────────────────────────────────────────────────────────── */
 figure { margin: 1.8rem 0; break-inside: avoid; }
-figure img, figure svg { display: block; max-width: 100%; height: auto; margin-inline: auto; }
+figure img, figure svg:not(.icon) { display: block; max-width: 100%; height: auto; margin-inline: auto; }
 figcaption {
   max-width: var(--nr-measure);
   margin-top: 0.5rem;

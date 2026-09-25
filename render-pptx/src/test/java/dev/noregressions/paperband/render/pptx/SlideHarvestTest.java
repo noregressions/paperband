@@ -200,7 +200,7 @@ class SlideHarvestTest {
             String script = scriptSource();
             assertAll(
                     () -> assertNotNull(script),
-                    () -> assertTrue(script.contains("const FIG = 'svg, table, pre, img, figure'"),
+                    () -> assertTrue(script.contains("const FIG = 'svg:not(.icon), table, pre, img, figure'"),
                             "figure selector should land in FIG"),
                     () -> assertTrue(script.contains("const TEXT = 'p, li, h2, h3, h4, h5, h6, blockquote'"),
                             "text selector should land in TEXT"),

@@ -122,6 +122,7 @@ list for that reason; it is now a book-scope key of its own.)
 | `page.measure` | Text line-length — overrides the theme's `--card-max-width` | Book |
 | `maxPagesPerCard` | Page-count ceiling per card; `<maxPagesPerCard>` wins | Book |
 | `watermark` | Watermark text or image, and its appearance; `<watermark>` wins. Marks the PDF and the site alike | Book |
+| `icons` | `false` turns off `:name:` icon references for the book (on by default). See [Icons](card:icons) | Book |
 | `strapline` | Per-edition strapline, read by `paperband:publish` | Edition |
 
 ## Frontmatter keys

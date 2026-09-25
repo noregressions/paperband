@@ -40,6 +40,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -216,6 +217,33 @@ public final class LayoutEngine {
         this.pagesAt = pages == null ? List.of() : List.copyOf(pages);
     }
 
+    /**
+     * The book's icon resolver — its own {@code icons/} beside {@code layouts/},
+     * then the bundled set. Lazily built: most pages carry no reference at all.
+     */
+    private Icons icons;
+
+    private Icons icons() {
+        if (icons == null) {
+            icons = new Icons(layoutsDir == null ? null : layoutsDir.resolveSibling("icons"));
+        }
+        return icons;
+    }
+
+    /**
+     * Draw {@code :name:} icon references into a finished page — see {@link Icons}.
+     * A book opts out with {@code vars: { icons: false }}.
+     */
+    private String withIcons(String html, Map<String, Object> vars) {
+        if (html == null) return null;
+        Object flag = vars == null ? null : vars.get("icons");
+        if (Boolean.FALSE.equals(flag)
+                || (flag instanceof String f && Set.of("false", "off", "no").contains(f.strip().toLowerCase(Locale.ROOT)))) {
+            return html;
+        }
+        return icons().apply(html);
+    }
+
     /** Construct an engine that resolves templates from the classpath only, no theme. */
     public LayoutEngine() {
         this(null, ThemeBundle.NONE);
@@ -345,7 +373,7 @@ public final class LayoutEngine {
         checkSlots(layoutName, List.of((Map<String, Object>) model.get("card")));
         // One card is a preview of one card: resolve its references to the
         // print form, but don't check them against a book that isn't here.
-        return CardLinks.of(List.of(card)).preview(html);
+        return withIcons(CardLinks.of(List.of(card)).preview(html), ctx.vars());
     }
 
     /**
@@ -417,8 +445,8 @@ public final class LayoutEngine {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> cardModels = (List<Map<String, Object>>) model.get("cards");
         checkSlots(layoutName, cardModels);
-        return CardLinks.of(cards, excludedCardIds)
-                .withNumbers(cardNumbers).print(html);
+        return withIcons(CardLinks.of(cards, excludedCardIds)
+                .withNumbers(cardNumbers).print(html), bookCtx.vars());
     }
 
     private static List<RenderContext> repeatedContexts(RenderContext ctx, int n) {
@@ -911,7 +939,7 @@ public final class LayoutEngine {
         CardLinks links = CardLinks.of(cards, excludedCardIds)
                 .withNumbers(cardNumbers);
         for (Map.Entry<String, String> e : out.entrySet()) {
-            e.setValue(links.site(e.getValue(), e.getKey()));
+            e.setValue(withIcons(links.site(e.getValue(), e.getKey()), bookCtx.vars()));
         }
         return watermarked(withContentAssets(out, bookCtx), bookCtx);
     }
@@ -1616,7 +1644,7 @@ public final class LayoutEngine {
         Map<String, Object> model = new HashMap<>();
         model.put("book", bookSiteModel(bookCtx));
         model.put("vars", LenientMap.of(bookCtx.vars()));
-        return renderSiteTemplate(footer.template(), model);
+        return withIcons(renderSiteTemplate(footer.template(), model), bookCtx.vars());
     }
 
     /**
@@ -1636,7 +1664,7 @@ public final class LayoutEngine {
         Map<String, Object> model = new HashMap<>();
         model.put("book", bookSiteModel(bookCtx));
         model.put("vars", LenientMap.of(bookCtx.vars()));
-        return renderSiteTemplate(header.template(), model);
+        return withIcons(renderSiteTemplate(header.template(), model), bookCtx.vars());
     }
 
     /**
