@@ -1944,13 +1944,8 @@ public final class LayoutEngine {
     }
 
     private static Map<String, Object> buildStats(List<Card> cards, List<AxisGrouping> groupings) {
-        int openrewrite = 0;
-        for (Card c : cards) {
-            if (truthy(c.frontmatter().values().get("openrewrite"))) openrewrite++;
-        }
         Map<String, Object> stats = new LinkedHashMap<>();
         stats.put("total", cards.size());
-        stats.put("openrewrite", openrewrite);
         Map<String, Object> byAxis = new LinkedHashMap<>();
         for (AxisGrouping g : groupings) {
             Map<String, Integer> counts = new LinkedHashMap<>();
@@ -1972,7 +1967,6 @@ public final class LayoutEngine {
         Map<String, Object> fm = card.frontmatter().values();
         m.put("oneliner", fm.get("oneliner"));
         m.put("effort", fm.get("effort"));
-        m.put("openrewrite", truthy(fm.get("openrewrite")));
         m.put("subsystem", fm.get("subsystem"));
         return m;
     }
@@ -2055,7 +2049,6 @@ public final class LayoutEngine {
         m.put("oneliner",    fm.get("oneliner"));
         m.put("impact",      fm.get("impact"));
         m.put("effort",      fm.get("effort"));
-        m.put("openrewrite", truthy(fm.get("openrewrite")));
         m.put("verify",      truthy(fm.get("verify")));
         return m;
     }

@@ -15,7 +15,6 @@
       card.oneliner    — short HTML-bearing summary (rendered with | raw)
       card.impact      — S/M/L (optional)
       card.effort      — S/M/L (optional)
-      card.openrewrite — boolean
       card.verify      — boolean
     urlPrefix        — relative path back to the site root ("" for root pages,
                        "../" for one level deep, e.g. when included from tech/)
@@ -24,7 +23,7 @@
   with a pill next to the title showing its label. Falls back to plain,
   uncoloured rows when the book declares no axes at all.
 
-  Badge classes (cb-effort, cb-openrewrite, etc.) are reused from site-tier.html
+  Badge classes (cb-effort, etc.) are reused from site-tier.html
   styling. cb-impact and cb-verify are additions of the same shape and follow
   the same conventions.
 #}
@@ -51,7 +50,6 @@
   <div class="tech-row-badges">
     {% if card.impact %}<span class="cb-impact cb-impact-{{ card.impact }}" title="Impact if this hits you">Impact {{ card.impact }}</span>{% endif %}
     {% if card.effort %}<span class="cb-effort cb-effort-{{ card.effort }}" title="Effort to fix">Effort {{ card.effort }}</span>{% endif %}
-    {% if card.openrewrite %}<span class="cb-openrewrite" title="OpenRewrite recipe available">⚙ OpenRewrite</span>{% endif %}
     {% if card.verify %}<span class="cb-verify" title="Verified against demo project">✓ Verified</span>{% endif %}
   </div>
 </a>

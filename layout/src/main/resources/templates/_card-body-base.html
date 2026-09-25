@@ -30,13 +30,12 @@
   {% endblock %}
 
   {% block meta %}
-  {% if card.frontmatter.oneliner or card.frontmatter.effort or card.frontmatter.openrewrite or card.axes is not empty %}
+  {% if card.frontmatter.oneliner or card.frontmatter.effort or card.axes is not empty %}
   <div class="card-meta">
     {% for entry in card.axes %}
     <span class="tier-badge axis-badge axis-badge-{{ entry.key }}">{{ entry.value.label }}</span>
     {% endfor %}
-    {% if card.frontmatter.effort %}<span class="effort-badge {{ card.frontmatter.effort }}">Impact: {{ card.frontmatter.effort }}</span>{% endif %}
-    {% if card.frontmatter.openrewrite %}<span class="openrewrite-badge">⚙ OpenRewrite</span>{% endif %}
+    {% if card.frontmatter.effort %}<span class="effort-badge {{ card.frontmatter.effort }}">Effort: {{ card.frontmatter.effort }}</span>{% endif %}
     {% if card.frontmatter.oneliner %}<div class="oneliner">{{ card.frontmatter.oneliner | raw }}</div>{% endif %}
   </div>
   {% endif %}
