@@ -1,9 +1,12 @@
 ---
 id: quickstart
-oneliner: "Go from an empty directory to a rendered PDF and site."
+oneliner: "What you need installed, which way in to take, and the goals that inspect a book."
 ---
 
-# Quickstart
+# Before You Start
+
+Paperband is a Maven plugin, so there's nothing to install beyond a JDK and Maven: the
+plugin comes from Maven Central the first time a build asks for it.
 
 ## Requirements
 
@@ -13,72 +16,21 @@ oneliner: "Go from an empty directory to a rendered PDF and site."
 | Maven 3.8+ | Standard Maven install |
 | Playwright | The only PDF renderer; downloads ~300 MB Chromium on first use |
 
-## Start from the archetype
+## Two ways in
 
-The archetype scaffolds a working book — a POM wired to the plugin, a `paperband.yaml`,
-and one card — so you can see a PDF before you learn any of the configuration:
+Everything else depends on one question: where is your Markdown going to live?
 
-```bash
-mvn archetype:generate \
-  -DarchetypeGroupId=dev.noregressions.paperband \
-  -DarchetypeArtifactId=paperband-archetype \
-  -DarchetypeVersion=0.1.2 \
-  -DgroupId=com.example -DartifactId=my-guide
-cd my-guide
-mvn package
-```
+| If… | Read |
+|---|---|
+| You're starting the writing, or the docs can live inside the project | [Start a New Book](card:java-first): the archetype, and a book at `src/main/paperband/` found by convention |
+| The Markdown already exists somewhere and is staying there | [Use the Markdown You Already Have](card:docs-anywhere): one `<content>` line, or glob patterns for files spread across the project |
 
-The PDF lands in `target/`. Add more `.md` files under `src/main/paperband/` and run
-`mvn package` again.
-
-## Add the plugin
-
-To put a book in a project you already have, declare the plugin there:
-
-```xml
-<plugin>
-  <groupId>dev.noregressions.paperband</groupId>
-  <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.1.2</version>
-  <executions>
-    <execution>
-      <goals><goal>build</goal></goals>
-      <configuration>
-        <output>${project.build.directory}/book.pdf</output>
-      </configuration>
-    </execution>
-  </executions>
-</plugin>
-```
-
-There's no `<input>` in that block on purpose. Put the book at `src/main/paperband/`
-— `paperband.yaml` at its root, cards under `content/` — and every goal finds it without
-being told. [Java-first Layout](card:java-first) walks through that layout, and
-[Docs Where They Already Are](card:docs-anywhere) covers `<content>`, `<book>` and the
-legacy `<input>` for a book whose Markdown lives somewhere else.
-
-`mvn package` now builds the book along with the rest of the project. Every goal also runs
-on its own, without an execution, which is how the examples throughout this guide are
-written.
-
-## Build your first book
-
-From a module whose book sits at the conventional location, the goals take no arguments:
-
-```bash
-# PDF
-mvn paperband:build -Dpaperband.output=out.pdf
-
-# Static site
-mvn paperband:site -Dpaperband.outputDirectory=out-site
-```
-
-Point them somewhere else with `-Dpaperband.input=`, which walks any directory that has a
-`paperband.yaml` at its root. Cards are the `.md` files found recursively beneath it.
+Both lead to the same books, built by the same goals. Everything after Getting Started
+applies to either.
 
 ## Explore what's available
 
-Three goals answer questions about a book without rendering it, which makes them the
+These goals answer questions about a book without rendering it, which makes them the
 cheapest way to check your config did what you meant:
 
 ```bash

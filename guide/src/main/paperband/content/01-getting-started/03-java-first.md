@@ -1,18 +1,73 @@
 ---
 id: java-first
-oneliner: "The book lives in src/main/paperband and the POM never says where."
-index: [src/main/paperband, convention]
+oneliner: "A book inside a Maven project, at src/main/paperband, found by convention with no configuration."
+index: [src/main/paperband, convention, archetype]
 ---
 
-# Java-first Layout
+# Start a New Book
 
-A Java project doesn't tell Maven where its code is. `src/main/java` is the convention, and
-the convention is the configuration. A Paperband book works the same way: put it at
-`src/main/paperband/` and every goal finds it with no `<input>`, `<home>` or `<content>`
-declared.
+Take this path when you're starting the writing from scratch, or when the docs can live
+inside the project. The book goes at `src/main/paperband/`, and every goal finds it there
+by convention, with no `<input>`, `<home>` or `<content>` declared. A Java project doesn't
+tell Maven where its code is either: `src/main/java` is the convention, and the convention
+is the configuration.
 
-This guide is laid out this way. If you started from the archetype in the
-[Quickstart](card:quickstart), your book already is too.
+This guide is laid out this way. You need a JDK 21+ and Maven 3.8+; see
+[Before You Start](card:quickstart).
+
+## From nothing to a PDF
+
+**1. Generate the project.** The archetype scaffolds a Maven project with the plugin wired
+in and one card to replace:
+
+```bash
+mvn archetype:generate \
+  -DarchetypeGroupId=dev.noregressions.paperband \
+  -DarchetypeArtifactId=paperband-archetype \
+  -DarchetypeVersion=0.1.2 \
+  -DgroupId=com.example -DartifactId=my-guide
+cd my-guide
+```
+
+**2. Build it.**
+
+```bash
+mvn package
+```
+
+The PDF lands at `target/my-guide.pdf`. The first build downloads headless Chromium to
+render it, so it needs internet access once.
+
+**3. Write.** Replace the starter card and add your own: every `.md` file under
+`src/main/paperband/content/` is a card, built in filename order, and each subfolder is a
+section. A card is plain Markdown with an H1 title:
+
+```markdown
+# Installing the Agent
+
+Two steps, and a check at the end.
+
+## Setup
+
+…
+```
+
+Run `mvn package` again. For the same book as a website, run
+`mvn paperband:site -Dpaperband.outputDirectory=target/site` and open
+`target/site/index.html`.
+
+**Archetype 0.1.2 predates the layout on this page.** It puts the starter card directly in
+`src/main/paperband/` and names that folder with an `<input>` in the POM. That layout still
+builds. To move to this one, create `src/main/paperband/content/`, move the `.md` files into
+it and delete the `<input>` line. Later archetype releases generate this layout, with a site
+execution, from the start.
+
+## Adding a book to a project you already have
+
+No archetype needed: create `src/main/paperband/content/` in the module, add a
+`paperband.yaml` beside `content/` to give the book a title and theme, and declare the
+plugin with an output and nothing else (the full block is under The POM, below). `mvn package` then builds the
+book along with the rest of the module.
 
 ## The layout
 

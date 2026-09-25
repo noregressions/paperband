@@ -1,17 +1,53 @@
 ---
 id: docs-anywhere
-oneliner: "Keep the Markdown where it already lives, and tell the plugin where that is."
+oneliner: "Point the plugin at Markdown that lives anywhere: a docs folder, a readme per service, another tool's source."
 index: [existing docs, content root]
 ---
 
-# Docs Where They Already Are
+# Use the Markdown You Already Have
 
-Most projects that need a PDF already have the words. They sit in `docs/`, in a readme per
-service, or in a folder a static site generator reads. Moving them into `src/main/paperband`
-to suit a build tool would be the tail wagging the dog. Instead you tell the plugin where
-they are.
+Take this path when the words already exist. They sit in `docs/`, in a readme per service,
+or in a folder a static site generator also reads. Moving them into `src/main/paperband` to
+suit a build tool would be the tail wagging the dog, so they stay where they are and you
+tell the plugin where that is. You need a JDK 21+ and Maven 3.8+; see
+[Before You Start](card:quickstart).
 
-How you say it depends on the shape of what's there:
+## From your docs to a PDF
+
+**1. Add the plugin** to the POM of the module the docs belong to, and name the folder:
+
+```xml
+<plugin>
+  <groupId>dev.noregressions.paperband</groupId>
+  <artifactId>paperband-maven-plugin</artifactId>
+  <version>0.1.2</version>
+  <configuration>
+    <content>docs</content>
+  </configuration>
+</plugin>
+```
+
+**2. Build it.**
+
+```bash
+mvn paperband:build -Dpaperband.output=target/docs.pdf
+mvn paperband:site  -Dpaperband.outputDirectory=target/site
+```
+
+The first PDF build downloads headless Chromium to render it, so it needs internet access
+once. The site needs no browser.
+
+**3. Check what it found.** `mvn paperband:structure` lists every section and card it
+read, without rendering anything. Each `.md` file is a card and each subfolder a section;
+`README.md` files are left out.
+
+Your existing Markdown should build without edits: frontmatter is optional, and a card's id
+comes from its path. To build the book on every `mvn package`, bind the goals in
+`<executions>` as shown under One folder, below.
+
+## One folder, or files all over
+
+Which setting to use depends on the shape of what's there:
 
 | Your docs are… | Declare | Structure comes from |
 |---|---|---|

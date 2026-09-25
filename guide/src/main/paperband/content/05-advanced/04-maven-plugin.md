@@ -514,7 +514,7 @@ parent chain, not from the `<book>` element, so a pattern reaching outside the r
 match cards that belong to a different book.
 
 The `playwright` renderer needs headless Chromium on first use — see the Watch Out in
-Quickstart. A Maven build with no internet access (an offline CI runner, say) needs
+Before You Start. A Maven build with no internet access (an offline CI runner, say) needs
 Chromium pre-cached before the goal runs.
 
 ## The site goal
