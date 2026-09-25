@@ -10,3 +10,11 @@ order:
   - 04-conditionals
   - 05-html-cards
   - 06-icons
+  - 07-data-tables
+
+# Sample data for the live table in Tables from Data (07-data-tables.md).
+vars:
+  demoFormats:
+    - { icon: file-text, name: "Technical article", reach: 3, depth: 4 }
+    - { icon: mic,       name: "Conference talk",   reach: 4, depth: 3 }
+    - { icon: mail,      name: "Newsletter",        reach: 3, depth: 3 }
