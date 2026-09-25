@@ -58,7 +58,7 @@ body.has-sidebar { margin: 0; }
 .site-main { flex: 1 1 auto; min-width: 0; }  /* min-width:0 keeps wide code from blowing out the flex row */
 
 .site-content {
-  max-width: 48rem;
+  max-width: var(--card-max-width, 48rem);
   margin: 0 auto;
   padding: 1.5rem 2rem 4rem;
   box-sizing: border-box;
@@ -76,9 +76,13 @@ body.has-sidebar { margin: 0; }
 .paperband-site .site-main { container-type: inline-size; }
 
 .paperband-site .site-content.has-rail {
-  max-width: 74rem;
+  /* The measure plus the rail and the gap: the content column is the book's
+     measure (page.measure, stamped as --card-max-width), not a fixed 48rem.
+     `none` makes the calc invalid, which resolves max-width to its initial
+     none — the whole window, which is what `none` asks for. */
+  max-width: calc(var(--card-max-width, 48rem) + 19rem);
   display: grid;
-  grid-template-columns: minmax(0, 48rem) minmax(12rem, 16rem);
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 16rem);
   gap: 3rem;
   align-items: start;
 }
@@ -119,7 +123,7 @@ body.has-sidebar { margin: 0; }
 @media (max-width: 68rem) {
   .paperband-site .site-content.has-rail {
     display: block;
-    max-width: 48rem;
+    max-width: var(--card-max-width, 48rem);
   }
   .page-rail { position: static; max-height: none; margin-bottom: 1.5rem; }
 }
