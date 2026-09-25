@@ -270,8 +270,8 @@
        only appears when the window can spare the width. The body inset uses
        body:has(...) so its (0,1,1) specificity survives a theme's own plain
        `body` rule (editorial-gold sets `body { margin: 0 }`). Colours are
-       inherited, so it follows any theme's ground. Opt out with
-       vars.sidebar: false. */
+       inherited, so it follows any theme's ground. Opt out with the
+       book's `sidebar: false`, the same key as the site's sidebar. */
     .book-screen-nav { display: none; }
     @media screen and (min-width: 64rem) {
       html { scroll-behavior: smooth; }
@@ -331,8 +331,11 @@
        own page margins (see PageSpec.contentHeightMm). Theme-neutral by
        default (sections have no colour concept the way axis values do);
        themes/book CSS may add their own .section-divider rules below to
-       override this. */
-    .section-divider {
+       override this. An axis-value divider (.tier-divider) is the same kind
+       of page and gets the same rules; without them it printed as a band at
+       the foot of the previous card's page. */
+    .section-divider,
+    .tier-divider {
       break-before: page;
       break-after: page;
       page-break-before: always;
@@ -364,7 +367,8 @@
     /* The flex item — width-capped so a long title wraps to a readable
        measure rather than the full page width, and left-aligned again for
        the table of contents, which reads badly centred. */
-    .section-divider .tier-divider-inner { width: 100%; max-width: 34rem; }
+    .section-divider .tier-divider-inner,
+    .tier-divider .tier-divider-inner { width: 100%; max-width: 34rem; }
     .section-divider h1 { margin: 0 0 0.5rem; }
 
     /* A divider whose section wrote a body (_section.md) is a different page:
@@ -391,9 +395,12 @@
        whatever ground the theme paints, so a fixed grey and the UA's link
        blue turn invisible the moment that ground is dark (they did). Themes
        that want more than legibility still style .section-divider directly. */
-    .section-divider .tier-count { color: inherit; opacity: 0.65; margin-bottom: 1rem; }
-    .section-divider .tier-toc { display: inline-block; text-align: left; padding-left: 1.25rem; }
-    .section-divider .tier-toc a { color: inherit; text-decoration: none; }
+    .section-divider .tier-count,
+    .tier-divider .tier-count { color: inherit; opacity: 0.65; margin-bottom: 1rem; }
+    .section-divider .tier-toc,
+    .tier-divider .tier-toc { display: inline-block; text-align: left; padding-left: 1.25rem; }
+    .section-divider .tier-toc a,
+    .tier-divider .tier-toc a { color: inherit; text-decoration: none; }
 
     /* Printed TOC / back-of-book index scaffold. Each takes a page run of
        its own (forced breaks both sides — adjacent forced breaks collapse,
@@ -481,7 +488,7 @@
      a divider page falls, each card beneath its group. A section that
      declined its page (landingPage false) still labels its cards — as plain
      text, since there's no divider to jump to. #}
-  {% if not (vars.sidebar == false) %}
+  {% if screenNav %}
   <nav class="book-screen-nav" aria-label="Book contents">
     <div class="nav-book-title"><a href="#book-cover">{{ ctx.book.title | default('Book') }}</a></div>
     <ul>

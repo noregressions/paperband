@@ -931,18 +931,6 @@ public final class LayoutEngine {
             model.put("sidebar_collapsed", sidebarCollapsed);
             model.put("sidebar_sections_collapsed", sidebarSectionsCollapsed);
 
-            // Optional auto-cards block. When a card's frontmatter sets
-            // `auto_cards: true`, attach a sorted list of every other card in
-            // the book whose `tech` frontmatter overlaps with this page's
-            // `tech`, sorted by the book's first declared axis (if any).
-            // Used by the by-technology index pages under content/tech/, but
-            // the mechanism is generic — any card with the flag gets the
-            // cross-cut list. site-card.html renders it via _tech-row.html
-            // after the regular card body.
-            if (truthy(card.frontmatter().values().get("auto_cards"))) {
-                model.put("autoCards", buildAutoCardsList(card, cards, groupings));
-            }
-
             out.put("cards/" + card.id() + ".html",
                     renderSiteTemplate("site-card", model));
             checkSlots("site-card", List.of(cm));
@@ -1967,7 +1955,6 @@ public final class LayoutEngine {
         Map<String, Object> fm = card.frontmatter().values();
         m.put("oneliner", fm.get("oneliner"));
         m.put("effort", fm.get("effort"));
-        m.put("subsystem", fm.get("subsystem"));
         return m;
     }
 
@@ -1978,96 +1965,6 @@ public final class LayoutEngine {
         m.put("title", card.title());
         m.put("axes", cardAxesFromGroupings(cardIndex, groupings));
         return m;
-    }
-
-    /**
-     * Build the row models for a tech-index page's auto-cards block.
-     *
-     * <p>Triggered when a card's frontmatter sets {@code auto_cards: true}.
-     * Returns every card in the book whose {@code tech} frontmatter list
-     * overlaps with the host card's {@code tech} list, sorted by the book's
-     * first declared axis (if any) — matching the previous tier-only
-     * behaviour's intent ("most severe first") without hardcoding which axis
-     * plays that role. Cards with no value on that axis sort after cards
-     * that have one; if the book declares no axes at all, the original book
-     * order is kept.
-     */
-    private static List<Map<String, Object>> buildAutoCardsList(
-            Card techCard,
-            List<Card> allCards,
-            List<AxisGrouping> groupings) {
-        List<String> myTech = readStringList(techCard.frontmatter().values().get("tech"));
-        if (myTech.isEmpty()) return List.of();
-
-        AxisGrouping sortAxis = groupings.isEmpty() ? null : groupings.get(0);
-
-        record Match(int idx, Card card) {}
-        List<Match> matched = new ArrayList<>();
-        for (int i = 0; i < allCards.size(); i++) {
-            Card c = allCards.get(i);
-            List<String> cardTech = readStringList(c.frontmatter().values().get("tech"));
-            if (anyOverlap(cardTech, myTech)) {
-                matched.add(new Match(i, c));
-            }
-        }
-
-        if (sortAxis != null) {
-            matched.sort((a, b) -> {
-                Map<String, Object> ma = sortAxis.metaFor(a.idx());
-                Map<String, Object> mb = sortAxis.metaFor(b.idx());
-                if (ma == null && mb == null) return Integer.compare(a.idx(), b.idx());
-                if (ma == null) return 1;   // no value on the sort axis sorts after cards that have one
-                if (mb == null) return -1;
-                int cmp = sortAxis.valueMetas().indexOf(ma) - sortAxis.valueMetas().indexOf(mb);
-                if (cmp != 0) return cmp;
-                return Integer.compare(a.idx(), b.idx());
-            });
-        }
-
-        List<Map<String, Object>> rows = new ArrayList<>(matched.size());
-        for (Match m : matched) {
-            rows.add(techRowModel(m.card(), sortAxis, m.idx()));
-        }
-        return rows;
-    }
-
-    /**
-     * Row model consumed by {@code _tech-row.html}.
-     *
-     * <p>Mirrors {@link #siteCardSummary} but adds the book's sort axis
-     * label/colour (when one is declared) and impact/verify fields. Kept
-     * separate so the by-technology row template can evolve independently of
-     * the grid cards on axis-value and section pages.
-     */
-    private static Map<String, Object> techRowModel(Card card, AxisGrouping sortAxis, int cardIndex) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("id", card.id());
-        m.put("title", card.title());
-        Map<String, Object> sortValue = sortAxis == null ? null : sortAxis.metaFor(cardIndex);
-        m.put("sortValue", sortValue);
-        Map<String, Object> fm = card.frontmatter().values();
-        m.put("oneliner",    fm.get("oneliner"));
-        m.put("impact",      fm.get("impact"));
-        m.put("effort",      fm.get("effort"));
-        m.put("verify",      truthy(fm.get("verify")));
-        return m;
-    }
-
-    /** Read a frontmatter value that may be a string, a list of strings, or null into a {@code List<String>}. */
-    private static List<String> readStringList(Object v) {
-        if (v == null) return List.of();
-        if (v instanceof List<?> list) {
-            List<String> out = new ArrayList<>(list.size());
-            for (Object o : list) if (o != null) out.add(o.toString());
-            return out;
-        }
-        return List.of(v.toString());
-    }
-
-    /** True iff the two lists share at least one element. */
-    private static boolean anyOverlap(List<String> a, List<String> b) {
-        for (String s : a) if (b.contains(s)) return true;
-        return false;
     }
 
     /**
@@ -2419,6 +2316,11 @@ public final class LayoutEngine {
         model.put("book", bookModel);
         model.put("ctx", contextModel(bookCtx));
         model.put("vars", LenientMap.of(bookCtx.vars()));
+        // The emitHtml file's screen-only navigation: on unless the book turns
+        // the sidebar off explicitly (sidebar: false, or the deprecated
+        // vars.sidebar: false). The same key that controls the site's sidebar.
+        dev.noregressions.paperband.model.Sidebar sb = bookCtx.book().sidebar();
+        model.put("screenNav", !(sb.declared() && !sb.enabled()));
         model.put("target", bookCtx.target());
         model.put("size", bookCtx.size());
         model.put("fontScale", bookCtx.fontScale());

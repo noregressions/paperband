@@ -36,20 +36,6 @@
        "tier" param needs threading through anymore. #}
     {% include "_card-body" with {"card": card} %}
 
-    {% if autoCards is not empty %}
-    {# Auto-cards block: rendered when the host card sets `auto_cards: true`
-       and the filter returns at least one match. Uses `is not empty` rather
-       than a bare truthiness check because Pebble — unlike Jinja — refuses
-       to evaluate a list as Boolean in an `if` statement.
-       Used by content/tech/*.md to list every card whose `tech` overlaps
-       with the host's, sorted by the book's first declared axis, via the
-       shared _tech-row partial. #}
-    <section class="auto-cards">
-      {% for row in autoCards %}
-        {% include "_tech-row" with {"card": row, "urlPrefix": urlPrefix} %}
-      {% endfor %}
-    </section>
-    {% endif %}
   </div>
   {% endblock %}
 

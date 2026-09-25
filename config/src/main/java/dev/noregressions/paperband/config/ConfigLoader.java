@@ -466,11 +466,14 @@ public final class ConfigLoader {
                     truthy(map.get("sectionsCollapsed"), true));
         }
         if (node != null) {
-            return truthy(node, false) ? Sidebar.on() : Sidebar.NONE;
+            return truthy(node, false) ? Sidebar.on() : new Sidebar(false, false, true);
         }
         // Deprecated vars spelling.
         Map<String, Object> vars = data.get("vars") instanceof Map<?, ?> vm
                 ? (Map<String, Object>) vm : Map.of();
+        if (vars.containsKey("sidebar") && !truthy(vars.get("sidebar"), false)) {
+            return new Sidebar(false, false, true);             // an explicit false
+        }
         if (!truthy(vars.get("sidebar"), false)) return Sidebar.NONE;
         return new Sidebar(true,
                 truthy(vars.get("sidebar_collapsed"), false),
@@ -508,10 +511,22 @@ public final class ConfigLoader {
     /**
      * Book-scope keys, with the reason a folder can't set them. Structure that
      * frames the whole book has no meaningful per-folder value: the site either
-     * has a sidebar or it doesn't.
+     * has a sidebar or it doesn't. Read from a folder yaml, these were ignored
+     * without a word, so a folder's {@code theme:} simply didn't happen; an
+     * error names the file instead. {@code title} and {@code sections} are not
+     * here: a folder's title labels its section, and {@code sections:} may
+     * group a folder's own subfolders.
      */
     private static final Map<String, String> BOOK_ONLY_KEYS = Map.of(
-            "sidebar", "the site has one sidebar or none — it frames every page or no page");
+            "sidebar", "the site has one sidebar or none — it frames every page or no page",
+            "theme", "a book renders with one theme",
+            "axes", "axes are declared once, for the whole book",
+            "cover", "a book has one cover",
+            "back", "a book has one back page",
+            "header", "the running header frames every page",
+            "footer", "the running footer frames every page",
+            "cardSchema", "yaml cards are read with the book's one schema",
+            "publication", "editions are declared once, for the whole book");
 
     /**
      * Reject a book-scope key declared below the book root.
