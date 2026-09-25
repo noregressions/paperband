@@ -1,0 +1,6 @@
+# These cards set a value on the book's `level` axis, so they are grouped by
+# axis value (Beginner, Advanced) rather than by this folder.
+# https://noregressions.github.io/paperband/cards/book-configuration.html#axes
+order:
+  - 01-beginner
+  - 02-advanced

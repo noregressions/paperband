@@ -1,0 +1,3 @@
+{# A custom block type: ```note fences render through this template.
+   https://noregressions.github.io/paperband/cards/card-structure.html #}
+<aside class="note-block{% for c in classes %} {{ c }}{% endfor %}"><strong>Note</strong> {{ content }}</aside>

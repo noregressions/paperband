@@ -1,0 +1,4 @@
+# Keep drafts out of the book: any file ending .draft.md, at any depth.
+# https://noregressions.github.io/paperband/cards/organising-content.html
+ignore:
+  - "*.draft.md"
