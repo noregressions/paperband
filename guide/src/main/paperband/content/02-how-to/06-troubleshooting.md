@@ -120,6 +120,14 @@ newline straight after a closing tag such as `{% endif %}`. Leave two blank line
 the tag. A trimming tag (`{%-`, `{#-`) on the line after a heading joins the following
 content onto the heading line. See [Tables from Data](card:tables-from-data#whitespace).
 
+## The build says raw HTML is still open where a heading starts
+
+The error reads `raw HTML <div> is still open where heading '…' starts`. A raw HTML
+element opened before a Markdown heading and closed after it. Each heading
+starts a block, and a block can't begin inside an element that's still open. Close the
+element before the heading, or write the heading inside the HTML if it belongs there. See
+[Card Structure](card:card-structure#raw-html-and-the-content-policy).
+
 ## Every page of the PDF is smaller than expected
 
 Chromium scales the whole document down to fit its widest element, so one table or code

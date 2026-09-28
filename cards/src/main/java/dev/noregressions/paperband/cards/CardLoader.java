@@ -39,7 +39,11 @@ import java.util.regex.Pattern;
  *   <li>Render body to HTML via commonmark-java with GFM pipe tables and
  *       paperband's own attribute syntax — {@link AttributeSyntax}, so that
  *       {@code ## Watch Out {.watch-out #wo-1}} attaches class/id to the {@code h2}.</li>
- *   <li>Parse that HTML with jsoup; walk top-level children.</li>
+ *   <li>{@link Sections} makes the heading structure explicit in the tree:
+ *       each heading and everything it owns become a {@code <section>}, nested
+ *       by rank (see below). Parse the HTML with jsoup and read those sections
+ *       as blocks. An {@code .html} card has no markdown tree, so its blocks are
+ *       inferred from the headings instead, by the same rule.</li>
  *   <li>A frontmatter {@code title:} names the card. Without one, the first
  *       {@code h1} does instead, and is consumed rather than rendered — so a
  *       card shows one heading, not a title plus a copy of it. With one, no
@@ -241,31 +245,38 @@ public final class CardLoader {
             body = markdown.substring(m.end());
         }
 
-        // 2. Markdown → HTML via commonmark-java. Parser and renderer are built
-        //    per parse because the attribute syntax keeps per-document state
-        //    (attributes keyed by node) between the two; both are cheap to build.
-        //    Heading ids appear only when the author wrote one: commonmark-java
-        //    generates none of its own.
+        // 2. Markdown → HTML via commonmark-java. The attribute syntax runs
+        //    first, then Sections writes the heading structure into the tree
+        //    as explicit <section> nodes -- see Sections for the rule. Parser
+        //    and renderer are built per parse because both post-processors
+        //    keep per-document state (nodes by identity) until render; both
+        //    are cheap to build. Heading ids appear only when the author
+        //    wrote one: commonmark-java generates none of its own.
+        String declaredTitle = fm.getString("title").orElse(null);
         AttributeSyntax attributeSyntax = new AttributeSyntax();
+        Sections sections = new Sections(declaredTitle == null || declaredTitle.isBlank());
         List<org.commonmark.Extension> extensions = List.of(TablesExtension.create());
         String html;
         try {
             org.commonmark.node.Node doc = Parser.builder()
                     .extensions(extensions)
                     .postProcessor(attributeSyntax)
+                    .postProcessor(sections)
                     .build()
                     .parse(body);
             html = HtmlRenderer.builder()
                     .extensions(extensions)
+                    .nodeRendererFactory(sections.renderer())
                     .attributeProviderFactory(context -> attributeSyntax.attributeProvider())
+                    .attributeProviderFactory(context -> sections.titleMarker())
                     .build()
                     .render(doc);
         } catch (IllegalArgumentException e) {
             throw new CardParseException(source + ": " + e.getMessage(), e);
         }
 
-        // 3. Walk via jsoup
-        return buildCard(source, fm, Jsoup.parseBodyFragment(html).body());
+        // 3. The rendered sections are the blocks: read them via jsoup
+        return buildCard(source, fm, Jsoup.parseBodyFragment(html).body(), true);
     }
 
     /**
@@ -298,7 +309,7 @@ public final class CardLoader {
                 meta.put(name, refineMetaValue(content));
             }
         }
-        return buildCard(source, new Frontmatter(meta), jdoc.body());
+        return buildCard(source, new Frontmatter(meta), jdoc.body(), false);
     }
 
     /**
@@ -323,8 +334,12 @@ public final class CardLoader {
     /**
      * The shared back half of card parsing: everything after a body element
      * exists, whatever syntax it came from.
+     *
+     * @param explicitSections true when {@link Sections} has already marked the
+     *        structure (a markdown card); false to infer it from the headings
+     *        (an {@code .html} card, which has no markdown tree)
      */
-    private Card buildCard(Path source, Frontmatter fm, Element bodyEl) {
+    private Card buildCard(Path source, Frontmatter fm, Element bodyEl, boolean explicitSections) {
         // 3a-pre. Block templates: a ```type block whose type has a
         //     blocks/<type>.html template (book layouts/, theme, or bundled)
         //     renders through it — the pluggable half of what a fence means.
@@ -375,6 +390,11 @@ public final class CardLoader {
         // h1 is just a heading -- consuming it would silently delete something
         // they wrote.
         boolean titleWanted = title == null || title.isBlank();
+        if (explicitSections) {
+            String[] titleOut = {title};
+            List<Block> blocks = explicitBlocks(source, bodyEl, titleOut);
+            return card(source, fm, titleOut[0], blocks);
+        }
         List<Block> topLevel = new ArrayList<>();
         Deque<OpenSection> stack = new ArrayDeque<>();
         StringBuilder introHtml = new StringBuilder();
@@ -440,9 +460,72 @@ public final class CardLoader {
             }
         }
 
+        return card(source, fm, title, topLevel);
+    }
+
+    private Card card(Path source, Frontmatter fm, String title, List<Block> blocks) {
         String id = fm.getString("id").orElseGet(() -> deriveIdFromFile(source));
         validateId(id, source);
-        return new Card(id, source, fm, title, topLevel);
+        return new Card(id, source, fm, title, blocks);
+    }
+
+    /**
+     * Blocks from a body whose structure {@link Sections} has made explicit:
+     * each marked {@code <section>} is a block and its nested ones are its
+     * children, so nothing is inferred here. Whatever sits outside every
+     * section comes before the first heading -- Sections guarantees it -- and
+     * is the intro. The title heading, when one was consumed, is marked and
+     * taken out wherever it sits.
+     *
+     * @param titleOut in: the frontmatter title or null; out: the card's title
+     */
+    private List<Block> explicitBlocks(Path source, Element bodyEl, String[] titleOut) {
+        List<Block> blocks = new ArrayList<>();
+        StringBuilder intro = new StringBuilder();
+        for (Node child : bodyEl.childNodes()) {
+            if (child instanceof Element el && el.hasAttr(Sections.SECTION_ATTR)) {
+                blocks.add(sectionBlock(source, el, titleOut));
+            } else if (child instanceof Element el && el.hasAttr(Sections.TITLE_ATTR)) {
+                titleOut[0] = el.text();
+            } else if (child instanceof Element el) {
+                intro.append(el.outerHtml());
+            } else if (child instanceof TextNode tn && !tn.text().isBlank()) {
+                intro.append(tn.text());
+            }
+        }
+        if (!intro.isEmpty()) {
+            blocks.add(0, new Block(Block.Kind.HEADING_SECTION, null, Set.of("intro"),
+                    null, 0, intro.toString(), List.of()));
+        }
+        return blocks;
+    }
+
+    /** One marked {@code <section>}: its heading, its own content, its nested sections. */
+    private Block sectionBlock(Path source, Element sectionEl, String[] titleOut) {
+        OpenSection section = new OpenSection();
+        section.level = Integer.parseInt(sectionEl.attr(Sections.SECTION_ATTR));
+        boolean headingSeen = false;
+        for (Node child : sectionEl.childNodes()) {
+            if (child instanceof Element el) {
+                if (!headingSeen && headingLevel(el.tagName()) >= 1) {
+                    // Sections puts the heading first; everything after it is owned content.
+                    headingSeen = true;
+                    section.heading    = el.text();
+                    section.id         = el.id().isEmpty() ? null : el.id();
+                    section.classes    = parseClassAttr(el.className());
+                    section.attributes = otherAttributes(source, el);
+                } else if (el.hasAttr(Sections.SECTION_ATTR)) {
+                    section.children.add(sectionBlock(source, el, titleOut));
+                } else if (el.hasAttr(Sections.TITLE_ATTR)) {
+                    titleOut[0] = el.text();
+                } else {
+                    section.html.append(el.outerHtml());
+                }
+            } else if (child instanceof TextNode tn && !tn.text().isBlank()) {
+                section.html.append(tn.text());
+            }
+        }
+        return build(section);
     }
 
     /** Apply {@link BlockTemplates} to every typed code block in {@code bodyEl}. */

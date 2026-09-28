@@ -345,6 +345,23 @@ Raw HTML in a card is for structure that Markdown can't express, such as a table
 rowspans, `<kbd>Ctrl</kbd>` or a `<details>` block. It is not for styling: content carries
 structure and the theme controls appearance, so that changing the theme changes the look.
 
+Raw HTML has to be self-contained: it closes every element it opens before the next
+Markdown heading. A heading starts a block of its own, so it can't sit inside a raw
+`<div>` or `<details>`:
+
+```markdown
+<div class="note">
+
+## A heading inside
+
+</div>
+```
+
+That fails the build and names the open element and the heading. A whole `<table>`, a
+spliced `as="html"` fragment or an include snippet is ordinary content of whichever block
+it falls in. A heading written as HTML, such as `<h2>` in a fragment, is content too: it
+doesn't start a block.
+
 The build enforces this with a content policy, declared through the `vars` cascade
 (book-wide in the root yaml, overridable per folder, or via the POM's `<vars>`):
 
