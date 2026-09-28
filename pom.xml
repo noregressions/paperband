@@ -333,6 +333,19 @@
             </modules>
         </profile>
 
+        <!--
+            The example books under examples/, opt-in for the same reason as the
+            guide: each one renders through Playwright/Chromium. Activate with
+            -Pexamples (or -Pguide,examples); like the guide, they join the
+            reactor after the plugin and render with the version just built.
+        -->
+        <profile>
+            <id>examples</id>
+            <modules>
+                <module>examples</module>
+            </modules>
+        </profile>
+
 
 
         <!-- Everything a Maven Central release needs beyond a normal build - sources

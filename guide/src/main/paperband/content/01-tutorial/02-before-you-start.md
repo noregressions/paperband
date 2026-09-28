@@ -51,7 +51,9 @@ mvn -DskipTests install
 ```
 
 This installs the plugin into the local Maven repository. Add `-Pguide` to also build this
-guide; the PDF, site and deck are written to `guide/target/`.
+guide; the PDF, site and deck are written to `guide/target/`. Add `-Pexamples` to build the
+example books under `examples/`, each into its own `target/`. Both profiles render with the
+plugin built in the same run, and they combine: `-Pguide,examples`.
 
 ## Watch Out
 

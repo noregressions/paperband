@@ -3,18 +3,26 @@
     A one-card book that ports table.html: the data in content/paperband.yaml,
     the markup built from it in content/01-map.md, the look in styles/map.css.
 
-    Not part of the Paperband reactor. Build it with the plugin installed
-    locally (mvn install at the repo root first):
+    Built from the repository root with the examples profile, using the plugin
+    built earlier in the same run:
 
-        mvn package        # target/effectiveness-map.pdf and target/site/
+        mvn install -Pexamples      # target/effectiveness-map.pdf and target/site/
+
+    Or on its own, once the root has been installed:
+
+        mvn package
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>dev.noregressions.paperband.examples</groupId>
+
+    <parent>
+        <groupId>dev.noregressions.paperband.examples</groupId>
+        <artifactId>examples</artifactId>
+        <version>${revision}</version>
+    </parent>
     <artifactId>effectiveness-map</artifactId>
-    <version>1</version>
     <packaging>pom</packaging>
 
     <build>
@@ -22,7 +30,8 @@
             <plugin>
                 <groupId>dev.noregressions.paperband</groupId>
                 <artifactId>paperband-maven-plugin</artifactId>
-                <version>0.1.2</version>
+                <!-- The plugin this reactor built, not a released one. -->
+                <version>${project.version}</version>
                 <executions>
                     <!-- No <input> or <content>: the book is at src/main/paperband -->
                     <execution>

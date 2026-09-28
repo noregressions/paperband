@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    The example books, as one opt-in part of the Paperband reactor. From the
+    repository root:
+
+        mvn install -Pexamples          # plugin, then every example
+        mvn install -Pguide,examples    # the guide as well
+
+    Each example renders with the plugin built earlier in the same run, never a
+    released one, so an example always shows what the current code does.
+    Rendering goes through Playwright and Chromium, which is why this isn't part
+    of the default build.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>dev.noregressions.paperband</groupId>
+        <artifactId>parent</artifactId>
+        <version>${revision}</version>
+    </parent>
+    <groupId>dev.noregressions.paperband.examples</groupId>
+    <artifactId>examples</artifactId>
+    <packaging>pom</packaging>
+
+    <name>Paperband :: Examples</name>
+    <description>Example books built with the Paperband plugin.</description>
+
+    <properties>
+        <!-- Examples are built to be read, never published. -->
+        <maven.deploy.skip>true</maven.deploy.skip>
+    </properties>
+
+    <modules>
+        <module>kitchen-sink</module>
+        <module>effectiveness-map</module>
+    </modules>
+</project>

@@ -3,9 +3,13 @@
 A small Paperband book that uses every major feature once. Each file says what it shows and
 links to the guide card that explains it (https://noregressions.github.io/paperband/).
 
-Build it with the plugin installed locally (`mvn install` at the repository root first):
+Build it from the repository root with the examples profile, which renders it with the
+plugin built in the same run:
 
-    mvn package        # target/kitchen-sink.pdf and target/site/
+    mvn install -Pexamples      # target/kitchen-sink.pdf and target/site/
+
+Or build it on its own with `mvn package` in this directory, once the root has been
+installed.
 
 The PDF has 9 cards; the site has 10, because one card is site-only.
 

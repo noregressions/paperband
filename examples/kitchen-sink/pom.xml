@@ -4,18 +4,26 @@
     each marked with a comment or a line of text naming the guide card that
     explains it. See README.md for the feature-to-file map.
 
-    Not part of the Paperband reactor. Build it with the plugin installed
-    locally (mvn install at the repo root first):
+    Built from the repository root with the examples profile, using the plugin
+    built earlier in the same run:
 
-        mvn package        # target/kitchen-sink.pdf and target/site/
+        mvn install -Pexamples      # target/kitchen-sink.pdf and target/site/
+
+    Or on its own, once the root has been installed:
+
+        mvn package
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>dev.noregressions.paperband.examples</groupId>
+
+    <parent>
+        <groupId>dev.noregressions.paperband.examples</groupId>
+        <artifactId>examples</artifactId>
+        <version>${revision}</version>
+    </parent>
     <artifactId>kitchen-sink</artifactId>
-    <version>1</version>
     <!-- pom packaging: nothing to compile, the book is the only output.
          https://noregressions.github.io/paperband/cards/place-a-book.html -->
     <packaging>pom</packaging>
@@ -25,7 +33,8 @@
             <plugin>
                 <groupId>dev.noregressions.paperband</groupId>
                 <artifactId>paperband-maven-plugin</artifactId>
-                <version>0.1.2</version>
+                <!-- The plugin this reactor built, not a released one. -->
+                <version>${project.version}</version>
                 <executions>
                     <!-- No <input> or <content>: the book is at the conventional
                          src/main/paperband, cards in content/.
