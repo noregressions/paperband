@@ -15,15 +15,9 @@
 }
 .demo-table th, .demo-table td { border: 1px solid #ccc; padding: 0.3rem 0.6rem; }
 
-/* {!step} writes each step's number as data-paperband-step on its heading
-   (and on the block's <section>); the book decides how it reads. A step inside
-   a step has its own sequence, so the nested one gets a plainer label.
+/* {!step} writes "Step N" into the text and the number as data-paperband-step
+   on the stepped heading, so a book can style steps without matching text.
    https://noregressions.github.io/paperband/cards/card-structure.html#numbered-steps */
-h2[data-paperband-step]::before {
-  content: "Step " attr(data-paperband-step) ": ";
-  color: #4a6b8a;
-}
-h3[data-paperband-step]::before {
-  content: attr(data-paperband-step) ". ";
+h2[data-paperband-step], h3[data-paperband-step] {
   color: #4a6b8a;
 }

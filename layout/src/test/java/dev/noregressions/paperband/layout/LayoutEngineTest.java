@@ -1387,6 +1387,18 @@ class LayoutEngineTest {
         }
 
         @Test
+        void should_anchor_a_stepped_heading_on_its_text_without_the_step_label() {
+            Block block = new Block(Block.Kind.HEADING_SECTION, null, Set.of("build-it"),
+                    "Step 2 Build it", 2, "<p>body</p>", List.of(), Map.of(), Map.of("step", "2"));
+            Card card = new Card("c", Path.of("c.md"), new Frontmatter(Map.of()), "C", List.of(block));
+
+            String html = new LayoutEngine().render(card, createMinimalContext());
+
+            assertTrue(html.contains("id=\"build-it\""), html);
+            assertTrue(html.contains(">Step 2 Build it</h2>"), html);
+        }
+
+        @Test
         void should_render_directives_onto_section_as_data_attributes() {
             Block block = new Block(Block.Kind.HEADING_SECTION, null, Set.of("step"),
                     "Build it", 2, "<p>body</p>", List.of(), Map.of(), Map.of("step", "2"));

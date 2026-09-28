@@ -30,13 +30,14 @@ import java.util.regex.Pattern;
  * — as a commonmark-java post-processor plus the attribute provider that
  * renders it.
  *
- * <p>A {@code !name} token is a <em>directive</em>: an instruction to
- * paperband rather than markup for the page. It attaches by the same rules as
- * an attribute, but never becomes a class or an attribute of its own; what it
- * does is up to the pass that handles it ({@link Steps} for {@code !step}),
- * and whatever that pass produces renders as {@code data-paperband-<name>}.
- * An unknown name fails the build, so a misspelt instruction can't be
- * silently ignored.
+ * <p>A {@code !name} token inside a group is a <em>directive</em>: an
+ * instruction to paperband rather than markup for the page. It attaches by the
+ * same rules as an attribute, but never becomes a class or an attribute of its
+ * own; what it does is up to the pass that handles it ({@link Steps} for
+ * {@code !step}), and whatever that pass produces renders as
+ * {@code data-paperband-<name>}. Unlike a {@code {!name}} marker on its own
+ * (see {@link Directives}), it writes no text -- which is how a fence, with no
+ * text to replace, gets numbered. An unknown name fails the build.
  *
  * <p>CommonMark has no attribute syntax, so this is ours to define. It follows
  * the Pandoc spelling authors already write, with one deliberate difference
@@ -84,13 +85,9 @@ final class AttributeSyntax implements PostProcessor {
             + "|(" + NAME + ")=(?:\"([^\"]*)\"|'([^']*)'|([^\\s\"']+))" // key=value
             + "|!([a-z][a-z0-9-]*)(?:=(\\S+))?");                     // !directive
 
-    /**
-     * Directives paperband knows, and whether each takes a value. A directive
-     * is stored among a node's attributes under {@code "!" + name}, which no
-     * real attribute name can start with, and split back out on render.
-     */
-    private static final Map<String, Boolean> DIRECTIVES = Map.of(
-            "step", false);     // numbered by position -- see Steps
+    // A directive is stored among a node's attributes under "!" + name, which
+    // no real attribute name can start with, and split back out on render.
+    // Which names exist is Directives.KNOWN, shared with the {!name} markers.
 
     /** The prefix a directive is rendered with, on whatever element carries it. */
     static final String DIRECTIVE_ATTR_PREFIX = "data-paperband-";
@@ -163,9 +160,9 @@ final class AttributeSyntax implements PostProcessor {
         return out;
     }
 
-    /** Set directive {@code name}'s value on {@code node}, which must already carry it. */
+    /** Set directive {@code name}'s value on {@code node}, adding it if the node doesn't carry it yet. */
     void setDirective(Node node, String name, String value) {
-        attributes.get(node).put("!" + name, value);
+        attributes.computeIfAbsent(node, n -> new LinkedHashMap<>()).put("!" + name, value);
     }
 
     // ----------- placement -----------
@@ -272,16 +269,7 @@ final class AttributeSyntax implements PostProcessor {
                 else out.put(t.group(5), value);
             } else {
                 String name = t.group(9);
-                Boolean takesValue = DIRECTIVES.get(name);
-                if (takesValue == null) {
-                    throw new IllegalArgumentException("unknown directive '!" + name
-                            + "'. Known directives: " + DIRECTIVES.keySet().stream().sorted()
-                            .map(d -> "!" + d).collect(java.util.stream.Collectors.joining(", ")) + ".");
-                }
-                if (!takesValue && t.group(10) != null) {
-                    throw new IllegalArgumentException("directive '!" + name
-                            + "' takes no value (got '" + t.group(10) + "'). Write {!" + name + "}.");
-                }
+                Directives.check(name, t.group(10));
                 out.put("!" + name, t.group(10) == null ? "" : t.group(10));
             }
             pos = end;

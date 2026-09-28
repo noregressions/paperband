@@ -84,5 +84,28 @@ public record Block(
         this(kind, id, classes, heading, level, html, children, Map.of(), Map.of());
     }
 
+    /** The text a {@code {!step}} marker is replaced with. */
+    public static String stepLabel(String number) {
+        return "Step " + number;
+    }
+
+    /**
+     * The heading as the author wrote it, without the text its {@code {!step}}
+     * markers were replaced with. Slugs and anchors derive from this, not from
+     * {@link #heading()}, so a link to {@code #build} keeps working when
+     * reordering turns "Step 2 Build" into "Step 3 Build".
+     *
+     * @return the heading without step labels, or null for a block with no heading
+     */
+    public String plainHeading() {
+        return withoutStepLabel(heading, directives.get("step"));
+    }
+
+    /** {@code heading} with every {@link #stepLabel} for {@code step} removed. */
+    public static String withoutStepLabel(String heading, String step) {
+        if (heading == null || step == null || step.isEmpty()) return heading;
+        return heading.replace(stepLabel(step), " ").replaceAll("\\s+", " ").strip();
+    }
+
     public enum Kind { HEADING_SECTION, FENCED_DIV }
 }

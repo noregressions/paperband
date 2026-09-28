@@ -48,41 +48,45 @@ in the braces needs a `.`, a `#` or an `=`, so braces in ordinary prose, such as
 
 ## Numbered steps
 
-`{!step}` numbers something by where it sits. A `!` marks an instruction to paperband
-rather than markup for the page, so it never becomes a class or an attribute:
+`{!step}` is replaced with "Step N", where N comes from where the step sits. A `!` in
+braces marks an instruction to paperband, and it can go anywhere in the text:
 
 ```markdown
 ## Install
 
-### Get it {!step}
+### {!step} Get it
 
-### Build it {!step}
+### {!step}: Build it
 
 ## Configure
 
-### Edit {!step}
+### {!step} Edit
 ```
 
-The first stepped item under a parent is 1, the next is 2, and each parent starts again,
-so the example numbers 1, 2, then 1. Add, remove or reorder steps and the numbers follow.
-It works on anything that takes braces: a heading, a paragraph, a list item or a fence.
-Items without `{!step}` in between don't count and don't reset the sequence.
+That renders as "Step 1 Get it", "Step 2: Build it" and, under the next heading, "Step 1
+Edit": the first step under a parent is 1, the next is 2, and each parent starts again.
+Add, remove or reorder steps and the numbers follow. A marker works in a heading, a
+paragraph, a list item or a table cell, and numbers the block it sits in. Blocks without
+one in between don't count and don't reset the sequence. A `{!step}` inside inline code
+or a fence is left alone, so you can write about it.
 
-The number is written as `data-paperband-step`: on a stepped heading and its block's
-`<section>`, or on the element itself for anything else. Paperband doesn't add "Step 1" to
-the text; the output decides how to show it. A template reads `block.directives.step`,
-and CSS can use the attribute:
+The block also carries its number as `data-paperband-step`: on a stepped heading and its
+block's `<section>`, or on the element itself for anything else. A template reads it as
+`block.directives.step`. A heading's class and anchor come from its text without the
+label, so `### {!step} Get it` is `#get-it` whatever number it has.
+
+To number something without writing the label, put `!step` in its attribute group
+instead: `### Get it {.x !step}`, or ` ```bash {!step} ` on a fence, which has no text to
+replace. CSS can then show the number, from the attribute on the heading:
 
 ```css
 h3[data-paperband-step]::before { content: "Step " attr(data-paperband-step) " — "; }
 ```
 
-`attr()` reads the element its `::before` belongs to, which is why the heading carries the
-number too: `section[data-paperband-step] > h3::before` would show an empty value.
-
-An unknown instruction fails the build, so a typo such as `{!stpe}` can't be silently
-ignored. `{!step}` takes no value: the position is the number. The card's title heading
-can't carry one, because it names the card rather than starting a block.
+An unknown instruction fails the build, so a typo such as `{!stpe}` can't be printed by
+mistake, and `{step}` without the `!` is ordinary text. `{!step}` takes no value: the
+position is the number. The card's title heading can't carry one, because it names the
+card rather than starting a block.
 
 ## How to Fix
 

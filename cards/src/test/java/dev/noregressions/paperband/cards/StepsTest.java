@@ -8,10 +8,14 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** {@code {!step}}: numbered by position among the siblings of one parent. */
+/**
+ * {@code {!step}}: replaced with "Step N" where it's written, N numbered by
+ * position among the siblings of one parent.
+ */
 class StepsTest {
 
     private static List<Block> blocks(String md) {
@@ -23,23 +27,23 @@ class StepsTest {
     }
 
     @Nested
-    @DisplayName("Headings")
-    class Headings {
+    @DisplayName("Numbering")
+    class Numbering {
 
         @Test
         void siblings_count_from_one_and_each_parent_restarts() {
             List<Block> bs = blocks("""
                     ## Install
 
-                    ### Get it {!step}
+                    ### {!step} Get it
 
-                    ### Build it {!step}
+                    ### {!step} Build it
 
                     ## Configure
 
-                    ### Edit {!step}
+                    ### {!step} Edit
 
-                    ### Reload {!step}
+                    ### {!step} Reload
                     """);
             assertEquals(List.of("1", "2"), bs.get(0).children().stream().map(StepsTest::step).toList());
             assertEquals(List.of("1", "2"), bs.get(1).children().stream().map(StepsTest::step).toList());
@@ -47,69 +51,96 @@ class StepsTest {
 
         @Test
         void unstepped_siblings_in_between_do_not_reset_or_count() {
-            List<Block> bs = blocks("## A {!step}\n\n## Aside\n\n## B {!step}\n");
+            List<Block> bs = blocks("## {!step} A\n\n## Aside\n\n## {!step} B\n");
             assertEquals("1", step(bs.get(0)));
             assertNull(step(bs.get(1)));
             assertEquals("2", step(bs.get(2)));
         }
 
         @Test
-        void directive_is_kept_out_of_classes_attributes_and_heading() {
-            Block b = blocks("## What to do first {.step !step data-x=y}\n").get(0);
-            assertEquals(java.util.Set.of("step"), b.classes());
-            assertEquals(Map.of("data-x", "y"), b.attributes());
-            assertEquals(Map.of("step", "1"), b.directives());
-            assertEquals("What to do first", b.heading());
-        }
-
-        @Test
         void a_steps_level_is_its_own_whatever_is_nested_under_it() {
-            List<Block> bs = blocks("## One {!step}\n\n### Inner {!step}\n\n## Two {!step}\n");
+            List<Block> bs = blocks("## {!step} One\n\n### {!step} Inner\n\n## {!step} Two\n");
             assertEquals("1", step(bs.get(0)));
             assertEquals("1", step(bs.get(0).children().get(0)));
             assertEquals("2", step(bs.get(1)));
         }
+    }
+
+    @Nested
+    @DisplayName("Replacement")
+    class Replacement {
 
         @Test
-        void the_card_title_cannot_carry_a_step() {
-            CardParseException e = assertThrows(CardParseException.class,
-                    () -> new CardLoader().parse(Path.of("t.md"), "# Title {!step}\n\n## A\n"));
-            assertTrue(e.getMessage().contains("card title 'Title'"), e.getMessage());
+        void a_marker_becomes_step_n_wherever_it_is_written() {
+            List<Block> bs = blocks("# {!step} Inspect\n\n# {!step}: Build it\n\n# Tail {!step}\n");
+            assertEquals(List.of("Step 1 Inspect", "Step 2: Build it", "Tail Step 3"),
+                    bs.stream().map(Block::heading).toList());
+        }
+
+        @Test
+        void class_and_anchor_come_from_the_heading_as_written() {
+            Block b = blocks("## {!step} Build it\n").get(0);
+            assertEquals(Set.of("build-it"), b.classes());
+            assertEquals("Build it", b.plainHeading());
+        }
+
+        @Test
+        void list_items_and_paragraphs_are_replaced_in_place() {
+            String html = blocks("""
+                    ## A
+
+                    - {!step} one
+                    - two {!step}
+                    - three
+
+                    Run it again ({!step}).
+                    """).get(0).html();
+            assertTrue(html.contains("<li data-paperband-step=\"1\">Step 1 one</li>"), html);
+            assertTrue(html.contains("<li data-paperband-step=\"2\">two Step 2</li>"), html);
+            assertTrue(html.contains("<li>three</li>"), html);
+            assertTrue(html.contains("<p data-paperband-step=\"1\">Run it again (Step 1).</p>"), html);
+        }
+
+        @Test
+        void two_markers_in_one_block_show_the_same_number() {
+            assertEquals("Step 1 of the setup, Step 1", blocks("## {!step} of the setup, {!step}\n").get(0).heading());
+        }
+
+        @Test
+        void a_marker_in_code_is_an_example_not_an_instruction() {
+            Block b = blocks("## A\n\nWrite `{!step}` to number it.\n\n```\n{!step}\n```\n").get(0);
+            assertTrue(b.html().contains("<code>{!step}</code>"), b.html());
+            assertTrue(b.directives().isEmpty());
+            assertFalse(b.html().contains("Step 1"), b.html());
         }
     }
 
     @Nested
-    @DisplayName("Any kind of element")
-    class AnyElement {
+    @DisplayName("In an attribute group")
+    class Grouped {
 
         @Test
-        void list_items_number_within_their_list() {
-            String html = blocks("## A\n\n- one {!step}\n- two {!step}\n- three\n").get(0).html();
-            assertTrue(html.contains("<li data-paperband-step=\"1\">one</li>"), html);
-            assertTrue(html.contains("<li data-paperband-step=\"2\">two</li>"), html);
-            assertTrue(html.contains("<li>three</li>"), html);
+        void numbers_the_element_without_writing_text() {
+            Block b = blocks("## What to do first {.step !step data-x=y}\n").get(0);
+            assertEquals("What to do first", b.heading());
+            assertEquals(Set.of("step"), b.classes());
+            assertEquals(Map.of("data-x", "y"), b.attributes());
+            assertEquals(Map.of("step", "1"), b.directives());
         }
 
         @Test
-        void paragraphs_and_fences_under_one_parent_share_one_sequence() {
+        void a_fence_counts_alongside_a_marked_paragraph() {
             String html = blocks("""
                     ## A
 
-                    Do this first. {!step}
+                    {!step} Do this first.
 
                     ```bash {!step}
                     mvn verify
                     ```
                     """).get(0).html();
-            assertTrue(html.contains("<p data-paperband-step=\"1\">Do this first.</p>"), html);
+            assertTrue(html.contains("<p data-paperband-step=\"1\">Step 1 Do this first.</p>"), html);
             assertTrue(html.contains("<pre data-paperband-step=\"2\">"), html);
-        }
-
-        @Test
-        void a_heading_step_and_a_paragraph_step_at_one_level_count_together() {
-            List<Block> bs = blocks("Intro step. {!step}\n\n## A {!step}\n");
-            assertTrue(bs.get(0).html().contains("data-paperband-step=\"1\""), bs.get(0).html());
-            assertEquals("2", step(bs.get(1)));
         }
     }
 
@@ -119,20 +150,27 @@ class StepsTest {
 
         @Test
         void an_unknown_directive_fails_and_lists_the_known_ones() {
-            CardParseException e = assertThrows(CardParseException.class, () -> blocks("## A {!stpe}\n"));
-            assertTrue(e.getMessage().contains("unknown directive '!stpe'"), e.getMessage());
-            assertTrue(e.getMessage().contains("!step"), e.getMessage());
+            CardParseException e = assertThrows(CardParseException.class, () -> blocks("## {!stpe} A\n"));
+            assertTrue(e.getMessage().contains("unknown directive '{!stpe}'"), e.getMessage());
+            assertTrue(e.getMessage().contains("{!step}"), e.getMessage());
         }
 
         @Test
         void step_takes_no_value() {
-            CardParseException e = assertThrows(CardParseException.class, () -> blocks("## A {!step=3}\n"));
+            CardParseException e = assertThrows(CardParseException.class, () -> blocks("## {!step=3} A\n"));
             assertTrue(e.getMessage().contains("takes no value"), e.getMessage());
         }
 
         @Test
-        void braces_that_are_not_a_group_are_never_read_as_directives() {
-            assertDoesNotThrow(() -> blocks("## A\n\nuse `{!anything}` in code, or {not !a group}\n"));
+        void the_card_title_cannot_carry_a_step() {
+            CardParseException e = assertThrows(CardParseException.class,
+                    () -> new CardLoader().parse(Path.of("t.md"), "# {!step} Title\n\n## A\n"));
+            assertTrue(e.getMessage().contains("card title 'Title'"), e.getMessage());
+        }
+
+        @Test
+        void braces_that_are_not_a_marker_are_left_alone() {
+            assertDoesNotThrow(() -> blocks("## A\n\n{step} and {not !a group} stay as text\n"));
         }
     }
 }

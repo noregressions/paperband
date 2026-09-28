@@ -2725,7 +2725,9 @@ public final class LayoutEngine {
     static String blockAnchor(Block b) {
         if (b.id() != null && !b.id().isBlank()) return b.id();
         if (b.heading() == null) return null;
-        String lower = b.heading().toLowerCase(java.util.Locale.ROOT);
+        // plainHeading, not heading: "Step 2 Build" anchors as #build, so
+        // renumbering steps doesn't break links to them.
+        String lower = b.plainHeading().toLowerCase(java.util.Locale.ROOT);
         StringBuilder sb = new StringBuilder(lower.length());
         for (int i = 0; i < lower.length(); i++) {
             char c = lower.charAt(i);

@@ -1,13 +1,13 @@
 ---
 id: steps
-oneliner: "Numbered steps with {!step}, including steps inside a step."
+oneliner: "Numbered steps, including steps inside a step."
 ---
 
 # Setting Up a Book
 
-`{!step}` numbers a heading by its position: the first stepped heading under a parent is
-1, the next is 2, and each parent starts again. The headings below don't contain a single
-number; the book's CSS (`styles/book.css`) shows them as "Step 1", "Step 2" and so on
+`{!step}` is replaced with "Step N", numbered by position: the first step under a parent
+is 1, the next is 2, and each parent starts again. None of the headings below contains a
+number; reorder them and the numbers follow
 ([Card Structure](https://noregressions.github.io/paperband/cards/card-structure.html#numbered-steps)).
 
 ## Before you start
@@ -15,24 +15,24 @@ number; the book's CSS (`styles/book.css`) shows them as "Step 1", "Step 2" and 
 This heading has no `{!step}`, so it isn't counted, and the first step below is still
 Step 1.
 
-## Install the tools {!step}
+## {!step}: Install the tools
 
 Paperband needs Java and Maven. The two checks below are steps inside this step, so they
 number 1 and 2 again.
 
-### Check Java {!step}
+### {!step} Check Java
 
 ```command
 java -version
 ```
 
-### Check Maven {!step}
+### {!step} Check Maven
 
 ```command
 mvn -version
 ```
 
-## Create the book {!step}
+## {!step}: Create the book
 
 ```command
 mvn archetype:generate \
@@ -41,23 +41,23 @@ mvn archetype:generate \
   -DgroupId=com.example -DartifactId=my-guide
 ```
 
-## Write the first card {!step}
+## {!step}: Write the first card
 
 Three steps inside this one, restarting at 1:
 
-### Add a file {!step}
+### {!step} Add a file
 
 Create `src/main/paperband/01-hello.md`.
 
-### Give it a title {!step}
+### {!step} Give it a title
 
 The first `#` heading names the card.
 
-### Add a block {!step}
+### {!step} Add a block
 
 Each `##` heading starts a block the theme can style.
 
-## Build it {!step}
+## {!step}: Build it
 
 ```command
 mvn package

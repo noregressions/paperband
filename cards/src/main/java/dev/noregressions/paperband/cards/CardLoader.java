@@ -248,7 +248,9 @@ public final class CardLoader {
         // 2. Markdown → HTML via commonmark-java. The attribute syntax runs
         //    first, then Sections writes the heading structure into the tree
         //    as explicit <section> nodes -- see Sections for the rule -- and
-        //    Steps numbers {!step} among the siblings that structure made. Parser
+        //    Steps numbers {!step} among the siblings that structure made.
+        //    Directives runs first so a {!step} marker is never mistaken for an
+        //    attribute group. Parser
         //    and renderer are built per parse because both post-processors
         //    keep per-document state (nodes by identity) until render; both
         //    are cheap to build. Heading ids appear only when the author
@@ -262,6 +264,7 @@ public final class CardLoader {
         try {
             org.commonmark.node.Node doc = Parser.builder()
                     .extensions(extensions)
+                    .postProcessor(new Directives())
                     .postProcessor(attributeSyntax)
                     .postProcessor(sections)
                     .postProcessor(new Steps(attributeSyntax))
@@ -270,6 +273,7 @@ public final class CardLoader {
             html = HtmlRenderer.builder()
                     .extensions(extensions)
                     .nodeRendererFactory(sections.renderer())
+                    .nodeRendererFactory(Directives.renderer())
                     .attributeProviderFactory(context -> attributeSyntax.attributeProvider())
                     .attributeProviderFactory(context -> sections.titleMarker())
                     .build()
@@ -667,7 +671,9 @@ public final class CardLoader {
     private static Block build(OpenSection section) {
         Set<String> finalClasses = new LinkedHashSet<>(section.classes);
         if (finalClasses.isEmpty()) {
-            String slug = slug(section.heading);
+            // The heading as written, without "Step N": the class stays put
+            // when renumbering changes the label.
+            String slug = slug(Block.withoutStepLabel(section.heading, section.directives.get("step")));
             if (!slug.isEmpty()) finalClasses.add(slug);
         }
         return new Block(
