@@ -123,7 +123,7 @@ class ContentSanitizerTest {
 
     @Test
     void gfmTableAlignment_isMarkdownSemanticsAndSurvives() {
-        // flexmark renders `---:` column syntax as align attributes on th/td;
+        // The tables extension renders `---:` column syntax as align attributes on th/td;
         // stripping those would destroy alignment the author expressed in
         // pure markdown. Found in a real book's numeric tables.
         Card card = parse(ContentPolicy.CLEAN, """

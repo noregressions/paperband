@@ -41,7 +41,7 @@
         <!-- dependency versions -->
         <jsoup.version>1.18.1</jsoup.version>
         <playwright.version>1.47.0</playwright.version>
-        <flexmark.version>0.64.8</flexmark.version>
+        <commonmark.version>0.30.0</commonmark.version>
         <pebble.version>4.1.2</pebble.version>
         <snakeyaml.version>2.2</snakeyaml.version>
         <slf4j.version>2.0.13</slf4j.version>
@@ -180,24 +180,14 @@
                 <scope>provided</scope>
             </dependency>
             <dependency>
-                <groupId>com.vladsch.flexmark</groupId>
-                <artifactId>flexmark</artifactId>
-                <version>${flexmark.version}</version>
+                <groupId>org.commonmark</groupId>
+                <artifactId>commonmark</artifactId>
+                <version>${commonmark.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.vladsch.flexmark</groupId>
-                <artifactId>flexmark-ext-yaml-front-matter</artifactId>
-                <version>${flexmark.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.vladsch.flexmark</groupId>
-                <artifactId>flexmark-ext-attributes</artifactId>
-                <version>${flexmark.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.vladsch.flexmark</groupId>
-                <artifactId>flexmark-ext-tables</artifactId>
-                <version>${flexmark.version}</version>
+                <groupId>org.commonmark</groupId>
+                <artifactId>commonmark-ext-gfm-tables</artifactId>
+                <version>${commonmark.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.pebbletemplates</groupId>

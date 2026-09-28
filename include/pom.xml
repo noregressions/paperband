@@ -12,7 +12,7 @@
 
     <artifactId>include</artifactId>
     <name>Paperband :: Include</name>
-    <description>Content-include directive: pluggable ContentProviders + FragmentProcessors. Pulls fragments from working sources into markdown before flexmark parses it.</description>
+    <description>Content-include directive: pluggable ContentProviders + FragmentProcessors. Pulls fragments from working sources into markdown before it is parsed.</description>
     <url>https://github.com/noregressions/paperband</url>
 
     <dependencies>

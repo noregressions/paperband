@@ -7,7 +7,7 @@
   {% if target %}<meta name="paperband-target" content="{{ target }}">{% endif %}
 
   {# Prism syntax highlighting — Prism tokenises <pre><code class="language-X">
-     blocks (flexmark emits these from fenced ``` blocks with a language tag).
+     blocks (the markdown parser emits these from fenced ``` blocks with a language tag).
      The autoloader plugin fetches each language definition on demand from
      the CDN. Playwright waits for network-idle before snapshotting the PDF,
      so highlighting completes in PDF output too. Themes override
@@ -86,7 +86,7 @@
     /* Fenced-code font-size step-down. Long lines get clipped at the page
        edge in print/PDF targets — the overflow-x: auto above has no
        scrollbar to fall back on there. Rather than picking a size, drop
-       a specific block a step via flexmark's existing attribute-list
+       a specific block a step via the existing attribute-list
        syntax (the same mechanism `## Heading {.class}` uses), placed on
        its own line right after the closing fence with a blank line (or
        EOF) after it, so it attaches to the code block and not whatever

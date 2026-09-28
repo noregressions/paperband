@@ -1,18 +1,8 @@
 package dev.noregressions.paperband.cards;
 
-import com.vladsch.flexmark.ast.Heading;
-import com.vladsch.flexmark.ext.attributes.AttributeNode;
-import com.vladsch.flexmark.ext.attributes.AttributesExtension;
-import com.vladsch.flexmark.ext.attributes.AttributesNode;
-import com.vladsch.flexmark.ext.tables.TablesExtension;
-import com.vladsch.flexmark.html.AttributeProvider;
-import com.vladsch.flexmark.html.HtmlRenderer;
-import com.vladsch.flexmark.html.IndependentAttributeProviderFactory;
-import com.vladsch.flexmark.html.renderer.AttributablePart;
-import com.vladsch.flexmark.html.renderer.LinkResolverContext;
-import com.vladsch.flexmark.parser.Parser;
-import com.vladsch.flexmark.util.data.MutableDataSet;
-import com.vladsch.flexmark.util.misc.Extension;
+import org.commonmark.ext.gfm.tables.TablesExtension;
+import org.commonmark.parser.Parser;
+import org.commonmark.renderer.html.HtmlRenderer;
 
 import dev.noregressions.paperband.model.Block;
 import dev.noregressions.paperband.model.Card;
@@ -46,9 +36,9 @@ import java.util.regex.Pattern;
  * <ol>
  *   <li>Split YAML frontmatter from body via regex.</li>
  *   <li>Parse frontmatter via SnakeYAML for full type fidelity (lists, maps, numbers, bools).</li>
- *   <li>Render body to HTML via flexmark with {@code AttributesExtension} (so that
- *       {@code ## Watch Out {.watch-out #wo-1}} attaches class/id to the {@code h2})
- *       and {@code TablesExtension} (GFM pipe tables).</li>
+ *   <li>Render body to HTML via commonmark-java with GFM pipe tables and
+ *       paperband's own attribute syntax — {@link AttributeSyntax}, so that
+ *       {@code ## Watch Out {.watch-out #wo-1}} attaches class/id to the {@code h2}.</li>
  *   <li>Parse that HTML with jsoup; walk top-level children.</li>
  *   <li>A frontmatter {@code title:} names the card. Without one, the first
  *       {@code h1} does instead, and is consumed rather than rendered — so a
@@ -122,8 +112,6 @@ public final class CardLoader {
      */
     private final Path bookRoot;
 
-    private final Parser parser;
-    private final HtmlRenderer renderer;
     private final MarkdownPreprocessor preprocessor;
 
     /**
@@ -180,8 +168,8 @@ public final class CardLoader {
     }
 
     /**
-     * Construct a loader with an optional pre-flexmark markdown preprocessor.
-     * The hook lets the include subsystem (or any other pre-flexmark pass) run
+     * Construct a loader with an optional pre-parse markdown preprocessor.
+     * The hook lets the include subsystem (or any other pre-parse pass) run
      * before frontmatter parsing and HTML rendering.
      */
     public CardLoader(MarkdownPreprocessor preprocessor) {
@@ -203,58 +191,12 @@ public final class CardLoader {
     /**
      * Construct a loader with both a preprocessor and a book root.
      *
-     * @param preprocessor pre-flexmark pass, or null
+     * @param preprocessor pre-parse pass, or null
      * @param bookRoot     the book root ids are relative to, or null
      */
     public CardLoader(MarkdownPreprocessor preprocessor, Path bookRoot) {
         this.preprocessor = preprocessor;
         this.bookRoot = bookRoot;
-        MutableDataSet options = new MutableDataSet();
-        options.set(Parser.EXTENSIONS,
-                List.<Extension>of(AttributesExtension.create(), TablesExtension.create()));
-        // Attributes in the fence's own info line — ```bash {.command} — as
-        // well as the trailing-line form ({.class} after the closing fence).
-        // The info-line spelling keeps the tag with the block it describes
-        // instead of dangling after it.
-        options.set(AttributesExtension.FENCED_CODE_INFO_ATTRIBUTES, true);
-        // flexmark only writes a heading's {#id} when header ids are rendered,
-        // and rendering them also generates one for every other heading. There
-        // is no option for "explicit only" -- turning generation off drops the
-        // explicit ones too -- so render them all and let explicitHeadingIdsOnly
-        // take the generated ones back off. Block.id stays what it documents:
-        // the id the author wrote, or null.
-        options.set(HtmlRenderer.RENDER_HEADER_ID, true);
-        this.parser   = Parser.builder(options).build();
-        this.renderer = HtmlRenderer.builder(options)
-                .attributeProviderFactory(explicitHeadingIdsOnly())
-                .build();
-    }
-
-    /**
-     * Removes every heading id flexmark generated, keeping the ones an author
-     * wrote as {@code {#id}} or {@code {id=...}}. By the time a provider sees
-     * the attributes the two are indistinguishable, so it asks the attributes
-     * extension's own record of what was written on that heading instead.
-     */
-    private static IndependentAttributeProviderFactory explicitHeadingIdsOnly() {
-        return new IndependentAttributeProviderFactory() {
-            @Override
-            public AttributeProvider apply(LinkResolverContext context) {
-                return (node, part, attributes) -> {
-                    if (!(node instanceof Heading) || part != AttributablePart.NODE) return;
-                    List<AttributesNode> written =
-                            AttributesExtension.NODE_ATTRIBUTES.get(node.getDocument()).get(node);
-                    if (written != null) {
-                        for (AttributesNode attrs : written) {
-                            for (com.vladsch.flexmark.util.ast.Node a : attrs.getChildren()) {
-                                if (a instanceof AttributeNode attr && attr.isId()) return;
-                            }
-                        }
-                    }
-                    attributes.remove("id");
-                };
-            }
-        };
     }
 
     /**
@@ -299,9 +241,28 @@ public final class CardLoader {
             body = markdown.substring(m.end());
         }
 
-        // 2. Markdown → HTML via flexmark
-        com.vladsch.flexmark.util.ast.Node doc = parser.parse(body);
-        String html = renderer.render(doc);
+        // 2. Markdown → HTML via commonmark-java. Parser and renderer are built
+        //    per parse because the attribute syntax keeps per-document state
+        //    (attributes keyed by node) between the two; both are cheap to build.
+        //    Heading ids appear only when the author wrote one: commonmark-java
+        //    generates none of its own.
+        AttributeSyntax attributeSyntax = new AttributeSyntax();
+        List<org.commonmark.Extension> extensions = List.of(TablesExtension.create());
+        String html;
+        try {
+            org.commonmark.node.Node doc = Parser.builder()
+                    .extensions(extensions)
+                    .postProcessor(attributeSyntax)
+                    .build()
+                    .parse(body);
+            html = HtmlRenderer.builder()
+                    .extensions(extensions)
+                    .attributeProviderFactory(context -> attributeSyntax.attributeProvider())
+                    .build()
+                    .render(doc);
+        } catch (IllegalArgumentException e) {
+            throw new CardParseException(source + ": " + e.getMessage(), e);
+        }
 
         // 3. Walk via jsoup
         return buildCard(source, fm, Jsoup.parseBodyFragment(html).body());
@@ -627,11 +588,11 @@ public final class CardLoader {
     }
 
     /**
-     * A valid HTML attribute name. flexmark takes whatever sits before an
-     * {@code =} as the name, so {@code {.step=1}} arrives as an attribute
-     * called {@code .step} -- not something a selector can match, and a sign
-     * the author meant {@code {step=1}} or {@code {.step step=1}}, so it
-     * fails with that suggestion rather than passing through.
+     * A valid HTML attribute name. Markdown can't produce anything else --
+     * {@link AttributeSyntax} rejects {@code {.step=1}} before rendering -- but
+     * raw HTML and {@code .html} cards reach the heading walk without it, and
+     * jsoup accepts {@code <h2 .step="1">}. That's not something a selector can
+     * match, so it fails with the same suggestion rather than passing through.
      */
     private static final Pattern ATTRIBUTE_NAME = Pattern.compile("[A-Za-z_:][-A-Za-z0-9_:.]*");
 

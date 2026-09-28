@@ -7,7 +7,7 @@ import java.util.Optional;
  * Map a file extension to a language hint usable as a fenced code-block
  * language tag. Best-effort: unknown extensions return {@link Optional#empty()}.
  *
- * <p>The returned identifier is what flexmark / highlight.js / Prism will see
+ * <p>The returned identifier is what the markdown parser / highlight.js / Prism will see
  * as the info string on a fenced block. If you find yourself adding an
  * extension here, consider whether the fence renderer downstream actually
  * recognises the language.

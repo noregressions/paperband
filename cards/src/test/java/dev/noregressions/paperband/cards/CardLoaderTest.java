@@ -522,8 +522,7 @@ class CardLoaderTest {
 
             Block first = card.blocks().get(0);
             assertEquals(Set.of("custom-class"), first.classes());
-            // Note: ID extraction may depend on flexmark AttributesExtension configuration
-            // For now, focus on class extraction which is working
+            assertEquals("custom-id", first.id());
             assertEquals("Custom Section", first.heading());
 
             Block second = card.blocks().get(1);
@@ -1026,7 +1025,7 @@ class CardLoaderTest {
             CardLoader loader = new CardLoader(preprocessor);
             Card card = loader.load(mdFile); // Use load() not parse() to trigger preprocessor
 
-            // The preprocessor should transform the markdown before flexmark processing
+            // The preprocessor should transform the markdown before parsing
             String html = card.blocks().get(0).html();
             assertTrue(html.contains("REPLACEMENT_WAS_SUCCESSFUL"),
                 "Preprocessor should have replaced content. HTML: " + html);

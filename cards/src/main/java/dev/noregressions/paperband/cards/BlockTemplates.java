@@ -33,7 +33,7 @@ import java.util.Set;
  *
  * <p>A {@code ```} block does two things — it captures text verbatim, and it
  * implicitly selects a rendering process to turn that text into HTML. The
- * capture stays flexmark's job (the document remains standard markdown to
+ * capture stays the markdown parser's job (the document remains standard markdown to
  * every editor and preview); this class replaces the second half: a block
  * whose type has a template at {@code blocks/<type>.html} renders through
  * that Pebble fragment instead of the default {@code <pre><code>}.

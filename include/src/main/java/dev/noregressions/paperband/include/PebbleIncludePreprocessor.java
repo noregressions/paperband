@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Pre-flexmark hook that runs a single real Pebble parse/render pass over a
+ * Pre-parse hook that runs a single real Pebble parse/render pass over a
  * card's raw markdown, handling three things at once:
  * <ul>
  *   <li>{@code {% fragment %}} tags — resolved via {@link ContentProvider}/

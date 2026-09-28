@@ -4,8 +4,8 @@ import java.nio.file.Path;
 
 /**
  * Hook for transforming raw markdown text before {@link CardLoader} hands it
- * to flexmark. The classic use is content-include directive substitution
- * ({@code include}); other pre-flexmark passes (variable
+ * to the markdown parser. The classic use is content-include directive substitution
+ * ({@code include}); other pre-parse passes (variable
  * interpolation, conditional sections) could plug in here later.
  *
  * <p>Implementations are expected to be deterministic and side-effect-free

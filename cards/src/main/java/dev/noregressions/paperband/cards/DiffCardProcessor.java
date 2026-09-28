@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Post-flexmark HTML transform that rewrites two custom fenced-code conventions
+ * Post-parse HTML transform that rewrites two custom fenced-code conventions
  * into structured HTML:
  *
  * <h2>{@code ```diff-card}</h2>

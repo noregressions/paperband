@@ -2,7 +2,7 @@ package dev.noregressions.paperband.include;
 
 /**
  * {@link FragmentProcessor} that splices the fragment into the parent document
- * verbatim, letting the parent flexmark pass parse it as markdown.
+ * verbatim, letting the parent markdown pass parse it as markdown.
  *
  * <p>Use for {@code .md} fragments shared across cards (boilerplate intros,
  * common warnings, glossary chunks).

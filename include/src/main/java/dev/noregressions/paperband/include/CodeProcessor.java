@@ -28,7 +28,7 @@ public final class CodeProcessor implements FragmentProcessor {
             lang = fragment.inferredLanguage().orElse("");
         }
         StringBuilder sb = new StringBuilder();
-        // Surround with blank lines so flexmark always sees this as a block,
+        // Surround with blank lines so the parser always sees this as a block,
         // even when the directive sat inline within text.
         sb.append("\n\n```").append(lang).append('\n');
         sb.append(fragment.content());

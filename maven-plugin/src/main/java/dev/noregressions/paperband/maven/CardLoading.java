@@ -128,7 +128,7 @@ final class CardLoading {
     }
 
     /**
-     * Read {@code cardFile} and run the pre-flexmark preprocessing pass
+     * Read {@code cardFile} and run the pre-parse preprocessing pass
      * (fragment resolution + vars/conditionals — see
      * {@code PebbleIncludePreprocessor} in {@code include}), then parse the
      * result into a {@link Card}.
@@ -140,8 +140,8 @@ final class CardLoading {
      * <p>Bypasses {@link CardLoader#load(Path)} because {@code preprocessor}
      * varies per card (it binds that card's vars at construction) while
      * {@code load} knows only about a single configured instance; calling
-     * {@code parse} directly keeps one {@link CardLoader} — and its flexmark
-     * engine — shared across the whole book.
+     * {@code parse} directly keeps one {@link CardLoader}, with its content
+     * policy and block templates, shared across the whole book.
      *
      * @param cardLoader   the shared loader
      * @param preprocessor that card's preprocessor, or null to skip preprocessing
@@ -176,7 +176,7 @@ final class CardLoading {
      * build log as warnings, each naming the card and what went.
      *
      * @param cardLoader   the shared loader
-     * @param preprocessor pre-flexmark pass, or null
+     * @param preprocessor pre-parse pass, or null
      * @param cardFile     the card file
      * @param cardSchema   yaml-card schema, or null
      * @param vars         the card's resolved vars, for {@code contentPolicy}

@@ -22,7 +22,7 @@ import java.util.regex.Pattern;
  * layer changed, not fragment resolution.
  *
  * <p>Writes its result directly to the template {@link Writer}, unescaped:
- * this pass runs pre-flexmark, producing markdown/HTML source to be spliced
+ * this pass runs before markdown parsing, producing markdown/HTML source to be spliced
  * into the document, not a final HTML page, so Pebble's autoescaping (which
  * only wraps {@code {{ }}} print expressions) never applies here regardless.
  */

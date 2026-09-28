@@ -11,7 +11,7 @@ import java.util.List;
  * other brace-delimited syntax) as a literal example from being evaluated by
  * a Pebble pass.
  *
- * <p>Shared by every pre-flexmark Pebble evaluation pass —
+ * <p>Shared by every pre-parse Pebble evaluation pass —
  * {@code include}'s {@code {% fragment %}} tag resolution and
  * {@code cards}' whole-body vars/conditionals pass both run their
  * masked source through a real Pebble parser and need the exact same

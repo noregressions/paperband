@@ -2,15 +2,15 @@ package dev.noregressions.paperband.include;
 
 /**
  * Turns a {@link Fragment} into markdown source ready to splice back into the
- * parent document, before flexmark sees it.
+ * parent document, before the markdown parser sees it.
  *
  * <p>One implementation per return type. Built-ins:
  * <ul>
  *   <li>{@code code} — wraps in a fenced code block, language from
  *       {@link Fragment#inferredLanguage()} or the {@code lang} attribute</li>
  *   <li>{@code markdown} — splices the fragment in verbatim, parsed as markdown
- *       by the parent flexmark pass</li>
- *   <li>{@code html} — splices as raw HTML; flexmark passes raw HTML through
+ *       by the parent markdown pass</li>
+ *   <li>{@code html} — splices as raw HTML; the parser passes raw HTML through
  *       to the rendered document</li>
  *   <li>{@code text} — wraps in a fenced block with no language tag, no
  *       markdown parsing of the content</li>

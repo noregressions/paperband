@@ -2,10 +2,10 @@ package dev.noregressions.paperband.include;
 
 /**
  * {@link FragmentProcessor} for HTML fragments. Splices the content as a raw
- * HTML block: flexmark passes raw HTML through to the rendered document
+ * HTML block: the markdown parser passes raw HTML through to the rendered document
  * without re-parsing it as markdown.
  *
- * <p>The fragment is wrapped in blank lines so flexmark recognises it as a
+ * <p>The fragment is wrapped in blank lines so the parser recognises it as a
  * block-level HTML element rather than inline HTML embedded in a paragraph.
  */
 public final class HtmlProcessor implements FragmentProcessor {

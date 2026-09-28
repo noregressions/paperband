@@ -6,7 +6,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * Post-flexmark HTML transform that adds a semantic CSS class to every inline
+ * Post-parse HTML transform that adds a semantic CSS class to every inline
  * {@code <code>} element (i.e. {@code <code>} <i>not</i> inside a {@code <pre>}).
  *
  * <p>The classification is mechanical, based on the shape of the inline
