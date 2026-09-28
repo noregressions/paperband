@@ -28,6 +28,23 @@ Explicit classes and ids override the auto-slug via Pandoc attribute syntax:
 Multiple classes are space-separated inside the braces. The explicit `id` becomes the
 HTML `id` attribute and the PDF named-destination anchor for that block.
 
+Any other attribute goes in the same braces as `key=value`, and it lands on the block's
+`<section>` next to the classes:
+
+```markdown
+## What to do first {.step step=1}
+```
+
+```html
+<section class="block step" step="1">
+```
+
+Templates can read it as `block.attributes.step`, which is how a theme picks out every
+step without matching on heading text. The name can't start with a dot: `{.step=1}`
+fails the build and tells you to write `{step=1}` or `{.step step=1}` instead.
+Presentational attributes such as `style` or `width` are stripped under the content
+policy, the same as anywhere else in a card.
+
 ## How to Fix
 
 The conventional block headings and their CSS classes:
