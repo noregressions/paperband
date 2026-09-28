@@ -7,7 +7,7 @@ Build it with the plugin installed locally (`mvn install` at the repository root
 
     mvn package        # target/kitchen-sink.pdf and target/site/
 
-The PDF has 8 cards; the site has 9, because one card is site-only.
+The PDF has 9 cards; the site has 10, because one card is site-only.
 
 ## Feature map
 
@@ -31,6 +31,7 @@ Paths are relative to `src/main/paperband/`.
 | `card:` cross-links, including to a section anchor | `content/01-basics/01-first-card.md` |
 | Blocks: Watch Out, Check | `content/01-basics/02-blocks.md` |
 | `command`, `output` and `console` fences | `content/01-basics/02-blocks.md` |
+| Numbered steps with `{!step}`, including steps inside a step | `content/01-basics/04-steps.md`, `styles/book.css` |
 | A custom block type | `layouts/blocks/note.html`, used in `content/01-basics/02-blocks.md` |
 | `:name:` icons, bundled and the book's own | `content/01-basics/02-blocks.md`, `icons/ks.svg` |
 | `{% fragment %}` from a source file | `content/02-authoring/01-includes.md`, `content/02-authoring/Hello.java` |
