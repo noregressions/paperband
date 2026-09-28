@@ -1135,4 +1135,85 @@ class CardLoaderTest {
             assertEquals("Section with italic text", card.blocks().get(0).heading());
         }
     }
+
+    @Nested
+    @DisplayName("Heading ids")
+    class HeadingIds {
+
+        private List<Block> blocks(String md) {
+            return new CardLoader().parse(Path.of("t.md"), "---\ntitle: T\n---\n" + md).blocks();
+        }
+
+        @Test
+        void should_keep_explicit_hash_id_on_heading() {
+            Block b = blocks("## Watch Out {.watch-out #wo-overview}\n\nx\n").get(0);
+            assertEquals("wo-overview", b.id());
+            assertEquals(Set.of("watch-out"), b.classes());
+        }
+
+        @Test
+        void should_keep_explicit_id_written_as_key_value() {
+            assertEquals("go", blocks("## Go {id=go}\n").get(0).id());
+        }
+
+        @Test
+        void should_not_invent_id_for_heading_without_one() {
+            assertNull(blocks("## Plain Heading\n\nx\n").get(0).id());
+        }
+
+        @Test
+        void should_leave_id_on_inline_link_rather_than_heading() {
+            Block b = blocks("## See [x](y){#lnk} after\n\nbody\n").get(0);
+            assertNull(b.id());
+        }
+
+        @Test
+        void should_keep_explicit_id_on_duplicate_heading_text() {
+            List<Block> bs = blocks("## Dup\n\na\n\n## Dup {#dup}\n\nb\n");
+            assertNull(bs.get(0).id());
+            assertEquals("dup", bs.get(1).id());
+        }
+    }
+
+    @Nested
+    @DisplayName("Heading attributes")
+    class HeadingAttributes {
+
+        private Block onlyBlock(String md) {
+            Card card = new CardLoader().parse(Path.of("t.md"), "---\ntitle: T\n---\n" + md);
+            return card.blocks().get(0);
+        }
+
+        @Test
+        void should_keep_key_value_attribute_on_heading_block() {
+            Block b = onlyBlock("## What to do first {step=1}\n\nbody\n");
+            assertEquals(java.util.Map.of("step", "1"), b.attributes());
+            assertEquals("What to do first", b.heading());
+        }
+
+        @Test
+        void should_keep_class_and_attribute_together_in_source_order() {
+            Block b = onlyBlock("## Go {.step step=2 data-kind=setup #go}\n");
+            assertEquals(Set.of("step"), b.classes());
+            assertEquals("go", b.id());
+            assertEquals(List.of("step", "data-kind"), List.copyOf(b.attributes().keySet()));
+        }
+
+        @Test
+        void should_have_no_attributes_when_heading_has_only_class_and_id() {
+            assertTrue(onlyBlock("## Plain {.x #y}\n").attributes().isEmpty());
+        }
+
+        @Test
+        void should_reject_dotted_attribute_name_with_suggestion() {
+            CardParseException ex = assertThrows(CardParseException.class,
+                    () -> onlyBlock("## Go {.step=1}\n"));
+            assertTrue(ex.getMessage().contains("{step=1}"), ex.getMessage());
+        }
+
+        @Test
+        void should_strip_presentational_attributes_before_capture() {
+            assertTrue(onlyBlock("## Go {style=color:red}\n").attributes().isEmpty());
+        }
+    }
 }

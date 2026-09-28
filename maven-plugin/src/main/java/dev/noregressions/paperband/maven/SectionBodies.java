@@ -189,7 +189,14 @@ final class SectionBodies {
             String classes = String.join(" ", b.classes());
             sb.append("<section class=\"block");
             if (!classes.isEmpty()) sb.append(' ').append(classes);
-            sb.append("\">\n");
+            sb.append('"');
+            // Heading attributes ({step=1}) ride on the section, as they do
+            // in _block-section.html. Names are validated by CardLoader.
+            for (Map.Entry<String, String> a : b.attributes().entrySet()) {
+                sb.append(' ').append(a.getKey()).append("=\"")
+                        .append(escape(a.getValue()).replace("\"", "&quot;")).append('"');
+            }
+            sb.append(">\n");
             if (b.heading() != null) {
                 // h1 is the section's own title -- the site hero and the PDF
                 // divider each print it -- so a body's headings start at h2

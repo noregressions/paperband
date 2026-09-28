@@ -1364,7 +1364,26 @@ class LayoutEngineTest {
         }
     }
 
-    // Helper methods
+    @Nested
+    @DisplayName("Heading attributes")
+    class HeadingAttributes {
+
+        @Test
+        void should_render_heading_attributes_onto_section() {
+            Map<String, String> attrs = new java.util.LinkedHashMap<>();
+            attrs.put("step", "1");
+            attrs.put("data-note", "a\"b<c");
+            Block block = new Block(Block.Kind.HEADING_SECTION, null, Set.of("step"),
+                    "What to do first", 2, "<p>body</p>", List.of(), attrs);
+            Card card = new Card("c", Path.of("c.md"), new Frontmatter(Map.of()), "C", List.of(block));
+
+            String html = new LayoutEngine().render(card, createMinimalContext());
+
+            assertTrue(html.contains("<section class=\"block step\" id=\"what-to-do-first\" step=\"1\""), html);
+            assertTrue(html.contains("data-note=\"a&quot;b&lt;c\""), html);
+        }
+    }
+
 
     private Card createMinimalCard(String id) {
         Block block = new Block(

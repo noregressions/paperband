@@ -1,8 +1,15 @@
 package dev.noregressions.paperband.cards;
 
+import com.vladsch.flexmark.ast.Heading;
+import com.vladsch.flexmark.ext.attributes.AttributeNode;
 import com.vladsch.flexmark.ext.attributes.AttributesExtension;
+import com.vladsch.flexmark.ext.attributes.AttributesNode;
 import com.vladsch.flexmark.ext.tables.TablesExtension;
+import com.vladsch.flexmark.html.AttributeProvider;
 import com.vladsch.flexmark.html.HtmlRenderer;
+import com.vladsch.flexmark.html.IndependentAttributeProviderFactory;
+import com.vladsch.flexmark.html.renderer.AttributablePart;
+import com.vladsch.flexmark.html.renderer.LinkResolverContext;
 import com.vladsch.flexmark.parser.Parser;
 import com.vladsch.flexmark.util.data.MutableDataSet;
 import com.vladsch.flexmark.util.misc.Extension;
@@ -210,8 +217,44 @@ public final class CardLoader {
         // The info-line spelling keeps the tag with the block it describes
         // instead of dangling after it.
         options.set(AttributesExtension.FENCED_CODE_INFO_ATTRIBUTES, true);
+        // flexmark only writes a heading's {#id} when header ids are rendered,
+        // and rendering them also generates one for every other heading. There
+        // is no option for "explicit only" -- turning generation off drops the
+        // explicit ones too -- so render them all and let explicitHeadingIdsOnly
+        // take the generated ones back off. Block.id stays what it documents:
+        // the id the author wrote, or null.
+        options.set(HtmlRenderer.RENDER_HEADER_ID, true);
         this.parser   = Parser.builder(options).build();
-        this.renderer = HtmlRenderer.builder(options).build();
+        this.renderer = HtmlRenderer.builder(options)
+                .attributeProviderFactory(explicitHeadingIdsOnly())
+                .build();
+    }
+
+    /**
+     * Removes every heading id flexmark generated, keeping the ones an author
+     * wrote as {@code {#id}} or {@code {id=...}}. By the time a provider sees
+     * the attributes the two are indistinguishable, so it asks the attributes
+     * extension's own record of what was written on that heading instead.
+     */
+    private static IndependentAttributeProviderFactory explicitHeadingIdsOnly() {
+        return new IndependentAttributeProviderFactory() {
+            @Override
+            public AttributeProvider apply(LinkResolverContext context) {
+                return (node, part, attributes) -> {
+                    if (!(node instanceof Heading) || part != AttributablePart.NODE) return;
+                    List<AttributesNode> written =
+                            AttributesExtension.NODE_ATTRIBUTES.get(node.getDocument()).get(node);
+                    if (written != null) {
+                        for (AttributesNode attrs : written) {
+                            for (com.vladsch.flexmark.util.ast.Node a : attrs.getChildren()) {
+                                if (a instanceof AttributeNode attr && attr.isId()) return;
+                            }
+                        }
+                    }
+                    attributes.remove("id");
+                };
+            }
+        };
     }
 
     /**
@@ -410,6 +453,7 @@ public final class CardLoader {
                     section.heading  = el.text();
                     section.id       = el.id().isEmpty() ? null : el.id();
                     section.classes  = parseClassAttr(el.className());
+                    section.attributes = otherAttributes(source, el);
                     stack.push(section);
                     continue;
                 }
@@ -524,6 +568,7 @@ public final class CardLoader {
         String heading;
         String id;
         Set<String> classes;
+        Map<String, String> attributes;
         final StringBuilder html = new StringBuilder();
         final List<Block> children = new ArrayList<>();
     }
@@ -577,7 +622,44 @@ public final class CardLoader {
                 section.heading,
                 section.level,
                 section.html.toString(),
-                section.children);
+                section.children,
+                section.attributes);
+    }
+
+    /**
+     * A valid HTML attribute name. flexmark takes whatever sits before an
+     * {@code =} as the name, so {@code {.step=1}} arrives as an attribute
+     * called {@code .step} -- not something a selector can match, and a sign
+     * the author meant {@code {step=1}} or {@code {.step step=1}}, so it
+     * fails with that suggestion rather than passing through.
+     */
+    private static final Pattern ATTRIBUTE_NAME = Pattern.compile("[A-Za-z_:][-A-Za-z0-9_:.]*");
+
+    /**
+     * The heading's attributes other than class and id. The heading element
+     * itself is dissolved into a {@link Block}, so anything not copied out
+     * here is lost -- which used to be every {@code {key=value}} an author put
+     * on a heading, while the same attribute on a paragraph survived in its
+     * html. The content policy has already run, so presentational attributes
+     * are gone by this point; what's left is the author's own markup.
+     */
+    private static Map<String, String> otherAttributes(Path source, Element heading) {
+        Map<String, String> out = new LinkedHashMap<>();
+        for (org.jsoup.nodes.Attribute a : heading.attributes()) {
+            String name = a.getKey();
+            if (name.equals("class") || name.equals("id")) continue;
+            if (!ATTRIBUTE_NAME.matcher(name).matches()) {
+                // Failing beats dropping: a silently lost marker is exactly
+                // the bug this method exists to fix.
+                String bare = name.replaceFirst("^[.#]+", "");
+                throw new CardParseException(source + ": heading '" + heading.text()
+                        + "' has attribute '" + name + "', which isn't a valid HTML name. "
+                        + "Write {" + bare + "=" + a.getValue() + "} for an attribute, or {."
+                        + bare + " " + bare + "=" + a.getValue() + "} for a class as well.");
+            }
+            out.put(name, a.getValue());
+        }
+        return out;
     }
 
     private static Set<String> parseClassAttr(String classAttr) {

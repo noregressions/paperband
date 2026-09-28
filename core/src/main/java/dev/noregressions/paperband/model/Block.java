@@ -1,7 +1,10 @@
 package dev.noregressions.paperband.model;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -38,6 +41,9 @@ import java.util.Set;
  * @param level    heading depth (2–6) for a real heading section; {@code 0} for the synthetic intro block
  * @param html     this block's own direct HTML content, excluding any nested children's content
  * @param children nested sub-sections opened by a deeper heading while this block was open; never null, may be empty
+ * @param attributes every other attribute the heading carried ({@code ## Heading {step=1}}), in source
+ *                   order, keyed by name; class and id are excluded (they have their own components).
+ *                   Rendered onto the block's {@code <section>} alongside its classes; never null, may be empty
  */
 public record Block(
         Kind kind,
@@ -46,12 +52,23 @@ public record Block(
         String heading,
         int level,
         String html,
-        List<Block> children
+        List<Block> children,
+        Map<String, String> attributes
 ) {
 
     public Block {
         classes = classes == null ? Set.of() : Set.copyOf(new LinkedHashSet<>(classes));
         children = children == null ? List.of() : List.copyOf(children);
+        // Map.copyOf would lose source order, and the order is what the author
+        // wrote -- keep it, so the rendered attribute list reads the same way.
+        attributes = attributes == null || attributes.isEmpty() ? Map.of()
+                : Collections.unmodifiableMap(new LinkedHashMap<>(attributes));
+    }
+
+    /** A block with no attributes beyond its class and id. */
+    public Block(Kind kind, String id, Set<String> classes, String heading, int level,
+                 String html, List<Block> children) {
+        this(kind, id, classes, heading, level, html, children, Map.of());
     }
 
     public enum Kind { HEADING_SECTION, FENCED_DIV }

@@ -2812,6 +2812,9 @@ public final class LayoutEngine {
         bm.put("anchor", blockAnchor(b));
         bm.put("classes", new ArrayList<>(b.classes()));
         bm.put("classAttr", String.join(" ", b.classes()));
+        // Heading attributes beyond class/id ({step=1}), for templates to
+        // select on (block.attributes.step) and to write back onto the section.
+        bm.put("attributes", b.attributes());
         bm.put("heading", b.heading());
         bm.put("level", b.level());
         bm.put("html", b.html());
