@@ -1,0 +1,10 @@
+# A folder is a section. Its yaml names it and sets the card order.
+# https://noregressions.github.io/paperband/cards/organising-content.html
+title: "Basics"
+order:
+  - 01-first-card
+  - 02-blocks
+  # Built for the site only: `where:` is evaluated against the build target
+  # (`web` for the site goal, `pdf-a4` for build).
+  # https://noregressions.github.io/paperband/cards/targets.html
+  - { id: 03-web-only, where: "target == 'web'" }

@@ -1,0 +1,419 @@
+---
+id: book-configuration
+oneliner: "The root paperband.yaml declares the book: title, axes, CSS, vars, and targets."
+index: [paperband.yaml, axes, vars]
+---
+
+# Book Configuration
+
+The `paperband.yaml` at the book root holds global configuration that applies to every
+card: the book `title`, categorical `axes`, the base `css` chain, free-form `vars`, the
+default `theme`, the declared build `targets`, the book's `page` geometry, and the book's
+declared `sections`.
+
+These are **book scope**: read from this file and no other. Setting one in a folder's
+`paperband.yaml` fails the build. See [Configuration Cascade](card:configuration-cascade) for the scope model and for how the
+Maven plugin's `<book>` element layers on top.
+
+## `page`
+
+The sheet every page of the book is printed on:
+
+```yaml
+page:
+  size: a5                                       # preset slug, or { width, height, unit }
+  margins: { top: 18, right: 15, bottom: 18, left: 15 }
+  orientation: portrait                          # portrait (default) | landscape
+  measure: 58rem                                 # text line-length; see Targets
+```
+
+`size` and `margins` seed from the plugin's `<pageSize>`/`<margins>`, and this block wins
+over them. Margins declared here are emitted as the book's CSS `@page` rule. Don't also
+write one in the book stylesheet: it would win on cascade order, while the content-box
+height would still be computed from this block.
+
+`orientation` is the single key here that a folder *may* also set: it rotates that folder's
+cards without changing the book's paper. See [Configuration Cascade](card:configuration-cascade).
+
+## `axes`
+
+`axes` declares any number of categorical axes, each independent of the others. With no
+axes, cards are grouped by folder into sections.
+
+```yaml
+axes:
+  - name: tier
+    title: Tier
+    values:
+      - id: 1
+        label: "Tier 1 - Critical"
+        color: "#c0392b"
+      - id: 2
+        label: "Tier 2 - Moderate"
+        color: "#e67e22"
+  - name: subsystem
+    title: Subsystem
+    values:
+      - id: core
+        label: "Core Subsystem"
+      - id: edge
+        label: "Edge Subsystem"
+```
+
+Each value needs an `id`; a value with no `label` falls back to `"{axis title} {id}"`.
+Other keys under a value are free-form metadata. The bundled templates read only `color`;
+custom templates can read the rest.
+
+A card joins an axis's value either through its own frontmatter field of the same name:
+
+```yaml
+---
+title: Some card
+tier: 1
+subsystem: core
+---
+```
+
+or through a folder-level binding that cascades to every card under that folder:
+
+```yaml
+# some-folder/paperband.yaml
+axis:
+  tier: 1
+```
+
+Frontmatter wins when both are present. A card can belong to zero, one, or several axes'
+values at once; each axis is tracked independently. Every declared
+axis (with at least one declared value) automatically gets: a site landing page per value
+(`{axisName}-{valueId}.html`), a PDF divider page before the first card of each contiguous
+run of that value (stacked with other axes' dividers, in `axes:` declaration order, when a
+card starts a new run on more than one axis at once), nav/sidebar entries, and a
+`{axisName}-{valueId}` CSS class on every card that has a value for it.
+
+A value a card uses but that isn't listed under the axis's `values:` still gets its own
+landing page, with a generated label and a colour from the default palette, so a card
+can use a value before the yaml declares it.
+
+Cards with no value on any declared axis are grouped by their top-level folder name
+instead ("sections") and get their own landing pages alongside the axis-value pages.
+
+## `sections`
+
+Folder-derived sections are discovered — one group per top-level folder. `sections:`
+declares those groups instead, giving one title to a run of folders:
+
+```yaml
+sections:
+  - title: "Foundations"
+    folders:
+      - 01-getting-started
+      - 02-authoring
+```
+
+A declared section is one group wherever a discovered one would be: one divider, one
+landing page, one nav entry. Folders no declaration claims stay discovered sections. See [Organising Content](card:organising-content) for the full treatment, alongside the folder-level `order:`,
+`include:`, and `sort:` keys.
+
+`sections:` also has a map form, for books that need the declared list *and* the
+book-wide landing default below at once — the list moves under `declare:`:
+
+```yaml
+sections:
+  landing:
+    template: minimal
+  declare:
+    - title: "Foundations"
+      folders: [01-getting-started, 02-authoring]
+```
+
+## `sections.landing.template`
+
+A section's landing page normally renders with the built-in `site-section` template, but
+this is overridable in three places, most specific first:
+
+1. **A declared section's own template.** A section declared in the book yaml or the POM
+   carries its own, because it can span several folders. A declared section never reads a
+   folder yaml:
+
+   ```yaml
+   sections:
+     - title: "Scanners & Blindspots"
+       folders: [scanners, blindspots]
+       landing:
+         template: "layouts/scanners-section.html"
+   ```
+
+   ```xml
+   <section>
+     <title>Scanners &amp; Blindspots</title>
+     <landingTemplate>layouts/scanners-section.html</landingTemplate>
+     <includes><include>scanners/*.md</include></includes>
+   </section>
+   ```
+
+2. **A discovered folder's own `paperband.yaml`**, with the same `landing.template` shape
+   an axis value uses:
+
+   ```yaml
+   # content/scanners/paperband.yaml
+   title: "Scanners & Blindspots"
+   landing:
+     template: "layouts/scanners-section.html"
+   ```
+
+3. **A book-wide default** for every section that doesn't declare its own — at the book
+   root, or as the POM's `<book><sectionLandingTemplate>`:
+
+   ```yaml
+   sections:
+     landing:
+       template: "layouts/default-section.html"
+   ```
+
+Template paths are relative to the book's `layouts/` directory, extension stripped — a
+leading `layouts/` is accepted and dropped, so write the path as the file sits on disk.
+Subdirectories work: `layouts/sections/scanners.html` loads exactly that. A theme's
+template overrides are searched first, the bundled templates last. If none is set, the
+built-in template is used.
+
+Instead of a path, `template:` also accepts a **named preset** — no file needed:
+
+| Name      | Renders                                              |
+|-----------|-------------------------------------------------------|
+| `default` | Title, card count, and a grid of card tiles (the built-in behaviour) |
+| `minimal` | Just the section title — no count, no card list        |
+
+```yaml
+# content/quickref/paperband.yaml
+title: "Quick Reference"
+landing:
+  template: minimal
+```
+
+A `template:` value that isn't one of these names is treated as a file path. Presets and
+file paths can be mixed across a book's sections; a section that sets neither falls through
+to the book default, then the built-in template.
+
+`minimal` also affects the PDF. The section divider has no template of its own, so it reads
+the resolved choice and renders the title only, with no count or contents. A custom file
+path changes only the site; the divider keeps its default.
+
+## Section content in markdown
+
+To add text to a section's landing page, put a markdown file in the section folder. It
+becomes that section's landing page content:
+
+```markdown
+<!-- content/02-tools/_section.md -->
+# The Tools
+
+Ten JDK tools that answer *what will break* before you change a line of code.
+
+Run them roughly in the order below: `jdeps` first to map what you depend on,
+then the scanners, then the runtime diagnostics once something actually fails.
+
+{% if vars.audience == "internal" %}Start with the flag audit.{% endif %}
+```
+
+It goes through the same pipeline as a card, so `{{ vars.x }}`, `{% if %}`,
+`{% for %}`, `{% include %}` and `{% fragment %}` all work, along with block templates and
+the content policy.
+
+| File | Notes |
+|---|---|
+| `_section.md` | The explicit spelling; wins when both are present |
+| `README.md` | Also accepted; card discovery already skips readmes |
+
+Neither is loaded as a card, so the section's card count and card list are unaffected.
+
+### The book has one too
+
+The content root is the outermost section, so `content/_section.md` is the book's own
+body. It renders as the site index's body, and in the PDF
+as front matter between the cover and the first card. It replaces the index's stat rows and
+section grid; `sections: true` in its frontmatter asks for them back.
+
+### Both targets, one file
+
+A section body renders on the site's landing page and on the PDF's section divider. To
+vary the text between them, branch on `output`:
+
+```markdown
+# The Tools
+
+Ten JDK tools that answer *what will break* before you change a line of code.
+
+{% if output == 'print' %}
+The chapters that follow cover each in turn.
+{% else %}
+Browse them below — start with `jdeps`.
+{% endif %}
+```
+
+| In scope | Value |
+|---|---|
+| `output` | `print` or `site` — what to branch on |
+| `target` | the raw build target (`pdf-a4`, `web`), which a book may rename |
+
+On the divider a body replaces the card count and printed contents, as it replaces the
+card grid on the site.
+
+### Keeping the card list
+
+The card list is a section page's default content. A `_section.md` replaces it; to keep
+the list as well, set `cards: true`:
+
+```markdown
+---
+cards: true
+---
+
+# The Tools
+
+Prose, and then the usual card list beneath it.
+```
+
+This also applies with a custom landing template: the check wraps the `cards` block's
+invocation, not its contents.
+
+### Laying the cards out yourself
+
+The section's own cards are in scope as `section`, so the markdown can list them itself:
+
+```markdown
+## All {{ section.count }} chapters
+
+{% for c in section.cards %}1. [{{ c.title }}](card:{{ c.id }})
+
+{% endfor %}
+```
+
+| In scope | What |
+|---|---|
+| `section.id` | the folder name |
+| `section.count` | how many cards it holds |
+| `section.cards` | each `{id, title, url, anchor, oneliner, frontmatter}`, in book order. Link by `id` — see below |
+| `vars` | the config cascade, as in any card |
+
+`frontmatter` holds everything else the card declared, for filtering or grouping in
+Pebble.
+
+**Link with `card:{{ c.id }}`, not with `url` or `anchor`.** A section body renders into
+both outputs, and `card:` resolves correctly in each (see [Card Structure](card:card-structure)).
+`url` is always `cards/<id>.html`, which does not resolve in the PDF, and `anchor` is always
+`#card-<id>`, which does not resolve on the site.
+
+`url` and `anchor` remain in the model for templates that need the strings, and for books
+written before `card:` existed. `card:` is also the only form that fails the build when the
+card it names is missing.
+
+**Pebble removes the newline immediately after a `{% %}` tag.** A markdown line that ends
+with a tag loses its line break and joins the next line, so a list collapses into one item.
+Put text after the tag, or leave a blank line before the closing tag:
+
+```markdown
+{% for c in section.cards %}1. [{{ c.title }}](card:{{ c.id }}){% if c.oneliner %} — {{ c.oneliner }}{% endif %}
+{% endfor %}          ← broken: the line ends with {% endif %}
+
+{% for c in section.cards %}1. [{{ c.title }}](card:{{ c.id }})
+
+{% endfor %}          ← fine: a blank line survives
+```
+
+### Other details
+
+The `# Heading` becomes the section's label when the folder declares no `title:`. (The
+loader removes a leading `#` from the body, so it is used as the label rather than
+rendered.)
+
+Only folder-backed sections can have a body. Axis values have no directory, and declared
+sections that span several folders don't pick one up, because bodies are keyed by folder
+name.
+
+The wrapper is `.section-body`, and inside it the body's headings carry the same
+`<section class="block …">` wrappers a card's do, so one set of theme rules styles both.
+The hero above it is page chrome, not content; override the `hero` block to drop it.
+
+The PDF divider renders the same body. A divider with a body is laid out as prose rather
+than a centred title: it carries `.section-divider.has-body`, drops the centring, takes the
+card measure, and runs onto as many sheets as needed.
+
+## Writing a custom section template
+
+A site template can build the href itself with `urlPrefix`, since it only renders for the
+site. `href="card:{{ c.id }}"` also works, and adds the same build-time check a card's prose
+gets.
+
+A custom template does not have to replace the whole page. The shell — document head,
+stylesheet, top nav, sidebar, main column — lives in one base template, and every built-in
+site page extends it. Override only the block you care about:
+
+```html
+{# layouts/sectionLanding.html — a reading list instead of the card grid #}
+{% extends "site-section" %}
+
+{% block cards %}
+<ol class="section-landing-list">
+  {% for c in cards %}
+  <li>
+    <a href="{{ urlPrefix }}cards/{{ c.id }}.html">{{ c.title }}</a>
+    {% if c.oneliner %}<span class="section-landing-oneliner">{{ c.oneliner }}</span>{% endif %}
+  </li>
+  {% endfor %}
+</ol>
+{% endblock %}
+```
+
+That is the whole file; everything else is inherited. A page that copies the shell instead
+stops receiving changes to it, such as new sidebar options or theme hooks.
+
+Every site page works this way, not just section landings. Extend the page you want to
+change and override one block:
+
+| Extend | Blocks it adds | Page |
+|---|---|---|
+| `site-index` | `hero`, `stats`, `sections` | the book's front page |
+| `site-section` | `hero`, `body`, `cards` | a section landing page |
+| `site-tier` | `hero`, `cards` | an axis-value landing page |
+| `site-card` | `cardNav`, `body`, `rail`, `cardNavBottom` | a card page |
+| `_site-page` | — | the shell itself, when you want the whole main column |
+
+`cards` is the body below the hero — the card grid and its heading. `body` on a card page is
+the card itself plus any auto-cards; `rail` is the on-this-page nav.
+
+All of them also inherit the shell's own blocks:
+
+| Block | Contents |
+|---|---|
+| `title` | the `<title>` text; defaults to the book title |
+| `head` | extra `<head>` content, before the stylesheet |
+| `bodyClass` | extra classes on `<body>`, appended to the sidebar state |
+| `content` | everything inside `<main>` |
+
+A block you don't mention keeps its built-in contents, and an empty block removes it —
+`site-section-minimal` is nothing but `{% extends "site-section" %}` with an empty `cards`
+block.
+
+Don't name your file the same as the template it extends: a same-named override resolves
+`{% extends %}` to itself and recurses. Use a different name, such as
+`sectionLanding.html`.
+
+### What the template is given
+
+| Key | What |
+|---|---|
+| `section` | this section: `id`, `label`, `count`, `landingTemplate`, `minimal`, `landingPage`, `cards` |
+| `cards` | its cards, each `{id, title, oneliner, axes, effort}` |
+| `book` | `title`, `subtitle`, `series`, `author`, `vars`, `cover`, `back`, `header`, `footer` |
+| `sections` | every section's meta, for cross-links |
+| `navEntries` / `sidebarEntries` | the nav model (the shell passes these to the partials) |
+| `stats` | `{total, byAxis}` |
+| `css` / `cssImports` | the composed stylesheet (the shell emits it) |
+| `htmlClass` / `measure` | the `<html>` hooks — see [Themes](card:themes#print-and-site-layers) |
+| `sidebar`, `sidebar_collapsed`, `sidebar_sections_collapsed` | sidebar state |
+| `page` | `{kind: "section", id}` — lets the partials mark the active row |
+| `urlPrefix` | `""` on a landing page (`"../"` on card pages) |
+
+Style custom classes from the book's CSS chain or the POM's `<stylesheets>`.
+
+Axis values work identically: extend `site-tier` and override its `cards` or `hero` block.

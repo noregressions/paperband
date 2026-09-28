@@ -17,7 +17,7 @@
       <h2 class="index-letter">{{ group.letter }}</h2>
       <ul class="index-terms">
         {% for t in group.terms %}
-        <li class="index-term-row"><span class="index-term">{{ t.term }}</span><span class="index-refs">{% for r in t.refs %}<a class="index-ref" href="#{{ r.anchor }}" title="{{ r.title }}"><span class="pw-pageref" data-pw-anchor="{{ r.anchor }}">000</span></a>{% if not loop.last %}, {% endif %}{% endfor %}</span></li>
+        <li class="index-term-row"><span class="index-term no-icons">{{ t.term }}</span><span class="index-refs">{% for r in t.refs %}<a class="index-ref" href="#{{ r.anchor }}" title="{{ r.title }}"><span class="pw-pageref" data-pw-anchor="{{ r.anchor }}">000</span></a>{% if not loop.last %}, {% endif %}{% endfor %}</span></li>
         {% endfor %}
       </ul>
     </div>

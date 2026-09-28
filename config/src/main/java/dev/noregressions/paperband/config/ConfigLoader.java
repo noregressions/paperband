@@ -237,8 +237,8 @@ public final class ConfigLoader {
             PageConfigResolver.Resolved page = PageConfigResolver.resolve(null, basePageSpec(size, margins));
             bookPageSpec = page.pageSpec();   // no yaml: the base IS the book's sheet
             return new RenderContext(BookConfig.empty(mdFile.toAbsolutePath()),
-                    List.of(), seedVars(extraVars), null, target, size,
-                    page.pageSpec(), page.fontScale());
+                    List.of(), seedVars(extraVars), null, target,
+                    page.pageSpec().sizeLabel(), page.pageSpec(), page.fontScale());
         }
 
         // Walk parents, collecting yamls. Order: leaf-first. A declared root
@@ -263,8 +263,8 @@ public final class ConfigLoader {
             // With a declared root, an absent yaml is expected rather than a
             // fallback: the book is described somewhere else entirely.
             return new RenderContext(BookConfig.empty(root != null ? root : startDir),
-                    List.of(), seedVars(extraVars), null, target, size,
-                    page.pageSpec(), page.fontScale());
+                    List.of(), seedVars(extraVars), null, target,
+                    page.pageSpec().sizeLabel(), page.pageSpec(), page.fontScale());
         }
 
         // Book root: declared when the caller knows it, otherwise the
@@ -395,7 +395,20 @@ public final class ConfigLoader {
             spec = new PageSpec(spec.size(), spec.margins(), cardOrientation);
         }
 
-        return new RenderContext(book, cssChain, vars, layout, target, size, spec, page.fontScale());
+        // The size a card REPORTS is the sheet it resolved to, not the slug the
+        // caller asked for. `page.size:` in the book's own yaml wins over the
+        // plugin's <pageSize>, and the reported name is what themes hang
+        // page-density type off (`html.size-6x9 { font-size: 12pt }` — see
+        // card.html/book.html). Reporting the parameter meant a book whose yaml
+        // said 6x9 was typeset with the A4 rule on a 6x9 sheet, and a custom
+        // {width, height} size matched `html.size-a4` — whose fixed font-size
+        // outranks the bare `html` rule that consumes --pw-font-scale, so the
+        // scale the resolver had just computed for it was silently dead.
+        //
+        // sizeLabel() is canonical, so an alias normalises: <pageSize>7.5x9.25
+        // reports `packt`, one name per sheet however it was spelled.
+        return new RenderContext(book, cssChain, vars, layout, target,
+                spec.sizeLabel(), spec, page.fontScale());
     }
 
     // ---- internals ----
@@ -453,11 +466,14 @@ public final class ConfigLoader {
                     truthy(map.get("sectionsCollapsed"), true));
         }
         if (node != null) {
-            return truthy(node, false) ? Sidebar.on() : Sidebar.NONE;
+            return truthy(node, false) ? Sidebar.on() : new Sidebar(false, false, true);
         }
         // Deprecated vars spelling.
         Map<String, Object> vars = data.get("vars") instanceof Map<?, ?> vm
                 ? (Map<String, Object>) vm : Map.of();
+        if (vars.containsKey("sidebar") && !truthy(vars.get("sidebar"), false)) {
+            return new Sidebar(false, false, true);             // an explicit false
+        }
         if (!truthy(vars.get("sidebar"), false)) return Sidebar.NONE;
         return new Sidebar(true,
                 truthy(vars.get("sidebar_collapsed"), false),
@@ -495,10 +511,22 @@ public final class ConfigLoader {
     /**
      * Book-scope keys, with the reason a folder can't set them. Structure that
      * frames the whole book has no meaningful per-folder value: the site either
-     * has a sidebar or it doesn't.
+     * has a sidebar or it doesn't. Read from a folder yaml, these were ignored
+     * without a word, so a folder's {@code theme:} simply didn't happen; an
+     * error names the file instead. {@code title} and {@code sections} are not
+     * here: a folder's title labels its section, and {@code sections:} may
+     * group a folder's own subfolders.
      */
     private static final Map<String, String> BOOK_ONLY_KEYS = Map.of(
-            "sidebar", "the site has one sidebar or none — it frames every page or no page");
+            "sidebar", "the site has one sidebar or none — it frames every page or no page",
+            "theme", "a book renders with one theme",
+            "axes", "axes are declared once, for the whole book",
+            "cover", "a book has one cover",
+            "back", "a book has one back page",
+            "header", "the running header frames every page",
+            "footer", "the running footer frames every page",
+            "cardSchema", "yaml cards are read with the book's one schema",
+            "publication", "editions are declared once, for the whole book");
 
     /**
      * Reject a book-scope key declared below the book root.

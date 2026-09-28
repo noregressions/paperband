@@ -1,0 +1,22 @@
+# Deck — one card per 16:9 slide, blocks placed into a fixed slot skeleton.
+#
+# Pair with the 16:9 page preset in the book's paperband.yaml:
+#
+#   theme: deck
+#   page:
+#     size: 16x9
+#   vars:
+#     maxPagesPerCard: 1
+#
+# Prefer the `16x9` slug over a {width, height} map. Any size PageConfigResolver
+# doesn't recognise is treated as having no curated theme rules, so it derives a
+# font scale from the page width — 1.61x for a 13.3in sheet — and multiplies this
+# theme's type scale by it until every card overflows its one-page budget. An
+# exact {13.333, 7.5, inch} map does resolve to the same recognised value, but
+# 13.33 or 13.3333 does not, and the failure looks like a theme problem rather
+# than a spelling one.
+#
+# maxPagesPerCard is the point of the pairing: a slide that overflows fails the
+# build, naming the card and the region that crossed the boundary. Nothing in
+# PowerPoint can tell you that.
+theme.css

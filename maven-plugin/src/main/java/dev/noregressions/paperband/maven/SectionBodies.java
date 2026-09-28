@@ -1,5 +1,6 @@
 package dev.noregressions.paperband.maven;
 
+import dev.noregressions.paperband.cards.BlockTemplates;
 import dev.noregressions.paperband.cards.CardLoader;
 import dev.noregressions.paperband.cards.MarkdownPreprocessor;
 import dev.noregressions.paperband.include.Includes;
@@ -65,13 +66,18 @@ final class SectionBodies {
      * @param cards          every card in the book, in walk order
      * @param output         {@code "print"} or {@code "site"} — what the markdown branches on
      * @param target         the raw build target, e.g. {@code pdf-a4} or {@code web}
+     * @param blockTemplates the book's block-template resolver — the one its
+     *                       cards load with, so a {@code ```type} fence renders
+     *                       the same in a body as in a card; null for bundled only
+     * @param log            where content-policy removals are reported, or null
      * @return rendered bodies by section id, the book's own under {@link #BOOK}
      * @throws IllegalStateException if a body exists but fails to render
      */
     static Map<String, SectionBody> render(
             RenderContext bookCtx, Path layoutsDir,
             Map<String, Map<String, Object>> providerConfig, List<Card> cards,
-            String output, String target) {
+            String output, String target, BlockTemplates blockTemplates,
+            org.apache.maven.plugin.logging.Log log) {
 
         Path root = bookCtx.book().bookRoot();
         if (root == null || !Files.isDirectory(root)) return Map.of();
@@ -82,7 +88,7 @@ final class SectionBodies {
         Path bookFile = bodyFile(root);
         if (bookFile != null) {
             out.put(BOOK, renderOne(bookFile, BOOK, root, root, bookCtx, layoutsDir,
-                    providerConfig, cards, output, target));
+                    providerConfig, cards, output, target, blockTemplates, log));
         }
 
         try (var dirs = Files.list(root)) {
@@ -91,7 +97,8 @@ final class SectionBodies {
                 if (file == null) continue;
                 out.put(dir.getFileName().toString(),
                         renderOne(file, dir.getFileName().toString(), dir, root, bookCtx,
-                                layoutsDir, providerConfig, cards, output, target));
+                                layoutsDir, providerConfig, cards, output, target,
+                                blockTemplates, log));
             }
         } catch (IOException e) {
             throw new IllegalStateException(
@@ -103,7 +110,8 @@ final class SectionBodies {
     private static SectionBody renderOne(
             Path file, String id, Path scope, Path root, RenderContext bookCtx, Path layoutsDir,
             Map<String, Map<String, Object>> providerConfig, List<Card> cards,
-            String output, String target) {
+            String output, String target, BlockTemplates blockTemplates,
+            org.apache.maven.plugin.logging.Log log) {
         try {
             MarkdownPreprocessor pre = Includes.defaultPreprocessor(
                     root, layoutsDir, providerConfig, bookCtx.vars());
@@ -116,7 +124,11 @@ final class SectionBodies {
                 model.put("target", target);
                 pip.setExtraModel(model);
             }
-            Card card = new CardLoader(pre, root).load(file);
+            // Through CardLoading, as a card is: the content policy and the
+            // book's block templates both apply, so a body is not a second,
+            // laxer markdown dialect.
+            Card card = CardLoading.load(new CardLoader(root), pre, file, null,
+                    bookCtx.vars(), log, blockTemplates);
             StringBuilder html = new StringBuilder();
             appendBlocks(html, card.blocks());
             Map<String, Object> fm = card.frontmatter().values();

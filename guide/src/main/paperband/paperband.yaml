@@ -1,5 +1,5 @@
-title: "Paperband Guide"
-theme: editorial
+title: "Paperband"
+theme: workshop
 
 # The section axis makes vars.section available in each card's template context.
 # Note: static-site section grouping is driven by folder path (LayoutEngine.sectionIdFor),
@@ -8,16 +8,18 @@ axes:
   - name: section
     title: "Guide Section"
     values:
-      - id: getting-started
-        label: "Getting Started"
+      - id: tutorial
+        label: "Tutorial"
+      - id: how-to
+        label: "How-to Guides"
       - id: authoring
-        label: "Authoring"
+        label: "Reference: Authoring"
       - id: configuration
-        label: "Configuration"
+        label: "Reference: Configuration"
       - id: rendering
-        label: "Rendering"
+        label: "Reference: Rendering"
       - id: advanced
-        label: "Advanced"
+        label: "Reference: Advanced"
 
 # The book's sheet. Book scope: one book is printed on one page size, so this
 # is read from THIS file only — a folder yaml may set page.orientation (which
@@ -35,15 +37,15 @@ sidebar: true
 
 vars:
   author: "The Paperband Team"
-  version: "0.1.1-SNAPSHOT"
-  subtitle: "A self-documenting reference built with Paperband itself"
+  version: "0.1.3"
+  subtitle: "One set of Markdown files. A print-ready PDF, a browsable site and a slide deck."
   # ```plantuml diagrams, styled to this book's own palette. PlantUML bakes its
   # colours into each shape and emits no CSS classes, so a theme cannot reach
   # the drawing from outside -- its own style language is the way in, and this
   # is the file. See Card Structure / PlantUML diagrams.
   plantuml:
     styleFile: styles/diagrams.puml
-  series: "Paperband Documentation"
+  series: "Held together by paperband"
   # Printed table of contents and back-of-book index -- both live demos of
   # the features documented in Book Configuration / TOC and Index.
   toc: true

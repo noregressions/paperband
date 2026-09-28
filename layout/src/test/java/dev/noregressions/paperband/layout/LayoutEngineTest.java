@@ -545,8 +545,11 @@ class LayoutEngineTest {
             String result = engine.renderBook(cards, contexts,
                     new RenderContext(book, List.of(), Map.of(), null, "pdf", "A4"));
 
-            int rule = result.indexOf(".section-divider {");
-            assertTrue(rule >= 0, "the scaffold styles .section-divider");
+            // One rule serves both divider kinds: a section divider and an
+            // axis-value divider are the same sort of page.
+            int rule = result.indexOf(".tier-divider {");
+            assertTrue(rule >= 0 && result.substring(Math.max(0, rule - 40), rule).contains(".section-divider,"),
+                    "the scaffold styles .section-divider and .tier-divider together");
             String scaffold = result.substring(rule, result.indexOf('}', rule));
             assertTrue(scaffold.contains("break-before: page"), "a sheet of its own");
             assertTrue(scaffold.contains("break-after: page"), "and the next card starts a new one");

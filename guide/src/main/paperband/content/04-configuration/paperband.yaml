@@ -1,0 +1,12 @@
+title: "Reference: Configuration"
+
+axis:
+  section: configuration
+
+order:
+  - 01-book-config
+  - 02-config-cascade
+  - 03-organising-content
+  - 04-toc-and-index
+  - 05-config-reference
+  - 06-key-index

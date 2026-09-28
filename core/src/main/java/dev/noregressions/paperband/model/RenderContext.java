@@ -15,7 +15,15 @@ import java.util.Map;
  * @param vars          merged variables from all levels (later overrides earlier)
  * @param layout        Pebble template path; null if not specified anywhere
  * @param target        current build target, e.g. {@code "pdf-a4"}, {@code "pdf-6x9"}, {@code "web"}
- * @param size          current page size, e.g. {@code "A4"}, {@code "6x9"}
+ * @param size          the sheet this card RESOLVED to, canonically named:
+ *                      {@code "a4"}, {@code "6x9"}, {@code "16x9"}, or plain
+ *                      dimensions ({@code "200x150mm"}) for a size no preset
+ *                      covers. It is {@link PageSpec#sizeLabel()} of
+ *                      {@code pageSpec}, not the slug the caller asked for --
+ *                      a book's own {@code page.size:} wins over a tool's
+ *                      page-size parameter, and themes hang page-density type
+ *                      off this name ({@code html.size-6x9}), so the two must
+ *                      not be able to disagree
  * @param pageSpec      resolved page geometry: the plugin's {@code <pageSize>} preset, with any
  *                      book's {@code page:} override layered on top, and this card's own
  *                      {@code page.orientation} if its folder declared one (see
@@ -56,7 +64,14 @@ public record RenderContext(
         return new RenderContext(newBook, cssChain, vars, layout, target, size, pageSpec, fontScale);
     }
 
-    /** Convenience constructor for call sites that don't resolve page config (defaults to plain A4, no font-scale override). */
+    /**
+     * Convenience constructor for call sites that don't resolve page config
+     * (defaults to plain A4, no font-scale override).
+     *
+     * <p>{@code size} is taken on trust here — the real build path derives it
+     * from the resolved sheet (see the {@code size} parameter above), so a
+     * caller using this constructor is responsible for the two agreeing.
+     */
     public RenderContext(BookConfig book, List<Path> cssChain, Map<String, Object> vars,
                           Path layout, String target, String size) {
         this(book, cssChain, vars, layout, target, size, PageSpec.a4(), null);

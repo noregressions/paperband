@@ -63,6 +63,16 @@ class SidebarScopeTest {
         }
 
         @Test
+        void an_explicit_false_is_told_apart_from_no_mention(@TempDir Path dir) throws IOException {
+            // The emitHtml file's screen navigation is on by default and only
+            // an explicit false turns it off, so the two must differ.
+            assertTrue(sidebarOf(book(Files.createDirectories(dir.resolve("a")), "title: T\nsidebar: false\n", null)).declared());
+            assertTrue(sidebarOf(book(Files.createDirectories(dir.resolve("b")), "title: T\nvars:\n  sidebar: false\n", null)).declared(),
+                    "the deprecated vars spelling counts too");
+            assertFalse(sidebarOf(book(Files.createDirectories(dir.resolve("c")), "title: T\n", null)).declared());
+        }
+
+        @Test
         void the_map_form_opts_in_by_being_present(@TempDir Path dir) throws IOException {
             Sidebar s = sidebarOf(book(dir, "title: T\nsidebar:\n  collapsed: true\n", null));
 
@@ -149,5 +159,23 @@ class SidebarScopeTest {
         void one_is_truthy(@TempDir Path dir) throws IOException {
             assertTrue(sidebarOf(book(dir, "title: T\nsidebar: 1\n", null)).enabled());
         }
+    }
+
+    @Test
+    void other_book_scope_keys_in_a_folder_yaml_fail(@TempDir Path dir) throws IOException {
+        for (String yaml : new String[] {"theme: dark\n", "axes: []\n", "cover: x.png\n",
+                "cardSchema: {}\n", "publication: {}\n", "header: x\n"}) {
+            Path root = Files.createDirectories(dir.resolve("b" + yaml.hashCode()));
+            Path card = book(root, "title: T\n", yaml);
+            ConfigParseException e = org.junit.jupiter.api.Assertions.assertThrows(
+                    ConfigParseException.class, () -> new ConfigLoader().load(card, "pdf-a4", "a4"), yaml);
+            assertTrue(e.getMessage().contains("can only be set at the book root"), e.getMessage());
+        }
+    }
+
+    @Test
+    void a_folder_title_is_allowed(@TempDir Path dir) throws IOException {
+        Path card = book(dir, "title: T\n", "title: \"Chapter one\"\n");
+        new ConfigLoader().load(card, "pdf-a4", "a4");
     }
 }

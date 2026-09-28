@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    A one-card book that ports table.html: the data in content/paperband.yaml,
+    the markup built from it in content/01-map.md, the look in styles/map.css.
+
+    Not part of the Paperband reactor. Build it with the plugin installed
+    locally (mvn install at the repo root first):
+
+        mvn package        # target/effectiveness-map.pdf and target/site/
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>dev.noregressions.paperband.examples</groupId>
+    <artifactId>effectiveness-map</artifactId>
+    <version>1</version>
+    <packaging>pom</packaging>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>dev.noregressions.paperband</groupId>
+                <artifactId>paperband-maven-plugin</artifactId>
+                <version>0.1.2</version>
+                <executions>
+                    <!-- No <input> or <content>: the book is at src/main/paperband -->
+                    <execution>
+                        <id>pdf</id>
+                        <phase>package</phase>
+                        <goals><goal>build</goal></goals>
+                        <configuration>
+                            <output>${project.build.directory}/effectiveness-map.pdf</output>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>site</id>
+                        <phase>package</phase>
+                        <goals><goal>site</goal></goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/site</outputDirectory>
+                            <clean>true</clean>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

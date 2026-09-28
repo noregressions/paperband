@@ -1,0 +1,12 @@
+title: "HeroDevs Content Effectiveness Map"
+subtitle: "Which content types work best for different goals and where to publish them"
+
+# Thirteen columns want the long edge of the sheet.
+page:
+  size: a4
+  orientation: landscape
+  margins: { top: 10, right: 10, bottom: 10, left: 10 }
+  measure: none              # the map is wide by nature: use the whole sheet
+
+css:
+  - styles/map.css

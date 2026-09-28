@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Kitchen sink: a small book that uses every major Paperband feature once,
+    each marked with a comment or a line of text naming the guide card that
+    explains it. See README.md for the feature-to-file map.
+
+    Not part of the Paperband reactor. Build it with the plugin installed
+    locally (mvn install at the repo root first):
+
+        mvn package        # target/kitchen-sink.pdf and target/site/
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>dev.noregressions.paperband.examples</groupId>
+    <artifactId>kitchen-sink</artifactId>
+    <version>1</version>
+    <!-- pom packaging: nothing to compile, the book is the only output.
+         https://noregressions.github.io/paperband/cards/place-a-book.html -->
+    <packaging>pom</packaging>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>dev.noregressions.paperband</groupId>
+                <artifactId>paperband-maven-plugin</artifactId>
+                <version>0.1.2</version>
+                <executions>
+                    <!-- No <input> or <content>: the book is at the conventional
+                         src/main/paperband, cards in content/.
+                         https://noregressions.github.io/paperband/cards/start-a-new-book.html -->
+                    <execution>
+                        <id>pdf</id>
+                        <phase>package</phase>
+                        <goals><goal>build</goal></goals>
+                        <configuration>
+                            <output>${project.build.directory}/kitchen-sink.pdf</output>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>site</id>
+                        <phase>package</phase>
+                        <goals><goal>site</goal></goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/site</outputDirectory>
+                            <clean>true</clean>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

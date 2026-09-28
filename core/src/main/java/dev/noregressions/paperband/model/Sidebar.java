@@ -26,10 +26,20 @@ package dev.noregressions.paperband.model;
  *                         is a wall of links, so it behaves like a table of
  *                         contents that opens what you need.
  */
-public record Sidebar(boolean enabled, boolean collapsed, boolean sectionsCollapsed) {
+public record Sidebar(boolean enabled, boolean collapsed, boolean sectionsCollapsed, boolean declared) {
+
+    /**
+     * A declared sidebar setting. {@code declared} distinguishes a book that
+     * says {@code sidebar: false} from one that never mentions a sidebar: the
+     * site treats both as "no sidebar", but the emitHtml file's screen-only
+     * navigation is on by default and is turned off only by an explicit false.
+     */
+    public Sidebar(boolean enabled, boolean collapsed, boolean sectionsCollapsed) {
+        this(enabled, collapsed, sectionsCollapsed, true);
+    }
 
     /** No sidebar — what a book that never mentions one gets. */
-    public static final Sidebar NONE = new Sidebar(false, false, true);
+    public static final Sidebar NONE = new Sidebar(false, false, true, false);
 
     /** A sidebar with the default open/closed behaviour — the {@code sidebar: true} shorthand. */
     public static Sidebar on() {

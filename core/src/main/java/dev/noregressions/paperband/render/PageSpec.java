@@ -43,6 +43,22 @@ public record PageSpec(PageSize size, Margins margins, Orientation orientation) 
     }
 
     /**
+     * PowerPoint's 16:9 slide, with zero page margins.
+     *
+     * <p>Zero for the same reason {@link #a5()} is zero: Chromium's
+     * {@code Page.pdf()} margins override any {@code @page} margin CSS, and a
+     * slide is a full-bleed design whose ground has to reach the trim edge. The
+     * deck theme supplies its own inset, sized against
+     * {@code --pw-page-margin-*} so it still looks right if a book sets one.
+     */
+    public static PageSpec slide16x9() {
+        return new PageSpec(
+                PageSize.SLIDE_16X9,
+                Margins.uniform(0, Unit.MM),
+                Orientation.PORTRAIT);
+    }
+
+    /**
      * A compact tech-book trim — 7.5&times;9.25in (190.5&times;235mm) — the
      * size found on Packt Publishing's printed paperbacks (confirmed against
      * two Packt titles' listed dimensions: 23.5&times;19.1cm). Noticeably
@@ -61,7 +77,7 @@ public record PageSpec(PageSize size, Margins margins, Orientation orientation) 
 
     /**
      * Resolve a page-size slug ({@code a4}, {@code a5},
-     * {@code letter}, {@code 6x9}, {@code packt} — case-insensitive) to its factory preset.
+     * {@code letter}, {@code 6x9}, {@code packt}, {@code 16x9} — case-insensitive) to its factory preset.
      * Shared by {@code ConfigLoader} (to seed the base a {@code page:} yaml
      * override layers on top of) and the Maven plugin's {@code <pageSize>}
      * parameter, so both sides agree
@@ -75,25 +91,47 @@ public record PageSpec(PageSize size, Margins margins, Orientation orientation) 
             case "letter" -> letter();
             case "6x9"    -> booklet6x9();
             case "packt", "7.5x9.25" -> packt();
+            case "16x9", "slide" -> slide16x9();
             default -> throw new IllegalArgumentException("Unknown page size slug: " + slug);
         };
     }
 
     /**
-     * The printable content-box height in millimetres: the resolved page's
-     * vertical dimension (width/height swap under {@link Orientation#LANDSCAPE},
-     * matching how {@code Page.pdf()}'s {@code setLandscape} rotates the page)
-     * minus top and bottom margins.
+     * The sheet's size named the way a book would write it: the slug
+     * {@link #forSizeName} parses back ({@code a4}, {@code 16x9}, …), or the
+     * dimensions themselves ({@code 200x150mm}) for a size that matches no
+     * preset.
      *
-     * <p>This is the single source of truth a theme's CSS should reference
-     * (via the {@code --pw-content-height} custom property {@code LayoutEngine}
-     * stamps onto {@code <html>}) instead of hardcoding a full-page height —
-     * a theme that assumes zero margins by hardcoding e.g. {@code height: 209mm}
-     * for a full-bleed A5 divider/cover page silently overflows onto a second
-     * page the moment a book's {@code vars.page.margins} adds real top/bottom
-     * margins on top of that theme's own internal padding, since the actual
-     * printable area shrank but the CSS didn't know to shrink with it.
+     * <p>Deliberately the inverse of {@link #forSizeName}, and for
+     * diagnostics only. The size a build renders at is not always the one its
+     * caller named — a book's own {@code page.size:} wins over a tool's
+     * page-size parameter — so a log line that echoes the parameter tells a
+     * 16:9 deck it is A4. Reporting the resolved sheet is the whole point.
      */
+    public String sizeLabel() {
+        // Value comparison, not slug bookkeeping: PageSize is a record, so a
+        // longhand {width, height, unit} map that lands on a preset's exact
+        // dimensions is that preset, and gets named like one.
+        if (size.equals(PageSize.A4))     return "a4";
+        if (size.equals(PageSize.A5))     return "a5";
+        if (size.equals(PageSize.LETTER)) return "letter";
+        if (size.equals(PageSize.LEGAL))  return "legal";
+        if (size.equals(PageSize.SLIDE_16X9)) return "16x9";
+        if (size.equals(PageSize.of(6, 9, Unit.INCH))) return "6x9";
+        if (size.equals(PageSize.of(7.5, 9.25, Unit.INCH))) return "packt";
+        return trimZeros(size.width()) + "x" + trimZeros(size.height())
+                + switch (size.unit()) {
+                    case MM -> "mm";
+                    case INCH -> "in";
+                    case POINT -> "pt";
+                };
+    }
+
+    /** 210.0 reads as 210; 13.333 stays 13.333. */
+    private static String trimZeros(double v) {
+        return v == Math.rint(v) ? String.valueOf((long) v) : String.valueOf(v);
+    }
+
     /**
      * The page margins in millimetres, in CSS shorthand order (top, right,
      * bottom, left).
@@ -127,6 +165,21 @@ public record PageSpec(PageSize size, Margins margins, Orientation orientation) 
         };
     }
 
+    /**
+     * The printable content-box height in millimetres: the resolved page's
+     * vertical dimension (width/height swap under {@link Orientation#LANDSCAPE},
+     * matching how {@code Page.pdf()}'s {@code setLandscape} rotates the page)
+     * minus top and bottom margins.
+     *
+     * <p>This is the single source of truth a theme's CSS should reference
+     * (via the {@code --pw-content-height} custom property {@code LayoutEngine}
+     * stamps onto {@code <html>}) instead of hardcoding a full-page height —
+     * a theme that assumes zero margins by hardcoding e.g. {@code height: 209mm}
+     * for a full-bleed A5 divider/cover page silently overflows onto a second
+     * page the moment a book's {@code vars.page.margins} adds real top/bottom
+     * margins on top of that theme's own internal padding, since the actual
+     * printable area shrank but the CSS didn't know to shrink with it.
+     */
     public double contentHeightMm() {
         double pageHeightMm = orientation() == Orientation.LANDSCAPE
                 ? size().unit().toMillimetres(size().width())

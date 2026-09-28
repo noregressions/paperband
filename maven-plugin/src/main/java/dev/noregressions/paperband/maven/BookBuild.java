@@ -209,6 +209,7 @@ final class BookBuild {
                 ? new LayoutEngine(ctx.book().bookRoot(), layoutsDir, theme)
                 : new LayoutEngine(ctx.book().bookRoot(), theme);
         layout.setExtraCss(stylesheets);
+        layout.setIconsDir(iconsDir(ctx.book().bookRoot()));
         String html = layoutOverride != null
                 ? layout.render(card, ctx, layoutOverride)
                 : layout.render(card, ctx);
@@ -221,10 +222,14 @@ final class BookBuild {
 
         ensureParentDir(output);
         renderer.render(new HtmlInput(html, baseUri, ctx.pageSpec(), metadata), output);
-        applyWatermark(ctx);
+        // Same reason as the book path: the watermark is a PDFBox pass over
+        // `output`, so a non-PDF renderer's output must not reach it.
+        if (renderer.producesPdf()) {
+            applyWatermark(ctx);
+        }
 
         log.info("Built " + input + " -> " + output
-                + " (renderer=" + renderer.name() + describeGeometry()
+                + " (renderer=" + renderer.name() + describeGeometry(ctx.pageSpec())
                 + ", blocks=" + card.blocks().size() + ")");
     }
 
@@ -345,6 +350,7 @@ final class BookBuild {
                 ? new LayoutEngine(bookCtx.book().bookRoot(), layoutsDir, theme)
                 : new LayoutEngine(bookCtx.book().bookRoot(), theme);
         layout.setExtraCss(stylesheets);
+        layout.setIconsDir(iconsDir(bookCtx.book().bookRoot()));
         if (editionModel != null) layout.setEdition(editionModel);
         layout.setTocAt(tocCardIndex);
         layout.setPagesAt(pages);
@@ -356,7 +362,8 @@ final class BookBuild {
         // is on the site's landing page — same file, same mechanism, and the
         // markdown branches on `output` where the two want different words.
         layout.setSectionBodies(SectionBodies.render(
-                bookCtx, layoutsDir, includeProviderConfig, cards, "print", target));
+                bookCtx, layoutsDir, includeProviderConfig, cards, "print", target,
+                blockTemplates, log));
         // Chapter numbers are derived from book order, so a number written into
         // a cross-reference label is a copy, and copies drift. Checked here,
         // before renderBook lets CardLinks rewrite the `card:` hrefs the check
@@ -393,6 +400,25 @@ final class BookBuild {
         ensureParentDir(output);
         renderer.render(new HtmlInput(html, baseUri, sheet, metadata, footer, header),
                 output);
+
+        // Everything below reopens `output` with PDFBox. A renderer that
+        // wrote something else (the pptx renderer, say) has no PDF to
+        // post-process, and pointing PDFBox at its output would fail the
+        // build after a successful render — the most confusing place to fail.
+        // The page-count check further down is deliberately outside this
+        // guard: it measures the DOM, not the PDF, so a slide deck still gets
+        // its per-card budget enforced.
+        if (!renderer.producesPdf()) {
+            log.info("Renderer '" + renderer.name() + "' does not produce a PDF;"
+                    + " skipping the PDF post-processing passes"
+                    + " (page references, cover splice, watermark, bookmarks)");
+            new PageChecks(log, reportPages, maxPagesPerCard).run(cards, html, baseUri, bookCtx);
+            log.info("Built book " + bookRoot + " -> " + output
+                    + " (renderer=" + renderer.name() + describeGeometry(sheet)
+                    + ", cards=" + cards.size()
+                    + ", blocks=" + totalBlocks + ")");
+            return;
+        }
 
         // Two-pass page numbering: a printed TOC or index renders its page
         // numbers as placeholders (the layout can't know them — Chromium
@@ -437,7 +463,7 @@ final class BookBuild {
         applyBookmarks(bookCtx, layout.outline());
 
         log.info("Built book " + bookRoot + " -> " + output
-                + " (renderer=" + renderer.name() + describeGeometry()
+                + " (renderer=" + renderer.name() + describeGeometry(sheet)
                 + ", cards=" + cards.size()
                 + ", blocks=" + totalBlocks + ")");
 
@@ -790,15 +816,30 @@ final class BookBuild {
         return bookDeclaration == null ? Map.of() : bookDeclaration.declaredVars();
     }
 
-    /** The geometry half of the "Built ..." line, so a full-bleed build is visible in the log. */
-    private String describeGeometry() {
+    /**
+     * The geometry half of the "Built …" line, read off the sheet that was
+     * actually rendered rather than off {@link #pageSize}. The parameter is
+     * only the base a book's own {@code page.size:} layers over, so echoing it
+     * told the guide's 16:9 deck it had been built at A4.
+     *
+     * <p>{@code margins=} stays the parameter as written, and still appears
+     * only when a caller passed {@code <margins>} — there it is an echo of the
+     * request (so a full-bleed build is visible in the log) rather than a
+     * claim about the sheet.
+     */
+    private String describeGeometry(PageSpec sheet) {
         return ", target=" + target
-                + ", size=" + pageSize
+                + ", size=" + sheet.sizeLabel()
                 + (marginsLabel == null ? "" : ", margins=" + marginsLabel);
     }
 
     private static void ensureParentDir(Path file) throws Exception {
         Path parent = file.toAbsolutePath().getParent();
         if (parent != null) Files.createDirectories(parent);
+    }
+
+    /** The book's own icons: {@code ${home}/icons}, or {@code <bookRoot>/icons} with no home. */
+    private Path iconsDir(Path bookRoot) {
+        return home != null ? home.resolve("icons") : bookRoot == null ? null : bookRoot.resolve("icons");
     }
 }

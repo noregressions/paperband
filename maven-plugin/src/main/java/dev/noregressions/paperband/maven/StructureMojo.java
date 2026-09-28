@@ -114,7 +114,9 @@ public class StructureMojo extends AbstractPaperbandMojo {
                     ? plannedBook()
                     : BookSource.walk(root, target, getLog()), root);
         } else if (contentRoot != null) {
-            text += describeBook(BookSource.walkContent(contentRoot, target, getLog()), null);
+            // POM-decided content is the pinned root, exactly as build pins it,
+            // so ids and the book config resolve the same way in both goals.
+            text += describeBook(BookSource.walkContent(contentRoot, target, getLog()), contentRoot);
         } else {
             Path in = legacyConventional != null ? legacyConventional : resolve(input);
             if (Files.isRegularFile(in)) {

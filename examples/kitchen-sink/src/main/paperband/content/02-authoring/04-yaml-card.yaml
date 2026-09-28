@@ -1,0 +1,8 @@
+# A YAML card: transpiled to Markdown through the book's cardSchema.
+# The fields map to blocks in the order the schema lists them.
+id: yaml-card
+title: "A YAML Card"
+oneliner: "Structured data written as YAML, rendered through the book's cardSchema."
+summary: "This card was a YAML file. Each field became a block, headed as the schema says."
+steps: "Declare `cardSchema:` in the book's paperband.yaml, then write cards as `.yaml` files."
+caveat: "A `.yaml` file is a card only when the book declares a `cardSchema:`."

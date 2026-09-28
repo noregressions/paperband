@@ -1,0 +1,41 @@
+# The book's own configuration: what the book is. Book scope, so it is read
+# from this file only.
+# https://noregressions.github.io/paperband/cards/book-configuration.html
+title: "Kitchen Sink"
+theme: workshop                    # a bundled theme
+css:                               # the book's CSS chain, applied before the theme
+  - styles/book.css
+sidebar: true                      # the static site's navigation sidebar
+
+# A categorical axis. Cards join a value with `level:` in their frontmatter;
+# each value gets a divider page, a site landing page and a colour.
+# https://noregressions.github.io/paperband/cards/book-configuration.html#axes
+axes:
+  - name: level
+    title: "Level"
+    values:
+      - { id: beginner, label: "Beginner", color: "#2f6d44" }
+      - { id: advanced, label: "Advanced", color: "#b0561a" }
+
+# YAML cards: a .yaml file under content/ becomes a card through this schema.
+cardSchema:
+  frontmatter: [id, title, oneliner, level]
+  sections:
+    - field: summary
+    - field: steps
+      heading: "How to Fix"
+    - field: caveat
+      heading: "Watch Out"
+
+vars:
+  subtitle: "Every major feature, used once"
+  author: "The Paperband Team"
+  product: "Paperband"             # used by {{ vars.product }} in 02-authoring/02-templating.md
+  show_extras: true                # gates a section with {% if vars.show_extras %}
+  toc: true                        # printed table of contents
+  index: auto                      # back-of-book index, frontmatter terms + extracted terms
+  # A watermark on every page of the PDF and as an overlay on the site.
+  # https://noregressions.github.io/paperband/cards/watermarks.html
+  watermark:
+    text: "SAMPLE"
+    opacity: 0.06

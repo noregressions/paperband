@@ -1,0 +1,19 @@
+# Pages that moved, as "old-path new-path", relative to the site root.
+# .github/workflows/docs.yml writes a forwarding page at each old path, so
+# links made to the old address keep working. Add a line whenever a card's
+# id or a section's id changes.
+
+# Card ids renamed to match their titles (0.1.3).
+cards/quickstart.html        cards/before-you-start.html
+cards/java-first.html        cards/start-a-new-book.html
+cards/docs-anywhere.html     cards/use-existing-markdown.html
+cards/conditionals.html      cards/vars-and-conditionals.html
+cards/data-tables.html       cards/tables-from-data.html
+cards/book-config.html       cards/book-configuration.html
+cards/config-cascade.html    cards/configuration-cascade.html
+cards/config-reference.html  cards/configuration-reference.html
+cards/frontmatter.html       cards/frontmatter-reference.html
+cards/extending.html         cards/extending-paperband.html
+
+# Getting Started became the Tutorial section.
+section-getting-started.html section-tutorial.html
