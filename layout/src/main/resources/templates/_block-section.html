@@ -1,7 +1,7 @@
 {# Renders one card block and recurses into its nested children (a deeper
    heading found while this block's section was open -- see Block's javadoc
    in core for the nesting rule). Expects: block (model: id,
-   classes, classAttr, attributes, directives, heading, level, html, children), card (in scope via
+   classes, classAttr, attributes, directives, directiveAttrs, heading, level, html, children), card (in scope via
    inheritance from the caller -- needed for the verify:false "check" guard
    below).
 
@@ -11,17 +11,17 @@
    as consistently as the top-level call does), so there's no self-extends
    hazard the way there is with {% extends %} + {{ parent() }}. #}
 {% if not (card.frontmatter.verify == false and block.classes contains "check") %}
-<section class="block{% if block.classAttr %} {{ block.classAttr }}{% endif %}"{% if block.anchor %} id="{{ block.anchor }}"{% endif %}{% for a in block.attributes %} {{ a.key }}="{{ a.value }}"{% endfor %}{% for d in block.directives %} data-paperband-{{ d.key }}="{{ d.value }}"{% endfor %}>
+<section class="block{% if block.classAttr %} {{ block.classAttr }}{% endif %}"{% if block.anchor %} id="{{ block.anchor }}"{% endif %}{% for a in block.attributes %} {{ a.key }}="{{ a.value }}"{% endfor %}{{ block.directiveAttrs | raw }}>
   {% if block.heading %}
     {# A level-1 block is an h1 the author wrote after the card's title one --
        see CardLoader. Without this branch it fell through to <h6>, so a
        top-level step rendered smaller than its own subsections. #}
-    {% if block.level == 1 %}<h1>{{ block.heading }}</h1>
-    {% elseif block.level == 2 %}<h2>{{ block.heading }}</h2>
-    {% elseif block.level == 3 %}<h3>{{ block.heading }}</h3>
-    {% elseif block.level == 4 %}<h4>{{ block.heading }}</h4>
-    {% elseif block.level == 5 %}<h5>{{ block.heading }}</h5>
-    {% else %}<h6>{{ block.heading }}</h6>
+    {% if block.level == 1 %}<h1{{ block.directiveAttrs | raw }}>{{ block.heading }}</h1>
+    {% elseif block.level == 2 %}<h2{{ block.directiveAttrs | raw }}>{{ block.heading }}</h2>
+    {% elseif block.level == 3 %}<h3{{ block.directiveAttrs | raw }}>{{ block.heading }}</h3>
+    {% elseif block.level == 4 %}<h4{{ block.directiveAttrs | raw }}>{{ block.heading }}</h4>
+    {% elseif block.level == 5 %}<h5{{ block.directiveAttrs | raw }}>{{ block.heading }}</h5>
+    {% else %}<h6{{ block.directiveAttrs | raw }}>{{ block.heading }}</h6>
     {% endif %}
   {% endif %}
   {{ block.html | raw }}

@@ -1395,6 +1395,7 @@ class LayoutEngineTest {
             String html = new LayoutEngine().render(card, createMinimalContext());
 
             assertTrue(html.contains("<section class=\"block step\" id=\"build-it\" data-paperband-step=\"2\">"), html);
+            assertTrue(html.contains("<h2 data-paperband-step=\"2\">Build it</h2>"), html);
         }
     }
 

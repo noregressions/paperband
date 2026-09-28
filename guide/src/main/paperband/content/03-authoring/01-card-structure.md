@@ -68,14 +68,17 @@ so the example numbers 1, 2, then 1. Add, remove or reorder steps and the number
 It works on anything that takes braces: a heading, a paragraph, a list item or a fence.
 Items without `{!step}` in between don't count and don't reset the sequence.
 
-The number is written as `data-paperband-step`, on the block's `<section>` for a heading
-and on the element itself for anything else. Paperband doesn't add "Step 1" to the text;
-the output decides how to show it. A template reads `block.directives.step`, and CSS can
-use the attribute:
+The number is written as `data-paperband-step`: on a stepped heading and its block's
+`<section>`, or on the element itself for anything else. Paperband doesn't add "Step 1" to
+the text; the output decides how to show it. A template reads `block.directives.step`,
+and CSS can use the attribute:
 
 ```css
-section[data-paperband-step] > h3::before { content: "Step " attr(data-paperband-step) " — "; }
+h3[data-paperband-step]::before { content: "Step " attr(data-paperband-step) " — "; }
 ```
+
+`attr()` reads the element its `::before` belongs to, which is why the heading carries the
+number too: `section[data-paperband-step] > h3::before` would show an empty value.
 
 An unknown instruction fails the build, so a typo such as `{!stpe}` can't be silently
 ignored. `{!step}` takes no value: the position is the number. The card's title heading

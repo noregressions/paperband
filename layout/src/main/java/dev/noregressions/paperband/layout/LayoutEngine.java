@@ -2736,6 +2736,11 @@ public final class LayoutEngine {
         return out.isEmpty() ? null : out;
     }
 
+    private static String escapeAttr(String value) {
+        return value.replace("&", "&amp;").replace("\"", "&quot;")
+                .replace("<", "&lt;").replace(">", "&gt;");
+    }
+
     private static Map<String, Object> blockModel(Block b) {
         Map<String, Object> bm = new HashMap<>();
         bm.put("kind", b.kind().name());
@@ -2753,6 +2758,13 @@ public final class LayoutEngine {
         // Paperband directives ({!step}) with their computed values:
         // block.directives.step is the block's number among its siblings.
         bm.put("directives", b.directives());
+        // The same directives as ready-escaped attribute text, written on both
+        // the <section> and its heading: CSS attr() reads the element its
+        // ::before belongs to, so h2::before can only show a number the h2 has.
+        StringBuilder directiveAttrs = new StringBuilder();
+        b.directives().forEach((name, value) -> directiveAttrs.append(" data-paperband-")
+                .append(name).append("=\"").append(escapeAttr(value)).append('"'));
+        bm.put("directiveAttrs", directiveAttrs.toString());
         bm.put("heading", b.heading());
         bm.put("level", b.level());
         bm.put("html", b.html());

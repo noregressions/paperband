@@ -208,17 +208,20 @@ final class SectionBodies {
                 sb.append(' ').append(a.getKey()).append("=\"")
                         .append(escape(a.getValue()).replace("\"", "&quot;")).append('"');
             }
+            // Directives go on the section and its heading alike, as in
+            // _block-section.html: CSS attr() can only read the heading's own.
+            StringBuilder directiveAttrs = new StringBuilder();
             for (Map.Entry<String, String> d : b.directives().entrySet()) {
-                sb.append(" data-paperband-").append(d.getKey()).append("=\"")
+                directiveAttrs.append(" data-paperband-").append(d.getKey()).append("=\"")
                         .append(escape(d.getValue()).replace("\"", "&quot;")).append('"');
             }
-            sb.append(">\n");
+            sb.append(directiveAttrs).append(">\n");
             if (b.heading() != null) {
                 // h1 is the section's own title -- the site hero and the PDF
                 // divider each print it -- so a body's headings start at h2
                 // however the markdown numbered them.
                 int level = Math.max(2, b.level());
-                sb.append("<h").append(level).append('>').append(escape(b.heading()))
+                sb.append("<h").append(level).append(directiveAttrs).append('>').append(escape(b.heading()))
                         .append("</h").append(level).append(">\n");
             }
             if (b.html() != null) sb.append(b.html()).append('\n');
