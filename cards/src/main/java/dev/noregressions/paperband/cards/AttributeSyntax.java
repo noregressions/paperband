@@ -26,8 +26,17 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Paperband's attribute-list syntax — {@code {.class #id key=value}} — as a
- * commonmark-java post-processor plus the attribute provider that renders it.
+ * Paperband's attribute-list syntax — {@code {.class #id key=value !directive}}
+ * — as a commonmark-java post-processor plus the attribute provider that
+ * renders it.
+ *
+ * <p>A {@code !name} token is a <em>directive</em>: an instruction to
+ * paperband rather than markup for the page. It attaches by the same rules as
+ * an attribute, but never becomes a class or an attribute of its own; what it
+ * does is up to the pass that handles it ({@link Steps} for {@code !step}),
+ * and whatever that pass produces renders as {@code data-paperband-<name>}.
+ * An unknown name fails the build, so a misspelt instruction can't be
+ * silently ignored.
  *
  * <p>CommonMark has no attribute syntax, so this is ours to define. It follows
  * the Pandoc spelling authors already write, with one deliberate difference
@@ -72,7 +81,19 @@ final class AttributeSyntax implements PostProcessor {
             "([.#]" + NAME + ")=(\\S+)"                                // .key=value: a mistake
             + "|\\.([-\\p{L}\\p{N}_]+)"                                // .class
             + "|#([-\\p{L}\\p{N}_:.]+)"                                 // #id
-            + "|(" + NAME + ")=(?:\"([^\"]*)\"|'([^']*)'|([^\\s\"']+))"); // key=value
+            + "|(" + NAME + ")=(?:\"([^\"]*)\"|'([^']*)'|([^\\s\"']+))" // key=value
+            + "|!([a-z][a-z0-9-]*)(?:=(\\S+))?");                     // !directive
+
+    /**
+     * Directives paperband knows, and whether each takes a value. A directive
+     * is stored among a node's attributes under {@code "!" + name}, which no
+     * real attribute name can start with, and split back out on render.
+     */
+    private static final Map<String, Boolean> DIRECTIVES = Map.of(
+            "step", false);     // numbered by position -- see Steps
+
+    /** The prefix a directive is rendered with, on whatever element carries it. */
+    static final String DIRECTIVE_ATTR_PREFIX = "data-paperband-";
 
     private final Map<Node, Map<String, String>> attributes = new IdentityHashMap<>();
 
@@ -116,13 +137,35 @@ final class AttributeSyntax implements PostProcessor {
             // the <code> keeps language-x to itself.
             if (node instanceof FencedCodeBlock && !tagName.equals("pre")) return;
             for (Map.Entry<String, String> e : mine.entrySet()) {
-                if (e.getKey().equals("class") && attrs.containsKey("class")) {
+                if (e.getKey().startsWith("!")) {
+                    // A heading's directives describe its section, and render
+                    // there (see Sections); everything else carries its own.
+                    if (!(node instanceof Heading)) {
+                        attrs.put(DIRECTIVE_ATTR_PREFIX + e.getKey().substring(1), e.getValue());
+                    }
+                } else if (e.getKey().equals("class") && attrs.containsKey("class")) {
                     attrs.put("class", attrs.get("class") + " " + e.getValue());
                 } else {
                     attrs.put(e.getKey(), e.getValue());
                 }
             }
         };
+    }
+
+    /** The directives on {@code node}, by name without the {@code !}; empty when none. */
+    Map<String, String> directives(Node node) {
+        Map<String, String> mine = attributes.get(node);
+        if (mine == null) return Map.of();
+        Map<String, String> out = new LinkedHashMap<>();
+        mine.forEach((k, v) -> {
+            if (k.startsWith("!")) out.put(k.substring(1), v);
+        });
+        return out;
+    }
+
+    /** Set directive {@code name}'s value on {@code node}, which must already carry it. */
+    void setDirective(Node node, String name, String value) {
+        attributes.get(node).put("!" + name, value);
     }
 
     // ----------- placement -----------
@@ -193,7 +236,9 @@ final class AttributeSyntax implements PostProcessor {
      * should stay as text.
      *
      * @throws IllegalArgumentException for {@code .name=value}, which is
-     *         almost certainly {@code name=value} or {@code .name name=value}
+     *         almost certainly {@code name=value} or {@code .name name=value};
+     *         and for a directive paperband doesn't know, or given a value it
+     *         doesn't take
      */
     static Map<String, String> parse(String inner) {
         String s = inner.strip();
@@ -220,11 +265,24 @@ final class AttributeSyntax implements PostProcessor {
                 classes.add(t.group(3));
             } else if (t.group(4) != null) {
                 out.put("id", t.group(4));
-            } else {
+            } else if (t.group(5) != null) {
                 String value = t.group(6) != null ? t.group(6)
                         : t.group(7) != null ? t.group(7) : t.group(8);
                 if (t.group(5).equals("class")) classes.add(value);
                 else out.put(t.group(5), value);
+            } else {
+                String name = t.group(9);
+                Boolean takesValue = DIRECTIVES.get(name);
+                if (takesValue == null) {
+                    throw new IllegalArgumentException("unknown directive '!" + name
+                            + "'. Known directives: " + DIRECTIVES.keySet().stream().sorted()
+                            .map(d -> "!" + d).collect(java.util.stream.Collectors.joining(", ")) + ".");
+                }
+                if (!takesValue && t.group(10) != null) {
+                    throw new IllegalArgumentException("directive '!" + name
+                            + "' takes no value (got '" + t.group(10) + "'). Write {!" + name + "}.");
+                }
+                out.put("!" + name, t.group(10) == null ? "" : t.group(10));
             }
             pos = end;
         }

@@ -2750,6 +2750,9 @@ public final class LayoutEngine {
         // Heading attributes beyond class/id ({step=1}), for templates to
         // select on (block.attributes.step) and to write back onto the section.
         bm.put("attributes", b.attributes());
+        // Paperband directives ({!step}) with their computed values:
+        // block.directives.step is the block's number among its siblings.
+        bm.put("directives", b.directives());
         bm.put("heading", b.heading());
         bm.put("level", b.level());
         bm.put("html", b.html());

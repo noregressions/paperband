@@ -82,14 +82,18 @@ final class Sections implements PostProcessor {
     static final String TITLE_ATTR = "data-paperband-title";
 
     private final boolean titleWanted;
+    private final AttributeSyntax syntax;
     private Heading title;
 
     /**
      * @param titleWanted true when the frontmatter names no title, so the first
      *                    top-level {@code h1} is the title rather than a section
+     * @param syntax      where a heading's directives are kept; they render on
+     *                    its section
      */
-    Sections(boolean titleWanted) {
+    Sections(boolean titleWanted, AttributeSyntax syntax) {
         this.titleWanted = titleWanted;
+        this.syntax = syntax;
     }
 
     @Override
@@ -131,9 +135,26 @@ final class Sections implements PostProcessor {
         return document;
     }
 
+    /** A heading's text, for messages. */
+    static String text(Heading heading) {
+        StringBuilder sb = new StringBuilder();
+        heading.accept(new org.commonmark.node.AbstractVisitor() {
+            @Override
+            public void visit(org.commonmark.node.Text t) {
+                sb.append(t.getLiteral());
+            }
+
+            @Override
+            public void visit(org.commonmark.node.Code c) {
+                sb.append(c.getLiteral());
+            }
+        });
+        return sb.toString().strip();
+    }
+
     /** Renders each {@link Section} as a marked {@code <section>}. */
     HtmlNodeRendererFactory renderer() {
-        return SectionRenderer::new;
+        return context -> new SectionRenderer(context, syntax);
     }
 
     /** Marks the title heading, when there is one. */
@@ -145,9 +166,11 @@ final class Sections implements PostProcessor {
 
     private static final class SectionRenderer implements NodeRenderer {
         private final HtmlNodeRendererContext context;
+        private final AttributeSyntax syntax;
 
-        SectionRenderer(HtmlNodeRendererContext context) {
+        SectionRenderer(HtmlNodeRendererContext context, AttributeSyntax syntax) {
             this.context = context;
+            this.syntax = syntax;
         }
 
         @Override
@@ -160,7 +183,13 @@ final class Sections implements PostProcessor {
             Section section = (Section) node;
             HtmlWriter html = context.getWriter();
             html.line();
-            html.tag("section", Map.of(SECTION_ATTR, String.valueOf(section.level())));
+            Map<String, String> attrs = new java.util.LinkedHashMap<>();
+            attrs.put(SECTION_ATTR, String.valueOf(section.level()));
+            // The heading's directives describe the section: {!step} numbers it
+            // among its siblings, so the number rides here, not on the <hN>.
+            syntax.directives(section.heading()).forEach((name, value) ->
+                    attrs.put(AttributeSyntax.DIRECTIVE_ATTR_PREFIX + name, value));
+            html.tag("section", attrs);
             html.line();
             for (Node child = section.getFirstChild(); child != null; child = child.getNext()) {
                 context.render(child);
@@ -205,26 +234,10 @@ final class Sections implements PostProcessor {
         void checkNotInside(Heading heading) {
             if (open.isEmpty()) return;
             throw new IllegalArgumentException("raw HTML <" + open.peekLast()
-                    + "> is still open where heading '" + text(heading) + "' starts. A heading"
+                    + "> is still open where heading '" + Sections.text(heading) + "' starts. A heading"
                     + " can't sit inside raw HTML, because it starts a section of its own: close"
                     + " the element before the heading, or put the heading's content inside the"
                     + " HTML instead.");
-        }
-
-        private static String text(Heading heading) {
-            StringBuilder sb = new StringBuilder();
-            heading.accept(new org.commonmark.node.AbstractVisitor() {
-                @Override
-                public void visit(org.commonmark.node.Text t) {
-                    sb.append(t.getLiteral());
-                }
-
-                @Override
-                public void visit(org.commonmark.node.Code c) {
-                    sb.append(c.getLiteral());
-                }
-            });
-            return sb.toString().strip();
         }
     }
 }

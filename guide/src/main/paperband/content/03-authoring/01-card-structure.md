@@ -43,8 +43,43 @@ Templates can read it as `block.attributes.step`, which is how a theme picks out
 step without matching on heading text. The name can't start with a dot: `{.step=1}`
 fails the build and tells you to write `{step=1}` or `{.step step=1}` instead. Every item
 in the braces needs a `.`, a `#` or an `=`, so braces in ordinary prose, such as
-`{step}` or `${home}`, are left as text. Presentational attributes such as `style` or `width` are stripped under the content
-policy, the same as anywhere else in a card.
+`{step}` or `${home}`, are left as text. Presentational attributes such as `style` or
+`width` are stripped under the content policy, the same as anywhere else in a card.
+
+## Numbered steps
+
+`{!step}` numbers something by where it sits. A `!` marks an instruction to paperband
+rather than markup for the page, so it never becomes a class or an attribute:
+
+```markdown
+## Install
+
+### Get it {!step}
+
+### Build it {!step}
+
+## Configure
+
+### Edit {!step}
+```
+
+The first stepped item under a parent is 1, the next is 2, and each parent starts again,
+so the example numbers 1, 2, then 1. Add, remove or reorder steps and the numbers follow.
+It works on anything that takes braces: a heading, a paragraph, a list item or a fence.
+Items without `{!step}` in between don't count and don't reset the sequence.
+
+The number is written as `data-paperband-step`, on the block's `<section>` for a heading
+and on the element itself for anything else. Paperband doesn't add "Step 1" to the text;
+the output decides how to show it. A template reads `block.directives.step`, and CSS can
+use the attribute:
+
+```css
+section[data-paperband-step] > h3::before { content: "Step " attr(data-paperband-step) " — "; }
+```
+
+An unknown instruction fails the build, so a typo such as `{!stpe}` can't be silently
+ignored. `{!step}` takes no value: the position is the number. The card's title heading
+can't carry one, because it names the card rather than starting a block.
 
 ## How to Fix
 

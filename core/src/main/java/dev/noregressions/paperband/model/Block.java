@@ -44,6 +44,10 @@ import java.util.Set;
  * @param attributes every other attribute the heading carried ({@code ## Heading {step=1}}), in source
  *                   order, keyed by name; class and id are excluded (they have their own components).
  *                   Rendered onto the block's {@code <section>} alongside its classes; never null, may be empty
+ * @param directives paperband instructions on the heading ({@code {!step}}), by name without the
+ *                   {@code !}, with the value their pass gave them -- {@code step} is the block's
+ *                   number among its siblings. Rendered as {@code data-paperband-<name>}; never
+ *                   null, may be empty
  */
 public record Block(
         Kind kind,
@@ -53,7 +57,8 @@ public record Block(
         int level,
         String html,
         List<Block> children,
-        Map<String, String> attributes
+        Map<String, String> attributes,
+        Map<String, String> directives
 ) {
 
     public Block {
@@ -63,12 +68,20 @@ public record Block(
         // wrote -- keep it, so the rendered attribute list reads the same way.
         attributes = attributes == null || attributes.isEmpty() ? Map.of()
                 : Collections.unmodifiableMap(new LinkedHashMap<>(attributes));
+        directives = directives == null || directives.isEmpty() ? Map.of()
+                : Collections.unmodifiableMap(new LinkedHashMap<>(directives));
+    }
+
+    /** A block with attributes but no directives. */
+    public Block(Kind kind, String id, Set<String> classes, String heading, int level,
+                 String html, List<Block> children, Map<String, String> attributes) {
+        this(kind, id, classes, heading, level, html, children, attributes, Map.of());
     }
 
     /** A block with no attributes beyond its class and id. */
     public Block(Kind kind, String id, Set<String> classes, String heading, int level,
                  String html, List<Block> children) {
-        this(kind, id, classes, heading, level, html, children, Map.of());
+        this(kind, id, classes, heading, level, html, children, Map.of(), Map.of());
     }
 
     public enum Kind { HEADING_SECTION, FENCED_DIV }

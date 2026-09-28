@@ -1385,6 +1385,17 @@ class LayoutEngineTest {
             assertTrue(html.contains("<section class=\"block step\" id=\"what-to-do-first\" step=\"1\""), html);
             assertTrue(html.contains("data-note=\"a&quot;b&lt;c\""), html);
         }
+
+        @Test
+        void should_render_directives_onto_section_as_data_attributes() {
+            Block block = new Block(Block.Kind.HEADING_SECTION, null, Set.of("step"),
+                    "Build it", 2, "<p>body</p>", List.of(), Map.of(), Map.of("step", "2"));
+            Card card = new Card("c", Path.of("c.md"), new Frontmatter(Map.of()), "C", List.of(block));
+
+            String html = new LayoutEngine().render(card, createMinimalContext());
+
+            assertTrue(html.contains("<section class=\"block step\" id=\"build-it\" data-paperband-step=\"2\">"), html);
+        }
     }
 
 

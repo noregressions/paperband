@@ -247,14 +247,16 @@ public final class CardLoader {
 
         // 2. Markdown → HTML via commonmark-java. The attribute syntax runs
         //    first, then Sections writes the heading structure into the tree
-        //    as explicit <section> nodes -- see Sections for the rule. Parser
+        //    as explicit <section> nodes -- see Sections for the rule -- and
+        //    Steps numbers {!step} among the siblings that structure made. Parser
         //    and renderer are built per parse because both post-processors
         //    keep per-document state (nodes by identity) until render; both
         //    are cheap to build. Heading ids appear only when the author
         //    wrote one: commonmark-java generates none of its own.
         String declaredTitle = fm.getString("title").orElse(null);
         AttributeSyntax attributeSyntax = new AttributeSyntax();
-        Sections sections = new Sections(declaredTitle == null || declaredTitle.isBlank());
+        Sections sections = new Sections(declaredTitle == null || declaredTitle.isBlank(),
+                attributeSyntax);
         List<org.commonmark.Extension> extensions = List.of(TablesExtension.create());
         String html;
         try {
@@ -262,6 +264,7 @@ public final class CardLoader {
                     .extensions(extensions)
                     .postProcessor(attributeSyntax)
                     .postProcessor(sections)
+                    .postProcessor(new Steps(attributeSyntax))
                     .build()
                     .parse(body);
             html = HtmlRenderer.builder()
@@ -504,6 +507,13 @@ public final class CardLoader {
     private Block sectionBlock(Path source, Element sectionEl, String[] titleOut) {
         OpenSection section = new OpenSection();
         section.level = Integer.parseInt(sectionEl.attr(Sections.SECTION_ATTR));
+        for (org.jsoup.nodes.Attribute a : sectionEl.attributes()) {
+            String key = a.getKey();
+            if (key.startsWith(AttributeSyntax.DIRECTIVE_ATTR_PREFIX) && !key.equals(Sections.SECTION_ATTR)) {
+                section.directives.put(key.substring(AttributeSyntax.DIRECTIVE_ATTR_PREFIX.length()),
+                        a.getValue());
+            }
+        }
         boolean headingSeen = false;
         for (Node child : sectionEl.childNodes()) {
             if (child instanceof Element el) {
@@ -613,6 +623,7 @@ public final class CardLoader {
         String id;
         Set<String> classes;
         Map<String, String> attributes;
+        final Map<String, String> directives = new LinkedHashMap<>();
         final StringBuilder html = new StringBuilder();
         final List<Block> children = new ArrayList<>();
     }
@@ -667,7 +678,8 @@ public final class CardLoader {
                 section.level,
                 section.html.toString(),
                 section.children,
-                section.attributes);
+                section.attributes,
+                section.directives);
     }
 
     /**

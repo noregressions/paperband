@@ -208,6 +208,10 @@ final class SectionBodies {
                 sb.append(' ').append(a.getKey()).append("=\"")
                         .append(escape(a.getValue()).replace("\"", "&quot;")).append('"');
             }
+            for (Map.Entry<String, String> d : b.directives().entrySet()) {
+                sb.append(" data-paperband-").append(d.getKey()).append("=\"")
+                        .append(escape(d.getValue()).replace("\"", "&quot;")).append('"');
+            }
             sb.append(">\n");
             if (b.heading() != null) {
                 // h1 is the section's own title -- the site hero and the PDF
