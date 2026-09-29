@@ -98,6 +98,7 @@ final class Sections implements PostProcessor {
 
     @Override
     public Node process(Node document) {
+        checkInlineHtml(document);
         Deque<Section> open = new ArrayDeque<>();
         RawHtml raw = new RawHtml();
         boolean wantTitle = titleWanted;
@@ -132,7 +133,73 @@ final class Sections implements PostProcessor {
             }
             node = next;
         }
+        String unclosed = raw.innermostOpen();
+        if (unclosed != null) {
+            throw new IllegalArgumentException("raw HTML <" + unclosed + "> is never closed."
+                    + " Raw HTML has to close every element it opens, or the rest of the card"
+                    + " ends up inside it.");
+        }
         return document;
+    }
+
+    /**
+     * The elements the HTML parser reopens after an unclosed one: HTML's
+     * "formatting elements". Any other unclosed inline tag is closed at the end
+     * of its paragraph, so it can't reach a section.
+     */
+    private static final Set<String> FORMATTING = Set.of(
+            "a", "b", "big", "code", "em", "font", "i", "nobr", "s", "small",
+            "strike", "strong", "tt", "u");
+
+    /**
+     * A formatting element in inline HTML has to close inside the block that
+     * opens it. An unclosed {@code <b>} in a paragraph doesn't stay there: the
+     * HTML parser reopens it at the next text it meets, which here is the line
+     * break before the next section, so every section after it would end up
+     * inside the {@code <b>} and stop being a block. Other unclosed inline tags
+     * -- {@code local://<image>} written as a placeholder, say -- close at the
+     * end of their paragraph and are left alone.
+     */
+    private static void checkInlineHtml(Node document) {
+        Map<Node, RawHtml> byBlock = new java.util.LinkedHashMap<>();
+        document.accept(new org.commonmark.node.AbstractVisitor() {
+            @Override
+            public void visit(org.commonmark.node.HtmlInline html) {
+                Node block = html.getParent();
+                while (block != null && !(block instanceof org.commonmark.node.Block)) block = block.getParent();
+                byBlock.computeIfAbsent(block, b -> new RawHtml()).track(html.getLiteral());
+            }
+        });
+        byBlock.forEach((block, raw) -> {
+            String unclosed = raw.firstOpenOf(FORMATTING);
+            if (unclosed == null) return;
+            throw new IllegalArgumentException("raw HTML <" + unclosed + "> in the "
+                    + describe(block) + " is never closed. Inline HTML has to close inside the"
+                    + " paragraph, heading or list item that opens it: write </" + unclosed
+                    + "> before it ends.");
+        });
+    }
+
+    /** "paragraph 'Some text…'" and the like, for messages. */
+    private static String describe(Node block) {
+        String kind = switch (block) {
+            case Heading h -> "heading";
+            case org.commonmark.node.Paragraph p -> "paragraph";
+            case null -> "card";
+            default -> block.getClass().getSimpleName().replaceAll("([a-z])([A-Z])", "$1 $2")
+                    .toLowerCase(java.util.Locale.ROOT);
+        };
+        if (block == null) return kind;
+        StringBuilder sb = new StringBuilder();
+        block.accept(new org.commonmark.node.AbstractVisitor() {
+            @Override
+            public void visit(org.commonmark.node.Text t) {
+                sb.append(t.getLiteral());
+            }
+        });
+        String text = sb.toString().replaceAll("\\s+", " ").strip();
+        if (text.isEmpty()) return kind;
+        return kind + " '" + (text.length() <= 40 ? text : text.substring(0, 39) + "…") + "'";
     }
 
     /** A heading's text, for messages. */
@@ -229,6 +296,20 @@ final class Sections implements PostProcessor {
                     while (!open.pop().equals(name)) { /* unwind */ }
                 }
             }
+        }
+
+        /** The element opened last and not yet closed, or null when everything is closed. */
+        String innermostOpen() {
+            return open.peek();
+        }
+
+        /** The outermost still-open element among {@code names}, or null when none is open. */
+        String firstOpenOf(Set<String> names) {
+            for (java.util.Iterator<String> it = open.descendingIterator(); it.hasNext(); ) {
+                String name = it.next();
+                if (names.contains(name)) return name;
+            }
+            return null;
         }
 
         void checkNotInside(Heading heading) {

@@ -128,6 +128,14 @@ starts a block, and a block can't begin inside an element that's still open. Clo
 element before the heading, or write the heading inside the HTML if it belongs there. See
 [Card Structure](card:card-structure#raw-html-and-the-content-policy).
 
+## The build says raw HTML in a paragraph is never closed
+
+The error reads `raw HTML <b> in the paragraph '…' is never closed`. An inline formatting
+tag such as `<b>`, `<em>` or `<a>` opened without its closing tag. Add the closing tag
+before the paragraph, heading or list item ends. If the text was meant literally, such as
+a `<placeholder>`, put it in backticks. See
+[Card Structure](card:card-structure#raw-html-and-the-content-policy).
+
 ## Every page of the PDF is smaller than expected
 
 Chromium scales the whole document down to fit its widest element, so one table or code

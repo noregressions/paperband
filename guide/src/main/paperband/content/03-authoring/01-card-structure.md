@@ -399,10 +399,16 @@ Markdown heading. A heading starts a block of its own, so it can't sit inside a 
 </div>
 ```
 
-That fails the build and names the open element and the heading. A whole `<table>`, a
-spliced `as="html"` fragment or an include snippet is ordinary content of whichever block
-it falls in. A heading written as HTML, such as `<h2>` in a fragment, is content too: it
-doesn't start a block.
+That fails the build and names the open element and the heading, and so does raw HTML
+still open at the end of the card. A whole `<table>`, a spliced `as="html"` fragment or an
+include snippet is ordinary content of whichever block it falls in. A heading written as
+HTML, such as `<h2>` in a fragment, is content too: it doesn't start a block.
+
+Inline HTML follows the same rule inside its paragraph, heading or list item. An unclosed
+`<b>`, `<i>`, `<em>`, `<strong>`, `<code>` or `<a>` fails the build, because the browser
+would carry it on into everything after it. Other unclosed inline tags end with their
+paragraph, so `local://<image>` written as a placeholder can't swallow anything, though
+it won't show either: put it in backticks to print it.
 
 The build enforces this with a content policy, declared through the `vars` cascade
 (book-wide in the root yaml, overridable per folder, or via the POM's `<vars>`):

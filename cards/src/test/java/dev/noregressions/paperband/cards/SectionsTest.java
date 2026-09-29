@@ -148,6 +148,41 @@ class SectionsTest {
         }
 
         @Test
+        void an_unclosed_formatting_tag_in_a_paragraph_fails_instead_of_swallowing_sections() {
+            CardParseException e = assertThrows(CardParseException.class,
+                    () -> blocks("## A\n\nsome <b> bold\n\n## B\n\nafter\n"));
+            assertTrue(e.getMessage().contains("raw HTML <b> in the paragraph 'some bold'"), e.getMessage());
+            assertTrue(e.getMessage().contains("write </b>"), e.getMessage());
+        }
+
+        @Test
+        void a_formatting_tag_closed_in_its_paragraph_is_fine() {
+            List<Block> bs = blocks("## A\n\nsome <b>bold</b> text\n\n## B\n");
+            assertEquals(List.of("A", "B"), bs.stream().map(Block::heading).toList());
+        }
+
+        @Test
+        void an_unclosed_formatting_tag_in_a_heading_or_list_item_fails_too() {
+            assertThrows(CardParseException.class, () -> blocks("## A <em>x\n\n## B\n"));
+            assertThrows(CardParseException.class, () -> blocks("## A\n\n- one <i>x\n- two\n"));
+        }
+
+        @Test
+        void other_unclosed_inline_tags_close_with_their_paragraph_and_are_left_alone() {
+            // local://<image> as a placeholder: the parser makes <image> a void
+            // <img>, and a <span> closes at the paragraph's end. Neither reaches B.
+            List<Block> bs = blocks("## A\n\nscan local://<image> and <span> x\n\n## B\n");
+            assertEquals(List.of("A", "B"), bs.stream().map(Block::heading).toList());
+        }
+
+        @Test
+        void a_raw_html_block_left_open_at_the_end_of_the_card_fails() {
+            CardParseException e = assertThrows(CardParseException.class,
+                    () -> blocks("## A\n\n<div class=\"note\">\n\ntext\n"));
+            assertTrue(e.getMessage().contains("raw HTML <div> is never closed"), e.getMessage());
+        }
+
+        @Test
         void html_closed_before_the_heading_is_fine() {
             assertDoesNotThrow(() -> blocks("<div>\n\ntext\n\n</div>\n\n## A\n"));
         }
