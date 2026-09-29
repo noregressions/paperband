@@ -1,10 +1,10 @@
 package dev.noregressions.paperband.pebble;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Marker {@link HashMap} subclass signalling to {@link LenientMapAttributeResolver}
+ * Marker {@link LinkedHashMap} subclass signalling to {@link LenientMapAttributeResolver}
  * that missing-key lookups on this map should return {@code null} rather than
  * raising {@code AttributeNotFoundException}.
  *
@@ -16,10 +16,12 @@ import java.util.Map;
  * {@code LenientMap} preserves that pattern while {@link LenientMapAttributeResolver}
  * still catches typos on every other (non-lenient) map.
  *
- * <p>This class adds no behaviour beyond {@link HashMap}; the resolver
- * dispatches on {@code instanceof LenientMap}.
+ * <p>This class adds no behaviour beyond {@link LinkedHashMap}; the resolver
+ * dispatches on {@code instanceof LenientMap}. Linked rather than plain
+ * hashed so iteration keeps the wrapped map's order: a block's attributes are
+ * written onto its section in the order the author gave them.
  */
-public final class LenientMap<K, V> extends HashMap<K, V> {
+public final class LenientMap<K, V> extends LinkedHashMap<K, V> {
 
     public LenientMap() {
         super();

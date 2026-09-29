@@ -1399,6 +1399,21 @@ class LayoutEngineTest {
         }
 
         @Test
+        void a_block_without_directives_or_attributes_reads_them_as_absent(@TempDir Path book) throws IOException {
+            // Sparse like frontmatter: a template asking for a step on a block
+            // that has none gets nothing, not the strict resolver's failure.
+            Files.createDirectories(book.resolve("layouts"));
+            Files.writeString(book.resolve("layouts/probe.html"),
+                    "{% for b in card.blocks %}[{{ b.directives.step }}|{{ b.attributes.k }}|"
+                            + "{% if b.directives.step %}S{% else %}-{% endif %}]{% endfor %}");
+            Card card = createMinimalCard("c");
+
+            String html = new LayoutEngine(book).render(card, createMinimalContext(), "probe");
+
+            assertTrue(html.contains("[||-]"), html);
+        }
+
+        @Test
         void should_render_directives_onto_section_as_data_attributes() {
             Block block = new Block(Block.Kind.HEADING_SECTION, null, Set.of("step"),
                     "Build it", 2, "<p>body</p>", List.of(), Map.of(), Map.of("step", "2"));

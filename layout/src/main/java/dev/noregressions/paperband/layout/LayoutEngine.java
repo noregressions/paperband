@@ -2756,10 +2756,13 @@ public final class LayoutEngine {
         bm.put("classAttr", String.join(" ", b.classes()));
         // Heading attributes beyond class/id ({step=1}), for templates to
         // select on (block.attributes.step) and to write back onto the section.
-        bm.put("attributes", b.attributes());
+        // attributes and directives are sparse, like frontmatter: most blocks
+        // have no step, so {% if block.directives.step %} has to be a plain
+        // false for them, not the strict resolver's missing-key failure.
+        bm.put("attributes", LenientMap.of(b.attributes()));
         // Paperband directives ({!step}) with their computed values:
         // block.directives.step is the block's number among its siblings.
-        bm.put("directives", b.directives());
+        bm.put("directives", LenientMap.of(b.directives()));
         // The same directives as ready-escaped attribute text, written on both
         // the <section> and its heading: CSS attr() reads the element its
         // ::before belongs to, so h2::before can only show a number the h2 has.
