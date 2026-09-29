@@ -54,7 +54,7 @@ import java.util.Set;
  *   <li>{@code type} — the fence's language tag.</li>
  *   <li>{@code classes} — extra classes from info-line attributes
  *       ({@code ```trace {.wide}}), so they can be carried onto the output.</li>
- *   <li>{@code id} — an {@code {#id}} attribute, or null.</li>
+ *   <li>{@code id} — an {@code {id=x}} attribute, or null.</li>
  *   <li>{@code vars} — the card's cascade, lenient as everywhere else.</li>
  * </ul>
  *
@@ -179,7 +179,7 @@ public final class BlockTemplates {
      * @param type    the fence's language tag
      * @param content the verbatim block text
      * @param classes extra classes from info-line attributes; may be empty
-     * @param id      an {@code {#id}} attribute, or null
+     * @param id      an {@code {id=x}} attribute, or null
      * @param vars    the card's resolved vars; may be null
      * @return the rendered HTML, or null when nothing claims the type
      */
@@ -201,7 +201,7 @@ public final class BlockTemplates {
      * @param type    the fence's language tag
      * @param content the verbatim block text
      * @param classes extra classes from info-line attributes; may be empty
-     * @param id      an {@code {#id}} attribute, or null
+     * @param id      an {@code {id=x}} attribute, or null
      * @param vars    the card's resolved vars; may be null
      * @param source  the card the block came from, for error messages and for
      *                a renderer that resolves the block's own includes; may be null

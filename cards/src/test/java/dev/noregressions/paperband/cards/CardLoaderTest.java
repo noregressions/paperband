@@ -506,7 +506,7 @@ class CardLoaderTest {
             String markdown = """
                 # Title
 
-                ## Custom Section {.custom-class #custom-id}
+                ## Custom Section {.custom-class id=custom-id}
 
                 Content with attributes.
 
@@ -1145,7 +1145,7 @@ class CardLoaderTest {
 
         @Test
         void should_keep_explicit_hash_id_on_heading() {
-            Block b = blocks("## Watch Out {.watch-out #wo-overview}\n\nx\n").get(0);
+            Block b = blocks("## Watch Out {.watch-out id=wo-overview}\n\nx\n").get(0);
             assertEquals("wo-overview", b.id());
             assertEquals(Set.of("watch-out"), b.classes());
         }
@@ -1162,13 +1162,13 @@ class CardLoaderTest {
 
         @Test
         void should_leave_id_on_inline_link_rather_than_heading() {
-            Block b = blocks("## See [x](y){#lnk} after\n\nbody\n").get(0);
+            Block b = blocks("## See [x](y){id=lnk} after\n\nbody\n").get(0);
             assertNull(b.id());
         }
 
         @Test
         void should_keep_explicit_id_on_duplicate_heading_text() {
-            List<Block> bs = blocks("## Dup\n\na\n\n## Dup {#dup}\n\nb\n");
+            List<Block> bs = blocks("## Dup\n\na\n\n## Dup {id=dup}\n\nb\n");
             assertNull(bs.get(0).id());
             assertEquals("dup", bs.get(1).id());
         }
@@ -1192,7 +1192,7 @@ class CardLoaderTest {
 
         @Test
         void should_keep_class_and_attribute_together_in_source_order() {
-            Block b = onlyBlock("## Go {.step step=2 data-kind=setup #go}\n");
+            Block b = onlyBlock("## Go {.step step=2 data-kind=setup id=go}\n");
             assertEquals(Set.of("step"), b.classes());
             assertEquals("go", b.id());
             assertEquals(List.of("step", "data-kind"), List.copyOf(b.attributes().keySet()));
@@ -1200,7 +1200,7 @@ class CardLoaderTest {
 
         @Test
         void should_have_no_attributes_when_heading_has_only_class_and_id() {
-            assertTrue(onlyBlock("## Plain {.x #y}\n").attributes().isEmpty());
+            assertTrue(onlyBlock("## Plain {.x id=y}\n").attributes().isEmpty());
         }
 
         @Test

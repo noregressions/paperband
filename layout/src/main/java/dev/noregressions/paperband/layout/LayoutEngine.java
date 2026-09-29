@@ -2713,7 +2713,7 @@ public final class LayoutEngine {
      * <p>Blocks already slugify their heading into a class
      * ({@code <section class="block sun-misc-unsafe-memory-access">}); this
      * derives the same string for use as an anchor, so an on-this-page rail
-     * has somewhere to point. An explicit {@code {#id}} always wins.
+     * has somewhere to point. An explicit {@code {id=x}} always wins.
      *
      * @param b the block
      * @return the anchor, or null
@@ -2747,7 +2747,7 @@ public final class LayoutEngine {
         Map<String, Object> bm = new HashMap<>();
         bm.put("kind", b.kind().name());
         bm.put("id", b.id());
-        // A stable link target for this block: its declared {#id} when the
+        // A stable link target for this block: its declared {id=x} when the
         // author gave one, else a slug of the heading — the same slug the
         // block already carries as a class, so the anchor and the styling
         // hook agree. Null for a block with no heading, which nothing links to.

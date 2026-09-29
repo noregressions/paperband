@@ -51,6 +51,20 @@ class PebbleIncludePreprocessorTest {
         assertEquals(md, preprocessor.process(md, Path.of("card.md")));
     }
 
+    @Test
+    void anOldStyleIdGroup_failsWithTheNewSpelling() {
+        // {#x} opens a Pebble comment, and Pebble runs before paperband sees the text.
+        IncludeException e = assertThrows(IncludeException.class,
+                () -> preprocessor.process("## Heading {#only-id}\n", Path.of("card.md")));
+        assertTrue(e.getMessage().contains("write {id=name}"), e.getMessage());
+    }
+
+    @Test
+    void anIdAttributeAndAClassGroup_passThroughUntouched() {
+        String md = "## Heading {.x id=wo}\n\nsee [x](y){id=lnk}\n";
+        assertEquals(md, preprocessor.process(md, Path.of("card.md")));
+    }
+
     // ---- real resolution ----
 
     @Test

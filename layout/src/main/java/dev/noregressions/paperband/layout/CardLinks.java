@@ -300,7 +300,7 @@ public final class CardLinks {
                 + " — card '" + id + "' has no block anchored '" + fragment + "'."
                 + (known.isEmpty()
                         ? " That card has no anchored blocks (a block is anchored by its"
-                                + " heading, or by an explicit {#id})."
+                                + " heading, or by an explicit {id=x})."
                         : suggest(fragment, known));
     }
 

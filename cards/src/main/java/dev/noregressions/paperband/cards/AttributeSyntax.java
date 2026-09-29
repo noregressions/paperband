@@ -26,7 +26,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Paperband's attribute-list syntax — {@code {.class #id key=value !directive}}
+ * Paperband's attribute-list syntax — {@code {.class id=x key=value !directive}}
  * — as a commonmark-java post-processor plus the attribute provider that
  * renders it.
  *
@@ -53,7 +53,7 @@ import java.util.regex.Pattern;
  *       {@code - item {.x}}, a table cell: the block (for a list item's first
  *       paragraph, the {@code <li>}; tight lists render no {@code <p>} to carry it).</li>
  *   <li><b>Straight after an inline element</b>, no space —
- *       {@code [x](y){#id}}, {@code ![](i.png){.wide}}, {@code `code`{.x}},
+ *       {@code [x](y){id=x}}, {@code ![](i.png){.wide}}, {@code `code`{.x}},
  *       {@code **bold**{.x}}: that element.</li>
  *   <li><b>A line of its own</b> — the line after a closing fence
  *       ({@code {.fs--1}}), under a heading or a rule: the block before it. As
@@ -82,7 +82,7 @@ final class AttributeSyntax implements PostProcessor {
     private static final Pattern TOKEN = Pattern.compile(
             "([.#]" + NAME + ")=(\\S+)"                                // .key=value: a mistake
             + "|\\.([-\\p{L}\\p{N}_]+)"                                // .class
-            + "|#([-\\p{L}\\p{N}_:.]+)"                                 // #id
+            + "|#([-\\p{L}\\p{N}_:.]+)"                                 // #id: a mistake, see parse
             + "|(" + NAME + ")=(?:\"([^\"]*)\"|'([^']*)'|([^\\s\"']+))" // key=value
             + "|!([a-z][a-z0-9-]*)(?:=(\\S+))?");                     // !directive
 
@@ -199,7 +199,7 @@ final class AttributeSyntax implements PostProcessor {
         }
     }
 
-    /** {@code [x](y){#id}} — a group touching the inline element before it. */
+    /** {@code [x](y){id=x}} — a group touching the inline element before it. */
     private void afterInline(Text text) {
         Node previous = text.getPrevious();
         if (!(previous instanceof Link || previous instanceof Image || previous instanceof Code
@@ -262,7 +262,15 @@ final class AttributeSyntax implements PostProcessor {
             if (!t.find(pos) || t.start() != pos) return null;
             int end = t.end();
             if (end < s.length() && !Character.isWhitespace(s.charAt(end))) return null;
-            if (t.group(1) != null) {
+            if (t.group(4) != null || (t.group(1) != null && t.group(1).startsWith("#"))) {
+                // {#x} was the Pandoc spelling, but {# opens a Pebble comment,
+                // which runs first: in a real build it fails as "Unclosed
+                // comment" or deletes text up to the next #}. One spelling for
+                // ids, then, and it's the attribute's own.
+                String id = t.group(4) != null ? t.group(4) : t.group(1).substring(1);
+                throw new IllegalArgumentException("'#" + id + "' in {" + s + "}: ids are written"
+                        + " id=" + id + ", as in {id=" + id + "}. A {# would start a Pebble comment.");
+            } else if (t.group(1) != null) {
                 String bare = t.group(1).substring(1);
                 throw new IllegalArgumentException("attribute '" + t.group(1)
                         + "' isn't a valid HTML name. Write {" + bare + "=" + t.group(2)

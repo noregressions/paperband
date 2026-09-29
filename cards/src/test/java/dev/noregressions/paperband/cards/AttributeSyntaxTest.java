@@ -14,7 +14,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * The {@code {.class #id key=value}} syntax, rendered straight through
+ * The {@code {.class id=x key=value}} syntax, rendered straight through
  * commonmark-java so each placement rule is checked on its own HTML.
  */
 class AttributeSyntaxTest {
@@ -35,7 +35,7 @@ class AttributeSyntaxTest {
         @Test
         void heading_takes_class_id_and_attribute() {
             assertEquals("<h2 class=\"a b\" id=\"x\" k=\"v\">Heading</h2>",
-                    html("## Heading {.a .b #x k=v}"));
+                    html("## Heading {.a .b id=x k=v}"));
         }
 
         @Test
@@ -73,8 +73,8 @@ class AttributeSyntaxTest {
 
         @Test
         void quoted_values_keep_their_spaces() {
-            assertEquals("<p class=\"c\" id=\"id\" k=\"v w\" j=\"u\">text</p>",
-                    html("text {#id .c k=\"v w\" j='u'}"));
+            assertEquals("<p class=\"c\" id=\"x\" k=\"v w\" j=\"u\">text</p>",
+                    html("text {id=x .c k=\"v w\" j='u'}"));
         }
     }
 
@@ -84,7 +84,7 @@ class AttributeSyntaxTest {
 
         @Test
         void link() {
-            assertEquals("<p>see <a href=\"y\" id=\"lnk\">x</a> after</p>", html("see [x](y){#lnk} after"));
+            assertEquals("<p>see <a href=\"y\" id=\"lnk\">x</a> after</p>", html("see [x](y){id=lnk} after"));
         }
 
         @Test
@@ -142,7 +142,7 @@ class AttributeSyntaxTest {
         @Test
         void group_goes_on_pre_and_language_stays_on_code() {
             assertEquals("<pre class=\"command\" id=\"c\"><code class=\"language-bash\">x\n</code></pre>",
-                    html("```bash {.command #c}\nx\n```"));
+                    html("```bash {.command id=c}\nx\n```"));
         }
 
         @Test
@@ -186,8 +186,8 @@ class AttributeSyntaxTest {
         @Test
         void keeps_source_order_with_class_first() {
             assertEquals(List.of("class", "id", "k"),
-                    List.copyOf(AttributeSyntax.parse(" #i .a k=v .b ").keySet()));
-            assertEquals("a b", AttributeSyntax.parse("#i .a k=v .b").get("class"));
+                    List.copyOf(AttributeSyntax.parse(" id=i .a k=v .b ").keySet()));
+            assertEquals("a b", AttributeSyntax.parse("id=i .a k=v .b").get("class"));
         }
 
         @Test
@@ -201,6 +201,14 @@ class AttributeSyntaxTest {
                     () -> AttributeSyntax.parse(".step=1"));
             assertTrue(e.getMessage().contains("{step=1}"), e.getMessage());
             assertTrue(e.getMessage().contains("{.step step=1}"), e.getMessage());
+        }
+
+        @Test
+        void a_hash_id_fails_with_the_id_spelling() {
+            IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                    () -> AttributeSyntax.parse(".x #y"));
+            assertTrue(e.getMessage().contains("{id=y}"), e.getMessage());
+            assertThrows(IllegalArgumentException.class, () -> AttributeSyntax.parse("#y"));
         }
 
         @Test

@@ -19,14 +19,17 @@ This card uses all five conventional block types.
 Each H2 creates a block. The heading text is lowercased and non-alphanumeric characters
 are replaced with hyphens: `## What Changed` → CSS class `what-changed`.
 
-Explicit classes and ids override the auto-slug via Pandoc attribute syntax:
+Explicit classes and ids override the auto-slug, written in braces after the heading:
 
 ```markdown
-## Watch Out {.watch-out #wo-overview}
+## Watch Out {.watch-out id=wo-overview}
 ```
 
 Multiple classes are space-separated inside the braces. The explicit `id` becomes the
-HTML `id` attribute and the PDF named-destination anchor for that block.
+HTML `id` attribute and the PDF named-destination anchor for that block. Pandoc writes an
+id as `#wo-overview`, but paperband doesn't: `{#` starts a Pebble comment, and Pebble
+reads the card before anything else does. A `#` in a group fails the build and names the
+`id=` spelling.
 
 Any other attribute goes in the same braces as `key=value`, and it lands on the block's
 `<section>` next to the classes:
@@ -153,7 +156,7 @@ Nested inside "Setup", not a sibling of it.
 
 `## Setup` and `## Usage` are top-level blocks; `### Prerequisites` is a child block inside
 `## Setup`, rendered as its own nested `<section>`. It can be targeted in CSS by its
-auto-slugged class (`prerequisites`) or an explicit `{.class #id}` attribute, like a
+auto-slugged class (`prerequisites`) or an explicit `{.class id=x}` attribute, like a
 top-level block. A card with no heading deeper than H2 renders as a flat list of blocks.
 
 Skipping a level (an H4 directly under an H2, no H3 in between) still nests correctly:

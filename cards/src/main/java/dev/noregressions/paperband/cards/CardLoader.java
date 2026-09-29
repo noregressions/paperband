@@ -38,7 +38,7 @@ import java.util.regex.Pattern;
  *   <li>Parse frontmatter via SnakeYAML for full type fidelity (lists, maps, numbers, bools).</li>
  *   <li>Render body to HTML via commonmark-java with GFM pipe tables and
  *       paperband's own attribute syntax — {@link AttributeSyntax}, so that
- *       {@code ## Watch Out {.watch-out #wo-1}} attaches class/id to the {@code h2}.</li>
+ *       {@code ## Watch Out {.watch-out id=wo-1}} attaches class/id to the {@code h2}.</li>
  *   <li>{@link Sections} makes the heading structure explicit in the tree:
  *       each heading and everything it owns become a {@code <section>}, nested
  *       by rank (see below). Parse the HTML with jsoup and read those sections

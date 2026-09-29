@@ -185,13 +185,13 @@ final class AstDiagram {
         return sb.toString().strip();
     }
 
-    /** {@code .class #id key=value !directive=value}, in that order. */
+    /** {@code .class id=x key=value !directive=value}, in that order. */
     private String attributes(Node node) {
         Map<String, String> attrs = syntax.attributesOf(node);
         StringBuilder sb = new StringBuilder();
         String classes = attrs.get("class");
         if (classes != null) for (String c : classes.split("\\s+")) sb.append(" .").append(c);
-        if (attrs.containsKey("id")) sb.append(" #").append(attrs.get("id"));
+        if (attrs.containsKey("id")) sb.append(" id=").append(attrs.get("id"));
         attrs.forEach((k, v) -> {
             if (k.equals("class") || k.equals("id")) return;
             sb.append(' ').append(k);

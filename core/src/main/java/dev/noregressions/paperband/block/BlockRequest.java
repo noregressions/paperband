@@ -19,7 +19,7 @@ import java.util.Optional;
  * @param content the verbatim block text, unescaped, newlines intact
  * @param classes extra classes from the info line ({@code ```plantuml {.wide}}),
  *                to carry onto the output; never null, may be empty
- * @param id      an explicit {@code {#id}} attribute, or null
+ * @param id      an explicit {@code {id=x}} attribute, or null
  * @param vars    the card's resolved cascade; never null
  * @param config  {@code vars.<rendererName>} as a map, or empty when the book
  *                configures nothing — the per-renderer settings block, and it

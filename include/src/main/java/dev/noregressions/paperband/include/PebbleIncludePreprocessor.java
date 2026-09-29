@@ -210,7 +210,12 @@ public final class PebbleIncludePreprocessor implements MarkdownPreprocessor {
                             + (e.getLineNumber() != null ? " at line " + e.getLineNumber() : "")
                             + ": " + e.getPebbleMessage()
                             + ". If this is a literal example of Pebble syntax rather than a real "
-                            + "directive, wrap it in a fenced code block, an inline code span, or {% verbatim %}.",
+                            + "directive, wrap it in a fenced code block, an inline code span, or {% verbatim %}."
+                            // {#x} was once the id spelling, and {# is a Pebble comment.
+                            + (String.valueOf(e.getPebbleMessage()).contains("Unclosed comment")
+                                    ? " If it's an element id written {#name}, write {id=name}: {# starts a"
+                                            + " Pebble comment."
+                                    : ""),
                     sourceFile, e);
         } catch (IOException e) {
             // StringWriter never throws; keep the compiler happy without hiding a real bug.

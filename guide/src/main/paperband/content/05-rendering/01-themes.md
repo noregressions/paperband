@@ -88,7 +88,7 @@ sticky **on this page** rail built from the card's block headings:
 Below `68rem` the rail becomes a plain list above the content. A card with fewer than
 three headings keeps the single centred column.
 
-Every block gets a stable anchor for the rail to point at: its declared `{#id}` when the
+Every block gets a stable anchor for the rail to point at: its declared `{id=x}` when the
 heading has one, otherwise a slug of the heading, which is also the block's class.
 
 `.pw-breakout` opts a single element out of the measure, such as one large diagram or one

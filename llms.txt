@@ -34,7 +34,7 @@ there is no fallback renderer).
 - **Block** — a section inside a card. Every H2 (and H3–H6, nested rank-based like Pandoc
   `--section-divs`) starts a `<section class="block <slug>">`. The heading text is slugified
   into a CSS class (`## Watch Out` → `watch-out`); explicit override via Pandoc attribute
-  syntax `## Heading {.class #id}`. Text before the first heading is the `intro` block.
+  syntax `## Heading {.class id=x}`. Text before the first heading is the `intro` block.
   Conventional block names: intro, `what-changed`, `how-to-fix`, `watch-out`, `check` — but
   any heading works; themes style block classes.
 - **Book** — a directory tree whose topmost `paperband.yaml` is the book root. Sub-folder
@@ -135,7 +135,7 @@ CHECKED against the book being built: an unknown id or an unknown block anchor F
 build, naming the file, aggregating every
 broken reference, and suggesting near misses. A card excluded by `select:`/an edition gets a
 distinct message. A single-card build (`-Dpaperband.input=card.md`) resolves but does not
-check — it has no book to check against. Block anchors come from the block's `{#id}` or its
+check — it has no book to check against. Block anchors come from the block's `{id=x}` or its
 slugged heading, the same rule the templates render.
 
 ## Authoring cards (Markdown)
