@@ -47,11 +47,11 @@
                             <output>${project.build.directory}/kitchen-sink.pdf</output>
                         </configuration>
                     </execution>
-                    <!-- A cheat sheet from the same cards: vars.cheatsheet turns
-                         every card into its {!step} entries (heading, the
-                         paragraph marked {.instructions}, the command) and
-                         leaves out cards with no steps, so here only the
-                         steps card appears.
+                    <!-- A cheat sheet of the workshop: <includes> picks that
+                         folder's cards out of the book, and vars.cheatsheet
+                         turns each into its {!step} entries (heading, the
+                         paragraph marked {.instructions}, the ```console
+                         session). The full guide above stays as it is.
                          https://noregressions.github.io/paperband/cards/make-a-cheat-sheet.html -->
                     <execution>
                         <id>cheatsheet</id>
@@ -59,7 +59,10 @@
                         <goals><goal>build</goal></goals>
                         <configuration>
                             <book>
-                                <title>Kitchen Sink: cheat sheet</title>
+                                <title>Workshop cheat sheet</title>
+                                <includes>
+                                    <include>04-workshop/0*.md</include>
+                                </includes>
                                 <vars>
                                     <cheatsheet>true</cheatsheet>
                                     <toc>false</toc>
@@ -77,7 +80,10 @@
                         <goals><goal>site</goal></goals>
                         <configuration>
                             <book>
-                                <title>Kitchen Sink: cheat sheet</title>
+                                <title>Workshop cheat sheet</title>
+                                <includes>
+                                    <include>04-workshop/0*.md</include>
+                                </includes>
                                 <vars>
                                     <cheatsheet>true</cheatsheet>
                                 </vars>

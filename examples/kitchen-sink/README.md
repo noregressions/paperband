@@ -12,7 +12,7 @@ plugin built in the same run:
 Or build it on its own with `mvn package` in this directory, once the root has been
 installed.
 
-The PDF has 9 cards; the site has 10, because one card is site-only.
+The PDF has 12 cards; the site has 13, because one card is site-only.
 
 ## Feature map
 
@@ -37,7 +37,7 @@ Paths are relative to `src/main/paperband/`.
 | Blocks: Watch Out, Check | `content/01-basics/02-blocks.md` |
 | `command`, `output` and `console` fences | `content/01-basics/02-blocks.md` |
 | Numbered steps with `{!step}`, including steps inside a step | `content/01-basics/04-steps.md`, `styles/book.css` |
-| A cheat sheet from the same cards (`vars.cheatsheet`, `{.instructions}`), as a PDF and a site | `../../../pom.xml` (`cheatsheet` and `cheatsheet-site` executions), `content/01-basics/04-steps.md` |
+| A cheat sheet of a chosen set of cards (`<book><includes>`, `vars.cheatsheet`, `{.instructions}`), as a PDF and a site | `../../../pom.xml` (`cheatsheet` and `cheatsheet-site` executions), `content/04-workshop/` |
 | A custom block type | `layouts/blocks/note.html`, used in `content/01-basics/02-blocks.md` |
 | `:name:` icons, bundled and the book's own | `content/01-basics/02-blocks.md`, `icons/ks.svg` |
 | `{% fragment %}` from a source file | `content/02-authoring/01-includes.md`, `content/02-authoring/Hello.java` |

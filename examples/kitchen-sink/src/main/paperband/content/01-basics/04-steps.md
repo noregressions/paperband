@@ -11,9 +11,9 @@ number; reorder them and the numbers follow
 ([Card Structure](https://noregressions.github.io/paperband/cards/card-structure.html#numbered-steps)).
 
 One paragraph in each step ends with `{.instructions}`. The class changes nothing here,
-because no stylesheet targets it, but the book's `cheatsheet` builds find it: with
-`vars.cheatsheet` set, this card becomes one entry per step (the title, the instructions
-and the command), and every card without steps is left out
+because no stylesheet targets it, but a cheat-sheet build keeps just that paragraph and
+the command from each step. The [Workshop](card:workshop-prepare) cards are marked the same
+way, and the book's `cheatsheet` builds turn them into one
 ([Make a Cheat Sheet](https://noregressions.github.io/paperband/cards/make-a-cheat-sheet.html)).
 
 ## Before you start

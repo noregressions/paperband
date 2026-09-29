@@ -18,7 +18,7 @@ mvn paperband:structure
 ```
 
 ```output
-[INFO] BOOK "Kitchen Sink"  [9 cards]
+[INFO] BOOK "Kitchen Sink"  [12 cards]
 ```
 
 ```console

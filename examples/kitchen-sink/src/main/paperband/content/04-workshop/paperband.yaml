@@ -1,0 +1,9 @@
+# A three-card workshop. Every step is a {!step} heading with one paragraph
+# marked {.instructions} and a ```console session, so the cheatsheet builds in
+# ../../../../pom.xml can select this folder and keep just those parts.
+# https://noregressions.github.io/paperband/cards/make-a-cheat-sheet.html
+title: "Workshop"
+order:
+  - 01-prepare
+  - 02-build
+  - 03-publish
