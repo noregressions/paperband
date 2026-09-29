@@ -169,8 +169,14 @@ class StepsTest {
         }
 
         @Test
-        void braces_that_are_not_a_marker_are_left_alone() {
-            assertDoesNotThrow(() -> blocks("## A\n\n{step} and {not !a group} stay as text\n"));
+        void step_without_the_bang_fails_and_suggests_it() {
+            CardParseException e = assertThrows(CardParseException.class, () -> blocks("# {step} Ask Syft\n"));
+            assertTrue(e.getMessage().contains("unknown marker '{step}'. Did you mean {!step}?"), e.getMessage());
+        }
+
+        @Test
+        void braces_that_are_not_marker_shaped_are_left_alone() {
+            assertDoesNotThrow(() -> blocks("## A\n\n{not !a group} and {a, b} stay as text\n"));
         }
     }
 }

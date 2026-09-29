@@ -45,6 +45,15 @@ final class Directives implements PostProcessor {
 
     private static final Pattern MARKER = Pattern.compile("\\{!([a-z][a-z0-9-]*)(?:=([^{}\\s]+))?\\}");
 
+    /**
+     * A bare {@code {word}}: shaped like a marker, but with no {@code !}, {@code .}
+     * or {@code /} to say which kind. It's almost always one mistyped --
+     * {@code {step}} for {@code {!step}} -- so it fails rather than printing.
+     * Braces holding anything else (spaces, commas, a {@code ${}} placeholder)
+     * are prose and stay as text.
+     */
+    private static final Pattern BARE = Pattern.compile("(?<![{$\\w])\\{([A-Za-z][\\w.-]*)\\}(?!\\})");
+
     /** A {@code {!name}} in the text; renders as whatever its pass set as its text. */
     static final class Marker extends CustomNode {
         private final String name;
@@ -83,6 +92,15 @@ final class Directives implements PostProcessor {
     /** Replace each marker in {@code text} with a {@link Marker} node between the surrounding text. */
     private static void split(Text text) {
         String literal = text.getLiteral();
+        Matcher bare = BARE.matcher(literal);
+        if (bare.find()) {
+            String name = bare.group(1);
+            throw new IllegalArgumentException("unknown marker '{" + name + "}'."
+                    + (KNOWN.containsKey(name) ? " Did you mean {!" + name + "}?" : "")
+                    + " A marker in braces needs a ! for an instruction ({!step}), a . for a class"
+                    + " ({." + name + "}) or a / to end one ({/" + name + "}). To print braces, put"
+                    + " them in backticks.");
+        }
         Matcher m = MARKER.matcher(literal);
         if (!m.find()) return;
         int from = 0;

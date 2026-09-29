@@ -61,7 +61,8 @@ import java.util.regex.Pattern;
  *   <li><b>A fence's info line</b> — {@code ```bash {.command}}: the
  *       {@code <pre>}; the language stays on the {@code <code>} for Prism.</li>
  * </ul>
- * A group anywhere else is left as text, visibly, rather than guessed at.
+ * A group anywhere else in the text opens a span, from there to its
+ * {@code {/x}} or the end of the element: see {@link Spans}, which runs next.
  *
  * <p>One instance serves one parse: the attributes are keyed by node identity
  * and read back by {@link #attributeProvider()} while that document renders.
@@ -290,6 +291,11 @@ final class AttributeSyntax implements PostProcessor {
             return withClass;
         }
         return out;
+    }
+
+    /** Give {@code node} the attributes of a group another pass placed, such as a {@link Spans.Span}. */
+    void addAttributes(Node node, Map<String, String> parsed) {
+        add(node, parsed);
     }
 
     /** Merge {@code parsed} into what {@code node} already has; classes accumulate. */

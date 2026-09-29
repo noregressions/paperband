@@ -41,10 +41,39 @@ Any other attribute goes in the same braces as `key=value`, and it lands on the 
 
 Templates can read it as `block.attributes.step`, which is how a theme picks out every
 step without matching on heading text. The name can't start with a dot: `{.step=1}`
-fails the build and tells you to write `{step=1}` or `{.step step=1}` instead. Every item
-in the braces needs a `.`, a `#` or an `=`, so braces in ordinary prose, such as
-`{step}` or `${home}`, are left as text. Presentational attributes such as `style` or
-`width` are stripped under the content policy, the same as anywhere else in a card.
+fails the build and tells you to write `{step=1}` or `{.step step=1}` instead.
+Presentational attributes such as `style` or `width` are stripped under the content
+policy, the same as anywhere else in a card.
+
+## Classes in the middle of text
+
+A group at the end of a heading or paragraph classes that block, and one on its own line
+classes the block above. Anywhere else in the text, `{.x}` starts a span: the class
+applies from there to `{/x}`, or to the end of the paragraph, heading, list item or table
+cell if nothing closes it.
+
+```markdown
+See {.warn}this part{/warn} first.
+
+{.lead} The objective is to see what evidence exists at each stage.
+```
+
+That renders as `See <span class="warn">this part</span> first.` and a paragraph whose
+whole text is in a `lead` span. A group can carry an id and attributes as well, as in
+`{.x id=x k=v}`. Spans nest, and `{/x}` closes the innermost open span with that class.
+
+A span stays inside the element it opened in, so `{/x}` has to be in the same paragraph,
+link or emphasis as its `{.x}`. The build fails on a `{/x}` with nothing to close, on
+spans that overlap rather than nest, and on an instruction such as `!step` inside a span's
+group.
+
+## Braces that aren't markup
+
+A bare word in braces, such as `{step}`, fails the build: it looks like a marker but
+doesn't say which kind, and it's almost always `{!step}` or `{.step}` mistyped. The error
+suggests the fix. Braces holding anything else are ordinary text: `{a, b}`, `{ x }` and a
+`${home}` placeholder all print as written, and nothing inside inline code or a fence is
+ever read as markup. To print a bare word in braces, put it in backticks.
 
 ## Numbered steps
 
@@ -84,7 +113,7 @@ h3[data-paperband-step]::before { content: "Step " attr(data-paperband-step) " â
 ```
 
 An unknown instruction fails the build, so a typo such as `{!stpe}` can't be printed by
-mistake, and `{step}` without the `!` is ordinary text. `{!step}` takes no value: the
+mistake, and neither can `{step}` without the `!`. `{!step}` takes no value: the
 position is the number. The card's title heading can't carry one, because it names the
 card rather than starting a block.
 
