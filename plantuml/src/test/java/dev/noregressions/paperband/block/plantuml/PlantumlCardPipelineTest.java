@@ -43,6 +43,23 @@ class PlantumlCardPipelineTest {
     }
 
     @Test
+    void anAstFrontmatterKeyDrawsTheCardsTree() {
+        String html = render("""
+                ---
+                title: T
+                ast: true
+                ---
+                ## Install
+
+                Run it.
+                """);
+
+        assertTrue(html.contains("<figure class=\"plantuml\""), html);
+        assertTrue(html.contains("<svg"), html);
+        assertFalse(html.contains("@startmindmap"), "drawn, not left as source: " + html);
+    }
+
+    @Test
     void aFenceInACardBecomesADrawnDiagram() {
         String html = render("""
                 # Sequence

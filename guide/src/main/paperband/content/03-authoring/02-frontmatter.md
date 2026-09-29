@@ -38,10 +38,34 @@ body are rendered rather than used as the title. The `effort` value appears as t
 | `max_pages` | integer | — | Page-count ceiling for this card. The build fails (exit 3) if the rendered card is longer. Overrides `<maxPagesPerCard>`. See [Page Enforcement](card:page-enforcement). |
 | `verify` | boolean | `true` | `false` hides every `check`-classed block in the card, at any nesting depth. |
 | `index` | list or string | — | Back-of-book index terms for this card. See [TOC and Index](card:toc-and-index). |
+| `ast` | `true` or `inline` | — | Draws the card's own parse tree as a last block, titled "AST": `true` for block nodes, `inline` for every node down to text runs. A debugging aid; see [Drawing a card's tree](#drawing-a-cards-tree). |
 | *axis name* | any | — | The card's value for a declared axis, such as `tier: 1` for an axis named `tier`. Overrides the folder's `axis:` binding. See [Book Configuration](card:book-configuration#axes). |
 
 A section body (`_section.md`) takes a different set of fields, such as `cards:` and
 `landing:`; see [Book Configuration](card:book-configuration).
+
+## Drawing a card's tree
+
+`ast: true` adds a block titled "AST" at the end of the card, holding a diagram of the tree
+paperband built from its markdown:
+
+```yaml
+---
+ast: true       # or: inline
+---
+```
+
+The diagram shows the tree after paperband's own passes, so it shows what they made. Each
+heading and everything it owns is a `Section`, labelled with the classes, attributes and
+directives it carries, such as `Section h2 .x !step=1`. Paragraphs, lists and fences show
+a short excerpt of their text. `ast: inline` goes further and draws text runs, code spans,
+links, emphasis and each `{!step}` marker with the text it became, such as
+`Marker {!step} = "Step 1"`.
+
+The diagram is a PlantUML mind map, so it's drawn when the book has the PlantUML block
+renderer (see [Extending Paperband](card:extending-paperband)). Without it, the block shows the diagram's
+source as code, which is still readable. Only a markdown card has a tree to draw: `ast`
+on an `.html` card fails the build. Remove the key before publishing.
 
 ## Custom fields
 

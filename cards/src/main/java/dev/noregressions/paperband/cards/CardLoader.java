@@ -261,6 +261,12 @@ public final class CardLoader {
                 attributeSyntax);
         List<org.commonmark.Extension> extensions = List.of(TablesExtension.create());
         String html;
+        AstDiagram.Detail ast;
+        try {
+            ast = AstDiagram.Detail.of(fm.get("ast").orElse(null));
+        } catch (IllegalArgumentException e) {
+            throw new CardParseException(source + ": " + e.getMessage(), e);
+        }
         try {
             org.commonmark.node.Node doc = Parser.builder()
                     .extensions(extensions)
@@ -278,12 +284,26 @@ public final class CardLoader {
                     .attributeProviderFactory(context -> sections.titleMarker())
                     .build()
                     .render(doc);
+            // ast: in the frontmatter draws the tree just built into the card,
+            // as a last block holding a plantuml fence: the block pass below
+            // draws it like any other, or leaves the source readable when no
+            // PlantUML renderer is installed.
+            if (ast != null) html += astBlock(AstDiagram.of(doc, attributeSyntax, ast));
         } catch (IllegalArgumentException e) {
             throw new CardParseException(source + ": " + e.getMessage(), e);
         }
 
         // 3. The rendered sections are the blocks: read them via jsoup
         return buildCard(source, fm, Jsoup.parseBodyFragment(html).body(), true);
+    }
+
+    /** The marked section that carries an {@code ast:} diagram. */
+    private static String astBlock(String plantuml) {
+        return "\n<section " + Sections.SECTION_ATTR + "=\"2\">\n"
+                + "<h2 class=\"paperband-ast\">AST</h2>\n"
+                + "<pre><code class=\"language-plantuml\">"
+                + org.jsoup.nodes.Entities.escape(plantuml)
+                + "</code></pre>\n</section>\n";
     }
 
     /**
@@ -315,6 +335,10 @@ public final class CardLoader {
             if (!name.isEmpty() && !meta.containsKey(name)) {
                 meta.put(name, refineMetaValue(content));
             }
+        }
+        if (AstDiagram.Detail.of(meta.get("ast")) != null) {
+            throw new CardParseException(source + ": ast: needs a markdown card. An .html card"
+                    + " has no markdown tree to draw.");
         }
         return buildCard(source, new Frontmatter(meta), jdoc.body(), false);
     }

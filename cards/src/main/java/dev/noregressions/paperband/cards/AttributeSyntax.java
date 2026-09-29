@@ -149,6 +149,15 @@ final class AttributeSyntax implements PostProcessor {
         };
     }
 
+    /**
+     * Everything {@code node} carries, attributes and directives alike, the
+     * directives under {@code "!" + name}; empty when none. For diagnostics.
+     */
+    Map<String, String> attributesOf(Node node) {
+        Map<String, String> mine = attributes.get(node);
+        return mine == null ? Map.of() : java.util.Collections.unmodifiableMap(mine);
+    }
+
     /** The directives on {@code node}, by name without the {@code !}; empty when none. */
     Map<String, String> directives(Node node) {
         Map<String, String> mine = attributes.get(node);
