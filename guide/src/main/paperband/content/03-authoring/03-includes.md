@@ -8,7 +8,9 @@ index: [includes, fragments, snippets]
 
 The `{% fragment %}` tag embeds content from another file into a card. It is a Pebble tag
 evaluated before Markdown parsing, so the inserted content is processed as Markdown like
-the rest of the card: headings, lists and code fences all work.
+the rest of the card: headings, lists and code fences all work. See
+[How a Card Is Processed](card:how-a-card-is-processed) for where that sits among the other
+phases.
 
 ## Anchor syntax
 

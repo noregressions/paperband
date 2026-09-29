@@ -140,6 +140,22 @@ slugged heading, the same rule the templates render.
 
 ## Authoring cards (Markdown)
 
+### Processing phases
+
+Rule: **Pebble writes the text; paperband reads its structure.** Guide card: `how-a-card-is-processed`.
+
+| Phase | Reads → produces | Owns |
+|---|---|---|
+| 1. Pebble | card text (frontmatter, fences, inline code hidden) + `vars` → markdown text | `{{ }}` `{% %}` `{# #}` |
+| 2. Parse | body → commonmark tree (code becomes code, never read again) | markdown |
+| 3. Tree | Directives → AttributeSyntax → Spans → Sections → Steps | `{!name}` `{.x}` `{/x}` `{key=value}` `{id=x}` |
+| 4. HTML | rendered card → blocks | ` ```type ` fences, `ast:` fallback, content policy |
+| 5. Book | all cards → outputs | `card:` links, `:icon:`, chapter numbers, TOC/index, layout templates (Pebble again, over the book model) |
+
+Consequences: a `{% for %}` can emit `## {!step} …` headings and they number correctly; no Pebble
+expression can read a step number (it doesn't exist until phase 3); a var's value is markdown source;
+a bare `{word}` fails the build; `{#` is always Pebble's, so ids are `{id=x}`.
+
 ### Frontmatter fields
 
 | Field | Type | Default | Meaning |

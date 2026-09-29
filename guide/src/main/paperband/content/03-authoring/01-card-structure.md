@@ -76,7 +76,9 @@ A bare word in braces, such as `{step}`, fails the build: it looks like a marker
 doesn't say which kind, and it's almost always `{!step}` or `{.step}` mistyped. The error
 suggests the fix. Braces holding anything else are ordinary text: `{a, b}`, `{ x }` and a
 `${home}` placeholder all print as written, and nothing inside inline code or a fence is
-ever read as markup. To print a bare word in braces, put it in backticks.
+ever read as markup. To print a bare word in braces, put it in backticks. Which phase reads
+which brace form, and in what order, is in
+[How a Card Is Processed](card:how-a-card-is-processed).
 
 ## Numbered steps
 

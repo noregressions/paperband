@@ -32,31 +32,38 @@ import java.util.regex.Pattern;
 /**
  * Loads a markdown card into a {@link Card} model.
  *
- * <p>Pipeline:
+ * <p>This class is phases 2 to 4 of a card's processing; the guide's "How a
+ * Card Is Processed" card describes all five. Phase 1, Pebble, has already run
+ * by the time {@link #load} parses: the {@link MarkdownPreprocessor} writes the
+ * card's text, and nothing here evaluates Pebble. The rule that divides them:
+ * Pebble writes the text; this class reads its structure.
+ *
  * <ol>
- *   <li>Split YAML frontmatter from body via regex.</li>
- *   <li>Parse frontmatter via SnakeYAML for full type fidelity (lists, maps, numbers, bools).</li>
- *   <li>Render body to HTML via commonmark-java with GFM pipe tables and
- *       paperband's own attribute syntax — {@link AttributeSyntax}, so that
- *       {@code ## Watch Out {.watch-out id=wo-1}} attaches class/id to the {@code h2}.</li>
- *   <li>{@link Sections} makes the heading structure explicit in the tree:
- *       each heading and everything it owns become a {@code <section>}, nested
- *       by rank (see below). Parse the HTML with jsoup and read those sections
- *       as blocks. An {@code .html} card has no markdown tree, so its blocks are
- *       inferred from the headings instead, by the same rule.</li>
- *   <li>A frontmatter {@code title:} names the card. Without one, the first
- *       {@code h1} does instead, and is consumed rather than rendered — so a
- *       card shows one heading, not a title plus a copy of it. With one, no
- *       {@code h1} is consumed: the card is already named, and every heading the
- *       author wrote renders.</li>
- *   <li>Every heading that isn't consumed as the title — {@code h2}–{@code h6},
- *       and any {@code h1} — opens a new
- *       {@link Block.Kind#HEADING_SECTION HEADING_SECTION} block, nested by rank — see below.
- *       Class set comes from the heading's {@code class} attribute, falling back to a slug
- *       derived from the heading text.</li>
- *   <li>Content before the first real heading becomes a synthetic top-level block with
- *       class {@code "intro"}.</li>
+ *   <li><b>Frontmatter.</b> Split the YAML frontmatter off by regex and parse it
+ *       with SnakeYAML for full type fidelity. A frontmatter {@code title:} names
+ *       the card; without one, the first top-level {@code h1} does and is
+ *       consumed rather than rendered, so a card shows one heading, not a title
+ *       plus a copy of it.</li>
+ *   <li><b>Parse.</b> commonmark-java, with GFM pipe tables, turns the body into
+ *       a tree. Anything in code becomes a code node and is never read again.</li>
+ *   <li><b>Tree.</b> Five post-processors, in this order, each seeing what the
+ *       one before it left: {@link Directives} ({@code {!name}} markers; a bare
+ *       {@code {word}} fails), {@link AttributeSyntax} ({@code {.x}} groups placed
+ *       by position), {@link Spans} (every other group, to {@code {/x}}),
+ *       {@link Sections} (each heading and what it owns becomes a section, nested
+ *       by rank -- see below) and {@link Steps} (numbering).</li>
+ *   <li><b>HTML.</b> Render the tree, parse the result with jsoup, and run the
+ *       HTML passes: block templates and renderers for {@code ```type} fences, the
+ *       {@code ast:} fallback, diff cards, inline-code classes and the content
+ *       policy. Then read each marked section back as a {@link Block}: class set
+ *       from the heading's {@code class}, falling back to a slug of its text;
+ *       content before the first heading is a synthetic {@code "intro"} block.
+ *       An {@code .html} card joins here, and its blocks are inferred from its
+ *       headings by the same rank rule.</li>
  * </ol>
+ *
+ * <p>Phase 5, the book, happens elsewhere: {@code card:} links, icons, chapter
+ * numbers and layout templates need every card, and a loader sees one.
  *
  * <p><b>Nesting by heading rank.</b> A heading at level <i>L</i> closes every
  * currently-open section whose level is <i>L</i> or deeper, then opens a new
