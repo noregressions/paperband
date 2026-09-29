@@ -78,8 +78,8 @@ The `build` goal's default phase is `process-resources`; override `<phase>` in t
 | `maxPagesPerCard` | `paperband.maxPagesPerCard` | *(`vars.maxPagesPerCard`)* | Fail the build if a card runs longer. See Page Enforcement. |
 | `select` | `paperband.select` | — | Keep only cards whose `field=value` matches. Book builds only. |
 | `watermark` | `paperband.watermark` | *(`vars.watermark`)* | Stamp this text on every page; `<watermarkImage>` stamps a logo instead. See Watermarks for the tuning parameters. |
-| `externalIncludeDirs` | `paperband.externalIncludeDirs` | — | Permit `{{#include}}` to read below these directories, outside the book root. |
-| `externalIncludeFiles` | `paperband.externalIncludeFiles` | — | Permit `{{#include}}` to read these specific files. |
+| `externalIncludeDirs` | `paperband.externalIncludeDirs` | — | Permit `{% fragment %}` to read below these directories, outside the book root. |
+| `externalIncludeFiles` | `paperband.externalIncludeFiles` | — | Permit `{% fragment %}` to read these specific files, outside the book root. |
 
 ### Full-bleed builds
 

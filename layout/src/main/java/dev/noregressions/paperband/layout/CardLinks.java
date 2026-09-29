@@ -313,7 +313,10 @@ public final class CardLinks {
      * no file to open is a grep, and a build failure should not set homework.
      */
     private String reference(String id) {
-        String needle = SCHEME + id;
+        // The whole id, not a prefix of a longer one: card:extending is not
+        // found inside a valid card:extending-paperband in some other card.
+        java.util.regex.Pattern needle = java.util.regex.Pattern.compile(
+                java.util.regex.Pattern.quote(SCHEME + id) + "(?![\\w.-])");
         for (Card card : cards) {
             if (containsRef(card.blocks(), needle)) {
                 return " in " + (card.source() == null ? card.id() : card.source().getFileName());
@@ -323,9 +326,9 @@ public final class CardLinks {
         return "";
     }
 
-    private static boolean containsRef(List<Block> blocks, String needle) {
+    private static boolean containsRef(List<Block> blocks, java.util.regex.Pattern needle) {
         for (Block b : blocks) {
-            if (b.html() != null && b.html().contains(needle)) return true;
+            if (b.html() != null && needle.matcher(b.html()).find()) return true;
             if (containsRef(b.children(), needle)) return true;
         }
         return false;

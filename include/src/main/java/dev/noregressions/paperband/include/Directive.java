@@ -4,8 +4,9 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Parsed include directive: the result of scanning {@code {{#include ...}}}
- * out of raw markdown.
+ * Parsed include directive, from the old {@code {{#include ...}}} regex
+ * scanner. Nothing constructs it any more: {@code {% fragment %}} is parsed by
+ * {@link FragmentTokenParser} into a {@link FragmentNode} instead.
  *
  * @param reference   the first whitespace-separated token after {@code #include}.
  *                    May carry a scheme prefix (e.g. {@code git://repo:path:tag});

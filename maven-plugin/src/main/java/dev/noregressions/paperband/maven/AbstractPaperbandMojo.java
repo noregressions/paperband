@@ -94,7 +94,7 @@ public abstract class AbstractPaperbandMojo extends AbstractMojo {
     protected File themeDir;
 
     /**
-     * Permit {@code &#123;&#123;#include&#125;&#125;} directives to read files
+     * Permit {@code &#123;% fragment %&#125;} tags to read files
      * under these directories, even though they sit outside the book root. Off
      * by default; name only directories you trust, since any card can then read
      * anything beneath them.
@@ -102,7 +102,7 @@ public abstract class AbstractPaperbandMojo extends AbstractMojo {
     @Parameter(property = "paperband.externalIncludeDirs")
     protected List<File> externalIncludeDirs;
 
-    /** Permit includes to read these specific files. Narrower than {@link #externalIncludeDirs}. */
+    /** Permit {@code &#123;% fragment %&#125;} tags to read these specific files. Narrower than {@link #externalIncludeDirs}. */
     @Parameter(property = "paperband.externalIncludeFiles")
     protected List<File> externalIncludeFiles;
 

@@ -29,8 +29,8 @@ public interface ContentProvider {
     /**
      * Provider identifier matching the scheme used in directives.
      *
-     * <p>For {@code {{#include git://samples:path}}} the name is {@code git}.
-     * For the short-form {@code {{#include path}}} the default name is
+     * <p>For {@code {% fragment "git:samples/path" %}} the name is {@code git}.
+     * A reference with no scheme, {@code {% fragment "path" %}}, goes to
      * {@code file}.
      * @return the provider name
      */

@@ -170,6 +170,27 @@ class CardLinksTest {
         }
 
         @Test
+        void the_message_names_the_right_file_when_the_id_prefixes_a_valid_one() {
+            // card:extending is dead; card:extending-paperband, in an earlier
+            // card, is fine. The search for the writer must not stop at the
+            // valid one because it starts with the same text.
+            Card target = new Card("extending-paperband", Path.of("03-extending.md"),
+                    new Frontmatter(Map.of()), "E", List.of());
+            Card valid = new Card("structure", Path.of("01-card-structure.md"), new Frontmatter(Map.of()), "S",
+                    List.of(new Block(Block.Kind.HEADING_SECTION, null, Set.of(), null, 0,
+                            "<p><a href=\"card:extending-paperband\">x</a></p>", List.of())));
+            String broken = "<a href=\"card:extending\">y</a>";
+            Card writer = new Card("frontmatter", Path.of("02-frontmatter.md"), new Frontmatter(Map.of()), "F",
+                    List.of(new Block(Block.Kind.HEADING_SECTION, null, Set.of(), null, 0,
+                            "<p>See " + broken + "</p>", List.of())));
+
+            CardLinkException e = assertThrows(CardLinkException.class,
+                    () -> CardLinks.of(List.of(target, valid, writer)).print(broken));
+
+            assertTrue(e.getMessage().contains("card:extending in 02-frontmatter.md"), e.getMessage());
+        }
+
+        @Test
         void a_reference_from_a_template_reports_without_a_file() {
             // Section bodies and templates aren't in the card set; the failure
             // still has to be legible.
