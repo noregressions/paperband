@@ -47,6 +47,22 @@
                             <output>${project.build.directory}/kitchen-sink.pdf</output>
                         </configuration>
                     </execution>
+                    <!-- A second document from the same content: one card, a
+                         different card body. The steps card marks one
+                         paragraph per step {.instructions}; this build's
+                         layouts/_card-body.html keeps only each step's title,
+                         that paragraph and its command, using | select.
+                         https://noregressions.github.io/paperband/cards/themes.html -->
+                    <execution>
+                        <id>cheatsheet</id>
+                        <phase>package</phase>
+                        <goals><goal>build</goal></goals>
+                        <configuration>
+                            <input>${project.basedir}/src/main/paperband/content/01-basics/04-steps.md</input>
+                            <layouts>${project.basedir}/src/main/cheatsheet/layouts</layouts>
+                            <output>${project.build.directory}/cheatsheet.pdf</output>
+                        </configuration>
+                    </execution>
                     <execution>
                         <id>site</id>
                         <phase>package</phase>

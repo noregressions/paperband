@@ -38,6 +38,12 @@
             <artifactId>pebble</artifactId>
         </dependency>
         <dependency>
+            <!-- The | select filter: layout templates pick parts out of a
+                 block's HTML by CSS selector. See HtmlSelectExtension. -->
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+        </dependency>
+        <dependency>
             <!-- Analyzers only (tokenisation, stopwords, stemming) for the
                  auto-generated index — see IndexTermExtractor. No Lucene
                  index is ever built or queried. -->

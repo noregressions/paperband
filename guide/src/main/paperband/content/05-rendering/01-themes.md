@@ -210,7 +210,7 @@ Theme templates receive the same Pebble model the bundled ones use. The core obj
 
 | Key | Where | What's in it |
 |---|---|---|
-| `card` | card pages, each entry of `cards` in `book.html` | `id`, `title`, `frontmatter.*` (raw map), `axes.{axisName}.{id,label,color}`, `blocks` (nested: `heading`, `level`, `classAttr`, `html`, `children`) |
+| `card` | card pages, each entry of `cards` in `book.html` | `id`, `title`, `frontmatter.*` (raw map), `axes.{axisName}.{id,label,color}`, `blocks` (nested: `heading`, `level`, `classes`, `classAttr`, `id`, `anchor`, `attributes`, `directives`, `html`, `children`) |
 | `book` | book PDF + every site page | `title`, `subtitle`, `series`, `author`, `vars.*`, `cover`, `back` |
 | `vars` | `card.html`, `book.html`, `site-card.html` | the fully-cascaded vars map for that card |
 | `axis` / `value` | axis dividers and landing pages | `{name, title}` / `{id, label, color, count, cards}` |
@@ -222,9 +222,10 @@ site index read. Everything else in `vars` is reachable too: this guide's
 `paperband.yaml` sets `version:`, which no bundled template reads, but a theme template
 can with `{{ book.vars.version }}`.
 
-`vars` and `frontmatter` are lenient: reading a key that was never set yields null rather
-than an error, so themes work across books with different vars.
-The structural objects (`card`, `block`, `value`) are strict: a typo like
+`vars`, `frontmatter` and a block's `attributes` and `directives` are lenient: reading a
+key that was never set yields null rather than an error, so themes work across books with
+different vars, and `{% if block.directives.step %}` is simply false for a block with no
+step. The structural objects (`card`, `block`, `value`) are strict: a typo like
 `{{ block.headign }}` fails the build instead of rendering blanks.
 
 Extra keys under an axis value in yaml (`icon:`, `description:`) are not exposed to
@@ -257,6 +258,47 @@ each offending card and block. Without the `rest()` line, the template becomes a
 shape check: cards with unexpected sections fail to build. Templates that don't use
 `card.slots` are not checked. Nested blocks always travel with their parent — slots operate on
 top-level blocks only.
+
+## Picking parts out of a block
+
+Slots move whole blocks. To use *part* of one, such as the paragraph a card marked
+`{.instructions}` or the console session under it, filter the block's HTML with
+`select`, which takes a CSS selector:
+
+```
+{{ block.html | select('p.instructions, pre.console') | raw }}
+```
+
+It returns the outer HTML of every match, in document order, and doesn't repeat an
+element that sits inside another match. No match gives an empty string, so
+`{% if block.html | select('pre.console') %}` works as a test. Like `block.html` itself
+the result is HTML, so print it with `| raw`. A selector jsoup can't read fails the build
+and names the selector.
+
+Together with `block.directives` it builds a second document out of pieces of the first.
+This card body gives one entry per `{!step}`: its heading, its instructions and its
+console session, with nested steps inside their parent's entry:
+
+```
+{% macro entries(blocks) %}
+  {% for b in blocks %}
+    {% if b.directives.step %}
+      <section class="step-entry">
+        <h3>{{ b.heading }}</h3>
+        {{ b.html | select('p.instructions, pre.console') | raw }}
+        {{ entries(b.children) }}
+      </section>
+    {% else %}
+      {{ entries(b.children) }}
+    {% endif %}
+  {% endfor %}
+{% endmacro %}
+{{ entries(card.blocks) }}
+```
+
+Put it in a separate `layouts/_card-body.html` and point a second plugin execution at it
+with `<layouts>` and its own `<output>`; the source cards don't change. The kitchen-sink
+example's `cheatsheet` execution does exactly this.
 
 ## Authoring a custom theme
 

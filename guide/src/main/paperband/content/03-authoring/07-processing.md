@@ -44,7 +44,7 @@ html --> book
 | 2. Parse | The body, after the frontmatter is split off | A markdown tree | Markdown itself; anything in code becomes code and is never read again | Other cards |
 | 3. Tree | That tree | The same tree with sections, attributes, spans and numbered steps | `{!name}`, `{.x}`, `{/x}`, `{key=value}` | Other cards |
 | 4. HTML | The card rendered to HTML | The card's blocks: heading, classes, attributes, directives and HTML for each | ` ```type ` fences, the `ast:` fallback, the content policy | Other cards |
-| 5. Book | Every card's blocks, in book order | The PDF, the site and any other outputs | `card:` links, `:icon:` references, chapter numbers, the table of contents and index, layout templates | Nothing is hidden: this is the first phase with the whole book |
+| 5. Book | Every card's blocks, in book order | The PDF, the site and any other outputs | `card:` links, `:icon:` references, chapter numbers, the table of contents and index, layout templates, which can reorder blocks into slots and pick parts out of them with `select` | Nothing is hidden: this is the first phase with the whole book |
 
 An `.html` card skips phases 2 and 3, because it has no markdown to parse; its blocks come
 from its headings in phase 4. A `.yaml` card is turned into markdown first and then goes
@@ -115,9 +115,17 @@ also why a value containing a stray `{step}` fails the build like one typed in t
 | Draw a fence as something else | a ` ```type ` fence with a block template or renderer | 4 |
 | Link to another card | `[text](card:id)` | 5 |
 | Change how every card looks | a theme, or a template in `layouts/` | 5 |
+| Move a block to another place on the page | a slot, `card.slots.take('name')`, in `_card-body.html` | 5 |
+| Build a second document from parts of the cards | a separate `_card-body.html` using `block.html \| select('css')` | 5 |
 
 If something needs to know the structure (a number, a parent, a neighbour), it belongs in
 phase 3 or later, not in Pebble.
+
+Slots and `select` find blocks and elements by the ids and classes phase 3 gave them. A
+heading's explicit class replaces its slug, so `## Watch Out {.warning}` is `warning` to
+a slot, not `watch-out`; a mid-text span isn't a block and can't be taken; and a nested
+block always travels with its parent. See
+[Themes](card:themes#structural-templates-block-slots).
 
 ## Two Pebble passes
 

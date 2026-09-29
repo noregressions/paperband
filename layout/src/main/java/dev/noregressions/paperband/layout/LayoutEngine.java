@@ -342,6 +342,7 @@ public final class LayoutEngine {
         return new PebbleEngine.Builder()
                 .loader(loader)
                 .extension(new LenientMapExtension())
+                .extension(new HtmlSelectExtension())
                 .strictVariables(false)
                 .autoEscaping(true)
                 .build();

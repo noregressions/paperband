@@ -10,6 +10,11 @@ is 1, the next is 2, and each parent starts again. None of the headings below co
 number; reorder them and the numbers follow
 ([Card Structure](https://noregressions.github.io/paperband/cards/card-structure.html#numbered-steps)).
 
+One paragraph in each step ends with `{.instructions}`. The class changes nothing here,
+because no stylesheet targets it, but it lets a separate layout find that paragraph: the
+book's `cheatsheet` build (`src/main/cheatsheet/layouts/_card-body.html`) turns this card
+into a one-entry-per-step summary of the title, the instructions and the command.
+
 ## Before you start
 
 This heading has no `{!step}`, so it isn't counted, and the first step below is still
@@ -20,7 +25,11 @@ Step 1.
 Paperband needs Java and Maven. The two checks below are steps inside this step, so they
 number 1 and 2 again.
 
+Install a JDK, version 21 or later, and Maven. {.instructions}
+
 ### {!step} Check Java
+
+Confirm the JDK is version 21 or later. {.instructions}
 
 ```command
 java -version
@@ -28,11 +37,15 @@ java -version
 
 ### {!step} Check Maven
 
+Confirm Maven runs and uses that JDK. {.instructions}
+
 ```command
 mvn -version
 ```
 
 ## {!step}: Create the book
+
+Generate a new book from the archetype. {.instructions}
 
 ```command
 mvn archetype:generate \
@@ -47,17 +60,19 @@ Three steps inside this one, restarting at 1:
 
 ### {!step} Add a file
 
-Create `src/main/paperband/01-hello.md`.
+Create `src/main/paperband/01-hello.md`. {.instructions}
 
 ### {!step} Give it a title
 
-The first `#` heading names the card.
+The first `#` heading names the card. {.instructions}
 
 ### {!step} Add a block
 
-Each `##` heading starts a block the theme can style.
+Each `##` heading starts a block the theme can style. {.instructions}
 
 ## {!step}: Build it
+
+Build the PDF and the site. {.instructions}
 
 ```command
 mvn package
