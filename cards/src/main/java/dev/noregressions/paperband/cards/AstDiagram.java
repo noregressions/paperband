@@ -17,6 +17,8 @@ import org.commonmark.node.Node;
 import org.commonmark.node.OrderedList;
 import org.commonmark.node.Text;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -34,6 +36,10 @@ import java.util.Map;
  * ast: true      block nodes, each with an excerpt of its text
  * ast: inline    every node, down to text runs and code spans
  * </pre>
+ *
+ * <p>The tree is drawn by the PlantUML block renderer when the book has it,
+ * and otherwise as nested HTML lists the base stylesheet draws as a tree --
+ * plainer, but a picture of the tree either way, with nothing to install.
  */
 final class AstDiagram {
 
@@ -63,41 +69,93 @@ final class AstDiagram {
     /** Longest excerpt of a node's text before it's cut with an ellipsis. */
     private static final int EXCERPT = 48;
 
+    /**
+     * One node of the drawing: its type, what distinguishes it (level,
+     * language, attributes), a short excerpt of its text, and its children.
+     * Built once, then written as PlantUML or as HTML.
+     */
+    record Item(String type, String detail, String excerpt, List<Item> children) {
+    }
+
     private final AttributeSyntax syntax;
     private final Detail detail;
-    private final StringBuilder out = new StringBuilder();
 
     private AstDiagram(AttributeSyntax syntax, Detail detail) {
         this.syntax = syntax;
         this.detail = detail;
     }
 
-    /** The PlantUML source for {@code document}'s tree. */
-    static String of(Node document, AttributeSyntax syntax, Detail detail) {
-        AstDiagram d = new AstDiagram(syntax, detail);
+    /** The drawing of {@code document}'s tree. */
+    static Item tree(Node document, AttributeSyntax syntax, Detail detail) {
+        return new AstDiagram(syntax, detail).item(document);
+    }
+
+    /** {@code tree} as PlantUML source. */
+    static String plantuml(Item tree) {
         // A mind map grows left to right: depth goes across and siblings go
         // down, so a long card makes a tall diagram that still fits a page
         // column. A work-breakdown tree put siblings side by side, and a card
         // of ordinary length came out several page-widths wide.
-        d.out.append("@startmindmap\n");
-        d.node(document, 1);
-        d.out.append("@endmindmap\n");
-        return d.out.toString();
+        StringBuilder out = new StringBuilder("@startmindmap\n");
+        plantuml(tree, 1, out);
+        return out.append("@endmindmap\n").toString();
     }
 
-    private void node(Node node, int depth) {
-        out.append("*".repeat(depth)).append(' ').append(escape(label(node))).append('\n');
+    private static void plantuml(Item item, int depth, StringBuilder out) {
+        StringBuilder label = new StringBuilder(item.type());
+        if (!item.detail().isEmpty()) label.append(' ').append(item.detail());
+        if (item.excerpt() != null) label.append("  \"").append(item.excerpt()).append('"');
+        out.append("*".repeat(depth)).append(' ').append(escape(label.toString())).append('\n');
+        for (Item child : item.children()) plantuml(child, depth + 1, out);
+    }
+
+    /**
+     * {@code tree} as nested lists, drawn as a tree by the base stylesheet's
+     * {@code .paperband-ast-tree} rules: what a book without the PlantUML block
+     * renderer gets instead of the diagram's source.
+     */
+    static String html(Item tree) {
+        StringBuilder out = new StringBuilder("<div class=\"paperband-ast-tree\"><ul>");
+        html(tree, out);
+        return out.append("</ul></div>").toString();
+    }
+
+    private static void html(Item item, StringBuilder out) {
+        out.append("<li><span class=\"ast-node\"><b>").append(esc(item.type())).append("</b>");
+        if (!item.detail().isEmpty()) {
+            out.append(" <span class=\"ast-detail\">").append(esc(item.detail())).append("</span>");
+        }
+        if (item.excerpt() != null) {
+            out.append(" <q class=\"ast-text\">").append(esc(item.excerpt())).append("</q>");
+        }
+        out.append("</span>");
+        if (!item.children().isEmpty()) {
+            out.append("<ul>");
+            for (Item child : item.children()) html(child, out);
+            out.append("</ul>");
+        }
+        out.append("</li>");
+    }
+
+    private static String esc(String s) {
+        return org.jsoup.nodes.Entities.escape(s);
+    }
+
+    private Item item(Node node) {
+        List<Item> children = new ArrayList<>();
         // Below a block, inline content is summarised in the block's excerpt
         // unless the whole tree was asked for.
-        if (detail == Detail.BLOCKS && !hasBlockChildren(node)) return;
-        for (Node child = node.getFirstChild(); child != null; child = child.getNext()) {
-            if (detail == Detail.BLOCKS && !isBlock(child)) continue;
-            node(child, depth + 1);
+        if (detail == Detail.INLINE || hasBlockChildren(node)) {
+            for (Node child = node.getFirstChild(); child != null; child = child.getNext()) {
+                if (detail == Detail.BLOCKS && !isBlock(child)) continue;
+                children.add(item(child));
+            }
         }
+        return new Item(type(node), detailOf(node), excerpt(node), List.copyOf(children));
     }
 
-    private String label(Node node) {
-        StringBuilder sb = new StringBuilder(type(node));
+    private String detailOf(Node node) {
+        StringBuilder sb = new StringBuilder();
         if (node instanceof Heading h) {
             sb.append(" h").append(h.getLevel());
             // The consumed title stays in the tree, outside any section.
@@ -124,9 +182,7 @@ final class AstDiagram {
         if (!attrs.isEmpty() && !(node instanceof Heading && node.getParent() instanceof Sections.Section)) {
             sb.append(' ').append(attrs);
         }
-        String excerpt = excerpt(node);
-        if (excerpt != null) sb.append("  \"").append(excerpt).append('"');
-        return sb.toString();
+        return sb.toString().strip();
     }
 
     /** {@code .class #id key=value !directive=value}, in that order. */

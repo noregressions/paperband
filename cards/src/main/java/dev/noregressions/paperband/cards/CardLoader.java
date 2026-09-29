@@ -261,6 +261,7 @@ public final class CardLoader {
                 attributeSyntax);
         List<org.commonmark.Extension> extensions = List.of(TablesExtension.create());
         String html;
+        String astFallback = null;
         AstDiagram.Detail ast;
         try {
             ast = AstDiagram.Detail.of(fm.get("ast").orElse(null));
@@ -288,13 +289,17 @@ public final class CardLoader {
             // as a last block holding a plantuml fence: the block pass below
             // draws it like any other, or leaves the source readable when no
             // PlantUML renderer is installed.
-            if (ast != null) html += astBlock(AstDiagram.of(doc, attributeSyntax, ast));
+            if (ast != null) {
+                AstDiagram.Item tree = AstDiagram.tree(doc, attributeSyntax, ast);
+                html += astBlock(AstDiagram.plantuml(tree));
+                astFallback = AstDiagram.html(tree);
+            }
         } catch (IllegalArgumentException e) {
             throw new CardParseException(source + ": " + e.getMessage(), e);
         }
 
         // 3. The rendered sections are the blocks: read them via jsoup
-        return buildCard(source, fm, Jsoup.parseBodyFragment(html).body(), true);
+        return buildCard(source, fm, Jsoup.parseBodyFragment(html).body(), true, astFallback);
     }
 
     /** The marked section that carries an {@code ast:} diagram. */
@@ -340,7 +345,7 @@ public final class CardLoader {
             throw new CardParseException(source + ": ast: needs a markdown card. An .html card"
                     + " has no markdown tree to draw.");
         }
-        return buildCard(source, new Frontmatter(meta), jdoc.body(), false);
+        return buildCard(source, new Frontmatter(meta), jdoc.body(), false, null);
     }
 
     /**
@@ -369,14 +374,29 @@ public final class CardLoader {
      * @param explicitSections true when {@link Sections} has already marked the
      *        structure (a markdown card); false to infer it from the headings
      *        (an {@code .html} card, which has no markdown tree)
+     * @param astFallback the {@code ast:} tree as HTML, used when no block
+     *        renderer drew its PlantUML fence; null when the card has no {@code ast:}
      */
-    private Card buildCard(Path source, Frontmatter fm, Element bodyEl, boolean explicitSections) {
+    private Card buildCard(Path source, Frontmatter fm, Element bodyEl, boolean explicitSections,
+                           String astFallback) {
         // 3a-pre. Block templates: a ```type block whose type has a
         //     blocks/<type>.html template (book layouts/, theme, or bundled)
         //     renders through it — the pluggable half of what a fence means.
         //     Types with no template fall through untouched, which is also
         //     what keeps diff-card/error-output on their Java path below.
         applyBlockTemplates(source, bodyEl);
+
+        // No PlantUML renderer drew the ast: diagram, so its fence is still
+        // there as source: swap in the tree drawn as HTML instead.
+        if (astFallback != null) {
+            Element undrawn = bodyEl.selectFirst("h2.paperband-ast + pre:has(> code.language-plantuml)");
+            if (undrawn != null) {
+                for (Node n : new ArrayList<>(Jsoup.parseBodyFragment(astFallback).body().childNodes())) {
+                    undrawn.before(n);
+                }
+                undrawn.remove();
+            }
+        }
 
         // 3a. Rewrite custom fenced-code conventions (diff-card, error-output)
         //     into structured HTML before block-walking. Real-language fences

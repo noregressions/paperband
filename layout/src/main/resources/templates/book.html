@@ -173,6 +173,26 @@
     figure.plantuml > svg, figure.diagram > svg,
     figure.plantuml > img, figure.diagram > img { max-width: 100%; height: auto; }
 
+    /* ast: drawn without the PlantUML block renderer -- the same tree rules
+       as site-base.css, so the PDF matches the site. */
+    .paperband-ast-tree { margin: 1.2rem 0; font-size: 0.8em; line-height: 1.35; text-align: left; }
+    .paperband-ast-tree ul { list-style: none; margin: 0; padding: 0 0 0 1.4em; }
+    .paperband-ast-tree > ul { padding-left: 0; }
+    .paperband-ast-tree li { position: relative; margin: 0; padding: 0.18em 0 0.18em 1.1em; }
+    .paperband-ast-tree li::before, .paperband-ast-tree li::after {
+      content: ""; position: absolute; left: 0; border-color: rgba(127, 127, 127, 0.55); }
+    .paperband-ast-tree li::before { top: 0; bottom: 0; border-left: 1px solid; }
+    .paperband-ast-tree li:last-child::before { bottom: auto; height: 0.95em; }
+    .paperband-ast-tree li::after { top: 0.95em; width: 0.9em; border-top: 1px solid; }
+    .paperband-ast-tree > ul > li { padding-left: 0; }
+    .paperband-ast-tree > ul > li::before, .paperband-ast-tree > ul > li::after { display: none; }
+    .paperband-ast-tree .ast-node {
+      display: inline-block; padding: 0.05em 0.45em; border: 1px solid rgba(127, 127, 127, 0.45);
+      border-radius: 4px; background: rgba(127, 127, 127, 0.08); }
+    .paperband-ast-tree .ast-detail { opacity: 0.8; }
+    .paperband-ast-tree .ast-text { opacity: 0.7; font-style: italic; }
+    .paperband-ast-tree li { break-inside: avoid; page-break-inside: avoid; }
+
     /* card.slots.takeWithLayout/requireWithLayout break-preference classes —
        bundled here (not per-theme) so every theme gets them regardless of
        whether it opts into slot-based layout. break-inside/break-before are

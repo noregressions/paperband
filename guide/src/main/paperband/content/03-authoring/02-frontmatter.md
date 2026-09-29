@@ -62,9 +62,10 @@ a short excerpt of their text. `ast: inline` goes further and draws text runs, c
 links, emphasis and each `{!step}` marker with the text it became, such as
 `Marker {!step} = "Step 1"`.
 
-The diagram is a PlantUML mind map, so it's drawn when the book has the PlantUML block
-renderer (see [Extending Paperband](card:extending-paperband)). Without it, the block shows the diagram's
-source as code, which is still readable. Only a markdown card has a tree to draw: `ast`
+With the PlantUML block renderer installed (see
+[Extending Paperband](card:extending-paperband)), the tree is a PlantUML mind map. Without
+it, paperband draws the tree itself: each node a box, joined to its parent by a line, so
+`ast:` works in any book with nothing to install. Only a markdown card has a tree to draw: `ast`
 on an `.html` card fails the build. Remove the key before publishing.
 
 ## Custom fields
