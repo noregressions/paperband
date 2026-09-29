@@ -15,42 +15,54 @@
 ' The values below are the noregressions theme's tokens, copied by hand — the
 ' two systems have no way to share them. When the theme's palette moves, this
 ' moves with it. See theme.css.
+'
+' Each token name sits on its own line above the value it names. PlantUML
+' reads a comment after a value as part of the value: "#687280 ' --nr-muted"
+' is no colour at all, and arrows drawn with it came out white.
 
 <style>
 root {
   FontName        "IBM Plex Sans"
   FontSize        12
-  FontColor       #333333          ' --nr-text
-  LineColor       #aeb7c2          ' --nr-line-strong
+  ' --nr-text
+  FontColor       #333333
+  ' --nr-line-strong
+  LineColor       #aeb7c2
   BackgroundColor transparent
-  HyperLinkColor  #1d4ed8          ' --nr-brand
+  ' --nr-brand
+  HyperLinkColor  #1d4ed8
 }
 
 ' Titles and captions sit with the book's headings, not with its prose.
 title {
   FontName  "IBM Plex Sans"
   FontSize  14
-  FontColor #161616                ' --nr-ink
+  ' --nr-ink
+  FontColor #161616
 }
 
 ' One quiet fill for every kind of box, so a diagram reads as structure
 ' rather than as decoration -- the same rule the prose theme follows.
 node, component, class, entity, participant, state, usecase, rectangle, artifact {
-  BackgroundColor #f6f8fa          ' --nr-surface
+  ' --nr-surface
+  BackgroundColor #f6f8fa
   LineColor       #aeb7c2
   FontColor       #161616
   RoundCorner     3
 }
 
 arrow {
-  LineColor #687280                ' --nr-muted
+  ' --nr-muted
+  LineColor #687280
   FontColor #333333
   FontSize  11
 }
 
 note {
-  BackgroundColor #eefafd          ' --nr-info-soft
-  LineColor       #0e8ea9          ' --nr-info
+  ' --nr-info-soft
+  BackgroundColor #eefafd
+  ' --nr-info
+  LineColor       #0e8ea9
   FontColor       #333333
   FontSize        11
 }
@@ -65,7 +77,8 @@ sequenceDiagram {
     FontColor       #161616
   }
   divider {
-    BackgroundColor #edf1f5        ' --nr-surface-strong
+    ' --nr-surface-strong
+    BackgroundColor #edf1f5
     LineColor       #aeb7c2
   }
 }
