@@ -905,7 +905,8 @@ public final class LayoutEngine {
             }
 
             Map<String, Object> model = new HashMap<>();
-            Map<String, Object> cm = cardModel(card, cardAxesFromGroupings(i, groupings));
+            Map<String, Object> cm = cardModel(card, cardAxesFromGroupings(i, groupings),
+                    contexts.get(i).vars());
             cm.put("number", numberLabel(card.id()));
             model.put("book", bookModel);
             model.put("navEntries", navEntries);
@@ -2063,7 +2064,7 @@ public final class LayoutEngine {
 
     private Map<String, Object> buildModel(Card card, RenderContext ctx) {
         Map<String, Object> model = new HashMap<>();
-        model.put("card", cardModel(card, resolveCardAxes(card, ctx, ctx.book().axes())));
+        model.put("card", cardModel(card, resolveCardAxes(card, ctx, ctx.book().axes()), ctx.vars()));
         model.put("ctx", contextModel(ctx));
         model.put("vars", LenientMap.of(ctx.vars()));
         model.put("target", ctx.target());
@@ -2194,7 +2195,7 @@ public final class LayoutEngine {
             // slot is taken before any of this card's entries are added.
             if (tocAt != null && i == tocAt) tocEntryIndex = tocEntries.size();
             Map<String, Object> axesForCard = cardAxesFromGroupings(i, groupings);
-            Map<String, Object> cm = cardModel(cards.get(i), axesForCard);
+            Map<String, Object> cm = cardModel(cards.get(i), axesForCard, contexts.get(i).vars());
             cm.put("number", numberLabel(cards.get(i).id()));
             // Card-scope page treatment: when this card's resolved orientation
             // differs from the book's sheet, name the rotation so book.html can
@@ -2630,7 +2631,8 @@ public final class LayoutEngine {
         return n == null ? null : n.label();
     }
 
-    private static Map<String, Object> cardModel(Card card, Map<String, Object> axes) {
+    private static Map<String, Object> cardModel(Card card, Map<String, Object> axes,
+                                                 Map<String, Object> vars) {
         Map<String, Object> m = new HashMap<>();
         m.put("id", card.id());
         m.put("title", card.title());
@@ -2664,6 +2666,12 @@ public final class LayoutEngine {
         // looping card.blocks; after the render the engine checks it (see
         // checkSlots). Templates that never touch it are unaffected.
         m.put("slots", new SlotTracker(blocks));
+        // Every {!step} block, flattened with its depth, so a template lists a
+        // card's steps without recursing -- and can tell a card has none.
+        m.put("steps", CheatSheet.steps(blocks));
+        // Cheat-sheet mode for this card: null when off, else its selector. The
+        // body templates branch on it; see CheatSheet.
+        m.put("cheatsheet", CheatSheet.model(vars));
         return m;
     }
 

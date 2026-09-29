@@ -262,6 +262,28 @@ public class SiteMojo extends AbstractPaperbandMojo {
 
         CardLoading.requireUniqueIds(cards, bookDir);
 
+        // Cheat-sheet mode (vars.cheatsheet): a card is its steps, so one with
+        // none is left out, and a card: link to it becomes plain text -- as in
+        // a build. See CheatSheet.
+        java.util.Set<String> steplessIds = new java.util.LinkedHashSet<>();
+        for (int i = cards.size() - 1; i >= 0; i--) {
+            if (dev.noregressions.paperband.layout.CheatSheet.enabled(contexts.get(i).vars())
+                    && !dev.noregressions.paperband.layout.CheatSheet.hasSteps(cards.get(i))) {
+                steplessIds.add(cards.get(i).id());
+                cards.remove(i);
+                contexts.remove(i);
+            }
+        }
+        if (!steplessIds.isEmpty()) {
+            if (cards.isEmpty()) {
+                throw new MojoFailureException("cheat sheet: no card has a {!step}, so there is"
+                        + " nothing to show. Mark the steps with {!step}, or turn vars.cheatsheet"
+                        + " off for this build.");
+            }
+            getLog().info("Cheat sheet: left out " + steplessIds.size() + " card(s) with no {!step}: "
+                    + String.join(", ", steplessIds));
+        }
+
         // Book-level config and sections declared in the POM, applied exactly as
         // in a build: the site's title, landing pages and nav then match the
         // PDF's cover and dividers.
@@ -278,6 +300,7 @@ public class SiteMojo extends AbstractPaperbandMojo {
                 ? new LayoutEngine(bookCtx.book().bookRoot(), geo.layouts(), theme)
                 : new LayoutEngine(bookCtx.book().bookRoot(), theme);
         layout.setExtraCss(stylesheetPaths());
+        layout.setExcludedCardIds(steplessIds);
         // The book's own icons live in its home, beside paperband.yaml; a book
         // with no home keeps them at its root. See LayoutEngine#setIconsDir.
         layout.setIconsDir(geo.home() != null ? geo.home().resolve("icons")

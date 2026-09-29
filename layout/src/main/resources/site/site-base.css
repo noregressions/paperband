@@ -294,6 +294,19 @@ figure.plantuml, figure.diagram { margin: 1.8rem 0; text-align: center; }
 figure.plantuml > svg, figure.diagram > svg,
 figure.plantuml > img, figure.diagram > img { max-width: 100%; height: auto; }
 
+/* Cheat-sheet mode (vars.cheatsheet): each card is its steps, one entry per
+ * {!step}, flowing on under the card's title; a nested step is indented
+ * under its parent, and an entry never splits across a page. */
+.cheatsheet-card { margin: 0 0 1.8rem; }
+.cheatsheet-card + .cheatsheet-card { padding-top: 1.2rem; border-top: 1px solid rgba(127, 127, 127, 0.35); }
+.cheatsheet-card-title { margin: 0 0 0.8rem; }
+.cheatsheet-step { margin: 0 0 0.9rem; break-inside: avoid; page-break-inside: avoid; }
+.cheatsheet-step > h3 { margin: 0 0 0.3rem; font-size: 1.05em; }
+.cheatsheet-step > p { margin: 0 0 0.4rem; }
+.cheatsheet-depth-1 { margin-left: 1.4rem; }
+.cheatsheet-depth-2 { margin-left: 2.8rem; }
+.cheatsheet-depth-3 { margin-left: 4.2rem; }
+
 /* ast: in a card's frontmatter, drawn without the PlantUML block renderer:
  * nested lists become a tree, each node a box joined to its parent by an
  * elbow line. Neutral greys at partial opacity so any theme, light or dark,

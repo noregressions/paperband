@@ -117,6 +117,6 @@
   {# card.axes (resolved by LayoutEngine.resolveCardAxes: frontmatter wins,
      vars is the fallback) already carries every axis this card belongs to,
      so _card-body no longer needs a "tier" param threaded through. #}
-  {% include "_card-body" with {"card": card} %}
+  {% if card.cheatsheet is not null %}{% include "_cheatsheet-card" with {"card": card} %}{% else %}{% include "_card-body" with {"card": card} %}{% endif %}
 </body>
 </html>

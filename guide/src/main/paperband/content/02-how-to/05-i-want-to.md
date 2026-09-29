@@ -162,6 +162,17 @@ mvn paperband:site -Dpaperband.outputDirectory=target/site
 
 See [Maven Plugin](card:maven-plugin#the-site-goal).
 
+### Build a cheat sheet of the steps
+
+```xml
+<book>
+  <vars><cheatsheet>true</cheatsheet></vars>
+</book>
+```
+
+In a second execution with its own `<output>`. See
+[Make a Cheat Sheet](card:make-a-cheat-sheet).
+
 ### Turn on the site sidebar
 
 ```yaml

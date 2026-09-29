@@ -47,20 +47,43 @@
                             <output>${project.build.directory}/kitchen-sink.pdf</output>
                         </configuration>
                     </execution>
-                    <!-- A second document from the same content: one card, a
-                         different card body. The steps card marks one
-                         paragraph per step {.instructions}; this build's
-                         layouts/_card-body.html keeps only each step's title,
-                         that paragraph and its command, using | select.
-                         https://noregressions.github.io/paperband/cards/themes.html -->
+                    <!-- A cheat sheet from the same cards: vars.cheatsheet turns
+                         every card into its {!step} entries (heading, the
+                         paragraph marked {.instructions}, the command) and
+                         leaves out cards with no steps, so here only the
+                         steps card appears.
+                         https://noregressions.github.io/paperband/cards/make-a-cheat-sheet.html -->
                     <execution>
                         <id>cheatsheet</id>
                         <phase>package</phase>
                         <goals><goal>build</goal></goals>
                         <configuration>
-                            <input>${project.basedir}/src/main/paperband/content/01-basics/04-steps.md</input>
-                            <layouts>${project.basedir}/src/main/cheatsheet/layouts</layouts>
+                            <book>
+                                <title>Kitchen Sink: cheat sheet</title>
+                                <vars>
+                                    <cheatsheet>true</cheatsheet>
+                                    <toc>false</toc>
+                                    <index>false</index>
+                                </vars>
+                            </book>
                             <output>${project.build.directory}/cheatsheet.pdf</output>
+                        </configuration>
+                    </execution>
+                    <!-- The same cheat sheet as a site: vars.cheatsheet works for
+                         the site goal too. -->
+                    <execution>
+                        <id>cheatsheet-site</id>
+                        <phase>package</phase>
+                        <goals><goal>site</goal></goals>
+                        <configuration>
+                            <book>
+                                <title>Kitchen Sink: cheat sheet</title>
+                                <vars>
+                                    <cheatsheet>true</cheatsheet>
+                                </vars>
+                            </book>
+                            <outputDirectory>${project.build.directory}/cheatsheet-site</outputDirectory>
+                            <clean>true</clean>
                         </configuration>
                     </execution>
                     <execution>

@@ -6,7 +6,8 @@ links to the guide card that explains it (https://noregressions.github.io/paperb
 Build it from the repository root with the examples profile, which renders it with the
 plugin built in the same run:
 
-    mvn install -Pexamples      # target/kitchen-sink.pdf, target/cheatsheet.pdf and target/site/
+    mvn install -Pexamples      # target/kitchen-sink.pdf, target/site/, and the cheat sheet
+                                # as target/cheatsheet.pdf and target/cheatsheet-site/
 
 Or build it on its own with `mvn package` in this directory, once the root has been
 installed.
@@ -36,7 +37,7 @@ Paths are relative to `src/main/paperband/`.
 | Blocks: Watch Out, Check | `content/01-basics/02-blocks.md` |
 | `command`, `output` and `console` fences | `content/01-basics/02-blocks.md` |
 | Numbered steps with `{!step}`, including steps inside a step | `content/01-basics/04-steps.md`, `styles/book.css` |
-| A second document from parts of the cards (`{.instructions}`, `block.directives`, `\| select`) | `../../../pom.xml` (`cheatsheet` execution), `../cheatsheet/layouts/_card-body.html`, `content/01-basics/04-steps.md` |
+| A cheat sheet from the same cards (`vars.cheatsheet`, `{.instructions}`), as a PDF and a site | `../../../pom.xml` (`cheatsheet` and `cheatsheet-site` executions), `content/01-basics/04-steps.md` |
 | A custom block type | `layouts/blocks/note.html`, used in `content/01-basics/02-blocks.md` |
 | `:name:` icons, bundled and the book's own | `content/01-basics/02-blocks.md`, `icons/ks.svg` |
 | `{% fragment %}` from a source file | `content/02-authoring/01-includes.md`, `content/02-authoring/Hello.java` |

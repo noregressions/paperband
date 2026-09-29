@@ -310,7 +310,7 @@ final class BookBuild {
 
         CardLoading.requireUniqueIds(cards, bookRoot);
 
-        Selection selected = applySelection(cards, contexts, tocCardIndex, pages);
+        Selection selected = dropCardsWithoutSteps(applySelection(cards, contexts, tocCardIndex, pages));
         // The whole book, before the selection narrows it. Chapter numbers are
         // derived from this rather than from what survives: a sampler that
         // renumbered its extracts would give the same chapter two different
@@ -548,6 +548,48 @@ final class BookBuild {
         }
         return new Selection(keptCards, keptContexts,
                 tocCardIndex == null ? null : keptBeforeToc, keptPages);
+    }
+
+    /**
+     * In cheat-sheet mode ({@code vars.cheatsheet}), a card is its steps, so a
+     * card with none has nothing to show and is left out -- counted with what
+     * a selection left out, so a {@code card:} link to it becomes plain text
+     * rather than failing. Marker positions move the way a selection moves them.
+     */
+    private Selection dropCardsWithoutSteps(Selection s) throws MojoFailureException {
+        List<Card> keptCards = new ArrayList<>();
+        List<RenderContext> keptContexts = new ArrayList<>();
+        List<String> dropped = new ArrayList<>();
+        int keptBeforeToc = 0;
+        int[] keptBeforePage = new int[s.pages().size()];
+        for (int i = 0; i < s.cards().size(); i++) {
+            Card card = s.cards().get(i);
+            if (dev.noregressions.paperband.layout.CheatSheet.enabled(s.contexts().get(i).vars())
+                    && !dev.noregressions.paperband.layout.CheatSheet.hasSteps(card)) {
+                dropped.add(card.id());
+                continue;
+            }
+            keptCards.add(card);
+            keptContexts.add(s.contexts().get(i));
+            if (s.tocCardIndex() != null && i < s.tocCardIndex()) keptBeforeToc++;
+            for (int p = 0; p < s.pages().size(); p++) {
+                if (i < s.pages().get(p).cardIndex()) keptBeforePage[p]++;
+            }
+        }
+        if (dropped.isEmpty()) return s;
+        if (keptCards.isEmpty()) {
+            throw new MojoFailureException("cheat sheet: none of the " + s.cards().size()
+                    + " cards has a {!step}, so there is nothing to show. Mark the steps with"
+                    + " {!step}, or turn vars.cheatsheet off for this build.");
+        }
+        log.info("Cheat sheet: left out " + dropped.size() + " card(s) with no {!step}: "
+                + String.join(", ", dropped));
+        List<PlacedPage> keptPages = new ArrayList<>(s.pages().size());
+        for (int p = 0; p < s.pages().size(); p++) {
+            keptPages.add(new PlacedPage(keptBeforePage[p], s.pages().get(p).template()));
+        }
+        return new Selection(keptCards, keptContexts,
+                s.tocCardIndex() == null ? null : keptBeforeToc, keptPages);
     }
 
     private String describeSelection(List<String> inclusion) {

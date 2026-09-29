@@ -210,7 +210,7 @@ Theme templates receive the same Pebble model the bundled ones use. The core obj
 
 | Key | Where | What's in it |
 |---|---|---|
-| `card` | card pages, each entry of `cards` in `book.html` | `id`, `title`, `frontmatter.*` (raw map), `axes.{axisName}.{id,label,color}`, `blocks` (nested: `heading`, `level`, `classes`, `classAttr`, `id`, `anchor`, `attributes`, `directives`, `html`, `children`) |
+| `card` | card pages, each entry of `cards` in `book.html` | `id`, `title`, `frontmatter.*` (raw map), `axes.{axisName}.{id,label,color}`, `blocks` (nested: `heading`, `level`, `classes`, `classAttr`, `id`, `anchor`, `attributes`, `directives`, `html`, `children`), `steps` (every `{!step}` block flattened, as `{block, depth}`), `cheatsheet` (null, or `{select}` in [cheat-sheet mode](card:make-a-cheat-sheet)) |
 | `book` | book PDF + every site page | `title`, `subtitle`, `series`, `author`, `vars.*`, `cover`, `back` |
 | `vars` | `card.html`, `book.html`, `site-card.html` | the fully-cascaded vars map for that card |
 | `axis` / `value` | axis dividers and landing pages | `{name, title}` / `{id, label, color, count, cards}` |

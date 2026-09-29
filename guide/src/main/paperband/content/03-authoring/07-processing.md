@@ -116,7 +116,8 @@ also why a value containing a stray `{step}` fails the build like one typed in t
 | Link to another card | `[text](card:id)` | 5 |
 | Change how every card looks | a theme, or a template in `layouts/` | 5 |
 | Move a block to another place on the page | a slot, `card.slots.take('name')`, in `_card-body.html` | 5 |
-| Build a second document from parts of the cards | a separate `_card-body.html` using `block.html \| select('css')` | 5 |
+| Make a cheat sheet of each card's steps | `vars.cheatsheet` in a second execution, see [Make a Cheat Sheet](card:make-a-cheat-sheet) | 5 |
+| Build some other document from parts of the cards | a separate `_card-body.html` using `block.html \| select('css')` | 5 |
 
 If something needs to know the structure (a number, a parent, a neighbour), it belongs in
 phase 3 or later, not in Pebble.
