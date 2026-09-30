@@ -24,7 +24,7 @@
     {% else %}<h6{{ block.directiveAttrs | raw }}>{{ block.heading }}</h6>
     {% endif %}
   {% endif %}
-  {{ block.html | raw }}
+  {% include "_block-content" %}
   {% for child in block.children %}
   {% include "_block-section" with {"block": child} %}
   {% endfor %}

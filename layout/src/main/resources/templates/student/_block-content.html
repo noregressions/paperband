@@ -1,0 +1,4 @@
+{# The student view's block content: every node marked {.solution} (a
+   paragraph, a list, a fence) is left out, with an empty
+   <div class="answer-space"> where it was. A block with none prints as it
+   always does. #}{% if block | find('.solution') is empty %}{{ block.html | raw }}{% else %}{{ block | blank('.solution', 'answer-space') | html | raw }}{% endif %}

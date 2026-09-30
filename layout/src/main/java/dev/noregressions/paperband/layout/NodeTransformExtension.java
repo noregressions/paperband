@@ -23,7 +23,8 @@ import java.util.regex.Pattern;
 
 /**
  * Filters that change a block's content as data and write it back:
- * {@code drop('css')}, {@code addClass('css', 'name')} and {@code html}.
+ * {@code drop('css')}, {@code addClass('css', 'name')}, {@code blank('css', 'name')}
+ * and {@code html}.
  *
  * <pre>
  * {{ e.block | drop('pre.console') | addClass('p.instructions', 'lead') | html | raw }}
@@ -39,14 +40,18 @@ import java.util.regex.Pattern;
  *       it.</li>
  *   <li>{@code addClass} adds a class to every node matching a selector. A
  *       class is letters, digits, {@code -} and {@code _}.</li>
+ *   <li>{@code blank} puts an empty {@code <div>} with a class where each
+ *       node matching a selector was: space to write in, where a student
+ *       edition leaves out a solution.</li>
  *   <li>{@code html} writes nodes back as HTML, the way {@code block.html} is
  *       written: an unchanged node prints the bytes it came from, and a
  *       templated fence goes through its block template. Print it with
  *       {@code | raw}, as {@code block.html} is.</li>
  * </ul>
  * The selector sees what {@code find}'s does. The content was sanitised when the
- * card loaded, and neither transform can add markup: one removes nodes, the
- * other adds a class the writer escapes.
+ * card loaded, and no transform can add markup of the template's choosing:
+ * they remove nodes, add a class the writer escapes, or add an empty
+ * {@code div} with one.
  */
 final class NodeTransformExtension extends AbstractExtension {
 
@@ -57,7 +62,7 @@ final class NodeTransformExtension extends AbstractExtension {
 
     @Override
     public Map<String, Filter> getFilters() {
-        return Map.of("drop", new Drop(), "addClass", new AddClass(), "html", new Html());
+        return Map.of("drop", new Drop(), "addClass", new AddClass(), "blank", new Blank(), "html", new Html());
     }
 
     /** What a node becomes: itself, a changed copy, or null to leave it out. */
@@ -90,14 +95,24 @@ final class NodeTransformExtension extends AbstractExtension {
         @Override
         public Object apply(Object input, Map<String, Object> args, PebbleTemplate self,
                             EvaluationContext context, int lineNumber) throws PebbleException {
-            Object name = args.get("name");
-            if (name == null || !CLASS_NAME.matcher(name.toString()).matches()) {
-                throw new PebbleException(null, "addClass needs a selector and a class name of letters,"
-                        + " digits, - and _, as in addClass('p.instructions', 'lead'), not "
-                        + (name == null ? "nothing" : "'" + name + "'"), lineNumber, self.getName());
-            }
-            String cls = name.toString();
+            String cls = className("addClass", args.get("name"), self, lineNumber);
             return transform("addClass", input, args.get("selector"), n -> withClass(n, cls), self, lineNumber);
+        }
+    }
+
+    private static final class Blank implements Filter {
+
+        @Override
+        public List<String> getArgumentNames() {
+            return List.of("selector", "name");
+        }
+
+        @Override
+        public Object apply(Object input, Map<String, Object> args, PebbleTemplate self,
+                            EvaluationContext context, int lineNumber) throws PebbleException {
+            String cls = className("blank", args.get("name"), self, lineNumber);
+            Node space = space(cls);
+            return transform("blank", input, args.get("selector"), n -> space, self, lineNumber);
         }
     }
 
@@ -117,6 +132,23 @@ final class NodeTransformExtension extends AbstractExtension {
             }
             return out.toString();
         }
+    }
+
+    /** {@code name} as a class, or a failure naming {@code filter}'s arguments. */
+    private static String className(String filter, Object name, PebbleTemplate self, int lineNumber)
+            throws PebbleException {
+        if (name == null || !CLASS_NAME.matcher(name.toString()).matches()) {
+            throw new PebbleException(null, filter + " needs a selector and a class name of letters,"
+                    + " digits, - and _, as in " + filter + "('.solution', 'answer-space'), not "
+                    + (name == null ? "nothing" : "'" + name + "'"), lineNumber, self.getName());
+        }
+        return name.toString();
+    }
+
+    /** An empty {@code <div class="cls">}: what {@code blank} leaves where a node was. */
+    private static Node space(String cls) {
+        String html = "<div class=\"" + cls + "\"></div>";
+        return new Node("element", "div", null, Set.of(cls), Map.of(), Map.of(), "", html, List.of(), Map.of());
     }
 
     /** {@code input}'s nodes with {@code change} applied to each that {@code selector} matches. */

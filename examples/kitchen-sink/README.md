@@ -6,8 +6,9 @@ links to the guide card that explains it (https://noregressions.github.io/paperb
 Build it from the repository root with the examples profile, which renders it with the
 plugin built in the same run:
 
-    mvn install -Pexamples      # target/kitchen-sink.pdf, target/site/, and the cheat sheet
-                                # as target/cheatsheet.pdf and target/cheatsheet-site/
+    mvn install -Pexamples      # target/kitchen-sink.pdf, target/site/, the cheat sheet
+                                # as target/cheatsheet.pdf and target/cheatsheet-site/,
+                                # and the student edition as target/student.pdf
 
 Or build it on its own with `mvn package` in this directory, once the root has been
 installed.
@@ -39,6 +40,7 @@ Paths are relative to `src/main/paperband/`.
 | Numbered steps with `{!step}`, including steps inside a step | `content/01-basics/04-steps.md`, `styles/book.css` |
 | A cheat sheet of a chosen set of cards (`<book><includes>`, `<view>cheatsheet</view>`, `{.instructions}`), as a PDF and a site | `../../../pom.xml` (`cheatsheet` and `cheatsheet-site` executions), `content/04-workshop/` |
 | A generated page built from every card with `cards \| query`: each workshop step's command, at the end of the cheat sheet (a `<page>` in `<sections>`) | `../../../pom.xml` (`cheatsheet` execution), `layouts/commands.html`, `styles/book.css` |
+| A student edition: the `student` view prints each `{.solution}` as space to write in | `../../../pom.xml` (`student` execution), `content/01-basics/02-blocks.md` (Try It) |
 | A custom block type | `layouts/blocks/note.html`, used in `content/01-basics/02-blocks.md` |
 | A fragment filled from a card's content (`block.nodes`, `find`): an "At a glance" box of each step and its command | `layouts/_card-body.html`, `layouts/fragments/step-glance.html`, `styles/book.css` |
 | `:name:` icons, bundled and the book's own | `content/01-basics/02-blocks.md`, `icons/ks.svg` |

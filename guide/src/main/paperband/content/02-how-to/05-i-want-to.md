@@ -165,13 +165,20 @@ See [Maven Plugin](card:maven-plugin#the-site-goal).
 ### Build a cheat sheet of the steps
 
 ```xml
-<book>
-  <vars><cheatsheet>true</cheatsheet></vars>
-</book>
+<view>cheatsheet</view>
 ```
 
 In a second execution with its own `<output>`. See
 [Make a Cheat Sheet](card:make-a-cheat-sheet).
+
+### Build a student edition without the solutions
+
+```xml
+<view>student</view>
+```
+
+In a second execution with its own `<output>`, after marking each solution `{.solution}`.
+See [Make a Student Edition](card:make-a-student-edition).
 
 ### Turn on the site sidebar
 

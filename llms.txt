@@ -190,8 +190,14 @@ goals). Every template is looked up as `<view>/<name>.html` first, through theme
 bundled, then as the default, so a view ships only what it changes. `keep.html` is required: rendered per card
 (sees `card`, `card.steps`, `card.vars`, `output`), it prints `true`/`false`, and the cards it rejects are
 dropped before dividers, contents, nav and `card:` links are worked out. Bundled: `cheatsheet/keep.html`
-(`{{ card.steps is not empty }}`) and `cheatsheet/_card-body.html`. A view with no `keep.html` fails the
-build. Block templates don't go through views yet. Guide: Themes, "Views".
+(`{{ card.steps is not empty }}`) and `cheatsheet/_card-body.html`; `student/keep.html` (`true`),
+`student/_block-section.html` (a `.solution` block, heading and nested blocks, becomes `_answer-space`: a
+dashed `.answer-space` box, `{lines=N}` tall, labelled `vars.answerLabel`, default "Your answer") and
+`student/_block-content.html` (`.solution` nodes become an empty `div.answer-space`). In a view's template,
+`{% include "default:<name>" %}` is the template the view replaces (theme/book override included); what it
+includes goes through the view again. The default `_block-section.html` prints content via
+`_block-content.html`. A view with no `keep.html` fails the build. Block templates don't go through views
+yet. Guide: Themes, "Views"; cards `make-a-cheat-sheet`, `make-a-student-edition`.
 
 ### Querying the book
 
@@ -205,7 +211,8 @@ Example: `{% for c in cards %}{% for e in c | query('block[data-paperband-step] 
 {{ e.node.code }}…`. Guide: Themes, "Querying the whole book".
 
 `drop('css')` and `addClass('css', 'name')` take a block (its own nodes), a list of nodes or a node, and
-return a changed copy as a list of nodes; `| html` writes nodes back as `block.html` would (fences through
+return a changed copy as a list of nodes, as does `blank('css', 'name')`, which puts an empty
+`<div class="name">` where each match was; `| html` writes nodes back as `block.html` would (fences through
 their block templates), printed with `| raw`: `{{ e.block | drop('pre.console') | html | raw }}`. Nothing
 changes in place. Class names are letters, digits, `-`, `_`. Guide: Themes, "Changing what a block prints".
 

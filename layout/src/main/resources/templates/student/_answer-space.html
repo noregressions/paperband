@@ -1,0 +1,5 @@
+{# Where a solution block was, in the student view: an empty box to write in.
+   {lines=8} on the solution sets its height in lines (default 4, from the
+   scaffold CSS on .answer-space); vars.answerLabel names it. It keeps the
+   block's anchor, so a link to the solution lands on the space. #}
+<div class="answer-space"{% if block.anchor %} id="{{ block.anchor }}"{% endif %}{% if block.attributes.lines %} style="--answer-lines: {{ block.attributes.lines }}"{% endif %}><span class="answer-space-label">{{ vars.answerLabel | default('Your answer') }}</span></div>

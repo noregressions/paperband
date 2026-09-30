@@ -437,6 +437,7 @@ and write them back:
 |---|---|
 | `drop('css')` | Leaves out every node the selector matches, and everything in it |
 | `addClass('css', 'name')` | Adds a class to every node the selector matches. The name is letters, digits, `-` and `_` |
+| `blank('css', 'name')` | Puts an empty `<div>` with that class where each node the selector matches was |
 | `html` | Writes nodes back as HTML, the way `block.html` is written. Print it with `\| raw` |
 
 Each takes a block, a list of nodes or one node, and `drop` and `addClass` return the
@@ -449,8 +450,9 @@ Nothing changes in place: the card prints as it did everywhere else, and a chang
 `block.html` has it, and a ` ```command ` block through its block template, so it keeps
 its label and copy button. A class `addClass` puts on a fence reaches the template too.
 
-Neither transform can add markup. One removes nodes, and the other adds a class the writer
-escapes, so the content is as safe as it was when the card loaded.
+No transform can add markup of the template's choosing. They remove nodes, add a class the
+writer escapes, or add an empty `div` with one, so the content is as safe as it was when
+the card loaded.
 
 ## Dividers
 
@@ -513,8 +515,30 @@ they get no page, no contents entry and no divider, and a `card:` link to one pr
 text. A view with no `keep.html` anywhere in the chain fails the build, which is what
 catches a misspelt `<view>`.
 
-Paperband ships one view, `cheatsheet`: it keeps the cards with a `{!step}` and writes each
-as its steps. See [Make a Cheat Sheet](card:make-a-cheat-sheet). Block templates
+A view's template can still use the template it replaces. `default:` in front of a name
+looks it up as if there were no view, through the theme, the book's `layouts/` and the
+bundled set:
+
+```
+{# layouts/handout/_block-section.html #}
+{% if not (block.classes contains "aside") %}{% include "default:_block-section" %}{% endif %}
+```
+
+That handout leaves out every `.aside` block and hands the rest to the default, the book's
+own `_block-section.html` if it has one. Whatever the default includes goes through the
+view again, so the nested blocks it writes come back to the handout's template, and an
+aside nested anywhere is left out too. The default `_block-section.html` writes a block's
+own content through `_block-content.html`, so a view can change what a block says without
+writing its section.
+
+Paperband ships two views:
+
+- `cheatsheet` keeps the cards with a `{!step}` and writes each as its steps. See
+  [Make a Cheat Sheet](card:make-a-cheat-sheet).
+- `student` keeps every card and writes each `{.solution}` as space to write the answer
+  in. See [Make a Student Edition](card:make-a-student-edition).
+
+Block templates
 (`blocks/<type>.html`) don't go through the view yet: a fence is written the same way in
 every view.
 

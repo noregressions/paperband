@@ -253,6 +253,26 @@ pre.command::before { content: "Command"; }
 pre.output::before  { content: "Output"; }
 pre.console::before { content: "Console"; }
 
+/* Answer space (the student view's .solution replacement): an empty box to
+   write in, --answer-lines lines tall. Neutral like the fences above; themes
+   restyle freely. */
+.answer-space {
+  min-height: calc(var(--answer-lines, 4) * 1.8em);
+  margin-block: 1rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px dashed #8a94a0;
+  border-radius: 3px;
+  break-inside: avoid;
+}
+.answer-space-label {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
 /* Copy-to-clipboard buttons (_copy-buttons.html injects them into
  * pre.command/pre.console/pre.copy). Mirrors the book scaffold in book.html;
  * hidden when a reader prints the page. Themes restyle via .pw-copy-button. */

@@ -45,3 +45,16 @@ A `## Watch Out` block is styled as a callout by the theme. Write `::name:` for 
 ## Check
 
 The site's copy of this page has a **Copy** button on the `command` and `console` blocks.
+
+## Try It
+
+Which fence would you use for what the reader types, and which for what the terminal
+prints back?
+
+The one the reader types is a `command`; what comes back is `output`. {.solution}
+
+## Answer {.answer .solution lines=3}
+
+A `command` block for what the reader types, and `output` for what comes back. The
+`student` build prints a box to write in here instead
+([Make a Student Edition](https://noregressions.github.io/paperband/cards/make-a-student-edition.html)).

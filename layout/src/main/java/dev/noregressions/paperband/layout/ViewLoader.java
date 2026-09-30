@@ -18,6 +18,14 @@ import java.io.Reader;
  * {@code cheatsheet/_card-body.html} exactly as {@code layouts/_card-body.html}
  * overrides the bundled {@code _card-body.html}.
  *
+ * <p>A view's template can still reach the one it replaces:
+ * {@code {% include "default:_block-section" %}} is {@code _block-section}
+ * looked up as if there were no view. A view that changes one case -- a
+ * student edition turning solutions into answer space -- hands every other
+ * case to the default that way, a theme's or a book's override included,
+ * instead of copying it. Anything the default includes goes through the view
+ * again, so a recursive template stays the view's all the way down.
+ *
  * <p>The choice is made in {@link #createCacheKey}, so the engine caches a
  * view's template and the default under different keys.
  */
@@ -31,8 +39,12 @@ final class ViewLoader<T> implements Loader<T> {
         this.view = view;
     }
 
-    /** The name the chain is asked for: the view's own, when some link has it. */
+    /** How a view's template names the template it replaces: {@code default:<name>}. */
+    static final String DEFAULT_PREFIX = "default:";
+
+    /** The name the chain is asked for: the view's own, when some link has it, unless it asks for the default. */
     String resolve(String name) {
+        if (name.startsWith(DEFAULT_PREFIX)) return name.substring(DEFAULT_PREFIX.length());
         String own = view + "/" + name;
         return chain.resourceExists(own) ? own : name;
     }

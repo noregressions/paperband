@@ -84,6 +84,19 @@
                             <output>${project.build.directory}/cheatsheet.pdf</output>
                         </configuration>
                     </execution>
+                    <!-- A student edition: the whole book, with each {.solution}
+                         (the Try It exercise in 01-basics/02-blocks.md) printed as
+                         space to write the answer in.
+                         https://noregressions.github.io/paperband/cards/make-a-student-edition.html -->
+                    <execution>
+                        <id>student</id>
+                        <phase>package</phase>
+                        <goals><goal>build</goal></goals>
+                        <configuration>
+                            <view>student</view>
+                            <output>${project.build.directory}/student.pdf</output>
+                        </configuration>
+                    </execution>
                     <!-- The same cheat sheet as a site: a view works for the
                          site goal too. -->
                     <execution>

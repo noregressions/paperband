@@ -103,6 +103,15 @@ class NodeTransformExtensionTest {
     }
 
     @Test
+    void blank_puts_an_empty_div_where_each_match_was(@TempDir Path book) throws IOException {
+        String html = render(book, "{{ b | blank('pre.console, li', 'space') | html | raw }}");
+        assertFalse(html.contains("BUILD SUCCESS"), html);
+        assertTrue(html.contains("<div class=\"space\"></div>"), html);
+        assertTrue(html.contains("<ul>"), "only the matches are blanked: " + html);
+        assertEquals(3, html.split("class=\"space\"", -1).length - 1, html);
+    }
+
+    @Test
     void a_class_name_that_isnt_one_fails(@TempDir Path book) {
         Exception e = assertThrows(Exception.class,
                 () -> render(book, "{{ b | addClass('p', 'x\" onclick=\"y') }}"));
