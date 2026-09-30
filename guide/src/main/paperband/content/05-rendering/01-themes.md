@@ -210,7 +210,7 @@ Theme templates receive the same Pebble model the bundled ones use. The core obj
 
 | Key | Where | What's in it |
 |---|---|---|
-| `card` | card pages, each entry of `cards` in `book.html` | `id`, `title`, `frontmatter.*` (raw map), `axes.{axisName}.{id,label,color}`, `blocks` (nested: `heading`, `level`, `classes`, `classAttr`, `id`, `anchor`, `attributes`, `directives`, `html`, `children`), `steps` (every `{!step}` block flattened, as `{block, depth}`), `cheatsheet` (null, or `{select}` in [cheat-sheet mode](card:make-a-cheat-sheet)) |
+| `card` | card pages, each entry of `cards` in `book.html` | `id`, `title`, `frontmatter.*` (raw map), `axes.{axisName}.{id,label,color}`, `blocks` (nested: `heading`, `level`, `classes`, `classAttr`, `id`, `anchor`, `attributes`, `directives`, `html`, `nodes`, `children`), `steps` (every `{!step}` block flattened, as `{block, depth}`), `cheatsheet` (null, or `{select}` in [cheat-sheet mode](card:make-a-cheat-sheet)) |
 | `book` | book PDF + every site page | `title`, `subtitle`, `series`, `author`, `vars.*`, `cover`, `back` |
 | `vars` | `card.html`, `book.html`, `site-card.html` | the fully-cascaded vars map for that card |
 | `axis` / `value` | axis dividers and landing pages | `{name, title}` / `{id, label, color, count, cards}` |
@@ -222,8 +222,8 @@ site index read. Everything else in `vars` is reachable too: this guide's
 `paperband.yaml` sets `version:`, which no bundled template reads, but a theme template
 can with `{{ book.vars.version }}`.
 
-`vars`, `frontmatter` and a block's `attributes` and `directives` are lenient: reading a
-key that was never set yields null rather than an error, so themes work across books with
+`vars`, `frontmatter`, a block's `attributes` and `directives`, and every node in
+`block.nodes` are lenient: reading a key that was never set yields null rather than an error, so themes work across books with
 different vars, and `{% if block.directives.step %}` is simply false for a block with no
 step. The structural objects (`card`, `block`, `value`) are strict: a typo like
 `{{ block.headign }}` fails the build instead of rendering blanks.
@@ -299,6 +299,56 @@ console session, with nested steps inside their parent's entry:
 Put it in a separate `layouts/_card-body.html` and point a second plugin execution at it
 with `<layouts>` and its own `<output>`; the source cards don't change. The kitchen-sink
 example's `cheatsheet` execution does exactly this.
+
+## Reading a block as data
+
+`select` hands back HTML, and all a template can do with HTML is print it. When a template
+needs the words of a paragraph or the command in a fence, read `block.nodes` instead. It's
+the same content as `block.html`, as a list of nodes in document order, and like
+`block.html` it leaves out the block's children.
+
+| Key | What's in it |
+|---|---|
+| `type` | `paragraph`, `fence`, `list`, `item`, `table`, `row`, `cell`, `quote`, `figure` or `rule`; inside those, `text`, `code`, `emphasis`, `strong`, `link`, `image`, `span` or `break`. Anything else, such as raw HTML or a drawn diagram, is `element` |
+| `tag`, `id`, `classes`, `attributes` | The element's markup. `attributes` leaves out class, id and directives |
+| `directives` | `{!name}` directives on the element, such as `{!step}` on a fence |
+| `text` | Its text content |
+| `html` | Its outer HTML, printed with `\| raw` |
+| `children` | Its child nodes |
+| `lang`, `code` | A fence's type and its text as the author wrote it |
+| `ordered` | A list: true for a numbered one |
+| `header` | A table cell: true for a header cell |
+
+A fence keeps what the author wrote after a block template has replaced its markup. A
+` ```command ` block is `pre.command` to a selector, and it's still `lang` `command` with
+the command as its `code`.
+
+`find` searches nodes with a CSS selector and returns the nodes that match. It takes a
+block, `block.nodes` or a single node, and it searches everything under them. That's
+enough to fill a fragment of your own from a card's content:
+
+```
+{# layouts/fragments/step.html #}
+<div class="step">
+  <h3>{{ heading }}</h3>
+  <p>{{ instructions.text }}</p>
+  {% if command is not null %}<kbd>{{ command.code | trim }}</kbd>{% endif %}
+</div>
+```
+
+```
+{% for s in card.steps %}
+  {% include "fragments/step" with {
+       "heading": s.block.heading,
+       "instructions": s.block | find('.instructions') | first,
+       "command": s.block | find('pre.command, pre.console') | first } %}
+{% endfor %}
+```
+
+The fragment prints `text` and `code`, which are escaped like any other value, so it never
+needs `| raw` on card content. Unlike `select`, `find` keeps a match that sits inside
+another, so `find('li')` returns the items of a nested list too. No match is an empty
+list, and a selector jsoup can't read fails the build and names the selector.
 
 ## Authoring a custom theme
 

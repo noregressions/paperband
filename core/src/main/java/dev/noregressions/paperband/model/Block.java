@@ -48,6 +48,8 @@ import java.util.Set;
  *                   {@code !}, with the value their pass gave them -- {@code step} is the block's
  *                   number among its siblings. Rendered as {@code data-paperband-<name>}; never
  *                   null, may be empty
+ * @param nodes      the same direct content as {@code html}, as data: its top-level {@link Node}s in
+ *                   document order, children excluded like {@code html}'s; never null, may be empty
  */
 public record Block(
         Kind kind,
@@ -58,7 +60,8 @@ public record Block(
         String html,
         List<Block> children,
         Map<String, String> attributes,
-        Map<String, String> directives
+        Map<String, String> directives,
+        List<Node> nodes
 ) {
 
     public Block {
@@ -70,6 +73,14 @@ public record Block(
                 : Collections.unmodifiableMap(new LinkedHashMap<>(attributes));
         directives = directives == null || directives.isEmpty() ? Map.of()
                 : Collections.unmodifiableMap(new LinkedHashMap<>(directives));
+        nodes = nodes == null ? List.of() : List.copyOf(nodes);
+    }
+
+    /** A block whose content hasn't been read as nodes. */
+    public Block(Kind kind, String id, Set<String> classes, String heading, int level,
+                 String html, List<Block> children, Map<String, String> attributes,
+                 Map<String, String> directives) {
+        this(kind, id, classes, heading, level, html, children, attributes, directives, List.of());
     }
 
     /** A block with attributes but no directives. */

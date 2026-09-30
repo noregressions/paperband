@@ -5,6 +5,7 @@ import org.jsoup.nodes.TextNode;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BiConsumer;
 
 /**
  * Post-parse HTML transform that rewrites two custom fenced-code conventions
@@ -87,15 +88,23 @@ final class DiffCardProcessor {
      * Idempotent — already-rewritten figures don't match the selectors.
      */
     static void process(Element bodyEl) {
+        process(bodyEl, (from, to) -> { });
+    }
+
+    /**
+     * {@link #process(Element)}, telling {@code replaced} about each
+     * {@code <pre>} it swaps for new markup, so the fence's origin can follow it.
+     */
+    static void process(Element bodyEl, BiConsumer<Element, Element> replaced) {
         // Snapshot first; we mutate the tree during iteration.
         List<Element> codes = new ArrayList<>(bodyEl.select("pre > code"));
         for (Element code : codes) {
             String cls = code.className();
             if (hasClassWithPrefix(cls, DIFF_CARD_PREFIX)) {
                 String lang = extractDiffCardLanguage(cls);
-                rewriteDiffCard(code, lang);
+                rewriteDiffCard(code, lang, replaced);
             } else if (hasClass(cls, ERROR_OUTPUT_CLASS)) {
-                rewriteErrorOutput(code);
+                rewriteErrorOutput(code, replaced);
             }
         }
     }
@@ -130,7 +139,7 @@ final class DiffCardProcessor {
         return DEFAULT_LANGUAGE;
     }
 
-    private static void rewriteDiffCard(Element code, String lang) {
+    private static void rewriteDiffCard(Element code, String lang, BiConsumer<Element, Element> replaced) {
         Element pre = code.parent();
         if (pre == null) return;
 
@@ -162,6 +171,7 @@ final class DiffCardProcessor {
         }
 
         pre.replaceWith(figure);
+        replaced.accept(pre, figure);
     }
 
     private static void appendSide(
@@ -246,7 +256,7 @@ final class DiffCardProcessor {
         }
     }
 
-    private static void rewriteErrorOutput(Element code) {
+    private static void rewriteErrorOutput(Element code, BiConsumer<Element, Element> replaced) {
         Element pre = code.parent();
         if (pre == null) return;
 
@@ -268,6 +278,7 @@ final class DiffCardProcessor {
         }
 
         pre.replaceWith(newPre);
+        replaced.accept(pre, newPre);
     }
 
     /** Return CSS class for whole-line decoration, or null if the line is plain. */

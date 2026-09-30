@@ -15,6 +15,7 @@ import dev.noregressions.paperband.config.SectionFolderConfig;
 import dev.noregressions.paperband.model.Card;
 import dev.noregressions.paperband.model.CardNumber;
 import dev.noregressions.paperband.model.NamedTemplates;
+import dev.noregressions.paperband.model.Node;
 import dev.noregressions.paperband.model.OutlineEntry;
 import dev.noregressions.paperband.model.PageMatter;
 import dev.noregressions.paperband.number.Numbering;
@@ -343,6 +344,7 @@ public final class LayoutEngine {
                 .loader(loader)
                 .extension(new LenientMapExtension())
                 .extension(new HtmlSelectExtension())
+                .extension(new NodeFindExtension())
                 .strictVariables(false)
                 .autoEscaping(true)
                 .build();
@@ -2782,12 +2784,48 @@ public final class LayoutEngine {
         bm.put("heading", b.heading());
         bm.put("level", b.level());
         bm.put("html", b.html());
+        // The same content as data: block.nodes | find('.instructions') is the
+        // paragraph itself, its text and props, not a cut of the HTML string.
+        List<Map<String, Object>> nodes = new ArrayList<>(b.nodes().size());
+        for (Node n : b.nodes()) {
+            nodes.add(nodeModel(n));
+        }
+        bm.put("nodes", nodes);
         List<Map<String, Object>> children = new ArrayList<>(b.children().size());
         for (Block c : b.children()) {
             children.add(blockModel(c));
         }
         bm.put("children", children);
         return bm;
+    }
+
+    /**
+     * A {@link Node} as a template sees it: lenient, since most keys belong to
+     * some types only ({@code {% if node.lang %}}), with its props alongside
+     * the rest ({@code node.code}, not {@code node.props.code}) and the yes/no
+     * ones as booleans, so {@code {% if node.ordered %}} isn't fooled by
+     * {@code "false"}.
+     */
+    static Map<String, Object> nodeModel(Node n) {
+        LenientMap<String, Object> m = new LenientMap<>();
+        m.put("type", n.type());
+        m.put("tag", n.tag());
+        m.put("id", n.id());
+        m.put("classes", new ArrayList<>(n.classes()));
+        m.put("attributes", LenientMap.of(n.attributes()));
+        m.put("directives", LenientMap.of(n.directives()));
+        m.put("text", n.text());
+        m.put("html", n.html());
+        n.props().forEach((k, v) -> m.put(k, switch (k) {
+            case "ordered", "header" -> Boolean.valueOf(v);
+            default -> v;
+        }));
+        List<Map<String, Object>> children = new ArrayList<>(n.children().size());
+        for (Node c : n.children()) {
+            children.add(nodeModel(c));
+        }
+        m.put("children", children);
+        return m;
     }
 
     private static Map<String, Object> contextModel(RenderContext ctx) {

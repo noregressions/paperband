@@ -43,8 +43,8 @@ html --> book
 | 1. Pebble | The card file as text, with its frontmatter, fences and inline code hidden; the `vars` cascade; `layouts/` snippets; fragment sources | Markdown text | `{{ }}`, `{% %}`, `{# #}` | Headings, sections, numbers, anchors, the card's own frontmatter |
 | 2. Parse | The body, after the frontmatter is split off | A markdown tree | Markdown itself; anything in code becomes code and is never read again | Other cards |
 | 3. Tree | That tree | The same tree with sections, attributes, spans and numbered steps | `{!name}`, `{.x}`, `{/x}`, `{key=value}` | Other cards |
-| 4. HTML | The card rendered to HTML | The card's blocks: heading, classes, attributes, directives and HTML for each | ` ```type ` fences, the `ast:` fallback, the content policy | Other cards |
-| 5. Book | Every card's blocks, in book order | The PDF, the site and any other outputs | `card:` links, `:icon:` references, chapter numbers, the table of contents and index, layout templates, which can reorder blocks into slots and pick parts out of them with `select` | Nothing is hidden: this is the first phase with the whole book |
+| 4. HTML | The card rendered to HTML | The card's blocks: heading, classes, attributes, directives, and their content as HTML and as nodes | ` ```type ` fences, the `ast:` fallback, the content policy | Other cards |
+| 5. Book | Every card's blocks, in book order | The PDF, the site and any other outputs | `card:` links, `:icon:` references, chapter numbers, the table of contents and index, layout templates, which can reorder blocks into slots, pick parts out of them with `select` and read them as data with `find` | Nothing is hidden: this is the first phase with the whole book |
 
 An `.html` card skips phases 2 and 3, because it has no markdown to parse; its blocks come
 from its headings in phase 4. A `.yaml` card is turned into markdown first and then goes
@@ -118,6 +118,7 @@ also why a value containing a stray `{step}` fails the build like one typed in t
 | Move a block to another place on the page | a slot, `card.slots.take('name')`, in `_card-body.html` | 5 |
 | Make a cheat sheet of each card's steps | `vars.cheatsheet` in a second execution, see [Make a Cheat Sheet](card:make-a-cheat-sheet) | 5 |
 | Build some other document from parts of the cards | a separate `_card-body.html` using `block.html \| select('css')` | 5 |
+| Fill a fragment of your own from a card's content | `block.nodes \| find('css')`, see [Themes](card:themes#reading-a-block-as-data) | 5 |
 
 If something needs to know the structure (a number, a parent, a neighbour), it belongs in
 phase 3 or later, not in Pebble.

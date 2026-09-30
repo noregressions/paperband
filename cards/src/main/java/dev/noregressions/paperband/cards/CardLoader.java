@@ -388,12 +388,16 @@ public final class CardLoader {
      */
     private Card buildCard(Path source, Frontmatter fm, Element bodyEl, boolean explicitSections,
                            String astFallback) {
+        // What each block's content is as data, read once the passes below
+        // are done; the passes that replace a fence report it as they go.
+        ContentNodes nodes = new ContentNodes();
+
         // 3a-pre. Block templates: a ```type block whose type has a
         //     blocks/<type>.html template (book layouts/, theme, or bundled)
         //     renders through it — the pluggable half of what a fence means.
         //     Types with no template fall through untouched, which is also
         //     what keeps diff-card/error-output on their Java path below.
-        applyBlockTemplates(source, bodyEl);
+        applyBlockTemplates(source, bodyEl, nodes);
 
         // No PlantUML renderer drew the ast: diagram, so its fence is still
         // there as source: swap in the tree drawn as HTML instead.
@@ -411,7 +415,7 @@ public final class CardLoader {
         //     into structured HTML before block-walking. Real-language fences
         //     pass through untouched for Prism to highlight downstream.
         try {
-            DiffCardProcessor.process(bodyEl);
+            DiffCardProcessor.process(bodyEl, nodes::moved);
         } catch (IllegalArgumentException e) {
             throw new CardParseException(source + ": " + e.getMessage(), e);
         }
@@ -452,12 +456,13 @@ public final class CardLoader {
         boolean titleWanted = title == null || title.isBlank();
         if (explicitSections) {
             String[] titleOut = {title};
-            List<Block> blocks = explicitBlocks(source, bodyEl, titleOut);
+            List<Block> blocks = explicitBlocks(source, bodyEl, titleOut, nodes);
             return card(source, fm, titleOut[0], blocks);
         }
         List<Block> topLevel = new ArrayList<>();
         Deque<OpenSection> stack = new ArrayDeque<>();
         StringBuilder introHtml = new StringBuilder();
+        List<dev.noregressions.paperband.model.Node> introNodes = new ArrayList<>();
         boolean introFlushed = false;
 
         for (Node child : bodyEl.childNodes()) {
@@ -484,9 +489,7 @@ public final class CardLoader {
                         introFlushed = true;
                         String introContent = introHtml.toString();
                         if (!introContent.isBlank()) {
-                            topLevel.add(new Block(
-                                    Block.Kind.HEADING_SECTION, null, Set.of("intro"),
-                                    null, 0, introContent, List.of()));
+                            topLevel.add(introBlock(introContent, introNodes));
                         }
                     }
                     OpenSection section = new OpenSection();
@@ -498,12 +501,12 @@ public final class CardLoader {
                     stack.push(section);
                     continue;
                 }
-                appendContent(stack, introHtml, el.outerHtml());
+                appendContent(stack, introHtml, introNodes, el.outerHtml(), nodes.read(el));
                 continue;
             }
             if (child instanceof TextNode tn) {
                 String text = tn.text();
-                if (!text.isBlank()) appendContent(stack, introHtml, text);
+                if (!text.isBlank()) appendContent(stack, introHtml, introNodes, text, nodes.read(tn));
             }
         }
         // Close whatever's still open, innermost first.
@@ -514,13 +517,17 @@ public final class CardLoader {
         if (!introFlushed) {
             String introContent = introHtml.toString();
             if (!introContent.isBlank()) {
-                topLevel.add(new Block(
-                        Block.Kind.HEADING_SECTION, null, Set.of("intro"),
-                        null, 0, introContent, List.of()));
+                topLevel.add(introBlock(introContent, introNodes));
             }
         }
 
         return card(source, fm, title, topLevel);
+    }
+
+    /** The content before the first heading, as a block of its own. */
+    private static Block introBlock(String html, List<dev.noregressions.paperband.model.Node> contentNodes) {
+        return new Block(Block.Kind.HEADING_SECTION, null, Set.of("intro"), null, 0, html,
+                List.of(), Map.of(), Map.of(), contentNodes);
     }
 
     private Card card(Path source, Frontmatter fm, String title, List<Block> blocks) {
@@ -539,29 +546,32 @@ public final class CardLoader {
      *
      * @param titleOut in: the frontmatter title or null; out: the card's title
      */
-    private List<Block> explicitBlocks(Path source, Element bodyEl, String[] titleOut) {
+    private List<Block> explicitBlocks(Path source, Element bodyEl, String[] titleOut,
+                                       ContentNodes nodes) {
         List<Block> blocks = new ArrayList<>();
         StringBuilder intro = new StringBuilder();
+        List<dev.noregressions.paperband.model.Node> introNodes = new ArrayList<>();
         for (Node child : bodyEl.childNodes()) {
             if (child instanceof Element el && el.hasAttr(Sections.SECTION_ATTR)) {
-                blocks.add(sectionBlock(source, el, titleOut));
+                blocks.add(sectionBlock(source, el, titleOut, nodes));
             } else if (child instanceof Element el && el.hasAttr(Sections.TITLE_ATTR)) {
                 titleOut[0] = el.text();
             } else if (child instanceof Element el) {
                 intro.append(el.outerHtml());
+                introNodes.add(nodes.read(el));
             } else if (child instanceof TextNode tn && !tn.text().isBlank()) {
                 intro.append(tn.text());
+                introNodes.add(nodes.read(tn));
             }
         }
         if (!intro.isEmpty()) {
-            blocks.add(0, new Block(Block.Kind.HEADING_SECTION, null, Set.of("intro"),
-                    null, 0, intro.toString(), List.of()));
+            blocks.add(0, introBlock(intro.toString(), introNodes));
         }
         return blocks;
     }
 
     /** One marked {@code <section>}: its heading, its own content, its nested sections. */
-    private Block sectionBlock(Path source, Element sectionEl, String[] titleOut) {
+    private Block sectionBlock(Path source, Element sectionEl, String[] titleOut, ContentNodes nodes) {
         OpenSection section = new OpenSection();
         section.level = Integer.parseInt(sectionEl.attr(Sections.SECTION_ATTR));
         for (org.jsoup.nodes.Attribute a : sectionEl.attributes()) {
@@ -582,21 +592,23 @@ public final class CardLoader {
                     section.classes    = parseClassAttr(el.className());
                     section.attributes = otherAttributes(source, el);
                 } else if (el.hasAttr(Sections.SECTION_ATTR)) {
-                    section.children.add(sectionBlock(source, el, titleOut));
+                    section.children.add(sectionBlock(source, el, titleOut, nodes));
                 } else if (el.hasAttr(Sections.TITLE_ATTR)) {
                     titleOut[0] = el.text();
                 } else {
                     section.html.append(el.outerHtml());
+                    section.nodes.add(nodes.read(el));
                 }
             } else if (child instanceof TextNode tn && !tn.text().isBlank()) {
                 section.html.append(tn.text());
+                section.nodes.add(nodes.read(tn));
             }
         }
         return build(section);
     }
 
     /** Apply {@link BlockTemplates} to every typed code block in {@code bodyEl}. */
-    private void applyBlockTemplates(Path source, Element bodyEl) {
+    private void applyBlockTemplates(Path source, Element bodyEl, ContentNodes nodes) {
         for (Element code : new ArrayList<>(bodyEl.select("pre > code"))) {
             String type = null;
             List<String> extraClasses = new ArrayList<>();
@@ -625,8 +637,13 @@ public final class CardLoader {
             } catch (BlockTemplates.BlockTemplateException e) {
                 throw new CardParseException(source + ": ```" + type + " — " + e.getMessage(), e);
             }
-            if (rendered == null) continue;      // not a block type: ordinary code
+            if (rendered == null) {              // not a block type: ordinary code
+                nodes.fence(pre, type, code.wholeText());
+                continue;
+            }
             Element frag = Jsoup.parseBodyFragment(rendered).body();
+            Element root = frag.firstElementChild();
+            if (root != null) nodes.fence(root, type, code.wholeText());
             for (Node n : new ArrayList<>(frag.childNodes())) {
                 pre.before(n);
             }
@@ -682,6 +699,7 @@ public final class CardLoader {
         Map<String, String> attributes;
         final Map<String, String> directives = new LinkedHashMap<>();
         final StringBuilder html = new StringBuilder();
+        final List<dev.noregressions.paperband.model.Node> nodes = new ArrayList<>();
         final List<Block> children = new ArrayList<>();
     }
 
@@ -703,11 +721,15 @@ public final class CardLoader {
      * next heading closes and replaces it, so this check alone is enough to
      * route content correctly throughout the walk.
      */
-    private static void appendContent(Deque<OpenSection> stack, StringBuilder introHtml, String content) {
+    private static void appendContent(Deque<OpenSection> stack, StringBuilder introHtml,
+                                      List<dev.noregressions.paperband.model.Node> introNodes,
+                                      String content, dev.noregressions.paperband.model.Node node) {
         if (stack.isEmpty()) {
             introHtml.append(content);
+            introNodes.add(node);
         } else {
             stack.peek().html.append(content);
+            stack.peek().nodes.add(node);
         }
     }
 
@@ -738,7 +760,8 @@ public final class CardLoader {
                 section.html.toString(),
                 section.children,
                 section.attributes,
-                section.directives);
+                section.directives,
+                section.nodes);
     }
 
     /**
