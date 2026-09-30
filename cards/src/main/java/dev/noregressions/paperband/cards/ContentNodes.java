@@ -87,8 +87,10 @@ public final class ContentNodes {
         String tag = el.normalName();
         Map<String, String> attributes = new LinkedHashMap<>();
         Map<String, String> directives = new LinkedHashMap<>();
+        List<String> order = new ArrayList<>();
         for (Attribute a : el.attributes()) {
             String key = a.getKey();
+            order.add(key);
             if (key.equals("class") || key.equals("id")) continue;
             if (key.startsWith(AttributeSyntax.DIRECTIVE_ATTR_PREFIX)) {
                 directives.put(key.substring(AttributeSyntax.DIRECTIVE_ATTR_PREFIX.length()), a.getValue());
@@ -101,7 +103,7 @@ public final class ContentNodes {
         boolean opaque = OPAQUE_TAGS.contains(tag);
         List<Node> children = opaque ? List.of() : children(el);
         return new Node(type, tag, el.id().isEmpty() ? null : el.id(), el.classNames(),
-                attributes, directives, opaque ? drawnText(el) : el.text(), el.outerHtml(), children, props);
+                attributes, directives, opaque ? drawnText(el) : el.text(), el.outerHtml(), children, props, order);
     }
 
     /**

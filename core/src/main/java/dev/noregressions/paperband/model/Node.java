@@ -51,6 +51,10 @@ import java.util.Set;
  * @param props      what only some types have: {@code lang} and {@code code}
  *                   for a fence, {@code ordered} for a list, {@code header}
  *                   for a cell; never null
+ * @param attributeOrder the name of every attribute the element carried --
+ *                   class, id and {@code data-paperband-*} included -- in the
+ *                   order it carried them, so it can be written back as it
+ *                   was; never null, empty for a node built without one
  */
 public record Node(
         String type,
@@ -62,7 +66,8 @@ public record Node(
         String text,
         String html,
         List<Node> children,
-        Map<String, String> props
+        Map<String, String> props,
+        List<String> attributeOrder
 ) {
 
     public Node {
@@ -72,6 +77,14 @@ public record Node(
         directives = ordered(directives);
         children = children == null ? List.of() : List.copyOf(children);
         props = ordered(props);
+        attributeOrder = attributeOrder == null ? List.of() : List.copyOf(attributeOrder);
+    }
+
+    /** A node with no record of its attribute order: written back id, class, attributes, directives. */
+    public Node(String type, String tag, String id, Set<String> classes, Map<String, String> attributes,
+                Map<String, String> directives, String text, String html, List<Node> children,
+                Map<String, String> props) {
+        this(type, tag, id, classes, attributes, directives, text, html, children, props, List.of());
     }
 
     /** A run of text: no tag, no attributes, no children. */
