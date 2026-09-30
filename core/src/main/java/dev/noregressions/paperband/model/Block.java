@@ -69,7 +69,11 @@ public record Block(
 ) {
 
     public Block {
-        classes = classes == null ? Set.of() : Set.copyOf(new LinkedHashSet<>(classes));
+        // Set.copyOf would lose source order, and a JVM's hash salt then picks
+        // it: `## Answer {.answer .solution}` printed class="answer solution"
+        // one build and "solution answer" the next. Keep the order as written.
+        classes = classes == null || classes.isEmpty() ? Set.of()
+                : Collections.unmodifiableSet(new LinkedHashSet<>(classes));
         children = children == null ? List.of() : List.copyOf(children);
         // Map.copyOf would lose source order, and the order is what the author
         // wrote -- keep it, so the rendered attribute list reads the same way.
