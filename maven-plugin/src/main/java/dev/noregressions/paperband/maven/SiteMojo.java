@@ -92,6 +92,14 @@ public class SiteMojo extends AbstractPaperbandMojo {
     private String siteTarget;
 
     /**
+     * The view this site writes, as {@code <view>} does for a build: a folder
+     * of templates that replaces the defaults it has its own of and says which
+     * cards the site holds. The bundled view is {@code cheatsheet}.
+     */
+    @Parameter(property = "paperband.view")
+    private String view;
+
+    /**
      * The watermark to stamp, as a block — the POM spelling of the
      * {@code vars.watermark} map:
      *
@@ -262,26 +270,36 @@ public class SiteMojo extends AbstractPaperbandMojo {
 
         CardLoading.requireUniqueIds(cards, bookDir);
 
-        // Cheat-sheet mode (vars.cheatsheet): a card is its steps, so one with
-        // none is left out, and a card: link to it becomes plain text -- as in
-        // a build. See CheatSheet.
-        java.util.Set<String> steplessIds = new java.util.LinkedHashSet<>();
-        for (int i = cards.size() - 1; i >= 0; i--) {
-            if (dev.noregressions.paperband.layout.CheatSheet.enabled(contexts.get(i).vars())
-                    && !dev.noregressions.paperband.layout.CheatSheet.hasSteps(cards.get(i))) {
-                steplessIds.add(cards.get(i).id());
-                cards.remove(i);
-                contexts.remove(i);
+        Views.rejectCheatsheetVar(contexts);
+
+        // The engine exists before the card list is final: the view's
+        // keep.html is one of its templates, and decides which cards the site
+        // holds. A card it leaves out gets no page, and a card: link to it
+        // becomes plain text -- as in a build.
+        if (theme == null) theme = Themes.resolve(themeName, bookCtx.book().theme(), themeDirPath());
+        LayoutEngine layout = geo.layouts() != null
+                ? new LayoutEngine(bookCtx.book().bookRoot(), geo.layouts(), theme)
+                : new LayoutEngine(bookCtx.book().bookRoot(), theme);
+        layout.setBlockTemplates(blockTemplates);
+        layout.setView(view);
+        java.util.Set<String> leftOut = new java.util.LinkedHashSet<>();
+        if (layout.view() != null) {
+            List<Boolean> keeps = layout.keeps(cards, contexts, "site");
+            List<String> dropped = new ArrayList<>();
+            for (int i = cards.size() - 1; i >= 0; i--) {
+                if (!keeps.get(i)) {
+                    dropped.add(0, cards.get(i).id());
+                    cards.remove(i);
+                    contexts.remove(i);
+                }
             }
-        }
-        if (!steplessIds.isEmpty()) {
-            if (cards.isEmpty()) {
-                throw new MojoFailureException("cheat sheet: no card has a {!step}, so there is"
-                        + " nothing to show. Mark the steps with {!step}, or turn vars.cheatsheet"
-                        + " off for this build.");
+            leftOut.addAll(dropped);
+            if (!dropped.isEmpty()) {
+                if (cards.isEmpty()) {
+                    throw new MojoFailureException(Views.keptNone(layout.view(), keeps.size()));
+                }
+                getLog().info(Views.leftOut(layout.view(), dropped));
             }
-            getLog().info("Cheat sheet: left out " + steplessIds.size() + " card(s) with no {!step}: "
-                    + String.join(", ", steplessIds));
         }
 
         // Book-level config and sections declared in the POM, applied exactly as
@@ -295,13 +313,8 @@ public class SiteMojo extends AbstractPaperbandMojo {
             bookCtx = bookCtx.withBook(bookCtx.book().withSections(source.sections()));
         }
 
-        if (theme == null) theme = Themes.resolve(themeName, bookCtx.book().theme(), themeDirPath());
-        LayoutEngine layout = geo.layouts() != null
-                ? new LayoutEngine(bookCtx.book().bookRoot(), geo.layouts(), theme)
-                : new LayoutEngine(bookCtx.book().bookRoot(), theme);
         layout.setExtraCss(stylesheetPaths());
-        layout.setBlockTemplates(blockTemplates);
-        layout.setExcludedCardIds(steplessIds);
+        layout.setExcludedCardIds(leftOut);
         // The book's own icons live in its home, beside paperband.yaml; a book
         // with no home keeps them at its root. See LayoutEngine#setIconsDir.
         layout.setIconsDir(geo.home() != null ? geo.home().resolve("icons")

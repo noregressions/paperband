@@ -85,6 +85,16 @@ public class BuildMojo extends AbstractPaperbandMojo {
     private String layoutOverride;
 
     /**
+     * The view this build writes: a folder of templates, found through the
+     * theme, the book's {@code layouts/} and the bundled set, that replaces
+     * the default templates it has its own of and says which cards the book
+     * holds ({@code keep.html}). The bundled view is {@code cheatsheet}. Unset
+     * for the book as written.
+     */
+    @Parameter(property = "paperband.view")
+    private String view;
+
+    /**
      * Also write the rendered HTML here, before it reaches the renderer — the
      * browsable view of what layout produced. A book's copy is standalone:
      * local images are inlined as {@code data:} URIs, so the file works
@@ -250,6 +260,7 @@ public class BuildMojo extends AbstractPaperbandMojo {
         build.themeName = themeName;
         build.themeDir = themeDirPath();
         build.layoutOverride = layoutOverride;
+        build.view = view;
         build.emitHtml = emitHtml == null ? null : resolve(emitHtml);
         build.includeProviderConfig = includeProviderConfig();
         build.watermarkBase = Watermarks.base(watermark, watermarkText, watermarkImage);

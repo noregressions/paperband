@@ -100,6 +100,8 @@ final class BookBuild {
     String themeName;
     Path themeDir;
     String layoutOverride;
+    /** The view this build names ({@code <view>}), or null for the default. */
+    String view;
     Path emitHtml;
     Map<String, Map<String, Object>> includeProviderConfig = Map.of();
 
@@ -204,12 +206,14 @@ final class BookBuild {
                 "print", target);
         Card card = CardLoading.load(new CardLoader(), preprocessor, input, ctx.book().cardSchema(),
                 ctx.vars(), log, blockTemplates);
+        Views.rejectCheatsheetVar(List.of(ctx));
 
         LayoutEngine layout = layoutsDir != null
                 ? new LayoutEngine(ctx.book().bookRoot(), layoutsDir, theme)
                 : new LayoutEngine(ctx.book().bookRoot(), theme);
         layout.setExtraCss(stylesheets);
         layout.setBlockTemplates(blockTemplates);
+        layout.setView(view);
         layout.setIconsDir(iconsDir(ctx.book().bookRoot()));
         String html = layoutOverride != null
                 ? layout.render(card, ctx, layoutOverride)
@@ -310,8 +314,17 @@ final class BookBuild {
         }
 
         CardLoading.requireUniqueIds(cards, bookRoot);
+        Views.rejectCheatsheetVar(contexts);
 
-        Selection selected = dropCardsWithoutSteps(applySelection(cards, contexts, tocCardIndex, pages));
+        // The engine exists before the selection is final: the view's keep.html
+        // is one of its templates, and decides which cards the book holds.
+        if (theme == null) theme = Themes.resolve(themeName, bookCtx.book().theme(), themeDir);
+        LayoutEngine layout = layoutsDir != null
+                ? new LayoutEngine(bookCtx.book().bookRoot(), layoutsDir, theme)
+                : new LayoutEngine(bookCtx.book().bookRoot(), theme);
+        layout.setBlockTemplates(blockTemplates);
+        layout.setView(view);
+        Selection selected = keepViewCards(layout, applySelection(cards, contexts, tocCardIndex, pages));
         // The whole book, before the selection narrows it. Chapter numbers are
         // derived from this rather than from what survives: a sampler that
         // renumbered its extracts would give the same chapter two different
@@ -346,12 +359,7 @@ final class BookBuild {
             bookCtx = bookCtx.withBook(bookCtx.book().withSections(declaredSections));
         }
 
-        if (theme == null) theme = Themes.resolve(themeName, bookCtx.book().theme(), themeDir);
-        LayoutEngine layout = layoutsDir != null
-                ? new LayoutEngine(bookCtx.book().bookRoot(), layoutsDir, theme)
-                : new LayoutEngine(bookCtx.book().bookRoot(), theme);
         layout.setExtraCss(stylesheets);
-        layout.setBlockTemplates(blockTemplates);
         layout.setIconsDir(iconsDir(bookCtx.book().bookRoot()));
         if (editionModel != null) layout.setEdition(editionModel);
         layout.setTocAt(tocCardIndex);
@@ -553,12 +561,15 @@ final class BookBuild {
     }
 
     /**
-     * In cheat-sheet mode ({@code vars.cheatsheet}), a card is its steps, so a
-     * card with none has nothing to show and is left out -- counted with what
-     * a selection left out, so a {@code card:} link to it becomes plain text
-     * rather than failing. Marker positions move the way a selection moves them.
+     * The cards this build's view holds: its {@code keep.html} decides, card by
+     * card (see {@link LayoutEngine#keeps}). What it leaves out is counted with
+     * what a selection left out, so a {@code card:} link to it becomes plain
+     * text rather than failing, and marker positions move the way a selection
+     * moves them. The default view keeps every card.
      */
-    private Selection dropCardsWithoutSteps(Selection s) throws MojoFailureException {
+    private Selection keepViewCards(LayoutEngine layout, Selection s) throws MojoFailureException {
+        if (layout.view() == null) return s;
+        List<Boolean> keeps = layout.keeps(s.cards(), s.contexts(), "print");
         List<Card> keptCards = new ArrayList<>();
         List<RenderContext> keptContexts = new ArrayList<>();
         List<String> dropped = new ArrayList<>();
@@ -566,8 +577,7 @@ final class BookBuild {
         int[] keptBeforePage = new int[s.pages().size()];
         for (int i = 0; i < s.cards().size(); i++) {
             Card card = s.cards().get(i);
-            if (dev.noregressions.paperband.layout.CheatSheet.enabled(s.contexts().get(i).vars())
-                    && !dev.noregressions.paperband.layout.CheatSheet.hasSteps(card)) {
+            if (!keeps.get(i)) {
                 dropped.add(card.id());
                 continue;
             }
@@ -580,12 +590,9 @@ final class BookBuild {
         }
         if (dropped.isEmpty()) return s;
         if (keptCards.isEmpty()) {
-            throw new MojoFailureException("cheat sheet: none of the " + s.cards().size()
-                    + " cards has a {!step}, so there is nothing to show. Mark the steps with"
-                    + " {!step}, or turn vars.cheatsheet off for this build.");
+            throw new MojoFailureException(Views.keptNone(layout.view(), s.cards().size()));
         }
-        log.info("Cheat sheet: left out " + dropped.size() + " card(s) with no {!step}: "
-                + String.join(", ", dropped));
+        log.info(Views.leftOut(layout.view(), dropped));
         List<PlacedPage> keptPages = new ArrayList<>(s.pages().size());
         for (int p = 0; p < s.pages().size(); p++) {
             keptPages.add(new PlacedPage(keptBeforePage[p], s.pages().get(p).template()));

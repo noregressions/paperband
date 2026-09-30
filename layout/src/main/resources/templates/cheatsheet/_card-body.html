@@ -1,0 +1,24 @@
+{# The cheatsheet view's card body: one entry per {!step} -- its heading, then
+   the parts of its content that vars.cheatsheetSelect picks out, by default
+   the paragraph marked {.instructions} and its command or console session.
+   It replaces _card-body.html in this view, as a book's own
+   layouts/cheatsheet/_card-body.html would replace this.
+
+   card.steps is every stepped block flattened in document order, each with the
+   number of stepped blocks above it as depth, so a step inside a step is
+   indented under its parent without the template recursing. The selector is
+   read from card.vars, the card's own cascade, so a folder's paperband.yaml
+   can set it for that folder's cards.
+
+   The article keeps id="card-<id>", so card: links and the PDF outline land
+   here as they do on a full card. It has no "card" class, so the book's
+   one-page-per-card break doesn't apply: cards flow on, each under its title. #}
+{% set keeps = card.vars.cheatsheetSelect %}{% if keeps is empty %}{% set keeps = ".instructions, pre.command, pre.console" %}{% endif %}<article class="cheatsheet-card" id="card-{{ card.id }}">
+  {% if card.title %}<h2 class="card-title cheatsheet-card-title">{% if card.number %}<span class="card-number">{{ card.number }}</span> {% endif %}{{ card.title }}</h2>{% endif %}
+  {% for s in card.steps %}
+  <section class="cheatsheet-step cheatsheet-depth-{{ s.depth }}">
+    <h3>{{ s.block.heading }}</h3>
+    {{ s.block.html | select(keeps) | raw }}
+  </section>
+  {% endfor %}
+</article>

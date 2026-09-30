@@ -158,13 +158,22 @@ a bare `{word}` fails the build; `{#` is always Pebble's, so ids are `{id=x}`.
 
 ### Cheat sheets
 
-`vars.cheatsheet: true` (in a second execution's `<book><vars>`) makes each card its steps: title, then per
-`{!step}` its heading plus the parts matching `cheatsheetSelect` (default `.instructions, pre.command,
-pre.console`). Cards flow on; cards with no `{!step}` are left out (links to them become plain text). Works for
-`build` and `site`. `cheatsheetSelect` may go in `paperband.yaml` (it turns nothing on); a `cheatsheet:` map
-fails the build. Mark the paragraph to keep with `{.instructions}`; a plain ```` ```bash ```` fence isn't
-`pre.command` (use ```` ```command ```` or ```` ```bash {.command} ````). Template: `_cheatsheet-card.html`, which
-sees `card.steps` (`{block, depth}`) and `card.cheatsheet.select`. Guide card: `make-a-cheat-sheet`.
+`<view>cheatsheet</view>` (in a second execution; the site goal takes it too) makes each card its steps: title,
+then per `{!step}` its heading plus the parts matching `cheatsheetSelect` (default `.instructions,
+pre.command, pre.console`). Cards flow on; cards with no `{!step}` are left out (links to them become plain
+text). `cheatsheetSelect` may go in `paperband.yaml`; only the view reads it. `vars.cheatsheet` fails the
+build with the migration. Mark the paragraph to keep with `{.instructions}`; a plain ```` ```bash ```` fence
+isn't `pre.command` (use ```` ```command ```` or ```` ```bash {.command} ````). Guide card: `make-a-cheat-sheet`.
+
+### Views
+
+A view is a folder of templates a build names with `<view>name</view>` (`-Dpaperband.view`, build and site
+goals). Every template is looked up as `<view>/<name>.html` first, through theme → book `layouts/` →
+bundled, then as the default, so a view ships only what it changes. `keep.html` is required: rendered per card
+(sees `card`, `card.steps`, `card.vars`, `output`), it prints `true`/`false`, and the cards it rejects are
+dropped before dividers, contents, nav and `card:` links are worked out. Bundled: `cheatsheet/keep.html`
+(`{{ card.steps is not empty }}`) and `cheatsheet/_card-body.html`. A view with no `keep.html` fails the
+build. Block templates don't go through views yet. Guide: Themes, "Views".
 
 ### Frontmatter fields
 

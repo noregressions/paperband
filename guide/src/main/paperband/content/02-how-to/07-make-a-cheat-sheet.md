@@ -33,7 +33,7 @@ cheat sheet.
 
 ## Add the build
 
-Add an execution with its own `<output>` and `cheatsheet` set in its `<vars>`:
+Add an execution with its own `<output>` that names the `cheatsheet` view:
 
 ```xml
 <execution>
@@ -47,10 +47,10 @@ Add an execution with its own `<output>` and `cheatsheet` set in its `<vars>`:
         <include>setup/**/*.md</include>
       </includes>
       <vars>
-        <cheatsheet>true</cheatsheet>
         <toc>false</toc>
       </vars>
     </book>
+    <view>cheatsheet</view>
     <output>${project.build.directory}/cheatsheet.pdf</output>
   </configuration>
 </execution>
@@ -66,7 +66,7 @@ use the whole book. In this build:
 - A card with no `{!step}` is left out, and the build log names it. A `card:` link to it
   prints as plain text, the same as a link to a card a `select:` leaves out.
 
-The guide's own execution is untouched: `cheatsheet` is set only in this one.
+The guide's own execution is untouched: the view is named only in this one.
 
 ## Change what each step contributes
 
@@ -77,32 +77,48 @@ The guide's own execution is untouched: `cheatsheet` is set only in this one.
 <cheatsheetSelect>.instructions, pre.command, pre.console, figure</cheatsheetSelect>
 ```
 
-The selector can also go in `paperband.yaml`, for the whole book or one folder. It doesn't
-turn the mode on, so the full guide's build is unaffected:
+The selector can also go in `paperband.yaml`, for the whole book or one folder. Only the
+cheatsheet view reads it, so the full guide's build is unaffected:
 
 ```yaml
 vars:
   cheatsheetSelect: ".instructions, pre.console"
 ```
 
-Set `cheatsheet: true` only in the cheat-sheet build's own execution. `cheatsheet:` takes
-`true` or `false`; a map there fails the build and names these two keys.
-
 ## A cheat-sheet site
 
-`cheatsheet` works for the `site` goal too. Add a second execution with the same `<book>`
-and an `<outputDirectory>` of its own, and each card's page becomes its steps.
+The view works for the `site` goal too. Add a second execution with the same `<book>`,
+`<view>cheatsheet</view>` and an `<outputDirectory>` of its own, and each card's page becomes
+its steps.
 
-## Change the layout
+## Change the view
 
-The cheat-sheet entry is the bundled template `_cheatsheet-card.html`. To change it,
-put a template of the same name in the book's `layouts/`, or in a theme. It sees:
+A view is a folder of templates: the bundled `cheatsheet/` has two, and anything it doesn't
+have comes from the defaults. To change one, put a file of the same name in the book's
+`layouts/cheatsheet/`, or in a theme's `cheatsheet/`:
+
+| Template | What it decides | Bundled |
+|---|---|---|
+| `keep.html` | Which cards the build holds: prints `true` or `false` for each card | `{{ card.steps is not empty }}` |
+| `_card-body.html` | What each card becomes | The title, then per step its heading and the parts `cheatsheetSelect` picks |
+
+Both see the card's model, including:
 
 | Key | What's in it |
 |---|---|
 | `card.steps` | Each stepped block in document order, as `{block, depth}`: `depth` is 0 for a top-level step, 1 for a step inside one |
-| `card.cheatsheet.select` | The selector this build uses |
+| `card.vars` | The card's own cascaded vars, such as `card.vars.cheatsheetSelect` |
 | `step.block.html \| select(...)` | The parts of a step's HTML matching a selector (see [Themes](card:themes#picking-parts-out-of-a-block)) |
+| `step.block \| find(...)` | The same parts as data: text, a fence's `code` (see [Themes](card:themes#reading-a-block-as-data)) |
+
+A card `keep.html` leaves out has no page and no contents entry, and no divider fires for
+it, because the build leaves it out before working any of that out. Keep
+`id="card-{{ card.id }}"` on what `_card-body.html` writes: `card:` links and the PDF
+outline land there.
+
+A view of your own is a new folder: `layouts/handout/keep.html` (even just `true`) makes
+`<view>handout</view>` a view, and every other template it ships replaces the default of the
+same name for that build.
 
 ## Check
 
@@ -110,8 +126,8 @@ put a template of the same name in the book's `layouts/`, or in a theme. It sees
 mvn package
 ```
 
-The log lists the cards the cheat sheet left out, as `Cheat sheet: left out 3 card(s) with
-no {!step}: …`. Open `target/cheatsheet.pdf`: each card should appear under its title with
+The log lists the cards the view left out, as `View 'cheatsheet': left out 3 card(s) its
+keep.html doesn't keep: …`. Open `target/cheatsheet.pdf`: each card should appear under its title with
 its steps in order. If none of the chosen cards has a step, the build fails and says so.
 
 ## Watch Out

@@ -88,7 +88,10 @@ public final class LayoutEngine {
     /** Default layout name used when {@link RenderContext#layout()} is null. */
     public static final String DEFAULT_LAYOUT = "card";
 
-    private final PebbleEngine engine;
+    private PebbleEngine engine;
+
+    /** The view this build names ({@code <view>cheatsheet</view>}), or null for the default. */
+    private String view;
     private final ThemeBundle theme;
     /**
      * Where the book's own templates live — the POM-decided geography, or the
@@ -314,10 +317,106 @@ public final class LayoutEngine {
     public LayoutEngine(Path bookRoot, Path layoutsDir, ThemeBundle theme) {
         this.theme = (theme == null) ? ThemeBundle.NONE : theme;
         this.layoutsDir = layoutsDir == null ? null : layoutsDir.toAbsolutePath().normalize();
-        this.engine = buildEngine(this.layoutsDir, this.theme);
+        this.engine = buildEngine(this.layoutsDir, this.theme, null);
     }
 
-    private static PebbleEngine buildEngine(Path layoutsDir, ThemeBundle theme) {
+    /** A view's name: one folder, as it's written in the template chain. */
+    private static final java.util.regex.Pattern VIEW_NAME =
+            java.util.regex.Pattern.compile("[a-z0-9][a-z0-9-]*");
+
+    /**
+     * Render through a view: each template is looked up as {@code <view>/<name>}
+     * first, through the theme, the book's {@code layouts/} and the bundled set,
+     * and falls back to the default of the same name -- see {@link ViewLoader}.
+     * A view has at least a {@code keep.html}, which says which cards it holds
+     * ({@link #keeps}); a name with none anywhere in the chain is an error rather
+     * than a build of the default view under another name.
+     *
+     * @param view the view's name, or null for the default
+     * @throws LayoutException when the name isn't a folder name, or no link of
+     *         the chain has {@code <view>/keep.html}
+     */
+    public void setView(String view) {
+        if (view == null || view.isBlank()) {
+            this.view = null;
+        } else {
+            String name = view.strip();
+            if (!VIEW_NAME.matcher(name).matches()) {
+                throw new LayoutException("view '" + view + "' isn't a view name: use lowercase"
+                        + " letters, digits and hyphens, as in <view>cheatsheet</view>.");
+            }
+            this.view = name;
+        }
+        this.engine = buildEngine(this.layoutsDir, this.theme, this.view);
+        if (this.view != null && !hasOwn(this.view + "/keep")) {
+            throw new LayoutException("no view '" + this.view + "': a view is a folder of templates"
+                    + " with at least " + this.view + "/keep.html, and neither the theme, the"
+                    + " book's layouts/ nor paperband has one. The bundled view is cheatsheet.");
+        }
+    }
+
+    /** The view this engine renders through, or null for the default. */
+    public String view() {
+        return view;
+    }
+
+    /** Whether some link of the template chain has {@code name}, as written. */
+    private boolean hasOwn(String name) {
+        try {
+            engine.getTemplate(name);
+            return true;
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Which of {@code cards} this build's view holds: its {@code keep.html},
+     * rendered for each card with the card's model and vars, prints
+     * {@code true} or {@code false}. The default view holds every card. Called
+     * before the book's structure is worked out, so dividers, the contents,
+     * the site's nav and every {@code card:} link see only the cards kept.
+     *
+     * @param cards    the selected cards, in book order
+     * @param contexts each card's render context, in the same order
+     * @param output   {@code print} or {@code site}, which keep.html sees as {@code output}
+     * @return one entry per card: whether the view keeps it
+     * @throws LayoutException when keep.html fails or prints anything but true or false
+     */
+    public List<Boolean> keeps(List<Card> cards, List<RenderContext> contexts, String output) {
+        List<Boolean> out = new ArrayList<>(cards.size());
+        if (view == null) {
+            for (int i = 0; i < cards.size(); i++) out.add(Boolean.TRUE);
+            return out;
+        }
+        PebbleTemplate keep = engine.getTemplate("keep");
+        for (int i = 0; i < cards.size(); i++) {
+            Card card = cards.get(i);
+            RenderContext ctx = contexts.get(i);
+            Map<String, Object> model = new HashMap<>();
+            model.put("card", cardModel(card, resolveCardAxes(card, ctx, ctx.book().axes()), ctx.vars(),
+                    output, ctx.target()));
+            model.put("vars", LenientMap.of(ctx.vars()));
+            model.put("output", output);
+            model.put("target", ctx.target());
+            StringWriter w = new StringWriter();
+            try {
+                keep.evaluate(w, model);
+            } catch (IOException | RuntimeException e) {
+                throw new LayoutException("view '" + view + "': " + view + "/keep.html failed for card "
+                        + card.id() + locationOf(e) + ": " + explain(e), e);
+            }
+            String said = w.toString().strip();
+            if (!said.equals("true") && !said.equals("false")) {
+                throw new LayoutException("view '" + view + "': " + view + "/keep.html has to print"
+                        + " true or false, and printed '" + said + "' for card " + card.id() + ".");
+            }
+            out.add(said.equals("true"));
+        }
+        return out;
+    }
+
+    private static PebbleEngine buildEngine(Path layoutsDir, ThemeBundle theme, String view) {
         ClasspathLoader cp = new ClasspathLoader();
         cp.setPrefix("templates/");
         cp.setSuffix(".html");
@@ -335,6 +434,7 @@ public final class LayoutEngine {
         chain.add(cp);
 
         Loader<?> loader = (chain.size() == 1) ? chain.get(0) : new DelegatingLoader(chain);
+        if (view != null) loader = viewed(loader, view);
 
         // Variable-miss handling:
         //
@@ -365,6 +465,10 @@ public final class LayoutEngine {
                 .strictVariables(false)
                 .autoEscaping(true)
                 .build();
+    }
+
+    private static <T> Loader<T> viewed(Loader<T> chain, String view) {
+        return new ViewLoader<>(chain, view);
     }
 
     /**
@@ -2689,10 +2793,11 @@ public final class LayoutEngine {
         m.put("slots", new SlotTracker(blocks));
         // Every {!step} block, flattened with its depth, so a template lists a
         // card's steps without recursing -- and can tell a card has none.
-        m.put("steps", CheatSheet.steps(blocks));
-        // Cheat-sheet mode for this card: null when off, else its selector. The
-        // body templates branch on it; see CheatSheet.
-        m.put("cheatsheet", CheatSheet.model(vars));
+        m.put("steps", StepList.steps(blocks));
+        // The card's own cascaded vars. A page's `vars` is the book's in
+        // book.html; a template choosing per card -- a view's keep.html, its
+        // card body -- reads these.
+        m.put("vars", LenientMap.of(vars));
         return m;
     }
 

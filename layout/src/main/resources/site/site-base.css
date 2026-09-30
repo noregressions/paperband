@@ -294,7 +294,7 @@ figure.plantuml, figure.diagram { margin: 1.8rem 0; text-align: center; }
 figure.plantuml > svg, figure.diagram > svg,
 figure.plantuml > img, figure.diagram > img { max-width: 100%; height: auto; }
 
-/* Cheat-sheet mode (vars.cheatsheet): each card is its steps, one entry per
+/* The cheatsheet view (templates/cheatsheet/): each card is its steps, one entry per
  * {!step}, flowing on under the card's title; a nested step is indented
  * under its parent, and an entry never splits across a page. */
 .cheatsheet-card { margin: 0 0 1.8rem; }

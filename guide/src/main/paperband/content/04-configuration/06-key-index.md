@@ -31,6 +31,7 @@ ones the engine itself reads.
 | `cards` | `_section.md` | Section | — | `false` | `cards: true` | [Book Configuration](card:book-configuration) |
 | `cardSchema` | root yaml | Book | — | — | `cardSchema: { frontmatter: [id, title], sections: [...] }` | [Configuration Reference](card:configuration-reference) |
 | `<cardsOnly>` | POM | Build | — | `false` | `-Dpaperband.cardsOnly=true` (pages) | [Page Enforcement](card:page-enforcement) |
+| `cheatsheetSelect` | vars | Card | `<book><vars>` | `.instructions, pre.command, pre.console` | `vars: { cheatsheetSelect: ".instructions, figure" }` | [Make a Cheat Sheet](card:make-a-cheat-sheet) |
 | `<clean>` | POM | Build | — | `false` | `<clean>true</clean>` (site) | [Maven Plugin](card:maven-plugin) |
 | `<content>` | POM | Build | — | `${home}/content` | `<content>docs</content>` | [Use Existing Markdown](card:use-existing-markdown) |
 | `contentPolicy` | vars | Card | — | `clean` | `vars: { contentPolicy: strict }` | [Card Structure](card:card-structure) |
@@ -111,6 +112,7 @@ ones the engine itself reads.
 | `tocTitle` | vars | Book | — | `Contents` | `vars: { tocTitle: "In this book" }` | [TOC and Index](card:toc-and-index) |
 | `vars` | root yaml, folder yaml | Card | `<book><vars>` (flat strings) | — | `vars: { audience: internal }` | [Vars and Conditionals](card:vars-and-conditionals) |
 | `verify` | frontmatter | Card | — | `true` | `verify: false` | [Frontmatter Reference](card:frontmatter-reference) |
+| `<view>` | POM | Build | — | — | `<view>cheatsheet</view>` | [Themes](card:themes#views) |
 | `<watermark>` | POM | Build | `vars.watermark` | — | `<watermark>DRAFT</watermark>` | [Watermarks](card:watermarks) |
 | `watermark` | vars | Book | `<watermark>` (wins) | — | `vars: { watermark: DRAFT }` | [Watermarks](card:watermarks) |
 | `<watermarkImage>` | POM | Build | `vars.watermark.image` | — | `<watermarkImage>images/logo.png</watermarkImage>` | [Watermarks](card:watermarks) |

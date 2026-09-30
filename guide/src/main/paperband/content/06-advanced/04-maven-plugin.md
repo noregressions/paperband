@@ -69,6 +69,7 @@ The `build` goal's default phase is `process-resources`; override `<phase>` in t
 | `pageSize` | `paperband.pageSize` | `a4` | Page size slug, e.g. `a4`, `letter`, `6x9`. |
 | `margins` | `paperband.margins` | *(the page size's own)* | Page margins, CSS-style shorthand: `0`, `18mm`, `20mm 15mm`, `20 15 25 15`. Units `mm` (default), `cm`, `in`, `pt`. See Full-bleed builds below. |
 | `layout` | `paperband.layout` | *(context default)* | Layout template override. |
+| `view` | `paperband.view` | — | Write a view of the book, such as `cheatsheet`: a folder of templates that replaces the defaults it has and says which cards the build holds. The site goal takes it too. See [Themes](card:themes#views). |
 | `theme` | `paperband.theme` | *(book's `theme:`)* | Named theme; overrides `paperband.yaml`. |
 | `themeDir` | `paperband.themeDir` | — | User theme directory, checked before built-ins. |
 | `stylesheets` | `paperband.stylesheets` | — | Stylesheets this build contributes, inlined *after* the theme. See Declaring the whole book below. |

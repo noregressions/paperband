@@ -48,9 +48,9 @@
                         </configuration>
                     </execution>
                     <!-- A cheat sheet of the workshop: <includes> picks that
-                         folder's cards out of the book, and vars.cheatsheet
-                         turns each into its {!step} entries (heading, the
-                         paragraph marked {.instructions}, the ```console
+                         folder's cards out of the book, and the cheatsheet
+                         view turns each into its {!step} entries (heading,
+                         the paragraph marked {.instructions}, the ```console
                          session). The full guide above stays as it is.
                          https://noregressions.github.io/paperband/cards/make-a-cheat-sheet.html -->
                     <execution>
@@ -64,16 +64,16 @@
                                     <include>04-workshop/0*.md</include>
                                 </includes>
                                 <vars>
-                                    <cheatsheet>true</cheatsheet>
                                     <toc>false</toc>
                                     <index>false</index>
                                 </vars>
                             </book>
+                            <view>cheatsheet</view>
                             <output>${project.build.directory}/cheatsheet.pdf</output>
                         </configuration>
                     </execution>
-                    <!-- The same cheat sheet as a site: vars.cheatsheet works for
-                         the site goal too. -->
+                    <!-- The same cheat sheet as a site: a view works for the
+                         site goal too. -->
                     <execution>
                         <id>cheatsheet-site</id>
                         <phase>package</phase>
@@ -84,10 +84,8 @@
                                 <includes>
                                     <include>04-workshop/0*.md</include>
                                 </includes>
-                                <vars>
-                                    <cheatsheet>true</cheatsheet>
-                                </vars>
                             </book>
+                            <view>cheatsheet</view>
                             <outputDirectory>${project.build.directory}/cheatsheet-site</outputDirectory>
                             <clean>true</clean>
                         </configuration>

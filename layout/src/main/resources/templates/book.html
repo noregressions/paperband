@@ -173,7 +173,7 @@
     figure.plantuml > svg, figure.diagram > svg,
     figure.plantuml > img, figure.diagram > img { max-width: 100%; height: auto; }
 
-    /* Cheat-sheet mode -- the same rules as site-base.css. These cards have no
+    /* The cheatsheet view -- the same rules as site-base.css. These cards have no
        "card" class, so article.card's page break above doesn't fire and they
        flow on. */
     .cheatsheet-card { margin: 0 0 1.8rem; }
@@ -666,7 +666,7 @@
     {% include "_section-divider" with {"section": card.sectionMeta} %}
     {% endif %}
 
-    {% if card.cheatsheet is not null %}{% include "_cheatsheet-card" with {"card": card} %}{% else %}{% include "_card-body" with {"card": card} %}{% endif %}
+    {% include "_card-body" with {"card": card} %}
   {% endfor %}
 
   {# Markers after the last section land here, after every card and before

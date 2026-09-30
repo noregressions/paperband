@@ -1,0 +1,5 @@
+{# The cheatsheet view holds the cards that have a {!step}: a card is its
+   steps here, so one with none has nothing to show. A view's keep.html prints
+   true or false for each card, with the card's model (card, card.vars) in
+   scope; override it in the book's layouts/cheatsheet/ to keep other cards. #}
+{{ card.steps is not empty }}

@@ -210,7 +210,7 @@ Theme templates receive the same Pebble model the bundled ones use. The core obj
 
 | Key | Where | What's in it |
 |---|---|---|
-| `card` | card pages, each entry of `cards` in `book.html` | `id`, `title`, `frontmatter.*` (raw map), `axes.{axisName}.{id,label,color}`, `blocks` (nested: `heading`, `level`, `classes`, `classAttr`, `id`, `anchor`, `attributes`, `directives`, `html`, `nodes`, `children`), `steps` (every `{!step}` block flattened, as `{block, depth}`), `cheatsheet` (null, or `{select}` in [cheat-sheet mode](card:make-a-cheat-sheet)) |
+| `card` | card pages, each entry of `cards` in `book.html` | `id`, `title`, `frontmatter.*` (raw map), `axes.{axisName}.{id,label,color}`, `blocks` (nested: `heading`, `level`, `classes`, `classAttr`, `id`, `anchor`, `attributes`, `directives`, `html`, `nodes`, `children`), `steps` (every `{!step}` block flattened, as `{block, depth}`), `vars` (the card's own cascaded vars; a page's `vars` is the book's in `book.html`) |
 | `book` | book PDF + every site page | `title`, `subtitle`, `series`, `author`, `vars.*`, `cover`, `back` |
 | `vars` | `card.html`, `book.html`, `site-card.html` | the fully-cascaded vars map for that card |
 | `axis` / `value` | axis dividers and landing pages | `{name, title}` / `{id, label, color, count, cards}` |
@@ -354,6 +354,41 @@ list, and a selector jsoup can't read fails the build and names the selector.
 The kitchen-sink example does this in `layouts/_card-body.html`: every card with steps
 opens with an "At a glance" box, one fragment per step, showing its heading and the command
 it runs.
+
+## Views
+
+A view is a second set of templates for one build: the same cards, written another way. A
+build names it with `<view>`, in the POM or as `-Dpaperband.view=...`, and the site goal
+takes it too:
+
+```xml
+<view>cheatsheet</view>
+```
+
+The view is a folder in the template chain. For every template the build uses, paperband
+looks for the view's own first, as `<view>/<name>.html` in the theme, the book's
+`layouts/` and the bundled set, then for the default of the same name. So a view only ships
+what it changes, and a book overrides a view's template the way it overrides any other:
+`layouts/cheatsheet/_card-body.html` beats the bundled `cheatsheet/_card-body.html`.
+
+Every view has a `keep.html`, which says which cards the build holds. It's rendered once per
+card, sees the card's model (`card`, `card.steps`, `card.vars`) and `output`, and prints
+`true` or `false`:
+
+```
+{# layouts/handout/keep.html #}
+{{ card.frontmatter.handout == true }}
+```
+
+The build leaves out the cards it prints `false` for before it works out anything else, so
+they get no page, no contents entry and no divider, and a `card:` link to one prints as its
+text. A view with no `keep.html` anywhere in the chain fails the build, which is what
+catches a misspelt `<view>`.
+
+Paperband ships one view, `cheatsheet`: it keeps the cards with a `{!step}` and writes each
+as its steps. See [Make a Cheat Sheet](card:make-a-cheat-sheet). Block templates
+(`blocks/<type>.html`) don't go through the view yet: a fence is written the same way in
+every view.
 
 ## Authoring a custom theme
 

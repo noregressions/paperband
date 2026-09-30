@@ -117,7 +117,8 @@ also why a value containing a stray `{step}` fails the build like one typed in t
 | Link to another card | `[text](card:id)` | 5 |
 | Change how every card looks | a theme, or a template in `layouts/` | 5 |
 | Move a block to another place on the page | a slot, `card.slots.take('name')`, in `_card-body.html` | 5 |
-| Make a cheat sheet of each card's steps | `vars.cheatsheet` in a second execution, see [Make a Cheat Sheet](card:make-a-cheat-sheet) | 5 |
+| Make a cheat sheet of each card's steps | `<view>cheatsheet</view>` in a second execution, see [Make a Cheat Sheet](card:make-a-cheat-sheet) | 5 |
+| Change what a build writes and which cards it holds | a view: a folder of templates with a `keep.html`, see [Themes](card:themes#views) | 5 |
 | Build some other document from parts of the cards | a separate `_card-body.html` using `block.html \| select('css')` | 5 |
 | Fill a fragment of your own from a card's content | `block.nodes \| find('css')`, see [Themes](card:themes#reading-a-block-as-data) | 5 |
 

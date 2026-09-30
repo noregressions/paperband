@@ -34,7 +34,7 @@
   <div class="page">
     {# card.axes already carries every axis's resolved value; no per-page
        "tier" param needs threading through anymore. #}
-    {% if card.cheatsheet is not null %}{% include "_cheatsheet-card" with {"card": card} %}{% else %}{% include "_card-body" with {"card": card} %}{% endif %}
+    {% include "_card-body" with {"card": card} %}
 
   </div>
   {% endblock %}
