@@ -57,6 +57,16 @@ class CheatsheetViewTest {
         return engine.render(card(), ctx(vars));
     }
 
+    /** One stepped block whose content is read as nodes, as a loaded card's is. */
+    private static Card noded() {
+        String html = "<p>Why.</p><p class=\"instructions\">Check the version.</p>"
+                + "<pre><code class=\"language-command\">java -version\n</code></pre>";
+        Block check = new Block(Block.Kind.HEADING_SECTION, null, Set.of("check"), "Step 1 Check", 2, html,
+                List.of(), Map.of(), Map.of("step", "1"),
+                dev.noregressions.paperband.cards.ContentNodes.of(html));
+        return new Card("setup", Path.of("setup.md"), new Frontmatter(Map.of()), "Setting Up", List.of(check));
+    }
+
     private static Card stepless() {
         return new Card("notes", Path.of("notes.md"), new Frontmatter(Map.of()), "Notes",
                 List.of(block("Aside", 2, "<p>Just prose.</p>", List.of(), null)));
@@ -170,6 +180,41 @@ class CheatsheetViewTest {
             String html = render("cheatsheet", Map.of("cheatsheetSelect", "pre"));
             assertTrue(html.contains("java -version"), html);
             assertFalse(html.contains("Install a JDK."), html);
+        }
+
+        @Test
+        void the_how_tos_table_example_writes_each_step_from_its_nodes(@TempDir Path book) throws IOException {
+            // The example in Make a Cheat Sheet, verbatim.
+            Files.createDirectories(book.resolve("layouts/cheatsheet"));
+            Files.writeString(book.resolve("layouts/cheatsheet/_card-body.html"), "<article class=\"cheatsheet-card\" id=\"card-{{ card.id }}\">\n  <h2 class=\"cheatsheet-card-title\">{{ card.title }}</h2>\n  <table class=\"steps\">\n  {% for s in card.steps %}\n    {% set what = s.block | find('.instructions') | first %}\n    {% set cmd = s.block | find('pre.command') | first %}\n    <tr class=\"depth-{{ s.depth }}\">\n      <th>{{ s.block.heading }}</th>\n      <td>{% if what is not null %}{{ what.text }}{% endif %}</td>\n      <td>{% if cmd is not null %}<code>{{ cmd.code | trim }}</code>{% endif %}</td>\n    </tr>\n  {% endfor %}\n  </table>\n</article>");
+            LayoutEngine engine = new LayoutEngine(book);
+            engine.setView("cheatsheet");
+            String html = engine.render(noded(), ctx(Map.of()));
+            assertTrue(html.contains("<th>Step 1 Check</th>"), html);
+            assertTrue(html.contains("<td>Check the version.</td>"), html);
+            assertTrue(html.contains("<code>java -version</code>"), html);
+        }
+
+        @Test
+        void an_empty_dividers_template_in_the_view_drops_the_dividers_from_the_cheat_sheet_only(
+                @TempDir Path book) throws IOException {
+            Files.createDirectories(book.resolve("layouts/cheatsheet"));
+            Files.writeString(book.resolve("layouts/cheatsheet/dividers.html"), "");
+            Path lab = book.resolve("route/lab.md");
+            Card card = new Card("lab", lab, new Frontmatter(Map.of()), "Lab", card().blocks());
+            dev.noregressions.paperband.model.Section route = new dev.noregressions.paperband.model.Section(
+                    "route", "The Route", List.of(), null, List.of(lab));
+            BookConfig config = new BookConfig(book, "Book", List.of(), List.of(), Map.of(), List.of(),
+                    null, null, null, null, null, null, null, List.of(route));
+            RenderContext rc = new RenderContext(config, List.of(), Map.of(), null, "pdf", "A4");
+
+            LayoutEngine full = new LayoutEngine(book);
+            assertTrue(full.renderBook(List.of(card), List.of(rc), rc).contains("id=\"section-divider-route\""),
+                    "the full guide keeps its divider");
+            LayoutEngine cheat = new LayoutEngine(book);
+            cheat.setView("cheatsheet");
+            assertFalse(cheat.renderBook(List.of(card), List.of(rc), rc).contains("id=\"section-divider-route\""),
+                    "the view's own dividers.html prints none");
         }
 
         @Test

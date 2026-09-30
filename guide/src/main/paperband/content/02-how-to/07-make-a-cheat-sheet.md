@@ -13,7 +13,8 @@ same cards as the guide, as a second build, so the two can't drift apart.
 ## Mark the steps and what to keep
 
 Number each step heading with `{!step}`, end the paragraph that says what to do with
-`{.instructions}`, and put the command in a ` ```command ` or ` ```console ` fence:
+`{.instructions}`, put the command in a ` ```command ` fence, and put what it prints, if a
+reader needs to see it, in a ` ```console ` fence after it:
 
 ````markdown
 ## {!step} Install the tools
@@ -25,7 +26,16 @@ Install a JDK, version 21 or later, and Maven. {.instructions}
 ```command
 java -version
 ```
+
+```console
+openjdk version "21.0.4" 2024-07-16
+```
 ````
+
+A ` ```command ` block holds the command as it's typed, with no `$` prompt, since its copy
+button copies it whole. A ` ```console ` block is a terminal session: output, or prompt and
+output together. Keep them apart and the cheat sheet shows the command on its own, ready to
+copy, with the output under it.
 
 `{.instructions}` doesn't change how the paragraph looks in the guide, because no bundled
 stylesheet targets it. Everything else under the heading stays in the guide and out of the
@@ -65,16 +75,22 @@ use the whole book. In this build:
 - Cards flow on, one after another, rather than each starting a page.
 - A card with no `{!step}` is left out, and the build log names it. A `card:` link to it
   prints as plain text, the same as a link to a card a `select:` leaves out.
+- Section dividers still come before each section's first card, with the section's
+  `_section.md` text. To drop them, give the view a `dividers.html` that prints nothing (see
+  [Change the view](card:make-a-cheat-sheet#change-the-view)).
 
 The guide's own execution is untouched: the view is named only in this one.
 
 ## Change what each step contributes
 
 `cheatsheetSelect` is a CSS selector for the parts of each step to keep. The default is
-`.instructions, pre.command, pre.console`. To keep figures too:
+`.instructions, pre.command, pre.console`. To keep figures too, set it in the cheat-sheet
+execution's `<book><vars>`:
 
 ```xml
-<cheatsheetSelect>.instructions, pre.command, pre.console, figure</cheatsheetSelect>
+<vars>
+  <cheatsheetSelect>.instructions, pre.command, pre.console, figure</cheatsheetSelect>
+</vars>
 ```
 
 The selector can also go in `paperband.yaml`, for the whole book or one folder. Only the
@@ -114,7 +130,32 @@ Both see the card's model, including:
 A card `keep.html` leaves out has no page and no contents entry, and no divider fires for
 it, because the build leaves it out before working any of that out. Keep
 `id="card-{{ card.id }}"` on what `_card-body.html` writes: `card:` links and the PDF
-outline land there.
+outline land there, and a card the view keeps but nothing prints fails the build.
+
+This `layouts/cheatsheet/_card-body.html` writes each card as a table: a row per step, with
+the instruction as text and the command as its source, whatever the command's block
+template makes of it:
+
+```
+<article class="cheatsheet-card" id="card-{{ card.id }}">
+  <h2 class="cheatsheet-card-title">{{ card.title }}</h2>
+  <table class="steps">
+  {% for s in card.steps %}
+    {% set what = s.block | find('.instructions') | first %}
+    {% set cmd = s.block | find('pre.command') | first %}
+    <tr class="depth-{{ s.depth }}">
+      <th>{{ s.block.heading }}</th>
+      <td>{% if what is not null %}{{ what.text }}{% endif %}</td>
+      <td>{% if cmd is not null %}<code>{{ cmd.code | trim }}</code>{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </table>
+</article>
+```
+
+To drop the section dividers from the cheat sheet only, add `layouts/cheatsheet/dividers.html`
+with nothing in it: it decides the dividers in this view, and the full guide keeps its own
+(see [Themes](card:themes#dividers)).
 
 A view of your own is a new folder: `layouts/handout/keep.html` (even just `true`) makes
 `<view>handout</view>` a view, and every other template it ships replaces the default of the
@@ -138,3 +179,11 @@ replaces the class paperband makes from its text, which a theme may be using.
 A ` ```bash ` fence, or any other language, isn't a `pre.command`, so the default selector
 leaves it out and the step appears without its command. Use ` ```command `, or keep the
 language and add the class: ` ```bash {.command} `.
+
+The view replaces the default card body, a book's own included: a `layouts/_card-body.html`
+doesn't apply to the cheat sheet, because the view's `cheatsheet/_card-body.html` is found
+first. Put what the cheat sheet should have in `layouts/cheatsheet/_card-body.html`.
+
+A build that still sets `vars.cheatsheet` fails and says what to write instead. Cheat-sheet
+mode became the view: replace `<cheatsheet>true</cheatsheet>` in `<vars>` with
+`<view>cheatsheet</view>`.
