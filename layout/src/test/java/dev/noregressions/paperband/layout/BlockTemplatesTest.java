@@ -50,7 +50,7 @@ class BlockTemplatesTest {
     private static String html(Card card, BlockTemplates templates, Map<String, Object> vars) {
         ContentWriter writer = new ContentWriter(templates);
         StringBuilder sb = new StringBuilder();
-        card.blocks().forEach(b -> sb.append(writer.html(b, vars, card.source(), "pdf")));
+        card.blocks().forEach(b -> sb.append(writer.html(b, vars, card.source(), "print", "pdf-a4")));
         return sb.toString();
     }
 
@@ -190,9 +190,9 @@ class BlockTemplatesTest {
 
     @Test
     void aTemplate_seesWhichOutputIsBeingWritten(@TempDir Path layouts) throws IOException {
-        template(layouts, "trace.html", "<pre class=\"trace-{{ target }}\">{{ content }}</pre>");
+        template(layouts, "trace.html", "<pre class=\"trace-{{ output }} {{ target }}\">{{ content }}</pre>");
         Parsed card = parse(layouts, Map.of(), "# T\n\n```trace\nx\n```\n");
-        assertTrue(html(card).contains("class=\"trace-pdf\""), html(card));
+        assertTrue(html(card).contains("class=\"trace-print pdf-a4\""), html(card));
     }
 
     @Test

@@ -80,7 +80,7 @@ class BlockRendererWiringTest {
     private static String html(Card card, BlockTemplates templates, Map<String, Object> vars) {
         ContentWriter writer = new ContentWriter(templates);
         StringBuilder sb = new StringBuilder();
-        card.blocks().forEach(b -> sb.append(writer.html(b, vars, card.source(), "pdf")));
+        card.blocks().forEach(b -> sb.append(writer.html(b, vars, card.source(), "print", "pdf-a4")));
         return sb.toString();
     }
 

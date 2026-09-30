@@ -131,6 +131,10 @@ Three things can claim a fence type, and they are tried in this order:
 A book can therefore override one type by hand without removing a module, and a module can
 claim a type paperband already ships (for example, a server-side `mermaid`).
 
+A renderer draws when a card is read, once per build however many outputs it writes. The
+templates run later, as each output is written, which is why they can branch on `output`
+and a renderer can't.
+
 ### Watch Out
 
 A renderer's output is re-parsed as HTML and inserted into the card, so it must be

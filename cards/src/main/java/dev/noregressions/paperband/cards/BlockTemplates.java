@@ -38,6 +38,12 @@ import java.util.Set;
  * whose type has a template at {@code blocks/<type>.html} renders through
  * that Pebble fragment instead of the default {@code <pre><code>}.
  *
+ * <p><b>When each half runs.</b> {@link #draw} runs as a card is read: a
+ * drawing is computed once, and sanitised with the card. {@link #template}
+ * runs at layout time, as each output is written, because what a fence looks
+ * like is layout: a template sees {@code output} and {@code target}, and its
+ * markup goes where the fence was without becoming structure of the card.
+ *
  * <p>Resolution walks the same loader chain as every other template — the
  * theme's templates first, then the book's {@code layouts/blocks/}, then the
  * bundled {@code templates/blocks/} — so a book can define its own block
@@ -212,7 +218,7 @@ public final class BlockTemplates {
     public String render(String type, String content, List<String> classes, String id,
                          Map<String, Object> vars, Path source) {
         String drawn = draw(type, content, classes, id, vars, source);
-        return drawn != null ? drawn : template(type, content, classes, id, vars, null);
+        return drawn != null ? drawn : template(type, content, classes, id, vars, null, null);
     }
 
     /**
@@ -238,14 +244,16 @@ public final class BlockTemplates {
      * from the theme, the book or the bundled set, for a block no renderer
      * drew.
      *
-     * @param target the output being written ({@code pdf}, {@code site}...),
-     *               exposed to the template as {@code target}; may be null
+     * @param output what is being written, {@code print} or {@code site} -- the
+     *               value to branch on -- exposed as {@code output}; may be null
+     * @param target the raw build target ({@code pdf-a4}, {@code web}), which a
+     *               book may rename, exposed as {@code target}; may be null
      * @return the template's HTML, or null when no template has this type
      * @throws BlockTemplateException when a template exists but fails
      */
     public String template(String type, String content, List<String> classes, String id,
-                           Map<String, Object> vars, String target) {
-        return renderTemplate(type, content, classes, id, vars, target);
+                           Map<String, Object> vars, String output, String target) {
+        return renderTemplate(type, content, classes, id, vars, output, target);
     }
 
     /** Whether any template in the chain, authored or bundled, has {@code type}. */
@@ -315,7 +323,7 @@ public final class BlockTemplates {
 
     /** The original path: {@code blocks/<type>.html} anywhere in the loader chain. */
     private String renderTemplate(String type, String content, List<String> classes, String id,
-                                  Map<String, Object> vars, String target) {
+                                  Map<String, Object> vars, String output, String target) {
         if (missing.contains(type)) return null;
         PebbleTemplate template;
         try {
@@ -334,6 +342,7 @@ public final class BlockTemplates {
         model.put("classes", classes == null ? List.of() : classes);
         model.put("id", id);
         model.put("vars", LenientMap.of(vars == null ? Map.of() : vars));
+        model.put("output", output);
         model.put("target", target);
         StringWriter out = new StringWriter();
         try {

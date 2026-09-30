@@ -131,7 +131,8 @@ final class SectionBodies {
             Card card = CardLoading.load(new CardLoader(root), pre, file, null,
                     bookCtx.vars(), log, blockTemplates);
             StringBuilder html = new StringBuilder();
-            appendBlocks(html, card.blocks(), new ContentWriter(blockTemplates), bookCtx.vars(), file, target);
+            appendBlocks(html, card.blocks(), new ContentWriter(blockTemplates), bookCtx.vars(), file,
+                    output, target);
             Map<String, Object> fm = card.frontmatter().values();
             return new SectionBody(html.toString(), card.title(),
                     truthy(fm.get("cards")) || truthy(fm.get("sections")),
@@ -198,7 +199,7 @@ final class SectionBodies {
      * the same writing, on the same page, as the cards it introduces.
      */
     private static void appendBlocks(StringBuilder sb, List<Block> blocks, ContentWriter writer,
-                                     Map<String, Object> vars, Path file, String target) {
+                                     Map<String, Object> vars, Path file, String output, String target) {
         for (Block b : blocks) {
             String classes = String.join(" ", b.classes());
             sb.append("<section class=\"block");
@@ -227,8 +228,8 @@ final class SectionBodies {
                         .append("</h").append(level).append(">\n");
             }
             // Written as a card's are: fences through their block templates.
-            if (b.html() != null) sb.append(writer.html(b, vars, file, target)).append('\n');
-            appendBlocks(sb, b.children(), writer, vars, file, target);
+            if (b.html() != null) sb.append(writer.html(b, vars, file, output, target)).append('\n');
+            appendBlocks(sb, b.children(), writer, vars, file, output, target);
             sb.append("</section>\n");
         }
     }

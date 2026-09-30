@@ -198,8 +198,9 @@ sees `card.steps` (`{block, depth}`) and `card.cheatsheet.select`. Guide card: `
   contains a diagram — offline build machines need network for books that use it.
 - **Custom block types**: put a Pebble fragment at `layouts/blocks/<type>.html` and
   ```` ```<type> ```` renders through it. Model: `content` (verbatim, escaped — `| raw` is
-  a choice), `type`, `classes`, `id`, `vars`. Resolution: theme templates → book
-  `layouts/blocks/` → bundled. A template named after a real language (`java.html`)
+  a choice), `type`, `classes`, `id`, `vars`, `output` (`print`/`site`), `target`.
+  Templates run at layout time, as each output is written, so their markup can't create
+  sections. Resolution: theme templates → book `layouts/blocks/` → bundled. A template named after a real language (`java.html`)
   captures every such fence book-wide. A broken template fails the build naming card,
   type, and file.
 
@@ -723,7 +724,8 @@ the end naming failures.
   `META-INF/services/…block.BlockRenderer` (true ServiceLoader SPI). Installed by adding
   the jar to the **plugin's** `<dependencies>`. Precedence: theme/book
   `blocks/<type>.html` > BlockRenderer > bundled `blocks/<type>.html` > plain code block.
-  Settings arrive as `vars.<rendererName>` (so they cascade). Two renderers claiming one
+  Renderers draw when the card is read, once per build. Settings arrive as
+  `vars.<rendererName>` (so they cascade). Two renderers claiming one
   type fails the build. `mvn paperband:blocks` lists every type and what renders it.
   Bundled implementation: `block-plantuml` (```` ```plantuml ````/`puml`/`uml` → inline SVG
   at build time, no browser and no network;

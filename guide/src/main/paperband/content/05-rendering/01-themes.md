@@ -318,10 +318,11 @@ the same content as `block.html`, as a list of nodes in document order, and like
 | `lang`, `code` | A fence's type and its text as the author wrote it |
 | `ordered` | A list: true for a numbered one |
 | `header` | A table cell: true for a header cell |
+| `drawn` | A fence: true when a renderer module drew it, such as a PlantUML diagram |
 
-A fence keeps what the author wrote after a block template has replaced its markup. A
-` ```command ` block is `pre.command` to a selector, and it's still `lang` `command` with
-the command as its `code`.
+A fence keeps what the author wrote, whatever its block template makes of it. A
+` ```command ` block is `pre.command` to `find`, as it is to `select`, and it's `lang`
+`command` with the command as its `code`.
 
 `find` searches nodes with a CSS selector and returns the nodes that match. It takes a
 block, `block.nodes` or a single node, and it searches everything under them. That's

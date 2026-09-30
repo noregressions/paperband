@@ -925,7 +925,7 @@ public final class LayoutEngine {
 
             Map<String, Object> model = new HashMap<>();
             Map<String, Object> cm = cardModel(card, cardAxesFromGroupings(i, groupings),
-                    contexts.get(i).vars(), contexts.get(i).target());
+                    contexts.get(i).vars(), "site", contexts.get(i).target());
             cm.put("number", numberLabel(card.id()));
             model.put("book", bookModel);
             model.put("navEntries", navEntries);
@@ -2084,7 +2084,7 @@ public final class LayoutEngine {
     private Map<String, Object> buildModel(Card card, RenderContext ctx) {
         Map<String, Object> model = new HashMap<>();
         model.put("card", cardModel(card, resolveCardAxes(card, ctx, ctx.book().axes()), ctx.vars(),
-                ctx.target()));
+                "print", ctx.target()));
         model.put("ctx", contextModel(ctx));
         model.put("vars", LenientMap.of(ctx.vars()));
         model.put("target", ctx.target());
@@ -2216,7 +2216,7 @@ public final class LayoutEngine {
             if (tocAt != null && i == tocAt) tocEntryIndex = tocEntries.size();
             Map<String, Object> axesForCard = cardAxesFromGroupings(i, groupings);
             Map<String, Object> cm = cardModel(cards.get(i), axesForCard, contexts.get(i).vars(),
-                    contexts.get(i).target());
+                    "print", contexts.get(i).target());
             cm.put("number", numberLabel(cards.get(i).id()));
             // Card-scope page treatment: when this card's resolved orientation
             // differs from the book's sheet, name the rotation so book.html can
@@ -2653,7 +2653,7 @@ public final class LayoutEngine {
     }
 
     private Map<String, Object> cardModel(Card card, Map<String, Object> axes,
-                                          Map<String, Object> vars, String target) {
+                                          Map<String, Object> vars, String output, String target) {
         Map<String, Object> m = new HashMap<>();
         m.put("id", card.id());
         m.put("title", card.title());
@@ -2680,7 +2680,7 @@ public final class LayoutEngine {
 
         List<Map<String, Object>> blocks = new ArrayList<>(card.blocks().size());
         for (Block b : card.blocks()) {
-            blocks.add(blockModel(b, vars, card.source(), target));
+            blocks.add(blockModel(b, vars, card.source(), output, target));
         }
         m.put("blocks", blocks);
         // Slot-based templates pull blocks out of this tracker instead of
@@ -2773,7 +2773,8 @@ public final class LayoutEngine {
                 .replace("<", "&lt;").replace(">", "&gt;");
     }
 
-    private Map<String, Object> blockModel(Block b, Map<String, Object> vars, Path source, String target) {
+    private Map<String, Object> blockModel(Block b, Map<String, Object> vars, Path source,
+                                           String output, String target) {
         Map<String, Object> bm = new HashMap<>();
         bm.put("kind", b.kind().name());
         bm.put("id", b.id());
@@ -2803,7 +2804,7 @@ public final class LayoutEngine {
         bm.put("heading", b.heading());
         bm.put("level", b.level());
         // Written for this output: fences with a block template go through it.
-        bm.put("html", contentWriter.html(b, vars, source, target));
+        bm.put("html", contentWriter.html(b, vars, source, output, target));
         // The same content as data: block.nodes | find('.instructions') is the
         // paragraph itself, its text and props, not a cut of the HTML string.
         List<Map<String, Object>> nodes = new ArrayList<>(b.nodes().size());
@@ -2813,7 +2814,7 @@ public final class LayoutEngine {
         bm.put("nodes", nodes);
         List<Map<String, Object>> children = new ArrayList<>(b.children().size());
         for (Block c : b.children()) {
-            children.add(blockModel(c, vars, source, target));
+            children.add(blockModel(c, vars, source, output, target));
         }
         bm.put("children", children);
         return bm;

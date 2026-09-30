@@ -38,13 +38,15 @@ public final class ContentWriter {
      * @param block  the block
      * @param vars   the card's vars, which a block template sees as {@code vars}
      * @param source the card's file, for error messages; may be null
-     * @param target the output being written, which a template sees as
+     * @param output {@code print} or {@code site}, which a template sees as
+     *               {@code output}; may be null
+     * @param target the raw build target, which a template sees as
      *               {@code target}; may be null
      * @return the content, with templated fences written through their templates
      * @throws LayoutException when a block template fails
      */
-    public String html(Block block, Map<String, Object> vars, Path source, String target) {
-        NodeHtml.Replacement fences = n -> fence(n, vars, source, target);
+    public String html(Block block, Map<String, Object> vars, Path source, String output, String target) {
+        NodeHtml.Replacement fences = n -> fence(n, vars, source, output, target);
         // Most blocks have no templated fence; their HTML is already written.
         if (!NodeHtml.replacesAny(block.nodes(), n -> templated(n) ? "" : null)) return block.html();
         return NodeHtml.write(block.nodes(), fences);
@@ -57,7 +59,7 @@ public final class ContentWriter {
                 && lang != null && templates.hasTemplate(lang);
     }
 
-    private String fence(Node n, Map<String, Object> vars, Path source, String target) {
+    private String fence(Node n, Map<String, Object> vars, Path source, String output, String target) {
         if (!templated(n)) return null;
         String lang = n.props().get("lang");
         Node code = n.children().stream().filter(c -> "code".equals(c.tag())).findFirst().orElse(null);
@@ -74,7 +76,7 @@ public final class ContentWriter {
         }
         String id = n.id() != null ? n.id() : code == null ? null : code.id();
         try {
-            return templates.template(lang, n.props().get("code"), classes, id, vars, target);
+            return templates.template(lang, n.props().get("code"), classes, id, vars, output, target);
         } catch (BlockTemplates.BlockTemplateException e) {
             throw new LayoutException((source == null ? "" : source + ": ") + "```" + lang + " — "
                     + e.getMessage(), e);

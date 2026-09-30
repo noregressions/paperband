@@ -269,7 +269,9 @@ src/
 ```
 
 The fragment's model is `content` (the verbatim block text; `{{ content }}` is escaped,
-`| raw` is not), `type`, `classes` and `id` (from info-line attributes), and `vars`.
+`| raw` is not), `type`, `classes` and `id` (from info-line attributes), `vars`, and
+`output` (`print` or `site`) with the raw `target`, so one template can write a fence
+differently for the PDF and the site.
 Templates resolve through theme templates, then the book's `layouts/blocks/`, then the
 bundled ones, so a book can override `output` and a theme can change a block type's markup.
 The built-in `command`, `output`, `console` and `mermaid` types are bundled block templates.
@@ -279,6 +281,10 @@ defined in its own `layouts/blocks/`.
 A template named after a real language (`layouts/blocks/java.html`) applies to every
 ` ```java ` block in the book. A broken template fails the build, naming the card, the type
 and the template file.
+
+A block template runs when an output is written, after the card has been read, so what it
+writes goes where the fence was and nothing more. A heading in a template's markup is just
+markup: it doesn't start a section, and a slot or a step can't see it.
 
 ### PlantUML diagrams
 

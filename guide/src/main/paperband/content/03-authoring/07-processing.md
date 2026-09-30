@@ -43,8 +43,8 @@ html --> book
 | 1. Pebble | The card file as text, with its frontmatter, fences and inline code hidden; the `vars` cascade; `layouts/` snippets; fragment sources | Markdown text | `{{ }}`, `{% %}`, `{# #}` | Headings, sections, numbers, anchors, the card's own frontmatter |
 | 2. Parse | The body, after the frontmatter is split off | A markdown tree | Markdown itself; anything in code becomes code and is never read again | Other cards |
 | 3. Tree | That tree | The same tree with sections, attributes, spans and numbered steps | `{!name}`, `{.x}`, `{/x}`, `{key=value}` | Other cards |
-| 4. HTML | The card rendered to HTML | The card's blocks: heading, classes, attributes, directives, and their content as HTML and as nodes | ` ```type ` fences, the `ast:` fallback, the content policy | Other cards |
-| 5. Book | Every card's blocks, in book order | The PDF, the site and any other outputs | `card:` links, `:icon:` references, chapter numbers, the table of contents and index, layout templates, which can reorder blocks into slots, pick parts out of them with `select` and read them as data with `find` | Nothing is hidden: this is the first phase with the whole book |
+| 4. HTML | The card rendered to HTML | The card's blocks: heading, classes, attributes, directives, and their content as HTML and as nodes | ` ```type ` fences a renderer module draws, the `ast:` fallback, the content policy | Other cards |
+| 5. Book | Every card's blocks, in book order | The PDF, the site and any other outputs | `card:` links, `:icon:` references, chapter numbers, the table of contents and index, block templates for ` ```type ` fences, layout templates, which can reorder blocks into slots, pick parts out of them with `select` and read them as data with `find` | Nothing is hidden: this is the first phase with the whole book |
 
 An `.html` card skips phases 2 and 3, because it has no markdown to parse; its blocks come
 from its headings in phase 4. A `.yaml` card is turned into markdown first and then goes
@@ -112,7 +112,8 @@ also why a value containing a stray `{step}` fails the build like one typed in t
 | Class a block or its section | `{.x}` at the end of a heading or paragraph | 3 |
 | Class part of a sentence | `{.x}` … `{/x}` in the text | 3 |
 | Number steps | `{!step}` | 3 |
-| Draw a fence as something else | a ` ```type ` fence with a block template or renderer | 4 |
+| Compute a fence's HTML, such as drawing a diagram | a ` ```type ` fence a renderer module claims | 4 |
+| Change how a fence type is written | a block template, `layouts/blocks/<type>.html` | 5 |
 | Link to another card | `[text](card:id)` | 5 |
 | Change how every card looks | a theme, or a template in `layouts/` | 5 |
 | Move a block to another place on the page | a slot, `card.slots.take('name')`, in `_card-body.html` | 5 |
