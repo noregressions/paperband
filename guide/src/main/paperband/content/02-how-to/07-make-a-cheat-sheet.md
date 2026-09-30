@@ -133,8 +133,9 @@ it, because the build leaves it out before working any of that out. Keep
 outline land there, and a card the view keeps but nothing prints fails the build.
 
 This `layouts/cheatsheet/_card-body.html` writes each card as a table: a row per step, with
-the instruction as text and the command as its source, whatever the command's block
-template makes of it:
+the instruction as text and the command as the guide prints it. `| html` writes the command
+through its block template, so it keeps its label and copy button (see
+[Themes](card:themes#changing-what-a-block-prints)):
 
 ```
 <article class="cheatsheet-card" id="card-{{ card.id }}">
@@ -146,7 +147,7 @@ template makes of it:
     <tr class="depth-{{ s.depth }}">
       <th>{{ s.block.heading }}</th>
       <td>{% if what is not null %}{{ what.text }}{% endif %}</td>
-      <td>{% if cmd is not null %}<code>{{ cmd.code | trim }}</code>{% endif %}</td>
+      <td>{% if cmd is not null %}{{ cmd | html | raw }}{% endif %}</td>
     </tr>
   {% endfor %}
   </table>
