@@ -161,7 +161,9 @@ a bare `{word}` fails the build; `{#` is always Pebble's, so ids are `{id=x}`.
 `vars.cheatsheet: true` (in a second execution's `<book><vars>`) makes each card its steps: title, then per
 `{!step}` its heading plus the parts matching `cheatsheetSelect` (default `.instructions, pre.command,
 pre.console`). Cards flow on; cards with no `{!step}` are left out (links to them become plain text). Works for
-`build` and `site`. Mark the paragraph to keep with `{.instructions}`. Template: `_cheatsheet-card.html`, which
+`build` and `site`. `cheatsheetSelect` may go in `paperband.yaml` (it turns nothing on); a `cheatsheet:` map
+fails the build. Mark the paragraph to keep with `{.instructions}`; a plain ```` ```bash ```` fence isn't
+`pre.command` (use ```` ```command ```` or ```` ```bash {.command} ````). Template: `_cheatsheet-card.html`, which
 sees `card.steps` (`{block, depth}`) and `card.cheatsheet.select`. Guide card: `make-a-cheat-sheet`.
 
 ### Frontmatter fields

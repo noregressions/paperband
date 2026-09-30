@@ -16,17 +16,19 @@ import java.util.Map;
  *
  * <pre>
  * vars:
- *   cheatsheet: true                           # the defaults below
+ *   cheatsheet: true                           # the mode, in one build's execution
  *   cheatsheetSelect: "p.instructions, pre.console"  # what each step contributes
- *
- *   cheatsheet:                                # or both at once, in yaml
- *     select: "p.instructions, pre.console"
  * </pre>
  *
- * <p>The flat {@code cheatsheetSelect} exists because a POM's
- * {@code <book><vars>} is a string map: {@code <cheatsheet>true</cheatsheet>}
- * and {@code <cheatsheetSelect>...</cheatsheetSelect>} are how an execution
- * sets both.
+ * <p>Two keys, because they belong in different places. The mode is on for
+ * one build, so it's set in that execution's {@code <book><vars>}; the
+ * selector describes the cards, so it can sit in a folder's
+ * {@code paperband.yaml} and cascade, turning nothing on by itself. A
+ * {@code cheatsheet:} map holding both used to be accepted, and was a trap
+ * both ways: in a folder's yaml it switched the mode on for the full guide
+ * too, and an execution's {@code <cheatsheet>true</cheatsheet>} replaced it
+ * whole, dropping its selector. It now fails the build, saying which keys to
+ * use.
  *
  * <p>In this mode a card's body is {@code _cheatsheet-card.html} in place of
  * {@code _card-body.html}: one entry per {@code {!step}}, its heading plus the
@@ -48,15 +50,20 @@ public final class CheatSheet {
     }
 
     /**
-     * Whether {@code vars} switch cheat-sheet mode on: {@code cheatsheet: true},
-     * or a {@code cheatsheet:} map that doesn't say {@code enabled: false}.
+     * Whether {@code vars} switch cheat-sheet mode on: {@code cheatsheet: true}.
+     *
+     * @throws LayoutException when {@code cheatsheet:} is a map; see the class javadoc
      */
     public static boolean enabled(Map<String, Object> vars) {
         if (vars == null) return false;
         Object v = vars.get("cheatsheet");
         if (v instanceof Boolean b) return b;
-        if (v instanceof Map<?, ?> m) return !Boolean.FALSE.equals(m.get("enabled"))
-                && !"false".equals(String.valueOf(m.get("enabled")));
+        if (v instanceof Map<?, ?> m) {
+            throw new LayoutException("cheatsheet: takes true or false, not a map (" + m + ")."
+                    + " Turn the mode on with cheatsheet: true in the cheat-sheet build's"
+                    + " <book><vars>, and set what each step keeps with cheatsheetSelect:,"
+                    + " which can go in paperband.yaml without turning anything on.");
+        }
         return v != null && "true".equalsIgnoreCase(v.toString().strip());
     }
 
@@ -67,13 +74,8 @@ public final class CheatSheet {
     static Map<String, Object> model(Map<String, Object> vars) {
         if (!enabled(vars)) return null;
         String select = DEFAULT_SELECT;
-        Object flat = vars.get("cheatsheetSelect");
-        if (vars.get("cheatsheet") instanceof Map<?, ?> m && m.get("select") != null
-                && !m.get("select").toString().isBlank()) {
-            select = m.get("select").toString();
-        } else if (flat != null && !flat.toString().isBlank()) {
-            select = flat.toString();
-        }
+        Object own = vars.get("cheatsheetSelect");
+        if (own != null && !own.toString().isBlank()) select = own.toString();
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("select", select);
         return out;

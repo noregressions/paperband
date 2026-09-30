@@ -50,27 +50,40 @@ class CheatSheetTest {
     class Enabled {
 
         @Test
-        void by_boolean_string_or_map() {
+        void by_boolean_or_string() {
             assertTrue(CheatSheet.enabled(Map.of("cheatsheet", true)));
             assertTrue(CheatSheet.enabled(Map.of("cheatsheet", "true")));
-            assertTrue(CheatSheet.enabled(Map.of("cheatsheet", Map.of("select", "p"))));
         }
 
         @Test
-        void off_when_absent_false_or_disabled() {
+        void off_when_absent_or_false() {
             assertFalse(CheatSheet.enabled(Map.of()));
             assertFalse(CheatSheet.enabled(null));
             assertFalse(CheatSheet.enabled(Map.of("cheatsheet", false)));
             assertFalse(CheatSheet.enabled(Map.of("cheatsheet", "false")));
-            assertFalse(CheatSheet.enabled(Map.of("cheatsheet", Map.of("enabled", false))));
         }
 
         @Test
-        void the_selector_defaults_and_can_be_set_either_way() {
+        void the_selector_defaults_and_is_set_by_its_own_key() {
             assertEquals(CheatSheet.DEFAULT_SELECT, CheatSheet.model(Map.of("cheatsheet", true)).get("select"));
-            assertEquals("p.a", CheatSheet.model(Map.of("cheatsheet", Map.of("select", "p.a"))).get("select"));
             assertEquals("p.b", CheatSheet.model(Map.of("cheatsheet", "true", "cheatsheetSelect", "p.b")).get("select"));
             assertNull(CheatSheet.model(Map.of()));
+        }
+
+        @Test
+        void a_selector_without_the_mode_turns_nothing_on() {
+            // A folder's paperband.yaml can say what steps keep; only the
+            // cheat-sheet build's own execution switches the mode on.
+            assertFalse(CheatSheet.enabled(Map.of("cheatsheetSelect", "p.b")));
+            assertNull(CheatSheet.model(Map.of("cheatsheetSelect", "p.b")));
+        }
+
+        @Test
+        void a_map_fails_naming_the_two_keys_to_use() {
+            LayoutException e = assertThrows(LayoutException.class,
+                    () -> CheatSheet.enabled(Map.of("cheatsheet", Map.of("select", "p"))));
+            assertTrue(e.getMessage().contains("cheatsheet: true"), e.getMessage());
+            assertTrue(e.getMessage().contains("cheatsheetSelect"), e.getMessage());
         }
 
         @Test
@@ -121,7 +134,7 @@ class CheatSheetTest {
 
         @Test
         void the_books_selector_decides_what_each_step_contributes() {
-            String html = render(Map.of("cheatsheet", Map.of("select", "pre")));
+            String html = render(Map.of("cheatsheet", true, "cheatsheetSelect", "pre"));
             assertTrue(html.contains("java -version"), html);
             assertFalse(html.contains("Install a JDK."), html);
         }

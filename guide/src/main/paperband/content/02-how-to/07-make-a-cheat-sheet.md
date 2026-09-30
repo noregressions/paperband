@@ -77,13 +77,16 @@ The guide's own execution is untouched: `cheatsheet` is set only in this one.
 <cheatsheetSelect>.instructions, pre.command, pre.console, figure</cheatsheetSelect>
 ```
 
-In `paperband.yaml` the two can be written together:
+The selector can also go in `paperband.yaml`, for the whole book or one folder. It doesn't
+turn the mode on, so the full guide's build is unaffected:
 
 ```yaml
 vars:
-  cheatsheet:
-    select: ".instructions, pre.console"
+  cheatsheetSelect: ".instructions, pre.console"
 ```
+
+Set `cheatsheet: true` only in the cheat-sheet build's own execution. `cheatsheet:` takes
+`true` or `false`; a map there fails the build and names these two keys.
 
 ## A cheat-sheet site
 
@@ -115,3 +118,7 @@ its steps in order. If none of the chosen cards has a step, the build fails and 
 
 Put `{.instructions}` on the paragraph, not on the step's heading. A class on a heading
 replaces the class paperband makes from its text, which a theme may be using.
+
+A ` ```bash ` fence, or any other language, isn't a `pre.command`, so the default selector
+leaves it out and the step appears without its command. Use ` ```command `, or keep the
+language and add the class: ` ```bash {.command} `.
