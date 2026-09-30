@@ -474,6 +474,7 @@ public final class LayoutEngine {
                 .extension(new LenientMapExtension())
                 .extension(new HtmlSelectExtension())
                 .extension(new NodeFindExtension())
+                .extension(new BookQueryExtension())
                 .strictVariables(false)
                 .autoEscaping(true)
                 .build();

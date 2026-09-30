@@ -405,6 +405,9 @@ never inside one; a nested `<page>` fails the build:
 </table>
 ```
 
+To build a page from parts of the cards, such as every command or every Watch Out, use
+`cards | query('css')` (see [Themes](card:themes#querying-the-whole-book)).
+
 The template name resolves against `layouts/` like every other declared template, theme
 overrides first. The page occupies its own sheet, with page breaks on both sides and the
 full printable height, and gets a named PDF destination (`book-page-0`, `book-page-1`, …)

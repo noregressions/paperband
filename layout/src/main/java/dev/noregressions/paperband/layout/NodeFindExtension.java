@@ -68,7 +68,7 @@ final class NodeFindExtension extends AbstractExtension {
             // matching and each match maps straight back to its node.
             Map<Element, Map<?, ?>> byElement = new IdentityHashMap<>();
             Element top = new Element("paperband-nodes");
-            for (Object n : roots) add(top, n, byElement);
+            for (Object n : roots) standIn(top, n, byElement);
             List<Object> out = new ArrayList<>();
             try {
                 for (Element match : top.select(selector.toString())) {
@@ -92,33 +92,39 @@ final class NodeFindExtension extends AbstractExtension {
             }
             return null;
         }
+    }
 
-        private static void add(Element parent, Object n, Map<Element, Map<?, ?>> byElement) {
-            if (!(n instanceof Map<?, ?> node)) return;
-            Object tag = node.get("tag");
-            if (tag == null) {
-                if (node.get("text") != null) parent.appendChild(new TextNode(node.get("text").toString()));
-                return;
-            }
-            Element el = new Element(tag.toString());
-            if (node.get("id") != null) el.id(node.get("id").toString());
-            if (node.get("classes") instanceof List<?> classes) {
-                for (Object c : classes) el.addClass(c.toString());
-            }
-            if ("fence".equals(node.get("type")) && "pre".equals(tag) && node.get("lang") != null) {
-                el.addClass(node.get("lang").toString());
-            }
-            if (node.get("attributes") instanceof Map<?, ?> attrs) {
-                attrs.forEach((k, v) -> el.attr(k.toString(), v == null ? "" : v.toString()));
-            }
-            if (node.get("directives") instanceof Map<?, ?> dirs) {
-                dirs.forEach((k, v) -> el.attr("data-paperband-" + k, v == null ? "" : v.toString()));
-            }
-            parent.appendChild(el);
-            byElement.put(el, node);
-            if (node.get("children") instanceof List<?> children) {
-                for (Object c : children) add(el, c, byElement);
-            }
+    /**
+     * A jsoup stand-in for a node model and everything under it, appended to
+     * {@code parent}, each element mapped back to its node in {@code byElement}.
+     * Shared with {@code query}, which hangs nodes under stand-ins for their
+     * card and block.
+     */
+    static void standIn(Element parent, Object n, Map<Element, Map<?, ?>> byElement) {
+        if (!(n instanceof Map<?, ?> node)) return;
+        Object tag = node.get("tag");
+        if (tag == null) {
+            if (node.get("text") != null) parent.appendChild(new TextNode(node.get("text").toString()));
+            return;
+        }
+        Element el = new Element(tag.toString());
+        if (node.get("id") != null) el.id(node.get("id").toString());
+        if (node.get("classes") instanceof List<?> classes) {
+            for (Object c : classes) el.addClass(c.toString());
+        }
+        if ("fence".equals(node.get("type")) && "pre".equals(tag) && node.get("lang") != null) {
+            el.addClass(node.get("lang").toString());
+        }
+        if (node.get("attributes") instanceof Map<?, ?> attrs) {
+            attrs.forEach((k, v) -> el.attr(k.toString(), v == null ? "" : v.toString()));
+        }
+        if (node.get("directives") instanceof Map<?, ?> dirs) {
+            dirs.forEach((k, v) -> el.attr("data-paperband-" + k, v == null ? "" : v.toString()));
+        }
+        parent.appendChild(el);
+        byElement.put(el, node);
+        if (node.get("children") instanceof List<?> children) {
+            for (Object c : children) standIn(el, c, byElement);
         }
     }
 }

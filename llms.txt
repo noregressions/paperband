@@ -193,6 +193,17 @@ dropped before dividers, contents, nav and `card:` links are worked out. Bundled
 (`{{ card.steps is not empty }}`) and `cheatsheet/_card-body.html`. A view with no `keep.html` fails the
 build. Block templates don't go through views yet. Guide: Themes, "Views".
 
+### Querying the book
+
+`cards | query('css')` (also one card, or one block) matches across cards. Above the nodes the selector sees
+`card` (id; `<axis>-<value>` classes; scalar frontmatter as attributes, lists space-joined:
+`card[level=beginner]`, `card[index~=maven]`) and `block` (id, classes, attributes, directives as
+`data-paperband-*`, nested blocks inside). Each entry is `{kind, card, block, step, node}`: the match plus the
+card, innermost block and innermost `{!step}` block around it, as the models templates already have. Use it
+in a `<page>` template or `_book-front.html`, where `cards` is in scope; a card body can query its own `card`.
+Example: `{% for c in cards %}{% for e in c | query('block[data-paperband-step] pre.command') %}…{{ e.step.heading }}
+{{ e.node.code }}…`. Guide: Themes, "Querying the whole book".
+
 ### Frontmatter fields
 
 | Field | Type | Default | Meaning |

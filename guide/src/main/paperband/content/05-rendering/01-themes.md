@@ -359,6 +359,70 @@ The kitchen-sink example does this in `layouts/_card-body.html`: every card with
 opens with an "At a glance" box, one fragment per step, showing its heading and the command
 it runs.
 
+## Querying the whole book
+
+`find` sees one block, and a node it returns doesn't say where it was. A page built from the
+whole book, such as every command or every Watch Out, needs both: it crosses cards, and it
+has to say which card each piece came from. `query` does that. It takes `cards`, one card or
+one block, and a CSS selector that sees two more levels above the nodes:
+
+| Element | What the selector sees |
+|---|---|
+| `card` | Its id; a `<axis>-<value>` class per axis value, as its article carries; its frontmatter's scalar keys as attributes, with a list's items joined by spaces: `card#setup`, `card.level-beginner`, `card[index~=maven]` |
+| `block` | Its id, classes, attributes and directives, as its `<section>` has them, with its nested blocks inside it: `block.watch-out`, `block[data-paperband-step]` |
+| nodes | What `find` sees, inside their block |
+
+It returns one entry per match, in document order:
+
+| Key | What's in it |
+|---|---|
+| `kind` | `card`, `block` or `node`: the level that matched |
+| `card` | The card it's in, or the match itself |
+| `block` | The innermost block it's in, or the match itself; null for a card match |
+| `step` | The innermost `{!step}` block around it, or null |
+| `node` | The node, for a node match; otherwise null |
+
+Each is the model a template already has, so `e.block.heading`, `e.block.html` and
+`e.node | find(...)` work as usual. Like `find`, `query` keeps a match inside another. No
+match is an empty list, and a selector jsoup can't read fails the build and names the
+selector.
+
+Only a template that sees the whole book has `cards`, so this belongs in a `<page>` template
+(see [Maven Plugin](card:maven-plugin#generated-pages)) or `_book-front.html`. A card body
+can still query its own `card`. This `layouts/commands.html` is a command reference: each
+card that has a command in a step, with each step's command under its heading:
+
+```
+<h1>Command reference</h1>
+{% for c in cards %}
+  {% set commands = c | query('block[data-paperband-step] pre.command') %}
+  {% if commands is not empty %}
+  <h2><a href="card:{{ c.id }}">{{ c.title }}</a></h2>
+  <dl class="command-reference">
+  {% for e in commands %}
+    <dt>{{ e.step.heading }}</dt>
+    <dd><pre class="command"><code>{{ e.node.code | trim }}</code></pre></dd>
+  {% endfor %}
+  </dl>
+  {% endif %}
+{% endfor %}
+```
+
+Querying one card at a time is what groups the entries: the loop gives the card heading, and
+the query gives its commands. A query of `cards` gives one flat list instead, which suits a
+page that doesn't group. This one collects every Watch Out in the book:
+
+```
+{% for e in cards | query('block.watch-out') %}
+  <section class="watch-out-entry">
+    <h2><a href="card:{{ e.card.id }}">{{ e.card.title }}</a></h2>
+    {{ e.block.html | raw }}
+  </section>
+{% endfor %}
+```
+
+`card:` links in a page template resolve like the ones in cards do.
+
 ## Dividers
 
 Which divider pages come before each card of a book is decided by a template,
