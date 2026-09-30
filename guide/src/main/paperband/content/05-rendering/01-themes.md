@@ -351,6 +351,10 @@ needs `| raw` on card content. Unlike `select`, `find` keeps a match that sits i
 another, so `find('li')` returns the items of a nested list too. No match is an empty
 list, and a selector jsoup can't read fails the build and names the selector.
 
+The kitchen-sink example does this in `layouts/_card-body.html`: every card with steps
+opens with an "At a glance" box, one fragment per step, showing its heading and the command
+it runs.
+
 ## Authoring a custom theme
 
 A minimal theme is two files:

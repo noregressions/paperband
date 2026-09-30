@@ -1,0 +1,9 @@
+{# One entry of the At a glance box: a step's heading and the command it runs.
+   session is the step's first command or console fence as a node, so its code
+   is the text the author wrote, whatever its block template makes of it. The
+   first line is the command, less a console prompt; one that carries on with
+   a backslash ends in an ellipsis instead. split takes a regular expression,
+   which is how ' \\' finds a space and a single backslash. #}
+{% if session is not null %}{% set parts = session.code | split('\n') | first | replace({'$ ': ''}) | split(' \\', -1) %}{% endif %}
+<li class="at-a-glance-step depth-{{ depth }}">{{ heading }}{% if session is not null %}
+  <code>{{ parts | first }}{% if parts | length > 1 %} …{% endif %}</code>{% endif %}</li>

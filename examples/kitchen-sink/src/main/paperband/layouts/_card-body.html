@@ -1,0 +1,22 @@
+{# The kitchen-sink's card body: the default one, with an "At a glance" box in
+   front of the blocks of any card that has {!step}s. Each entry is
+   fragments/step-glance.html, filled from the step's nodes with find, so the
+   box is data the card already holds rather than text written twice.
+   https://noregressions.github.io/paperband/cards/themes.html#reading-a-block-as-data #}
+{% extends "_card-body-base" %}
+{% block cardBlocks %}
+{% if card.steps is not empty %}
+<aside class="at-a-glance">
+  <p class="at-a-glance-title">At a glance</p>
+  <ul>
+  {% for s in card.steps %}
+    {% include "fragments/step-glance" with {
+         "heading": s.block.heading,
+         "depth": s.depth,
+         "session": s.block | find('pre.command, pre.console') | first } %}
+  {% endfor %}
+  </ul>
+</aside>
+{% endif %}
+{{ parent() }}
+{% endblock %}

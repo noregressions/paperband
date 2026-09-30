@@ -39,6 +39,7 @@ Paths are relative to `src/main/paperband/`.
 | Numbered steps with `{!step}`, including steps inside a step | `content/01-basics/04-steps.md`, `styles/book.css` |
 | A cheat sheet of a chosen set of cards (`<book><includes>`, `vars.cheatsheet`, `{.instructions}`), as a PDF and a site | `../../../pom.xml` (`cheatsheet` and `cheatsheet-site` executions), `content/04-workshop/` |
 | A custom block type | `layouts/blocks/note.html`, used in `content/01-basics/02-blocks.md` |
+| A fragment filled from a card's content (`block.nodes`, `find`): an "At a glance" box of each step and its command | `layouts/_card-body.html`, `layouts/fragments/step-glance.html`, `styles/book.css` |
 | `:name:` icons, bundled and the book's own | `content/01-basics/02-blocks.md`, `icons/ks.svg` |
 | `{% fragment %}` from a source file | `content/02-authoring/01-includes.md`, `content/02-authoring/Hello.java` |
 | `{% include %}` of a layouts snippet | `content/02-authoring/01-includes.md`, `layouts/snippets/support.html` |
