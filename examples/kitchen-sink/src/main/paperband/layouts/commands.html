@@ -1,0 +1,18 @@
+{# A generated page (a <page> marker in the cheatsheet execution's
+   <sections>): every command the book's steps run, one list per card, each
+   under the heading of the step it belongs to. `c | query(...)` finds them
+   across the card's blocks, and each entry knows its step.
+   https://noregressions.github.io/paperband/cards/themes.html#querying-the-whole-book #}
+<h1>Every command</h1>
+{% for c in cards %}
+  {% set commands = c | query('block[data-paperband-step] pre.command') %}
+  {% if commands is not empty %}
+  <h2><a href="card:{{ c.id }}">{{ c.title }}</a></h2>
+  <dl class="command-reference">
+  {% for e in commands %}
+    <dt>{{ e.step.heading }}</dt>
+    <dd><pre class="command"><code>{{ e.node.code | trim }}</code></pre></dd>
+  {% endfor %}
+  </dl>
+  {% endif %}
+{% endfor %}

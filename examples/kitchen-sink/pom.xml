@@ -52,7 +52,10 @@
                          view turns each into its {!step} entries (heading,
                          the paragraph marked {.instructions}, the ```command
                          and its ```console output). The full guide above stays as it is.
-                         https://noregressions.github.io/paperband/cards/make-a-cheat-sheet.html -->
+                         https://noregressions.github.io/paperband/cards/make-a-cheat-sheet.html
+                         The <page> after the section adds a generated page,
+                         layouts/commands.html: every command, from cards | query.
+                         https://noregressions.github.io/paperband/cards/maven-plugin.html#generated-pages -->
                     <execution>
                         <id>cheatsheet</id>
                         <phase>package</phase>
@@ -60,9 +63,18 @@
                         <configuration>
                             <book>
                                 <title>Workshop cheat sheet</title>
-                                <includes>
-                                    <include>04-workshop/0*.md</include>
-                                </includes>
+                                <sections>
+                                    <section>
+                                        <!-- The folder's name as the id, so the
+                                             divider keeps 04-workshop/_section.md -->
+                                        <id>04-workshop</id>
+                                        <title>Workshop</title>
+                                        <includes>
+                                            <include>04-workshop/0*.md</include>
+                                        </includes>
+                                    </section>
+                                    <page><template>commands</template></page>
+                                </sections>
                                 <vars>
                                     <toc>false</toc>
                                     <index>false</index>
