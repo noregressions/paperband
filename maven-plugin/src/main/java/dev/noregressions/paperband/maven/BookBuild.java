@@ -386,6 +386,9 @@ final class BookBuild {
         String html = layoutOverride != null
                 ? layout.renderBook(cards, contexts, bookCtx, layoutOverride)
                 : layout.renderBook(cards, contexts, bookCtx);
+        for (String bookmark : layout.droppedBookmarks()) {
+            log.warn("Bookmark " + bookmark + " left out: the book printed nothing with that id");
+        }
 
         URI baseUri = bookRoot.toAbsolutePath().toUri();
         // Whether a second pass is coming is knowable now — it is the same

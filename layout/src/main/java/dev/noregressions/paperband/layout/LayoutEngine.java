@@ -167,6 +167,18 @@ public final class LayoutEngine {
         return outline;
     }
 
+    /** Bookmarks the last {@link #renderBook} left out because their anchors weren't printed. */
+    private final List<String> droppedBookmarks = new ArrayList<>();
+
+    /**
+     * The bookmarks the last {@link #renderBook} dropped, as {@code 'label' (#anchor)},
+     * for the caller to warn about: a divider page a template chose not to print
+     * has nothing for a bookmark to open.
+     */
+    public List<String> droppedBookmarks() {
+        return List.copyOf(droppedBookmarks);
+    }
+
     /**
      * Card ids the book holds that this build leaves out — what a
      * {@code select:} or an edition filtered away.
@@ -581,6 +593,12 @@ public final class LayoutEngine {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> cardModels = (List<Map<String, Object>>) model.get("cards");
         checkSlots(layoutName, cardModels);
+        // What the templates actually printed: every card the book holds, and
+        // a bookmark only where its anchor landed. See Printed.
+        Printed printed = new Printed(html);
+        printed.requireCards(cards, layoutName);
+        droppedBookmarks.clear();
+        this.outline = printed.reachable(outline, droppedBookmarks);
         return withIcons(CardLinks.of(cards, excludedCardIds)
                 .withNumbers(cardNumbers).print(html), bookCtx.vars());
     }

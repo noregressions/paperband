@@ -463,3 +463,14 @@ mvn paperband:themes -Dpaperband.themeDir=mythemes
 Lists every discovered theme with its source (`built-in`, your directory, or
 "overrides built-in") and how many stylesheets its manifest resolved. A `?` in the styles
 column means the manifest failed to load, usually because of a misspelt filename in it.
+
+## Watch Out
+
+A card body template has to keep `id="card-{{ card.id }}"` on what it writes. After a book
+renders, paperband reads the ids its templates printed, and a card the book holds with no
+`card-<id>` among them fails the build, naming it: `card:` links, the contents and the
+bookmarks would otherwise point at nothing. To leave a card out on purpose, use a view whose
+`keep.html` prints `false` for it (see [Views](card:themes#views)).
+
+A divider page is different: a template may choose not to print one. Its bookmark is left
+out, the build log says which, and the cards under it move up a level in the bookmark pane.

@@ -176,6 +176,13 @@ fell on that card; a part divider before the section opening it, only for a part
 bookmarks and `paperband:structure` all follow. Override in `layouts/dividers.html`, a theme or a view. Divider
 and landing-page card lists carry each card's whole `frontmatter`.
 
+### What the output is checked for
+
+After a book renders, paperband reads the ids its templates printed. A card the book holds with no
+`id="card-<id>"` fails the build (`UnprintedCardException`, a build failure like a broken `card:` link),
+naming it; leave cards out with a view's `keep.html` instead. A bookmark whose anchor wasn't printed (a
+divider page a template skipped) is dropped with a warning, its children lifted a level.
+
 ### Views
 
 A view is a folder of templates a build names with `<view>name</view>` (`-Dpaperband.view`, build and site
