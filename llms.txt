@@ -165,6 +165,17 @@ text). `cheatsheetSelect` may go in `paperband.yaml`; only the view reads it. `v
 build with the migration. Mark the paragraph to keep with `{.instructions}`; a plain ```` ```bash ```` fence
 isn't `pre.command` (use ```` ```command ```` or ```` ```bash {.command} ````). Guide card: `make-a-cheat-sheet`.
 
+### Dividers
+
+Which divider pages precede each card is `dividers.html`, a template rendered per card that prints tokens in
+order: `axis:<name>`, `part`, `section`. It decides from facts: `card.startsValue[axis]`,
+`card.startsSection`, `card.part` (`{label, part, sections}`), `card.startsPart`, `card.sectionMeta`. Bundled
+rules: an axis divider where a dividers-enabled axis's value starts; a section divider only if no axis divider
+fell on that card; a part divider before the section opening it, only for a part of 2+ sections. The result is
+`card.dividers` (`{kind, axis, value, section}`), which book.html's pages, the screen nav, the contents, PDF
+bookmarks and `paperband:structure` all follow. Override in `layouts/dividers.html`, a theme or a view. Divider
+and landing-page card lists carry each card's whole `frontmatter`.
+
 ### Views
 
 A view is a folder of templates a build names with `<view>name</view>` (`-Dpaperband.view`, build and site

@@ -210,11 +210,15 @@ Theme templates receive the same Pebble model the bundled ones use. The core obj
 
 | Key | Where | What's in it |
 |---|---|---|
-| `card` | card pages, each entry of `cards` in `book.html` | `id`, `title`, `frontmatter.*` (raw map), `axes.{axisName}.{id,label,color}`, `blocks` (nested: `heading`, `level`, `classes`, `classAttr`, `id`, `anchor`, `attributes`, `directives`, `html`, `nodes`, `children`), `steps` (every `{!step}` block flattened, as `{block, depth}`), `vars` (the card's own cascaded vars; a page's `vars` is the book's in `book.html`) |
+| `card` | card pages, each entry of `cards` in `book.html` | `id`, `title`, `frontmatter.*` (raw map), `axes.{axisName}.{id,label,color}`, `blocks` (nested: `heading`, `level`, `classes`, `classAttr`, `id`, `anchor`, `attributes`, `directives`, `html`, `nodes`, `children`), `steps` (every `{!step}` block flattened, as `{block, depth}`), `vars` (the card's own cascaded vars; a page's `vars` is the book's in `book.html`); in `book.html` also `dividers` and the facts behind them (see [Dividers](card:themes#dividers)) |
 | `book` | book PDF + every site page | `title`, `subtitle`, `series`, `author`, `vars.*`, `cover`, `back` |
 | `vars` | `card.html`, `book.html`, `site-card.html` | the fully-cascaded vars map for that card |
 | `axis` / `value` | axis dividers and landing pages | `{name, title}` / `{id, label, color, count, cards}` |
 | `section` | section dividers and landing pages | `{id, label, count, minimal, cards}` |
+
+Each entry of a divider's or a landing page's `cards` is `{id, title, oneliner, effort,
+frontmatter}`: `frontmatter` is the card's whole frontmatter, so a divider can list what the
+book declares (`c.frontmatter.audience`), not just the two keys named.
 
 Three vars get promoted to first-class book fields: `vars.subtitle`, `vars.series`, and
 `vars.author` become `book.subtitle`, `book.series`, `book.author`, which the cover and
@@ -354,6 +358,37 @@ list, and a selector jsoup can't read fails the build and names the selector.
 The kitchen-sink example does this in `layouts/_card-body.html`: every card with steps
 opens with an "At a glance" box, one fragment per step, showing its heading and the command
 it runs.
+
+## Dividers
+
+Which divider pages come before each card of a book is decided by a template,
+`dividers.html`, not by paperband. It's rendered once per card and prints the dividers in
+order, separated by spaces: `axis:<name>` for an axis value's divider, `part` for a part's,
+`section` for the card's section. paperband works out the facts it decides from:
+
+| Key | What it says |
+|---|---|
+| `card.startsValue[axis]` | The card's value for that axis differs from the last card that had one |
+| `card.startsSection` | The card is the first of its section |
+| `card.part` | Its section's part (`label`, `part`, `sections`), or null |
+| `card.startsPart` | The card is the first of that part |
+| `card.sectionMeta` | Its section (`label`, `landingPage`, ...), or null |
+
+The bundled rules: one divider per axis that asks for dividers, where its value starts;
+a section's divider only when no axis divider fell on the same card; a part's divider in
+front of the section that opens it, only where the part spans more than one section. What the
+template prints becomes `card.dividers`, a list of `{kind, axis, value, section}`, and the
+book's pages, its screen nav, its printed contents, its PDF bookmarks and
+`mvn paperband:structure` all follow it. A section with `landingPage: false` still starts
+there, and gets no page.
+
+To change the rules, put your own `dividers.html` in the book's `layouts/`, a theme or a
+view. This one gives every section its own divider, whatever the axes do:
+
+```
+{# layouts/dividers.html #}
+{% if card.startsSection %} section{% endif %}
+```
 
 ## Views
 

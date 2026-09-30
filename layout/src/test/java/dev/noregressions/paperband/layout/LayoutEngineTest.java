@@ -880,6 +880,91 @@ class LayoutEngineTest {
                     "at most one divider page precedes a card: the axis divider wins");
         }
 
+        /** One card that is both the first of axis value kind=scenario and the first of section route. */
+        private BookConfig axisAndSection(Path tempDir, Path lab1) {
+            Axis kind = new Axis("kind", "Kind", List.of(AxisValue.of("scenario", "Scenario")), null);
+            Section route = new Section("route", "The Route", List.of(), null, List.of(lab1));
+            return new BookConfig(tempDir, "Test Book", List.of(kind), List.of(), Map.of(),
+                    List.of(), null, null, null, null, null, null, null, List.of(route));
+        }
+
+        @Test
+        void should_let_a_books_own_dividers_template_change_which_divider_wins(@TempDir Path tempDir)
+                throws Exception {
+            Files.createDirectories(tempDir.resolve("layouts"));
+            Files.writeString(tempDir.resolve("layouts/dividers.html"),
+                    "{% if card.startsSection %} section{% endif %}");
+            LayoutEngine engine = new LayoutEngine(tempDir);
+            Path lab1 = tempDir.resolve("route").resolve("lab1.md");
+
+            String result = engine.renderBook(List.of(createCardAt("lab1", lab1, Map.of("kind", "scenario"))),
+                    List.of(createMinimalContext()),
+                    new RenderContext(axisAndSection(tempDir, lab1), List.of(), Map.of(), null, "pdf", "A4"));
+
+            assertEquals(1, countOccurrences(result, "id=\"section-divider-route\""),
+                    "the book's rule: sections always, axes never");
+            assertFalse(result.contains("id=\"axis-divider-kind-scenario\""), result);
+        }
+
+        @Test
+        void should_fail_naming_the_card_when_dividers_prints_something_unknown(@TempDir Path tempDir)
+                throws Exception {
+            Files.createDirectories(tempDir.resolve("layouts"));
+            Files.writeString(tempDir.resolve("layouts/dividers.html"), "chapter");
+            LayoutEngine engine = new LayoutEngine(tempDir);
+            Path lab1 = tempDir.resolve("route").resolve("lab1.md");
+
+            LayoutException e = assertThrows(LayoutException.class, () -> engine.renderBook(
+                    List.of(createCardAt("lab1", lab1, Map.of())), List.of(createMinimalContext()),
+                    new RenderContext(axisAndSection(tempDir, lab1), List.of(), Map.of(), null, "pdf", "A4")));
+            assertTrue(e.getMessage().contains("printed 'chapter' for card lab1"), e.getMessage());
+        }
+
+        @Test
+        void should_fail_when_dividers_asks_for_a_part_the_card_isnt_in(@TempDir Path tempDir) throws Exception {
+            Files.createDirectories(tempDir.resolve("layouts"));
+            Files.writeString(tempDir.resolve("layouts/dividers.html"), "part");
+            LayoutEngine engine = new LayoutEngine(tempDir);
+            Path lab1 = tempDir.resolve("route").resolve("lab1.md");
+
+            LayoutException e = assertThrows(LayoutException.class, () -> engine.renderBook(
+                    List.of(createCardAt("lab1", lab1, Map.of())), List.of(createMinimalContext()),
+                    new RenderContext(axisAndSection(tempDir, lab1), List.of(), Map.of(), null, "pdf", "A4")));
+            assertTrue(e.getMessage().contains("isn't in a titled part"), e.getMessage());
+        }
+
+        @Test
+        void should_describe_the_dividers_a_books_own_template_chooses(@TempDir Path tempDir) throws Exception {
+            Files.createDirectories(tempDir.resolve("layouts"));
+            Files.writeString(tempDir.resolve("layouts/dividers.html"),
+                    "{% if card.startsSection %} section{% endif %}");
+            Path lab1 = tempDir.resolve("route").resolve("lab1.md");
+
+            String outline = new LayoutEngine(tempDir).describe(
+                    List.of(createCardAt("lab1", lab1, Map.of("kind", "scenario"))), List.of(createMinimalContext()),
+                    new RenderContext(axisAndSection(tempDir, lab1), List.of(), Map.of(), null, "pdf", "A4"));
+
+            assertTrue(outline.contains("SECTION route"), outline);
+            assertFalse(outline.contains("DIVIDER kind"), outline);
+        }
+
+        @Test
+        void should_give_a_dividers_card_list_each_cards_whole_frontmatter(@TempDir Path tempDir) throws Exception {
+            Files.createDirectories(tempDir.resolve("layouts"));
+            Files.writeString(tempDir.resolve("layouts/_section-divider.html"),
+                    "<p id=\"section-divider-{{ section.id }}\">{% for c in section.cards %}[{{ c.frontmatter.audience }}]{% endfor %}</p>");
+            LayoutEngine engine = new LayoutEngine(tempDir);
+            Path lab1 = tempDir.resolve("route").resolve("lab1.md");
+            Section route = new Section("route", "The Route", List.of(), null, List.of(lab1));
+            BookConfig book = new BookConfig(tempDir, "Test Book", List.of(), List.of(), Map.of(),
+                    List.of(), null, null, null, null, null, null, null, List.of(route));
+
+            String result = engine.renderBook(List.of(createCardAt("lab1", lab1, Map.of("audience", "ops"))),
+                    List.of(createMinimalContext()), new RenderContext(book, List.of(), Map.of(), null, "pdf", "A4"));
+
+            assertTrue(result.contains("[ops]"), "not only oneliner and effort: " + result);
+        }
+
         @Test
         void should_treat_a_dividerless_axis_as_label_only(@TempDir Path tempDir) {
             LayoutEngine engine = new LayoutEngine();

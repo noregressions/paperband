@@ -1,0 +1,26 @@
+{# Which divider pages come before a card: printed as tokens, in order,
+   separated by spaces -- axis:<name> for an axis value's divider, part for a
+   part's, section for the card's section. Rendered once per card of a book;
+   what it prints becomes card.dividers, which book.html, the screen nav and
+   the contents all follow. A theme, a book's layouts/ or a view overrides
+   this to change the rules; paperband only works out the facts:
+
+     card.startsValue[axis]  the card's value for that axis differs from the
+                             last card that had one
+     card.startsSection      the card is the first of its section
+     card.part               its section's part: {label, part, sections, ...},
+                             or null
+     card.startsPart         the card is the first of that part
+     card.sectionMeta        its section: {label, landingPage, ...}, or null
+
+   The rules here: one divider per axis that asks for dividers and whose
+   value starts on this card, in the book's axes: order. A section's divider
+   only when no axis divider fell on the same card, so at most one kind of
+   divider precedes any card. A part's divider in front of the section that
+   opens it, and only where the part spans more than one section: a part of
+   one section is already announced by that section's own. A section that
+   declined its page (landingPage: false) still starts here -- the nav
+   labels it -- and book.html prints no page for it. #}
+{% set axisHere = false %}
+{% for g in axisGroupings %}{% if g.axis.dividers and card.startsValue[g.axis.name] and card.axes[g.axis.name] is not null %} axis:{{ g.axis.name }}{% set axisHere = true %}{% endif %}{% endfor %}
+{% if card.startsSection and not axisHere %}{% if card.startsPart and card.part.sections > 1 %} part{% endif %} section{% endif %}

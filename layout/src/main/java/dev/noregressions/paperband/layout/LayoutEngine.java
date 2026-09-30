@@ -609,10 +609,9 @@ public final class LayoutEngine {
      * cards of the same value are interleaved in walk order, the same divider
      * repeats — because it does in the PDF too.
      *
-     * <p><b>Keep in sync with {@link #buildBookModel}:</b> the first-of-value /
-     * first-of-section bookkeeping below mirrors the {@code axesFirstOf} /
-     * {@code sectionFirst} loop there, which is what {@code book.html}
-     * dispatches divider pages on.
+     * <p>Which dividers a card gets is asked of the same {@code dividers.html}
+     * a build renders, through this engine's template chain, so the outline
+     * shows the dividers the PDF would print, a book's own rules included.
      *
      * @param cards ordered card list
      * @param contexts parallel list of per-card render contexts
@@ -621,6 +620,15 @@ public final class LayoutEngine {
      */
     public static String describeBook(
             List<Card> cards, List<RenderContext> contexts, RenderContext bookCtx) {
+        return new LayoutEngine(bookCtx.book().bookRoot()).describe(cards, contexts, bookCtx);
+    }
+
+    /**
+     * {@link #describeBook}, through this engine's templates: its theme, its
+     * layouts/ and its view.
+     */
+    @SuppressWarnings("unchecked")
+    public String describe(List<Card> cards, List<RenderContext> contexts, RenderContext bookCtx) {
         if (cards.size() != contexts.size()) {
             throw new IllegalArgumentException(
                     "cards (" + cards.size() + ") and contexts (" + contexts.size() + ") size mismatch");
@@ -655,47 +663,41 @@ public final class LayoutEngine {
         // veto a bad term with vars.indexStop and re-run, no render needed.
         Map<String, List<String>> indexTerms = resolvedIndexTerms(cards, bookCtx.vars());
 
+        List<Map<String, Object>> groupingsModel = axisGroupingsModel(groupings);
+        Map<String, Map<String, Object>> parts = partModels(bookRoot, declaredSections, cards);
         Map<String, String> prevValueKeyByAxis = new HashMap<>();
         String prevSectionId = null;
         for (int i = 0; i < cards.size(); i++) {
             Card card = cards.get(i);
-            boolean grouped = false;
-
-            // Axis dividers — one per axis this card is first-of-value for,
-            // stacked in axes: declaration order (mirrors axesFirstOf).
-            boolean axisDividerHere = false;
-            for (AxisGrouping g : groupings) {
-                String key = normalizeAxisId(g.perCardValue().get(i));
-                if (key == null) continue;
-                grouped = true;
-                if (g.axis().dividers() && !key.equals(prevValueKeyByAxis.get(g.axis().name()))) {
-                    axisDividerHere = true;
-                    Map<String, Object> meta = g.metaFor(i);
-                    sb.append("  DIVIDER ").append(g.axis().name()).append('=').append(key);
-                    if (meta != null) {
-                        sb.append("  \"").append(meta.get("label")).append('"')
-                                .append("  [").append(meta.get("count")).append(" cards]");
-                    }
-                    sb.append('\n');
-                }
-                prevValueKeyByAxis.put(g.axis().name(), key);
-            }
-
-            // Section divider (mirrors sectionFirst): fires on the section's
-            // first card unless an axis divider fired on that same card.
             String secId = sectionIdFor(bookRoot, declaredSections, card.source());
-            if (secId != null) {
-                grouped = true;
-                if (!secId.equals(prevSectionId) && !axisDividerHere) {
-                    Map<String, Object> meta = findSectionMeta(sectionMetas, secId);
-                    sb.append("  SECTION ").append(secId);
-                    if (meta != null) {
-                        sb.append("  \"").append(meta.get("label")).append('"')
-                                .append("  [").append(meta.get("count")).append(" cards]");
+            boolean grouped = secId != null || hasAnyAxisValue(i, groupings);
+            boolean startsSection = secId != null && !secId.equals(prevSectionId);
+            if (secId != null) prevSectionId = secId;
+            Map<String, Object> part = secId == null ? null : parts.get(secId);
+            Map<String, Object> cm = cardModel(card, cardAxesFromGroupings(i, groupings),
+                    contexts.get(i).vars(), "print", contexts.get(i).target());
+            cm.put("startsValue", startsValues(i, groupings, prevValueKeyByAxis));
+            cm.put("sectionMeta", secId == null ? null : findSectionMeta(sectionMetas, secId));
+            cm.put("startsSection", startsSection);
+            cm.put("part", part);
+            cm.put("startsPart", startsSection && part != null && secId.equals(part.get("firstSection")));
+            for (Map<String, Object> d : dividers(cm, groupingsModel, bookCtx)) {
+                Map<String, Object> meta = (Map<String, Object>) d.get("section");
+                switch ((String) d.get("kind")) {
+                    case "axis" -> {
+                        Map<String, Object> value = (Map<String, Object>) d.get("value");
+                        sb.append("  DIVIDER ").append(((Map<String, Object>) d.get("axis")).get("name"))
+                                .append('=').append(value.get("id"))
+                                .append("  \"").append(value.get("label")).append('"')
+                                .append("  [").append(value.get("count")).append(" cards]").append('\n');
                     }
-                    sb.append('\n');
+                    case "part" -> sb.append("  PART ").append(meta.get("part"))
+                            .append("  \"").append(meta.get("label")).append('"')
+                            .append("  [").append(meta.get("sections")).append(" sections]").append('\n');
+                    default -> sb.append("  SECTION ").append(meta.get("id"))
+                            .append("  \"").append(meta.get("label")).append('"')
+                            .append("  [").append(meta.get("count")).append(" cards]").append('\n');
                 }
-                prevSectionId = secId;
             }
 
             String indent = grouped ? "    " : "  ";
@@ -2080,6 +2082,9 @@ public final class LayoutEngine {
         Map<String, Object> fm = card.frontmatter().values();
         m.put("oneliner", fm.get("oneliner"));
         m.put("effort", fm.get("effort"));
+        // Every key, so a grid or a nav reads what its book declares
+        // (c.frontmatter.audience) rather than the two keys named above.
+        m.put("frontmatter", LenientMap.of(fm));
         return m;
     }
 
@@ -2228,6 +2233,7 @@ public final class LayoutEngine {
                     sum.put("title", c.title());
                     sum.put("oneliner", c.frontmatter().values().get("oneliner"));
                     sum.put("effort", c.frontmatter().values().get("effort"));
+                    sum.put("frontmatter", LenientMap.of(c.frontmatter().values()));
                     valueCards.add(sum);
                 }
                 value.put("cards", valueCards);
@@ -2270,43 +2276,35 @@ public final class LayoutEngine {
                 sum.put("title", c.title());
                 sum.put("oneliner", c.frontmatter().values().get("oneliner"));
                 sum.put("effort", c.frontmatter().values().get("effort"));
+                sum.put("frontmatter", LenientMap.of(c.frontmatter().values()));
                 secCards.add(sum);
             }
             section.put("cards", secCards);
         }
 
-        // Enrich card models with axes + axesFirstOf so the template can drop
-        // one divider per axis before the first card of each of that axis's
-        // value groups — a card can be "first of value" for more than one
-        // axis at once, in which case the template stacks a divider per axis,
-        // in book.axes() declaration order. Every card with a resolvable
-        // section also gets sectionMeta (membership); sectionFirst — the
-        // section-divider trigger — fires on the section's first card unless
-        // an axis divider fires on that same card, in which case the axis
-        // divider wins and the section divider is skipped (not deferred:
-        // rendering it before a later card would put it after content).
+        // Each card model gets the facts about where it sits -- whether it
+        // starts a new value of each axis, starts its section, starts its part
+        // -- and dividers.html turns them into the divider pages in front of it
+        // (card.dividers). The rules are the template's: the bundled one lets
+        // an axis divider win over a section's, and gives a part a page only
+        // where it spans more than one section. What follows from the choice
+        // is worked out here: the contents entries and bookmarks, in the order
+        // the PDF assembles its pages.
         List<Map<String, Object>> cardModels = new ArrayList<>(cards.size());
-        // Printed table of contents — built alongside the divider bookkeeping
-        // below so its entries appear in the exact order the PDF assembles
-        // pages: each divider when it fires, then the cards under it. Anchors
-        // are the same named destinations the anchor-bait div links, which is
-        // what lets the build's second render pass fill in real page numbers
-        // (see PageRefs in the maven plugin).
+        // Printed table of contents. Anchors are the same named destinations
+        // the anchor-bait div links, which is what lets the build's second
+        // render pass fill in real page numbers (see PageRefs in the maven plugin).
         boolean wantToc = tocAt != null || truthyVar(bookCtx.vars().get("toc"));
         // Built for every book, printed only when one was asked for: these same
         // entries are what the PDF's bookmark tree is made of (see outline()),
         // and bookmarks are worth having in a book that prints no contents
         // page. Only the model put below is gated on wantToc.
         List<Map<String, Object>> tocEntries = new ArrayList<>();
-        // Section id -> the part divider that section opens. Empty for a book
-        // that declares no part spanning more than one section, which is every
-        // book that says nothing about parts.
-        Map<String, Map<String, Object>> partDividers =
-                partDividers(bookRoot, declaredSections, cards);
-        Set<Integer> partsWithDividers = new LinkedHashSet<>();
-        for (Map<String, Object> pd : partDividers.values()) {
-            partsWithDividers.add((Integer) pd.get("part"));
-        }
+        Map<String, Map<String, Object>> parts = partModels(bookRoot, declaredSections, cards);
+        List<Map<String, Object>> groupingsModel = axisGroupingsModel(groupings);
+        // Parts that printed a divider: their sections and cards sit one level
+        // deeper in the contents, so the nesting the dividers imply is visible.
+        Set<Object> partsShown = new LinkedHashSet<>();
         // Where a declared mid-book contents page falls among those entries,
         // for the bookmark that points at it (tocAt names the card the printed
         // page precedes; -1 means "up front").
@@ -2328,59 +2326,43 @@ public final class LayoutEngine {
             // card's whole run of sheets that rotation. Null when it matches —
             // the overwhelmingly common case, and no CSS is emitted for it.
             cm.put("sheet", rotationOf(contexts, i, sheetFor(bookCtx)));
-            Map<String, Boolean> firstOf = new LinkedHashMap<>();
-            for (AxisGrouping g : groupings) {
-                String key = normalizeAxisId(g.perCardValue().get(i));
-                boolean first = g.axis().dividers()
-                        && key != null && !key.equals(prevValueKeyByAxis.get(g.axis().name()));
-                firstOf.put(g.axis().name(), first);
-                if (key != null) prevValueKeyByAxis.put(g.axis().name(), key);
-                if (first
-                        && axesForCard.get(g.axis().name()) instanceof Map<?, ?> valueMeta) {
-                    tocEntries.add(tocEntry(
-                            String.valueOf(valueMeta.get("label")),
-                            "axis-divider-" + g.axis().name() + "-" + valueMeta.get("id"),
-                            "divider", 0));
-                }
-            }
-            cm.put("axesFirstOf", firstOf);
-            boolean axisDividerHere = firstOf.containsValue(Boolean.TRUE);
-
-            Map<String, Object> sectionMeta = null;
-            Map<String, Object> partMeta = null;
-            boolean sectionFirst = false;
             String secId = sectionIdFor(bookRoot, declaredSections, cards.get(i).source());
-            // Whether this card's section sits inside a part that prints a
-            // divider. That is what pushes it and its section one level deeper
-            // in the contents, so the nesting the dividers imply is visible.
-            boolean inPart = secId != null && partOf(secId) != null
-                    && partsWithDividers.contains(partOf(secId));
-            if (secId != null) {
-                sectionMeta = findSectionMeta(sectionMetas, secId);
-                sectionFirst = !secId.equals(prevSectionId) && !axisDividerHere;
-                prevSectionId = secId;
-                // The part divider precedes the section divider of the section
-                // that opens the part, so a reader meets "Part 3 — The Failure
-                // Catalogue" once and then its first level — rather than five
-                // sections each announcing Part 3.
-                partMeta = sectionFirst ? partDividers.get(secId) : null;
-                if (partMeta != null) {
-                    tocEntries.add(tocEntry(String.valueOf(partMeta.get("label")),
-                            "section-divider-" + partMeta.get("id"), "divider", 0));
-                }
-                if (sectionFirst && sectionMeta != null
-                        && Boolean.TRUE.equals(sectionMeta.get("landingPage"))) {
-                    tocEntries.add(tocEntry(
-                            String.valueOf(sectionMeta.get("label")),
-                            "section-divider-" + secId, "divider", inPart ? 1 : 0));
+            Map<String, Object> sectionMeta = secId == null ? null : findSectionMeta(sectionMetas, secId);
+            boolean startsSection = secId != null && !secId.equals(prevSectionId);
+            if (secId != null) prevSectionId = secId;
+            Map<String, Object> part = secId == null ? null : parts.get(secId);
+            cm.put("startsValue", startsValues(i, groupings, prevValueKeyByAxis));
+            cm.put("sectionMeta", sectionMeta);
+            cm.put("startsSection", startsSection);
+            cm.put("part", part);
+            cm.put("startsPart", startsSection && part != null && secId.equals(part.get("firstSection")));
+
+            List<Map<String, Object>> dividers = dividers(cm, groupingsModel, bookCtx);
+            cm.put("dividers", dividers);
+            boolean inPart = part != null && partsShown.contains(part.get("id"));
+            for (Map<String, Object> d : dividers) {
+                Map<String, Object> meta = (Map<String, Object>) d.get("section");
+                switch ((String) d.get("kind")) {
+                    case "axis" -> {
+                        Map<String, Object> value = (Map<String, Object>) d.get("value");
+                        tocEntries.add(tocEntry(String.valueOf(value.get("label")),
+                                "axis-divider-" + ((Map<String, Object>) d.get("axis")).get("name")
+                                        + "-" + value.get("id"), "divider", 0));
+                    }
+                    case "part" -> {
+                        partsShown.add(meta.get("id"));
+                        inPart = true;
+                        tocEntries.add(tocEntry(String.valueOf(meta.get("label")),
+                                "section-divider-" + meta.get("id"), "divider", 0));
+                    }
+                    default -> {
+                        if (Boolean.TRUE.equals(meta.get("landingPage"))) {
+                            tocEntries.add(tocEntry(String.valueOf(meta.get("label")),
+                                    "section-divider-" + meta.get("id"), "divider", inPart ? 1 : 0));
+                        }
+                    }
                 }
             }
-            cm.put("sectionMeta", sectionMeta);
-            cm.put("sectionFirst", sectionFirst);
-            // Non-null on exactly one card per part: the first card of the
-            // section that opens it. book.html renders it ahead of the section
-            // divider.
-            cm.put("partMeta", partMeta);
             int tocDepth = (sectionMeta != null || hasAnyAxisValue(i, groupings)) ? 1 : 0;
             if (inPart && tocDepth > 0) tocDepth++;
             // The number goes into the label rather than alongside it, so a
@@ -2437,7 +2419,7 @@ public final class LayoutEngine {
         // contents page's own position is known.
         this.outline = buildOutline(tocEntries, wantToc, tocEntryIndex, bookCtx);
         model.put("cards", cardModels);
-        model.put("axisGroupings", axisGroupingsModel(groupings));
+        model.put("axisGroupings", groupingsModel);
         model.put("sections", sectionMetas);
         model.put("stats", stats);
         model.put("book", bookModel);
@@ -2473,6 +2455,94 @@ public final class LayoutEngine {
         model.put("cssImports", extractCssImports(composedBookCss));
         model.put("css", stripCssImports(composedBookCss));
         return model;
+    }
+
+    /**
+     * Whether card {@code i} starts a new value of each axis: its value
+     * differs from the last card that had one. A fact for dividers.html, which
+     * decides whether that's a divider page; {@code prev} carries the last
+     * value per axis from card to card.
+     */
+    private static Map<String, Boolean> startsValues(int i, List<AxisGrouping> groupings,
+                                                     Map<String, String> prev) {
+        Map<String, Boolean> out = new LenientMap<>();
+        for (AxisGrouping g : groupings) {
+            String key = normalizeAxisId(g.perCardValue().get(i));
+            out.put(g.axis().name(), key != null && !key.equals(prev.get(g.axis().name())));
+            if (key != null) prev.put(g.axis().name(), key);
+        }
+        return out;
+    }
+
+    /** A token dividers.html prints: {@code part}, {@code section}, or {@code axis:<name>}. */
+    private static final java.util.regex.Pattern DIVIDER_TOKEN =
+            java.util.regex.Pattern.compile("part|section|axis:(\\S+)");
+
+    /**
+     * The divider pages in front of one card, as its {@code dividers.html}
+     * says: rendered with the card's model (its facts -- {@code startsValue},
+     * {@code startsSection}, {@code startsPart}, {@code part},
+     * {@code sectionMeta}), the book's {@code axisGroupings} and vars, it
+     * prints the dividers in order, separated by spaces. Each becomes
+     * {@code {kind, axis, value, section}} for book.html, the screen nav and
+     * the contents.
+     *
+     * @throws LayoutException when the template fails, or names a divider the
+     *         card has nothing for
+     */
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> dividers(Map<String, Object> cm,
+                                               List<Map<String, Object>> groupingsModel,
+                                               RenderContext bookCtx) {
+        Map<String, Object> model = new HashMap<>();
+        model.put("card", cm);
+        model.put("axisGroupings", groupingsModel);
+        model.put("vars", LenientMap.of(bookCtx.vars()));
+        model.put("output", "print");
+        StringWriter w = new StringWriter();
+        try {
+            engine.getTemplate("dividers").evaluate(w, model);
+        } catch (IOException | RuntimeException e) {
+            throw new LayoutException("dividers.html failed for card " + cm.get("id")
+                    + locationOf(e) + ": " + explain(e), e);
+        }
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (String token : w.toString().trim().split("\\s+")) {
+            if (token.isEmpty()) continue;
+            java.util.regex.Matcher m = DIVIDER_TOKEN.matcher(token);
+            Map<String, Object> d = new LinkedHashMap<>();
+            Object section = null;
+            if (!m.matches()) {
+                throw new LayoutException("dividers.html printed '" + token + "' for card " + cm.get("id")
+                        + ": it prints part, section and axis:<name>, separated by spaces.");
+            }
+            if (m.group(1) != null) {
+                String axis = m.group(1);
+                Object value = cm.get("axes") instanceof Map<?, ?> axes ? axes.get(axis) : null;
+                Map<String, Object> meta = null;
+                for (Map<String, Object> g : groupingsModel) {
+                    Map<String, Object> am = (Map<String, Object>) g.get("axis");
+                    if (axis.equals(am.get("name"))) meta = am;
+                }
+                if (meta == null || value == null) {
+                    throw new LayoutException("dividers.html printed '" + token + "' for card " + cm.get("id")
+                            + ", which has no value for an axis '" + axis + "'.");
+                }
+                d.put("kind", "axis");
+                d.put("axis", meta);
+                d.put("value", value);
+            } else {
+                section = token.equals("part") ? cm.get("part") : cm.get("sectionMeta");
+                if (section == null) {
+                    throw new LayoutException("dividers.html printed '" + token + "' for card " + cm.get("id")
+                            + ", which isn't in a " + (token.equals("part") ? "titled part" : "section") + ".");
+                }
+                d.put("kind", token);
+            }
+            d.put("section", section);
+            out.add(d);
+        }
+        return out;
     }
 
     /** Pebble-facing shape for {@code book.html}'s divider loop and named-destination anchor list. */
@@ -2685,27 +2755,27 @@ public final class LayoutEngine {
     }
 
     /**
-     * The parts this book declares, as section-id to part divider model.
+     * The parts this book declares, as section id to the part it belongs to.
      *
      * <p>A part groups sibling sections: the JDK guide's "Part 3 — The Failure
      * Catalogue" spans five level folders, each of which keeps its own divider
      * and its own contents entry. Sections join a part with {@code part:} in
      * their {@code _section.md} (the same key numbering reads), and one of them
-     * names it with {@code part_title:}.
+     * names it with {@code part_title:}; a part with no title has no model.
      *
-     * <p>Only the section that <em>opens</em> a part gets an entry, and only
-     * where the part spans more than one section. A part of one section is
-     * already announced by that section's own divider; a second page saying
-     * nearly the same thing reads as a mistake, which is exactly what five
-     * dividers each headed "Part 3" looked like before this existed.
+     * <p>Every section of a titled part maps to the same model, which says how
+     * many sections the part spans ({@code sections}) and which opens it
+     * ({@code firstSection}). Whether a part gets a divider page is the
+     * dividers template's call, not this method's: the bundled one prints a
+     * part only where it spans more than one section, since a part of one
+     * section is already announced by that section's own divider.
      *
      * @param bookRoot the book root, for resolving a card's section
      * @param declared declared sections, which may claim a card or a folder
      * @param cards    every card in the build, in book order
-     * @return section id to the divider model for the part it opens; empty when
-     *         the book declares no multi-section part
+     * @return section id to its part's model; empty when the book declares no titled part
      */
-    private Map<String, Map<String, Object>> partDividers(
+    private Map<String, Map<String, Object>> partModels(
             Path bookRoot, List<Section> declared, List<Card> cards) {
         if (cards == null || cards.isEmpty()) return Map.of();
         // Sections in book order, de-duplicated.
@@ -2727,11 +2797,13 @@ public final class LayoutEngine {
         Map<String, Map<String, Object>> out = new LinkedHashMap<>();
         for (var e : byPart.entrySet()) {
             String title = titles.get(e.getKey());
-            if (title == null || e.getValue().size() < 2) continue;
+            if (title == null) continue;
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id", "part-" + e.getKey());
             m.put("label", title);
             m.put("part", e.getKey());
+            m.put("sections", e.getValue().size());
+            m.put("firstSection", e.getValue().get(0));
             // Title only: the sections below carry the counts and contents, and
             // repeating them here would preview the preview.
             m.put("minimal", true);
@@ -2739,15 +2811,9 @@ public final class LayoutEngine {
             m.put("body", null);
             m.put("bodyCards", false);
             m.put("cards", List.of());
-            out.put(e.getValue().get(0), m);
+            for (String secId : e.getValue()) out.put(secId, m);
         }
         return out;
-    }
-
-    /** The part number a section declared, or null when it declared none. */
-    private Integer partOf(String sectionId) {
-        SectionBody body = sectionBodies.get(sectionId);
-        return body == null ? null : body.numbering().part();
     }
 
     /** This card's number as a template-ready string, or null when unnumbered. */

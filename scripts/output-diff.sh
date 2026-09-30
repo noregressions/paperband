@@ -9,7 +9,8 @@
 # books are the guide and every example (mvn install -Pguide,examples). Each
 # site is compared as HTML, file by file, and each PDF as its text, through
 # pdftotext from poppler, since a PDF's bytes carry more than its content.
-# Decks (.pptx) aren't compared.
+# When qpdf is installed, each PDF's bookmark tree is compared too, which its
+# text doesn't show. Decks (.pptx) aren't compared.
 #
 # Extra Maven arguments go in MVN_ARGS, which defaults to -DskipTests:
 #
@@ -18,6 +19,10 @@
 # check exits 0 when every output matches, 1 when some differ (it lists them,
 # and keeps both copies under .output-diff/ to read), and 2 when the
 # build fails -- so a broken build can't pass for "nothing changed".
+#
+# Chromium now and then lays out a line of code differently between two builds
+# of the same input, which shows as a PDF's text differing by a word or two. When
+# check reports only a difference like that, run it again before believing it.
 set -euo pipefail
 
 mode="${1:?usage: scripts/output-diff.sh save|check}"
@@ -46,7 +51,11 @@ snapshot() {
       [ -f "$site/index.html" ] && cp -R "$site" "$book/$(basename "$site")"
     done
     for pdf in "$target"/*.pdf; do
-      [ -f "$pdf" ] && pdftotext "$pdf" "$book/$(basename "$pdf" .pdf).txt"
+      [ -f "$pdf" ] || continue
+      pdftotext "$pdf" "$book/$(basename "$pdf" .pdf).txt"
+      if command -v qpdf >/dev/null; then
+        qpdf --json --json-key=outlines "$pdf" > "$book/$(basename "$pdf" .pdf).outline.json"
+      fi
     done
   done
 }

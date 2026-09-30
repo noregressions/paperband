@@ -463,11 +463,13 @@ that can be declared only once (`<title>`, `<author>`, `<root>`, …) fails the 
 appears twice, naming it. Repeating elements (`<section>`, `<axis>`, `<author>` inside
 `<authors>`) are unaffected.
 
-**Axes and declared sections both produce dividers.** A card is never in both an axis group
-and a section, so declaring an axis over cards that belong to declared sections replaces the
-section dividers with axis dividers, and the cards regroup by axis value. Declare axes only
-when the axis is the intended structure. Check the result with `mvn paperband:structure`
-before rendering.
+**Axes and declared sections both produce dividers.** A card belongs to its section and
+carries its axis values too, but where an axis divider falls on a section's first card, that
+section gets no divider of its own: at most one kind of divider precedes a card. So declaring
+an axis over cards in declared sections replaces those sections' dividers with axis dividers.
+That's the bundled `dividers.html`'s rule, and a book can write its own (see
+[Themes](card:themes#dividers)). Check the result with `mvn paperband:structure` before
+rendering.
 
 **`<book><vars>` takes flat string values only.** Maven's configurator maps
 `<vars><author>Name</author></vars>` onto a string map but handles nested structures

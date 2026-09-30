@@ -516,7 +516,7 @@
   </div>
 
   {# Screen-only sidebar (see the .book-screen-nav CSS above). The entries
-     mirror the card loop's own divider logic below, so the nav shows exactly
+     follow card.dividers, as the card loop below does, so the nav shows exactly
      the structure the PDF paginates: an axis-value or section label wherever
      a divider page falls, each card beneath its group. A section that
      declined its page (landingPage false) still labels its cards — as plain
@@ -530,14 +530,13 @@
          last card when the marker was placed at the end. #}
       {% for card in cards %}
         {% if toc is not empty and loop.index == tocAt %}<li class="nav-divider"><a href="#book-toc">Contents</a></li>{% endif %}
-        {% for g in axisGroupings %}
-          {% if card.axesFirstOf[g.axis.name] and card.axes[g.axis.name] is not null %}
-          <li class="nav-divider"><a href="#axis-divider-{{ g.axis.name }}-{{ card.axes[g.axis.name].id }}">{{ card.axes[g.axis.name].label }}</a></li>
+        {% for d in card.dividers %}
+          {% if d.kind == 'axis' %}
+          <li class="nav-divider"><a href="#axis-divider-{{ d.axis.name }}-{{ d.value.id }}">{{ d.value.label }}</a></li>
+          {% elseif d.kind == 'section' %}
+        <li class="nav-divider">{% if d.section.landingPage %}<a href="#section-divider-{{ d.section.id }}">{{ d.section.label }}</a>{% else %}<span>{{ d.section.label }}</span>{% endif %}</li>
           {% endif %}
         {% endfor %}
-        {% if card.sectionFirst and card.sectionMeta is not null %}
-        <li class="nav-divider">{% if card.sectionMeta.landingPage %}<a href="#section-divider-{{ card.sectionMeta.id }}">{{ card.sectionMeta.label }}</a>{% else %}<span>{{ card.sectionMeta.label }}</span>{% endif %}</li>
-        {% endif %}
         <li class="nav-card"><a href="#card-{{ card.id }}">{{ card.title }}</a></li>
       {% endfor %}
       {% if toc is not empty and tocAt >= (cards | length) %}<li class="nav-divider"><a href="#book-toc">Contents</a></li>{% endif %}
@@ -642,29 +641,20 @@
       <section class="book-page" id="book-page-{{ pg.n }}">{% include pg.template %}</section>
       {% endif %}
     {% endfor %}
-    {# A card can be "first of value" for more than one axis at once
-       (e.g. first card of tier 1 AND first card of subsystem "core"); stack
-       one divider per axis, in book.axes() declaration order, before that
-       card's body. #}
-    {% for g in axisGroupings %}
-      {% if card.axesFirstOf[g.axis.name] and card.axes[g.axis.name] is not null %}
-      {% include "_tier-divider" with {"axis": g.axis, "value": card.axes[g.axis.name]} %}
+    {# The divider pages in front of this card, in order, as dividers.html
+       decided: an axis value's, a part's, a section's. That template holds
+       the rules -- which divider wins, when a part gets a page -- so this
+       loop only prints them. A section that declined its page
+       (landingPage: false) prints none. #}
+    {% for d in card.dividers %}
+      {% if d.kind == 'axis' %}
+      {% include "_tier-divider" with {"axis": d.axis, "value": d.value} %}
+      {% elseif d.kind == 'part' %}
+      {% include "_section-divider" with {"section": d.section} %}
+      {% elseif d.section.landingPage %}
+      {% include "_section-divider" with {"section": d.section} %}
       {% endif %}
     {% endfor %}
-
-    {# Sections own cards, axes label them: every card with a resolvable
-       section carries sectionMeta, whether or not it also has axis values.
-       sectionFirst is the divider trigger, computed in the model with axis
-       precedence — it is false whenever an axis divider fired on this same
-       card — so at most one divider page still precedes any card. #}
-    {# A part divider comes first where a part spans several sections: one
-       page naming the part, then that part's first section as usual. #}
-    {% if card.partMeta is not null %}
-    {% include "_section-divider" with {"section": card.partMeta} %}
-    {% endif %}
-    {% if card.sectionFirst and card.sectionMeta is not null and card.sectionMeta.landingPage %}
-    {% include "_section-divider" with {"section": card.sectionMeta} %}
-    {% endif %}
 
     {% include "_card-body" with {"card": card} %}
   {% endfor %}

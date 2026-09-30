@@ -6,6 +6,7 @@ import dev.noregressions.paperband.cards.MarkdownPreprocessor;
 import dev.noregressions.paperband.config.ConfigLoader;
 import dev.noregressions.paperband.include.Includes;
 import dev.noregressions.paperband.layout.LayoutEngine;
+import dev.noregressions.paperband.layout.ThemeBundle;
 import dev.noregressions.paperband.model.Card;
 import dev.noregressions.paperband.model.RenderContext;
 
@@ -212,6 +213,18 @@ public class StructureMojo extends AbstractPaperbandMojo {
         if (!source.sections().isEmpty()) {
             bookCtx = bookCtx.withBook(bookCtx.book().withSections(source.sections()));
         }
-        return LayoutEngine.describeBook(cards, contexts, bookCtx);
+        // Through the book's own templates, so its dividers.html -- and a
+        // theme's -- decide the dividers here as they do in the PDF.
+        ThemeBundle theme;
+        try {
+            theme = Themes.resolve(themeName, bookCtx.book().theme(), themeDirPath());
+        } catch (java.io.IOException e) {
+            throw new MojoExecutionException("Could not load the theme: " + e.getMessage(), e);
+        }
+        LayoutEngine layout = geography().layouts() != null
+                ? new LayoutEngine(bookCtx.book().bookRoot(), geography().layouts(), theme)
+                : new LayoutEngine(bookCtx.book().bookRoot(), theme);
+        layout.setBlockTemplates(blockTemplates);
+        return layout.describe(cards, contexts, bookCtx);
     }
 }
