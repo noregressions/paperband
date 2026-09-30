@@ -151,6 +151,14 @@ class ContentNodesTest {
     }
 
     @Test
+    void a_drawing_is_one_node_whose_text_keeps_its_labels_apart() {
+        Node svg = ContentNodes.of("<svg><g><text>3. Tree</text><text>structure</text></g></svg>").get(0);
+        assertEquals("element", svg.type());
+        assertEquals(List.of(), svg.children(), "a drawing's insides aren't content");
+        assertEquals("3. Tree structure", svg.text());
+    }
+
+    @Test
     void an_html_card_has_nodes_too() {
         Block b = new CardLoader().parse(Path.of("t.html"),
                 "<h1>T</h1><h2>One</h2><p class=\"instructions\">Do it.</p>").blocks().get(0);

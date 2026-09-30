@@ -2,6 +2,7 @@ package dev.noregressions.paperband.layout;
 
 import dev.noregressions.paperband.model.Block;
 import dev.noregressions.paperband.model.Card;
+import dev.noregressions.paperband.model.Node;
 
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
@@ -18,7 +19,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -38,7 +38,7 @@ import java.util.regex.Pattern;
  *       weigh {@value #HEADING_WEIGHT}× — in technical writing the heading
  *       is where a card says what it's about.</li>
  *   <li><b>Code identifiers</b> — the text of a short, single-token
- *       {@code <code>} span ({@code paperband.yaml}, {@code <margins>}),
+ *       inline {@code code} node ({@code paperband.yaml}, {@code <margins>}),
  *       kept verbatim rather than analysed, weighted
  *       {@value #CODE_WEIGHT}×. In docs these are the index entries readers
  *       actually look up.</li>
@@ -61,13 +61,6 @@ final class IndexTermExtractor {
     /** A term in more than this share of cards is too common to locate anything. */
     static final double MAX_DOC_SHARE = 1.0 / 3.0;
 
-    private static final Pattern TAG = Pattern.compile("<[^>]+>");
-    private static final Pattern CODE_SPAN =
-            Pattern.compile("<code[^>]*>(.*?)</code>", Pattern.DOTALL);
-    /** Fenced code blocks — excluded entirely: a Java example's {@code public}
-     *  and {@code return} are frequent and distinctive, and index-worthless. */
-    private static final Pattern PRE_BLOCK =
-            Pattern.compile("<pre[^>]*>.*?</pre>", Pattern.DOTALL);
     private static final Pattern ALL_DIGITS = Pattern.compile("[0-9.,x\\-]+");
 
     private IndexTermExtractor() {}
@@ -157,23 +150,46 @@ final class IndexTermExtractor {
                                 StringBuilder headings, CardTerms terms) {
         for (Block b : blocks) {
             if (b.heading() != null) headings.append(b.heading()).append('\n');
-            if (b.html() != null) {
-                // Fenced code blocks are dropped before anything is counted —
-                // only prose and the inline <code> spans woven through it say
-                // what a card is about. Inline identifiers first, verbatim;
-                // then the tag-stripped text.
-                String html = PRE_BLOCK.matcher(b.html()).replaceAll(" ");
-                Matcher code = CODE_SPAN.matcher(html);
-                while (code.find()) {
-                    String ident = unescape(TAG.matcher(code.group(1)).replaceAll("")).trim();
-                    if (!ident.isEmpty() && ident.length() <= 40 && !ident.contains(" ")
-                            && !ident.contains("\n")) {
+            collect(b.nodes(), body, terms);
+            body.append('\n');
+            collect(b.children(), body, headings, terms);
+        }
+    }
+
+    /** Node types that sit inside a line of text, so no word breaks at their edges. */
+    private static final Set<String> INLINE = Set.of(
+            "text", "code", "emphasis", "strong", "link", "span", "image");
+
+    /**
+     * The words of {@code nodes} into {@code body}, and each inline code
+     * identifier into {@code terms}. A fence that still reads as code is
+     * skipped whole, wherever it sits -- only prose and the inline code woven
+     * through it say what a card is about. A Java example's {@code public} and
+     * {@code return} are frequent and distinctive, and index-worthless. A
+     * fence drawn as something else is read for the words it shows: a
+     * diagram's labels, a diff card's headers, but not the code in its columns.
+     */
+    private static void collect(List<Node> nodes, StringBuilder body, CardTerms terms) {
+        for (Node n : nodes) {
+            if (n.type().equals("fence") && "pre".equals(n.tag())) continue;
+            boolean inline = INLINE.contains(n.type());
+            if (!inline) body.append(' ');
+            switch (n.type()) {
+                case "text" -> body.append(n.text());
+                case "code" -> {
+                    String ident = n.text().strip();
+                    if (!ident.isEmpty() && ident.length() <= 40 && !ident.contains(" ")) {
                         terms.add("code:" + ident.toLowerCase(Locale.ROOT), ident, CODE_WEIGHT);
                     }
+                    body.append(n.text());
                 }
-                body.append(unescape(TAG.matcher(html).replaceAll(" "))).append('\n');
+                // An element read without its insides -- an svg's labels -- still has its text.
+                default -> {
+                    if (n.children().isEmpty()) body.append(n.text());
+                    else collect(n.children(), body, terms);
+                }
             }
-            collect(b.children(), body, headings, terms);
+            if (!inline) body.append(' ');
         }
     }
 
@@ -198,10 +214,5 @@ final class IndexTermExtractor {
         } catch (IOException e) {
             throw new LayoutException("Index term analysis failed", e);
         }
-    }
-
-    private static String unescape(String s) {
-        return s.replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"")
-                .replace("&#39;", "'").replace("&amp;", "&");
     }
 }

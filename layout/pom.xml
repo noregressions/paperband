@@ -51,6 +51,15 @@
             <artifactId>lucene-analysis-common</artifactId>
         </dependency>
         <dependency>
+            <!-- Tests only: blocks built by hand get their nodes the way a
+                 loaded card does, through ContentNodes. cards doesn't depend
+                 on layout, so this adds no cycle. -->
+            <groupId>dev.noregressions.paperband</groupId>
+            <artifactId>cards</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
         </dependency>

@@ -3,6 +3,7 @@ package dev.noregressions.paperband.layout;
 import dev.noregressions.paperband.model.Block;
 import dev.noregressions.paperband.model.Card;
 import dev.noregressions.paperband.model.CardNumber;
+import dev.noregressions.paperband.model.Node;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -307,18 +308,14 @@ public final class CardLinks {
     /**
      * Which file a broken reference is written in.
      *
-     * <p>Recovered by searching the cards for the literal text rather than
-     * tracked through the render, because by the time a page is assembled the
-     * prose has lost its provenance. Worth the scan: "no card has that id" with
-     * no file to open is a grep, and a build failure should not set homework.
+     * <p>Recovered by looking through the cards' links rather than tracked
+     * through the render, because by the time a page is assembled the prose
+     * has lost its provenance. Worth the scan: "no card has that id" with no
+     * file to open is a grep, and a build failure should not set homework.
      */
     private String reference(String id) {
-        // The whole id, not a prefix of a longer one: card:extending is not
-        // found inside a valid card:extending-paperband in some other card.
-        java.util.regex.Pattern needle = java.util.regex.Pattern.compile(
-                java.util.regex.Pattern.quote(SCHEME + id) + "(?![\\w.-])");
         for (Card card : cards) {
-            if (containsRef(card.blocks(), needle)) {
+            if (containsRef(card.blocks(), id)) {
                 return " in " + (card.source() == null ? card.id() : card.source().getFileName());
             }
         }
@@ -326,10 +323,28 @@ public final class CardLinks {
         return "";
     }
 
-    private static boolean containsRef(List<Block> blocks, java.util.regex.Pattern needle) {
+    private static boolean containsRef(List<Block> blocks, String id) {
         for (Block b : blocks) {
-            if (b.html() != null && needle.matcher(b.html()).find()) return true;
-            if (containsRef(b.children(), needle)) return true;
+            if (linksTo(b.nodes(), id) || containsRef(b.children(), id)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Whether any link among {@code nodes} names card {@code id} -- the whole
+     * id, so a valid {@code card:extending-paperband} isn't taken for a dead
+     * {@code card:extending}, and only in an href, so a code sample that
+     * mentions {@code card:x} isn't either.
+     */
+    private static boolean linksTo(List<Node> nodes, String id) {
+        for (Node n : nodes) {
+            String href = n.attributes().get("href");
+            if (href != null && href.startsWith(SCHEME)) {
+                String target = href.substring(SCHEME.length());
+                int hash = target.indexOf('#');
+                if ((hash < 0 ? target : target.substring(0, hash)).equals(id)) return true;
+            }
+            if (linksTo(n.children(), id)) return true;
         }
         return false;
     }

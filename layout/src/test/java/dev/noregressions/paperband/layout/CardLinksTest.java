@@ -1,5 +1,6 @@
 package dev.noregressions.paperband.layout;
 
+import dev.noregressions.paperband.cards.ContentNodes;
 import dev.noregressions.paperband.model.Block;
 import dev.noregressions.paperband.model.Card;
 import dev.noregressions.paperband.model.Frontmatter;
@@ -160,8 +161,7 @@ class CardLinksTest {
             // the page is assembled from these blocks.
             String broken = "<a href=\"card:nope\">x</a>";
             Card writer = new Card("gamma", Path.of("gamma.md"), new Frontmatter(Map.of()), "G",
-                    List.of(new Block(Block.Kind.HEADING_SECTION, null, Set.of(), null, 0,
-                            "<p>See " + broken + "</p>", List.of())));
+                    List.of(block("<p>See " + broken + "</p>")));
 
             CardLinkException e = assertThrows(CardLinkException.class,
                     () -> CardLinks.of(List.of(writer)).print(broken));
@@ -177,17 +177,29 @@ class CardLinksTest {
             Card target = new Card("extending-paperband", Path.of("03-extending.md"),
                     new Frontmatter(Map.of()), "E", List.of());
             Card valid = new Card("structure", Path.of("01-card-structure.md"), new Frontmatter(Map.of()), "S",
-                    List.of(new Block(Block.Kind.HEADING_SECTION, null, Set.of(), null, 0,
-                            "<p><a href=\"card:extending-paperband\">x</a></p>", List.of())));
+                    List.of(block("<p><a href=\"card:extending-paperband\">x</a></p>")));
             String broken = "<a href=\"card:extending\">y</a>";
             Card writer = new Card("frontmatter", Path.of("02-frontmatter.md"), new Frontmatter(Map.of()), "F",
-                    List.of(new Block(Block.Kind.HEADING_SECTION, null, Set.of(), null, 0,
-                            "<p>See " + broken + "</p>", List.of())));
+                    List.of(block("<p>See " + broken + "</p>")));
 
             CardLinkException e = assertThrows(CardLinkException.class,
                     () -> CardLinks.of(List.of(target, valid, writer)).print(broken));
 
             assertTrue(e.getMessage().contains("card:extending in 02-frontmatter.md"), e.getMessage());
+        }
+
+        @Test
+        void a_code_sample_that_mentions_the_id_is_not_the_writer() {
+            String broken = "<a href=\"card:nope\">x</a>";
+            Card sample = new Card("syntax", Path.of("01-syntax.md"), new Frontmatter(Map.of()), "S",
+                    List.of(block("<p>Write <code>card:nope</code> for a link.</p>")));
+            Card writer = new Card("gamma", Path.of("gamma.md"), new Frontmatter(Map.of()), "G",
+                    List.of(block("<p>See " + broken + "</p>")));
+
+            CardLinkException e = assertThrows(CardLinkException.class,
+                    () -> CardLinks.of(List.of(sample, writer)).print(broken));
+
+            assertTrue(e.getMessage().contains("in gamma.md"), e.getMessage());
         }
 
         @Test
@@ -244,6 +256,12 @@ class CardLinksTest {
     }
 
     /** A card whose blocks carry the given headings, so they get slugged anchors. */
+    /** A heading-less block whose nodes are read from its html, as a loaded card's are. */
+    private static Block block(String html) {
+        return new Block(Block.Kind.HEADING_SECTION, null, Set.of(), null, 0, html, List.of(),
+                Map.of(), Map.of(), ContentNodes.of(html));
+    }
+
     private static Card card(String id, String... headings) {
         List<Block> blocks = new java.util.ArrayList<>();
         blocks.add(new Block(Block.Kind.HEADING_SECTION, null, Set.of("intro"), null, 0,

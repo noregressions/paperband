@@ -12,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.StringJoiner;
 
 /**
  * Reads a card's finished HTML as {@link Node}s, the data a block carries
@@ -25,14 +26,42 @@ import java.util.Set;
  * here -- {@link #fence} for the element that now stands for it, {@link #moved}
  * when a later pass replaces that one in turn -- and the element reads as a
  * {@code fence} with the type and text the author wrote.
+ *
+ * <p>{@link #of(String)} reads a fragment that has no such history, for a
+ * block built by hand rather than loaded from a card.
  */
-final class ContentNodes {
+public final class ContentNodes {
 
     private record Origin(String lang, String code) {
     }
 
     /** Elements that stand for a fence, keyed by identity: the DOM is mutable. */
     private final Map<Element, Origin> fences = new IdentityHashMap<>();
+
+    ContentNodes() {
+    }
+
+    /**
+     * The nodes of an HTML fragment read on its own: a {@code <pre>} is a
+     * fence with the language its code element names, since no pass has
+     * replaced one.
+     *
+     * @param html a block's content, or any fragment of it
+     * @return its top-level nodes, in order
+     */
+    public static List<Node> of(String html) {
+        ContentNodes reader = new ContentNodes();
+        List<Node> out = new ArrayList<>();
+        if (html == null) return out;
+        for (org.jsoup.nodes.Node child : org.jsoup.Jsoup.parseBodyFragment(html).body().childNodes()) {
+            if (child instanceof Element el) {
+                out.add(reader.read(el));
+            } else if (child instanceof TextNode tn && !tn.isBlank()) {
+                out.add(reader.read(tn));
+            }
+        }
+        return out;
+    }
 
     /** {@code root} is what a {@code ```lang} fence with this text became. */
     void fence(Element root, String lang, String code) {
@@ -69,9 +98,25 @@ final class ContentNodes {
         }
         Map<String, String> props = new LinkedHashMap<>();
         String type = type(el, tag, props);
-        List<Node> children = OPAQUE_TAGS.contains(tag) ? List.of() : children(el);
+        boolean opaque = OPAQUE_TAGS.contains(tag);
+        List<Node> children = opaque ? List.of() : children(el);
         return new Node(type, tag, el.id().isEmpty() ? null : el.id(), el.classNames(),
-                attributes, directives, el.text(), el.outerHtml(), children, props);
+                attributes, directives, opaque ? drawnText(el) : el.text(), el.outerHtml(), children, props);
+    }
+
+    /**
+     * The words a drawing shows, one element's text at a time. jsoup's
+     * {@code text()} runs an svg's {@code <text>} elements together, since it
+     * doesn't know them as blocks: "3. Tree" and "structure" would read as
+     * "Treestructure".
+     */
+    private static String drawnText(Element el) {
+        StringJoiner out = new StringJoiner(" ");
+        for (Element e : el.getAllElements()) {
+            String own = e.ownText();
+            if (!own.isBlank()) out.add(own);
+        }
+        return out.toString();
     }
 
     /** A top-level run of text, as a block's own content holds it. */

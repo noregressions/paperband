@@ -2,6 +2,7 @@ package dev.noregressions.paperband.layout;
 
 import dev.noregressions.paperband.model.Axis;
 import dev.noregressions.paperband.model.AxisValue;
+import dev.noregressions.paperband.cards.ContentNodes;
 import dev.noregressions.paperband.model.Block;
 import dev.noregressions.paperband.model.BookConfig;
 import dev.noregressions.paperband.model.Card;
@@ -268,8 +269,9 @@ class BookTocIndexTest {
     }
 
     private static Card textCard(String id, String title, String bodyHtml) {
+        String html = "<p>" + bodyHtml + "</p>";
         Block block = new Block(Block.Kind.HEADING_SECTION, null, Set.of("intro"), title, 2,
-                "<p>" + bodyHtml + "</p>", List.of());
+                html, List.of(), Map.of(), Map.of(), ContentNodes.of(html));
         return new Card(id, Path.of(id + ".md"), new Frontmatter(Map.of()),
                 title, List.of(block));
     }

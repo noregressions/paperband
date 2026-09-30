@@ -1,5 +1,6 @@
 package dev.noregressions.paperband.layout;
 
+import dev.noregressions.paperband.cards.ContentNodes;
 import dev.noregressions.paperband.model.Block;
 import dev.noregressions.paperband.model.Card;
 import dev.noregressions.paperband.model.Frontmatter;
@@ -67,6 +68,30 @@ class IndexTermExtractorTest {
 
             assertTrue(terms.get("a").contains("paperband.yaml"),
                     "verbatim identifier expected: " + terms.get("a"));
+        }
+
+        @Test
+        void should_skip_fences_wherever_they_sit() {
+            Map<String, List<String>> terms = extract(
+                    card("a", "Lists", "Steps follow.</p><ul><li>Run it:<pre><code>"
+                            + "deploymentctl deploymentctl deploymentctl</code></pre></li></ul><p>Done."),
+                    card("b", "Other", "Something else entirely, about themes."),
+                    card("c", "More", "And a third card for corpus size."));
+
+            assertFalse(terms.get("a").stream().anyMatch(t -> t.contains("deploymentctl")),
+                    "a fence inside a list item is still code: " + terms.get("a"));
+        }
+
+        @Test
+        void should_read_text_not_markup() {
+            // The text as a reader sees it: an entity is its character, not a word.
+            Map<String, List<String>> terms = extract(
+                    card("a", "Spacing", "Playwright&nbsp;drives Chromium&nbsp;headless &amp; fast."),
+                    card("b", "Other", "Something else entirely, about themes."),
+                    card("c", "More", "And a third card for corpus size."));
+
+            assertFalse(terms.get("a").stream().anyMatch(t -> t.equalsIgnoreCase("nbsp")),
+                    "an entity's name isn't a term: " + terms.get("a"));
         }
 
         @Test
@@ -142,8 +167,9 @@ class IndexTermExtractorTest {
     }
 
     private static Card card(String id, String heading, String bodyHtml) {
+        String html = "<p>" + bodyHtml + "</p>";
         Block block = new Block(Block.Kind.HEADING_SECTION, null, Set.of("intro"), heading, 2,
-                "<p>" + bodyHtml + "</p>", List.of());
+                html, List.of(), Map.of(), Map.of(), ContentNodes.of(html));
         return new Card(id, Path.of(id + ".md"), new Frontmatter(Map.of()), heading,
                 List.of(block));
     }
