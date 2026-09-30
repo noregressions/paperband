@@ -8,6 +8,7 @@ import io.pebbletemplates.pebble.loader.FileLoader;
 import io.pebbletemplates.pebble.loader.Loader;
 import io.pebbletemplates.pebble.template.PebbleTemplate;
 
+import dev.noregressions.paperband.cards.BlockTemplates;
 import dev.noregressions.paperband.model.Axis;
 import dev.noregressions.paperband.model.AxisValue;
 import dev.noregressions.paperband.model.Block;
@@ -234,6 +235,22 @@ public final class LayoutEngine {
      */
     public void setIconsDir(Path dir) {
         this.icons = new Icons(dir);
+    }
+
+    /** Writes each block's content; its block templates are the bundled set until the build says otherwise. */
+    private ContentWriter contentWriter = new ContentWriter(null);
+
+    /**
+     * The book's block templates -- the theme's, its {@code layouts/blocks/},
+     * the bundled set, and the renderer modules that outrank the bundled ones
+     * -- which write each {@code ```type} fence a card's loading left as code.
+     * The build passes the same chain the cards were loaded with, so which
+     * rung a type is on doesn't change between reading and writing.
+     *
+     * @param templates the chain; null for the bundled set alone
+     */
+    public void setBlockTemplates(BlockTemplates templates) {
+        this.contentWriter = new ContentWriter(templates);
     }
 
     private Icons icons() {
@@ -908,7 +925,7 @@ public final class LayoutEngine {
 
             Map<String, Object> model = new HashMap<>();
             Map<String, Object> cm = cardModel(card, cardAxesFromGroupings(i, groupings),
-                    contexts.get(i).vars());
+                    contexts.get(i).vars(), contexts.get(i).target());
             cm.put("number", numberLabel(card.id()));
             model.put("book", bookModel);
             model.put("navEntries", navEntries);
@@ -2066,7 +2083,8 @@ public final class LayoutEngine {
 
     private Map<String, Object> buildModel(Card card, RenderContext ctx) {
         Map<String, Object> model = new HashMap<>();
-        model.put("card", cardModel(card, resolveCardAxes(card, ctx, ctx.book().axes()), ctx.vars()));
+        model.put("card", cardModel(card, resolveCardAxes(card, ctx, ctx.book().axes()), ctx.vars(),
+                ctx.target()));
         model.put("ctx", contextModel(ctx));
         model.put("vars", LenientMap.of(ctx.vars()));
         model.put("target", ctx.target());
@@ -2197,7 +2215,8 @@ public final class LayoutEngine {
             // slot is taken before any of this card's entries are added.
             if (tocAt != null && i == tocAt) tocEntryIndex = tocEntries.size();
             Map<String, Object> axesForCard = cardAxesFromGroupings(i, groupings);
-            Map<String, Object> cm = cardModel(cards.get(i), axesForCard, contexts.get(i).vars());
+            Map<String, Object> cm = cardModel(cards.get(i), axesForCard, contexts.get(i).vars(),
+                    contexts.get(i).target());
             cm.put("number", numberLabel(cards.get(i).id()));
             // Card-scope page treatment: when this card's resolved orientation
             // differs from the book's sheet, name the rotation so book.html can
@@ -2633,8 +2652,8 @@ public final class LayoutEngine {
         return n == null ? null : n.label();
     }
 
-    private static Map<String, Object> cardModel(Card card, Map<String, Object> axes,
-                                                 Map<String, Object> vars) {
+    private Map<String, Object> cardModel(Card card, Map<String, Object> axes,
+                                          Map<String, Object> vars, String target) {
         Map<String, Object> m = new HashMap<>();
         m.put("id", card.id());
         m.put("title", card.title());
@@ -2661,7 +2680,7 @@ public final class LayoutEngine {
 
         List<Map<String, Object>> blocks = new ArrayList<>(card.blocks().size());
         for (Block b : card.blocks()) {
-            blocks.add(blockModel(b));
+            blocks.add(blockModel(b, vars, card.source(), target));
         }
         m.put("blocks", blocks);
         // Slot-based templates pull blocks out of this tracker instead of
@@ -2754,7 +2773,7 @@ public final class LayoutEngine {
                 .replace("<", "&lt;").replace(">", "&gt;");
     }
 
-    private static Map<String, Object> blockModel(Block b) {
+    private Map<String, Object> blockModel(Block b, Map<String, Object> vars, Path source, String target) {
         Map<String, Object> bm = new HashMap<>();
         bm.put("kind", b.kind().name());
         bm.put("id", b.id());
@@ -2783,7 +2802,8 @@ public final class LayoutEngine {
         bm.put("directiveAttrs", directiveAttrs.toString());
         bm.put("heading", b.heading());
         bm.put("level", b.level());
-        bm.put("html", b.html());
+        // Written for this output: fences with a block template go through it.
+        bm.put("html", contentWriter.html(b, vars, source, target));
         // The same content as data: block.nodes | find('.instructions') is the
         // paragraph itself, its text and props, not a cut of the HTML string.
         List<Map<String, Object>> nodes = new ArrayList<>(b.nodes().size());
@@ -2793,7 +2813,7 @@ public final class LayoutEngine {
         bm.put("nodes", nodes);
         List<Map<String, Object>> children = new ArrayList<>(b.children().size());
         for (Block c : b.children()) {
-            children.add(blockModel(c));
+            children.add(blockModel(c, vars, source, target));
         }
         bm.put("children", children);
         return bm;
@@ -2817,7 +2837,7 @@ public final class LayoutEngine {
         m.put("text", n.text());
         m.put("html", n.html());
         n.props().forEach((k, v) -> m.put(k, switch (k) {
-            case "ordered", "header" -> Boolean.valueOf(v);
+            case "ordered", "header", "drawn" -> Boolean.valueOf(v);
             default -> v;
         }));
         List<Map<String, Object>> children = new ArrayList<>(n.children().size());

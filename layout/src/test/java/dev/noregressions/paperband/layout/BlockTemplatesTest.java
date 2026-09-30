@@ -1,5 +1,7 @@
-package dev.noregressions.paperband.cards;
+package dev.noregressions.paperband.layout;
 
+import dev.noregressions.paperband.cards.BlockTemplates;
+import dev.noregressions.paperband.cards.CardLoader;
 import dev.noregressions.paperband.model.Card;
 
 import org.junit.jupiter.api.Test;
@@ -21,15 +23,34 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class BlockTemplatesTest {
 
-    private static Card parse(Path layoutsDir, Map<String, Object> vars, String markdown) {
-        CardLoader loader = new CardLoader();
-        loader.setBlockTemplates(new BlockTemplates(null, layoutsDir), vars);
-        return loader.parse(Path.of("card.md"), markdown);
+    /** A card as loaded, with the templates and vars an output writes it with. */
+    private record Parsed(Card card, BlockTemplates templates, Map<String, Object> vars) {
     }
 
+    private static Parsed parse(Path layoutsDir, Map<String, Object> vars, String markdown) {
+        CardLoader loader = new CardLoader();
+        BlockTemplates templates = new BlockTemplates(null, layoutsDir);
+        loader.setBlockTemplates(templates, vars);
+        return new Parsed(loader.parse(Path.of("card.md"), markdown), templates, vars);
+    }
+
+    /**
+     * The card's content as an output writes it: block templates are layout,
+     * so a fence goes through its template here, not when the card is read.
+     */
+    private static String html(Parsed p) {
+        return html(p.card(), p.templates(), p.vars());
+    }
+
+    /** A card loaded with the bundled templates alone. */
     private static String html(Card card) {
+        return html(card, BlockTemplates.bundled(), Map.of());
+    }
+
+    private static String html(Card card, BlockTemplates templates, Map<String, Object> vars) {
+        ContentWriter writer = new ContentWriter(templates);
         StringBuilder sb = new StringBuilder();
-        card.blocks().forEach(b -> sb.append(b.html()));
+        card.blocks().forEach(b -> sb.append(writer.html(b, vars, card.source(), "pdf")));
         return sb.toString();
     }
 
@@ -47,7 +68,7 @@ class BlockTemplatesTest {
                 <pre><code>{{ content }}</code></pre>
                 </figure>""");
 
-        Card card = parse(layouts, Map.of("product_name", "Paperband"), """
+        Parsed card = parse(layouts, Map.of("product_name", "Paperband"), """
                 # T
 
                 ```trace {.wide}
@@ -71,7 +92,7 @@ class BlockTemplatesTest {
         template(layouts, "output.html",
                 "<div class=\"terminal\"><pre><code>{{ content }}</code></pre></div>");
 
-        Card card = parse(layouts, Map.of(), """
+        Parsed card = parse(layouts, Map.of(), """
                 # T
 
                 ```output
@@ -86,7 +107,7 @@ class BlockTemplatesTest {
 
     @Test
     void aTypeWithNoTemplate_staysAnOrdinaryCodeBlock(@TempDir Path layouts) {
-        Card card = parse(layouts, Map.of(), """
+        Parsed card = parse(layouts, Map.of(), """
                 # T
 
                 ```java
@@ -101,14 +122,15 @@ class BlockTemplatesTest {
     void aBrokenTemplate_failsNamingTheCardAndTheType(@TempDir Path layouts) throws IOException {
         template(layouts, "trace.html", "{% if unclosed %}");
 
-        CardParseException e = assertThrows(CardParseException.class,
-                () -> parse(layouts, Map.of(), """
-                        # T
+        // Loading leaves the fence alone; writing it is what reads the template.
+        Parsed card = parse(layouts, Map.of(), """
+                # T
 
-                        ```trace
-                        x
-                        ```
-                        """));
+                ```trace
+                x
+                ```
+                """);
+        LayoutException e = assertThrows(LayoutException.class, () -> html(card));
 
         assertTrue(e.getMessage().contains("card.md"), e.getMessage());
         assertTrue(e.getMessage().contains("```trace"), e.getMessage());
@@ -132,6 +154,45 @@ class BlockTemplatesTest {
         String html = html(card);
         assertTrue(html.contains("class=\"console\""), html);
         assertTrue(html.contains("language-shell-session"), html);
+    }
+
+    @Test
+    void semanticFenceLanguages_becomeBlockTypes() {
+        // The language tag IS the editorial role: no attribute syntax needed.
+        String html = html(new CardLoader().parse(Path.of("card.md"), """
+                # T
+
+                ```command
+                mvn dependency:tree
+                ```
+
+                ```output
+                [INFO] com.example:app:jar:1.0.0
+                ```
+
+                ```console
+                $ ls
+                a.txt
+                ```
+
+                ```java
+                int x = 1;
+                ```
+                """));
+        assertTrue(html.contains("class=\"command\""), "command class on the pre: " + html);
+        assertTrue(html.contains("language-bash"), "command highlights as bash: " + html);
+        assertTrue(html.contains("class=\"output\""), "output class on the pre: " + html);
+        assertFalse(html.contains("language-output"), "no made-up language for Prism to 404 on");
+        assertTrue(html.contains("class=\"console\""), "console class on the pre: " + html);
+        assertTrue(html.contains("language-shell-session"), "console highlights as a session");
+        assertTrue(html.contains("language-java"), "real languages pass through untouched");
+    }
+
+    @Test
+    void aTemplate_seesWhichOutputIsBeingWritten(@TempDir Path layouts) throws IOException {
+        template(layouts, "trace.html", "<pre class=\"trace-{{ target }}\">{{ content }}</pre>");
+        Parsed card = parse(layouts, Map.of(), "# T\n\n```trace\nx\n```\n");
+        assertTrue(html(card).contains("class=\"trace-pdf\""), html(card));
     }
 
     @Test

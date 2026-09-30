@@ -6,6 +6,7 @@ import org.jsoup.nodes.TextNode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.function.Predicate;
 
 /**
  * Post-parse HTML transform that rewrites two custom fenced-code conventions
@@ -88,18 +89,21 @@ final class DiffCardProcessor {
      * Idempotent — already-rewritten figures don't match the selectors.
      */
     static void process(Element bodyEl) {
-        process(bodyEl, (from, to) -> { });
+        process(bodyEl, (from, to) -> { }, type -> false);
     }
 
     /**
      * {@link #process(Element)}, telling {@code replaced} about each
-     * {@code <pre>} it swaps for new markup, so the fence's origin can follow it.
+     * {@code <pre>} it swaps for new markup, so the fence's origin can follow it,
+     * and leaving alone a type {@code templated} says a block template renders:
+     * an author's {@code blocks/diff-card.html} beats the built-in rewrite.
      */
-    static void process(Element bodyEl, BiConsumer<Element, Element> replaced) {
+    static void process(Element bodyEl, BiConsumer<Element, Element> replaced, Predicate<String> templated) {
         // Snapshot first; we mutate the tree during iteration.
         List<Element> codes = new ArrayList<>(bodyEl.select("pre > code"));
         for (Element code : codes) {
             String cls = code.className();
+            if (templated.test(fenceType(cls))) continue;
             if (hasClassWithPrefix(cls, DIFF_CARD_PREFIX)) {
                 String lang = extractDiffCardLanguage(cls);
                 rewriteDiffCard(code, lang, replaced);
@@ -107,6 +111,14 @@ final class DiffCardProcessor {
                 rewriteErrorOutput(code, replaced);
             }
         }
+    }
+
+    /** The {@code language-x} a code element's classes name, or "" when none does. */
+    private static String fenceType(String classAttr) {
+        for (String c : classAttr.split("\\s+")) {
+            if (c.startsWith("language-")) return c.substring("language-".length());
+        }
+        return "";
     }
 
     /** Class-attr lookup, multi-class safe. */

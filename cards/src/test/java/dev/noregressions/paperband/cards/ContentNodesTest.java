@@ -63,7 +63,7 @@ class ContentNodesTest {
     }
 
     @Test
-    void a_fence_its_block_template_rewrote_keeps_the_type_and_text_the_author_wrote() {
+    void a_templated_fence_stays_code_for_layout_to_write() {
         Node fence = blocks("""
                 ## Check
 
@@ -73,9 +73,10 @@ class ContentNodesTest {
                 """).get(0).nodes().get(0);
         assertEquals("fence", fence.type());
         assertEquals("pre", fence.tag());
-        assertTrue(fence.classes().contains("command"), "the markup is the template's: " + fence.html());
+        assertTrue(fence.html().contains("language-command"), "its template is layout's: " + fence.html());
         assertEquals("command", fence.props().get("lang"));
         assertEquals("java -version", fence.props().get("code").strip());
+        assertNull(fence.props().get("drawn"));
     }
 
     @Test
@@ -107,6 +108,7 @@ class ContentNodesTest {
         assertEquals("figure", fence.tag(), fence.html());
         assertEquals("fence", fence.type());
         assertEquals("diff-card", fence.props().get("lang"));
+        assertEquals("true", fence.props().get("drawn"), "a Java pass drew it; layout writes it as it is");
         assertTrue(fence.props().get("code").contains("@@added"), fence.props().get("code"));
         assertEquals(List.of("fence"), fence.children().stream()
                 .flatMap(c -> c.children().stream()).filter(n -> n.type().equals("fence"))

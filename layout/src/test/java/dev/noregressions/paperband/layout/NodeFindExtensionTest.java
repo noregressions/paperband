@@ -109,6 +109,22 @@ class NodeFindExtensionTest {
     }
 
     @Test
+    void a_fence_left_as_code_matches_its_type_as_a_class(@TempDir Path book) throws IOException {
+        // Loading leaves ```console as <pre><code class="language-console">; its
+        // template makes it pre.console later. find matches it either way.
+        Node console = new Node("fence", "pre", null, Set.of(), Map.of(), Map.of(), "$ ls",
+                "<pre><code class=\"language-console\">$ ls</code></pre>", List.of(), Map.of("lang", "console", "code", "$ ls\n"));
+        Block b = new Block(Block.Kind.HEADING_SECTION, null, Set.of("x"), "X", 2, "", List.of(), Map.of(), Map.of(),
+                List.of(console));
+        Path layouts = Files.createDirectories(book.resolve("layouts"));
+        Files.writeString(layouts.resolve("t.html"), "[{{ (card.blocks[0] | find('pre.console') | first).code | trim }}]");
+        BookConfig config = new BookConfig(null, "Book", List.of(), List.of(), Map.of(), List.of(), null, null);
+        String html = new LayoutEngine(book).render(new Card("c", Path.of("c.md"), new Frontmatter(Map.of()), "C", List.of(b)),
+                new RenderContext(config, List.of(), Map.of(), null, "pdf", "A4"), "t");
+        assertTrue(html.contains("[$ ls]"), html);
+    }
+
+    @Test
     void a_bad_selector_fails_with_the_selector_named(@TempDir Path book) {
         Exception e = assertThrows(Exception.class,
                 () -> render(book, "{{ card.blocks[0].nodes | find('p[[') }}"));

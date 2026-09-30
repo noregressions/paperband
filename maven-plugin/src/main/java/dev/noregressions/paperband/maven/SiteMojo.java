@@ -300,6 +300,7 @@ public class SiteMojo extends AbstractPaperbandMojo {
                 ? new LayoutEngine(bookCtx.book().bookRoot(), geo.layouts(), theme)
                 : new LayoutEngine(bookCtx.book().bookRoot(), theme);
         layout.setExtraCss(stylesheetPaths());
+        layout.setBlockTemplates(blockTemplates);
         layout.setExcludedCardIds(steplessIds);
         // The book's own icons live in its home, beside paperband.yaml; a book
         // with no home keeps them at its root. See LayoutEngine#setIconsDir.

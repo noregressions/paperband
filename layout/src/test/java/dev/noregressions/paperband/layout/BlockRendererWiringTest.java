@@ -1,9 +1,12 @@
-package dev.noregressions.paperband.cards;
+package dev.noregressions.paperband.layout;
 
 import dev.noregressions.paperband.block.BlockRenderException;
 import dev.noregressions.paperband.block.BlockRenderer;
 import dev.noregressions.paperband.block.BlockRendererRegistry;
 import dev.noregressions.paperband.block.BlockRequest;
+import dev.noregressions.paperband.cards.BlockTemplates;
+import dev.noregressions.paperband.cards.CardLoader;
+import dev.noregressions.paperband.cards.CardParseException;
 import dev.noregressions.paperband.model.Card;
 
 import org.junit.jupiter.api.Test;
@@ -49,16 +52,35 @@ class BlockRendererWiringTest {
         }
     }
 
-    private static Card parse(Path layoutsDir, BlockRendererRegistry registry,
-                              Map<String, Object> vars, String markdown) {
-        CardLoader loader = new CardLoader();
-        loader.setBlockTemplates(new BlockTemplates(null, layoutsDir, registry), vars);
-        return loader.parse(Path.of("card.md"), markdown);
+    /** A card as loaded, with the templates and vars an output writes it with. */
+    private record Parsed(Card card, BlockTemplates templates, Map<String, Object> vars) {
     }
 
+    private static Parsed parse(Path layoutsDir, BlockRendererRegistry registry,
+                              Map<String, Object> vars, String markdown) {
+        CardLoader loader = new CardLoader();
+        BlockTemplates templates = new BlockTemplates(null, layoutsDir, registry);
+        loader.setBlockTemplates(templates, vars);
+        return new Parsed(loader.parse(Path.of("card.md"), markdown), templates, vars);
+    }
+
+    /**
+     * The card's content as an output writes it: block templates are layout,
+     * so a fence goes through its template here, not when the card is read.
+     */
+    private static String html(Parsed p) {
+        return html(p.card(), p.templates(), p.vars());
+    }
+
+    /** A card loaded with the bundled templates alone. */
     private static String html(Card card) {
+        return html(card, BlockTemplates.bundled(), Map.of());
+    }
+
+    private static String html(Card card, BlockTemplates templates, Map<String, Object> vars) {
+        ContentWriter writer = new ContentWriter(templates);
         StringBuilder sb = new StringBuilder();
-        card.blocks().forEach(b -> sb.append(b.html()));
+        card.blocks().forEach(b -> sb.append(writer.html(b, vars, card.source(), "pdf")));
         return sb.toString();
     }
 
@@ -79,7 +101,7 @@ class BlockRendererWiringTest {
     void aClaimedType_rendersThroughTheRenderer(@TempDir Path layouts) {
         Spy spy = new Spy("<figure class=\"drawn\">svg here</figure>", "diagram");
 
-        Card card = parse(layouts, BlockRendererRegistry.of(spy), Map.of(), DIAGRAM);
+        Parsed card = parse(layouts, BlockRendererRegistry.of(spy), Map.of(), DIAGRAM);
 
         assertTrue(html(card).contains("class=\"drawn\""), html(card));
         assertTrue(html(card).contains("svg here"), html(card));
@@ -94,7 +116,7 @@ class BlockRendererWiringTest {
         template(layouts, "diagram.html", "<p class=\"mine\">{{ content }}</p>");
         Spy spy = new Spy("<figure>from the jar</figure>", "diagram");
 
-        Card card = parse(layouts, BlockRendererRegistry.of(spy), Map.of(), DIAGRAM);
+        Parsed card = parse(layouts, BlockRendererRegistry.of(spy), Map.of(), DIAGRAM);
 
         assertTrue(html(card).contains("<p class=\"mine\">"), html(card));
         assertTrue(spy.seen == null, "the renderer must not even be consulted");
@@ -106,7 +128,7 @@ class BlockRendererWiringTest {
         // takes it over -- that's how a server-side mermaid would work.
         Spy spy = new Spy("<figure>server-side</figure>", "mermaid");
 
-        Card card = parse(layouts, BlockRendererRegistry.of(spy), Map.of(), """
+        Parsed card = parse(layouts, BlockRendererRegistry.of(spy), Map.of(), """
                 # T
 
                 ```mermaid
@@ -125,7 +147,7 @@ class BlockRendererWiringTest {
         // to the bundled template behind it.
         Spy spy = new Spy(null, "console");
 
-        Card card = parse(layouts, BlockRendererRegistry.of(spy), Map.of(), """
+        Parsed card = parse(layouts, BlockRendererRegistry.of(spy), Map.of(), """
                 # T
 
                 ```console
@@ -174,7 +196,7 @@ class BlockRendererWiringTest {
 
     @Test
     void withNoRenderersInstalled_nothingChanges(@TempDir Path layouts) {
-        Card card = parse(layouts, BlockRendererRegistry.empty(), Map.of(), DIAGRAM);
+        Parsed card = parse(layouts, BlockRendererRegistry.empty(), Map.of(), DIAGRAM);
 
         // An unclaimed, un-templated type is an ordinary code block, exactly
         // as before the SPI existed.

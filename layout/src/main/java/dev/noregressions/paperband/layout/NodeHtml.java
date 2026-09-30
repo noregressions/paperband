@@ -20,6 +20,9 @@ import java.util.Set;
  *
  * <p>A drawing ({@code svg}, {@code math}) is read without its insides, so it
  * is written from its own {@code html}.
+ *
+ * <p>A {@link Replacement} can write some nodes differently -- a fence through
+ * its block template -- and everything around them is written as it was.
  */
 final class NodeHtml {
 
@@ -32,24 +35,51 @@ final class NodeHtml {
     private NodeHtml() {
     }
 
+    /** HTML to write in place of a node, or null to write the node itself. */
+    @FunctionalInterface
+    interface Replacement {
+        String html(Node n);
+    }
+
+    private static final Replacement NONE = n -> null;
+
     /**
      * A block's content, as {@code block.html} holds it: each top-level node's
      * outer HTML, one after another.
      */
     static String write(List<Node> nodes) {
+        return write(nodes, NONE);
+    }
+
+    /** {@link #write(List)}, with {@code replace} deciding what some nodes become. */
+    static String write(List<Node> nodes, Replacement replace) {
         StringBuilder out = new StringBuilder();
         for (Node n : nodes) {
-            out.append(n.tag() == null ? n.text() : element(n).outerHtml());
+            String replacement = n.tag() == null ? null : replace.html(n);
+            if (replacement != null) {
+                // Read the way a card's own content is: each element's outer
+                // HTML, and any text between them that isn't just a line break.
+                for (org.jsoup.nodes.Node r : Jsoup.parseBodyFragment(replacement).body().childNodes()) {
+                    if (r instanceof Element e) out.append(e.outerHtml());
+                    else if (r instanceof TextNode t && !t.isBlank()) out.append(t.text());
+                }
+            } else {
+                out.append(n.tag() == null ? n.text() : element(n, replace).outerHtml());
+            }
         }
         return out.toString();
     }
 
-    /** One node as a jsoup node, children and all. */
-    static org.jsoup.nodes.Node toJsoup(Node n) {
-        return n.tag() == null ? TextNode.createFromEncoded(n.html()) : element(n);
+    /** Whether {@code replace} writes any of {@code nodes}, at any depth, differently. */
+    static boolean replacesAny(List<Node> nodes, Replacement replace) {
+        for (Node n : nodes) {
+            if (n.tag() != null && replace.html(n) != null) return true;
+            if (replacesAny(n.children(), replace)) return true;
+        }
+        return false;
     }
 
-    private static Element element(Node n) {
+    private static Element element(Node n, Replacement replace) {
         if (OPAQUE_TAGS.contains(n.tag())) {
             Element drawn = Jsoup.parseBodyFragment(n.html()).body().firstElementChild();
             if (drawn != null) return drawn.clone();
@@ -67,7 +97,20 @@ final class NodeHtml {
             }
         }
         for (Node c : n.children()) {
-            el.appendChild(toJsoup(c));
+            if (c.tag() == null) {
+                el.appendChild(TextNode.createFromEncoded(c.html()));
+                continue;
+            }
+            String replacement = replace.html(c);
+            if (replacement == null) {
+                el.appendChild(element(c, replace));
+            } else {
+                // In place, as a pass that rewrites the DOM would have left it.
+                for (org.jsoup.nodes.Node r : new java.util.ArrayList<>(
+                        Jsoup.parseBodyFragment(replacement).body().childNodes())) {
+                    el.appendChild(r);
+                }
+            }
         }
         return el;
     }

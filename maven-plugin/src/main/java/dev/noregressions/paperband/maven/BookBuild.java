@@ -209,6 +209,7 @@ final class BookBuild {
                 ? new LayoutEngine(ctx.book().bookRoot(), layoutsDir, theme)
                 : new LayoutEngine(ctx.book().bookRoot(), theme);
         layout.setExtraCss(stylesheets);
+        layout.setBlockTemplates(blockTemplates);
         layout.setIconsDir(iconsDir(ctx.book().bookRoot()));
         String html = layoutOverride != null
                 ? layout.render(card, ctx, layoutOverride)
@@ -350,6 +351,7 @@ final class BookBuild {
                 ? new LayoutEngine(bookCtx.book().bookRoot(), layoutsDir, theme)
                 : new LayoutEngine(bookCtx.book().bookRoot(), theme);
         layout.setExtraCss(stylesheets);
+        layout.setBlockTemplates(blockTemplates);
         layout.setIconsDir(iconsDir(bookCtx.book().bookRoot()));
         if (editionModel != null) layout.setEdition(editionModel);
         layout.setTocAt(tocCardIndex);

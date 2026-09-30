@@ -32,7 +32,7 @@ import java.util.StringJoiner;
  */
 public final class ContentNodes {
 
-    private record Origin(String lang, String code) {
+    private record Origin(String lang, String code, boolean drawn) {
     }
 
     /** Elements that stand for a fence, keyed by identity: the DOM is mutable. */
@@ -63,15 +63,22 @@ public final class ContentNodes {
         return out;
     }
 
-    /** {@code root} is what a {@code ```lang} fence with this text became. */
-    void fence(Element root, String lang, String code) {
-        fences.put(root, new Origin(lang, code));
+    /**
+     * {@code root} stands for a {@code ```lang} fence with this text: the fence
+     * itself, or what a pass drew it as.
+     *
+     * @param drawn true when a pass replaced the fence with its finished
+     *              markup, so layout writes it as it is rather than through a
+     *              block template
+     */
+    void fence(Element root, String lang, String code, boolean drawn) {
+        fences.put(root, new Origin(lang, code, drawn));
     }
 
-    /** A pass replaced {@code from} with {@code to}: {@code to} keeps any fence origin. */
+    /** A pass replaced {@code from} with {@code to}, its finished markup: {@code to} keeps any fence origin. */
     void moved(Element from, Element to) {
         Origin o = fences.remove(from);
-        if (o != null) fences.put(to, o);
+        if (o != null) fences.put(to, new Origin(o.lang(), o.code(), true));
     }
 
     private static final Set<String> BLOCK_TAGS = Set.of(
@@ -132,6 +139,7 @@ public final class ContentNodes {
             String lang = origin != null ? origin.lang() : language(el);
             if (lang != null) props.put("lang", lang);
             props.put("code", origin != null ? origin.code() : codeText(el));
+            if (origin != null && origin.drawn()) props.put("drawn", "true");
             return "fence";
         }
         return switch (tag) {

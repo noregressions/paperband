@@ -53,8 +53,8 @@ import java.util.regex.Pattern;
  *       {@link Sections} (each heading and what it owns becomes a section, nested
  *       by rank -- see below) and {@link Steps} (numbering).</li>
  *   <li><b>HTML.</b> Render the tree, parse the result with jsoup, and run the
- *       HTML passes: block templates and renderers for {@code ```type} fences, the
- *       {@code ast:} fallback, diff cards, inline-code classes and the content
+ *       HTML passes: block renderers for {@code ```type} fences (their
+ *       templates are layout's), the {@code ast:} fallback, diff cards, inline-code classes and the content
  *       policy. Then read each marked section back as a {@link Block}: class set
  *       from the heading's {@code class}, falling back to a slug of its text;
  *       content before the first heading is a synthetic {@code "intro"} block.
@@ -138,14 +138,15 @@ public final class CardLoader {
     private java.util.function.Consumer<String> onRemoval;
 
     /**
-     * Renders {@code ```type} blocks through {@code blocks/<type>.html}
-     * templates — see {@link BlockTemplates}. Defaults to the bundled types
-     * (command, output, console); the build wires a book-aware chain so a
-     * book's {@code layouts/blocks/} and the theme participate.
+     * Draws {@code ```type} blocks a renderer module claims, and says which
+     * types have a {@code blocks/<type>.html} template -- see
+     * {@link BlockTemplates}. The templates themselves run at layout time.
+     * The build wires a book-aware chain so a book's {@code layouts/blocks/}
+     * and the theme take part in the precedence.
      */
     private BlockTemplates blockTemplates = BlockTemplates.bundled();
 
-    /** The card's vars, exposed to block templates as {@code vars}. */
+    /** The card's vars, exposed to block renderers. */
     private Map<String, Object> blockVars = Map.of();
 
     /**
@@ -392,12 +393,12 @@ public final class CardLoader {
         // are done; the passes that replace a fence report it as they go.
         ContentNodes nodes = new ContentNodes();
 
-        // 3a-pre. Block templates: a ```type block whose type has a
-        //     blocks/<type>.html template (book layouts/, theme, or bundled)
-        //     renders through it — the pluggable half of what a fence means.
-        //     Types with no template fall through untouched, which is also
-        //     what keeps diff-card/error-output on their Java path below.
-        applyBlockTemplates(source, bodyEl, nodes);
+        // 3a-pre. Block renderers: a ```type block a renderer module claims
+        //     (and no authored template overrides) is drawn now, once per
+        //     card. Every other fence stays code: its blocks/<type>.html
+        //     template, if it has one, is layout's to apply. A type with a
+        //     template is also kept off diff-card/error-output's Java path below.
+        drawBlocks(source, bodyEl, nodes);
 
         // No PlantUML renderer drew the ast: diagram, so its fence is still
         // there as source: swap in the tree drawn as HTML instead.
@@ -415,7 +416,7 @@ public final class CardLoader {
         //     into structured HTML before block-walking. Real-language fences
         //     pass through untouched for Prism to highlight downstream.
         try {
-            DiffCardProcessor.process(bodyEl, nodes::moved);
+            DiffCardProcessor.process(bodyEl, nodes::moved, blockTemplates::hasTemplate);
         } catch (IllegalArgumentException e) {
             throw new CardParseException(source + ": " + e.getMessage(), e);
         }
@@ -607,8 +608,13 @@ public final class CardLoader {
         return build(section);
     }
 
-    /** Apply {@link BlockTemplates} to every typed code block in {@code bodyEl}. */
-    private void applyBlockTemplates(Path source, Element bodyEl, ContentNodes nodes) {
+    /**
+     * Draw every typed code block in {@code bodyEl} that a
+     * {@link dev.noregressions.paperband.block.BlockRenderer}
+     * claims. The rest stay code blocks here: a block template is layout, and
+     * runs when an output is written, not when a card is read.
+     */
+    private void drawBlocks(Path source, Element bodyEl, ContentNodes nodes) {
         for (Element code : new ArrayList<>(bodyEl.select("pre > code"))) {
             String type = null;
             List<String> extraClasses = new ArrayList<>();
@@ -632,18 +638,18 @@ public final class CardLoader {
                     : (code.id().isEmpty() ? null : code.id());
             String rendered;
             try {
-                rendered = blockTemplates.render(type, code.wholeText(), extraClasses, id,
+                rendered = blockTemplates.draw(type, code.wholeText(), extraClasses, id,
                         blockVars, source);
             } catch (BlockTemplates.BlockTemplateException e) {
                 throw new CardParseException(source + ": ```" + type + " — " + e.getMessage(), e);
             }
-            if (rendered == null) {              // not a block type: ordinary code
-                nodes.fence(pre, type, code.wholeText());
+            if (rendered == null) {              // layout's to write, through a template or as code
+                nodes.fence(pre, type, code.wholeText(), false);
                 continue;
             }
             Element frag = Jsoup.parseBodyFragment(rendered).body();
             Element root = frag.firstElementChild();
-            if (root != null) nodes.fence(root, type, code.wholeText());
+            if (root != null) nodes.fence(root, type, code.wholeText(), true);
             for (Node n : new ArrayList<>(frag.childNodes())) {
                 pre.before(n);
             }

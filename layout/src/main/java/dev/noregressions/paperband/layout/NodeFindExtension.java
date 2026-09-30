@@ -29,7 +29,9 @@ import java.util.Map;
  * ({@code block.nodes}, {@code node.children}) or one node, and searches them
  * and everything under them. The selector sees each node's tag, id, classes
  * and attributes, and its directives as {@code data-paperband-<name>}, the
- * same markup {@code select} sees. It returns the matching node maps in
+ * same markup {@code select} sees. A fence written as code also carries its
+ * type as a class: {@code pre.command} is a {@code ```command} block here as
+ * it is in the HTML its block template writes. It returns the matching node maps in
  * document order, and unlike {@code select} it keeps a match inside another:
  * data isn't printed twice, and a template asking for every list item wants
  * the nested ones too. No match is an empty list.
@@ -102,6 +104,9 @@ final class NodeFindExtension extends AbstractExtension {
             if (node.get("id") != null) el.id(node.get("id").toString());
             if (node.get("classes") instanceof List<?> classes) {
                 for (Object c : classes) el.addClass(c.toString());
+            }
+            if ("fence".equals(node.get("type")) && "pre".equals(tag) && node.get("lang") != null) {
+                el.addClass(node.get("lang").toString());
             }
             if (node.get("attributes") instanceof Map<?, ?> attrs) {
                 attrs.forEach((k, v) -> el.attr(k.toString(), v == null ? "" : v.toString()));

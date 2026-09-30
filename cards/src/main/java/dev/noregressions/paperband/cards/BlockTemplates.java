@@ -211,11 +211,56 @@ public final class BlockTemplates {
      */
     public String render(String type, String content, List<String> classes, String id,
                          Map<String, Object> vars, Path source) {
+        String drawn = draw(type, content, classes, id, vars, source);
+        return drawn != null ? drawn : template(type, content, classes, id, vars, null);
+    }
+
+    /**
+     * The half of {@link #render} a card's loading does: hand the block to the
+     * {@link BlockRenderer} that claims its type, unless the theme or the book
+     * overrides the type with a template of its own. A drawing is computed
+     * once per card, whichever outputs the build writes.
+     *
+     * @return the renderer's HTML, or null when no renderer draws this block
+     *         (none claims it, the author overrides it, or it declined) --
+     *         the block is then left for {@link #template} at layout time
+     * @throws BlockTemplateException when a renderer rejects the block
+     */
+    public String draw(String type, String content, List<String> classes, String id,
+                       Map<String, Object> vars, Path source) {
         BlockRenderer renderer = renderers.forType(type).orElse(null);
-        if (renderer != null && !authorOverrides(type)) {
-            return renderWith(renderer, type, content, classes, id, vars, source);
+        if (renderer == null || authorOverrides(type)) return null;
+        return renderWith(renderer, type, content, classes, id, vars, source);
+    }
+
+    /**
+     * The half of {@link #render} layout does: {@code blocks/<type>.html}
+     * from the theme, the book or the bundled set, for a block no renderer
+     * drew.
+     *
+     * @param target the output being written ({@code pdf}, {@code site}...),
+     *               exposed to the template as {@code target}; may be null
+     * @return the template's HTML, or null when no template has this type
+     * @throws BlockTemplateException when a template exists but fails
+     */
+    public String template(String type, String content, List<String> classes, String id,
+                           Map<String, Object> vars, String target) {
+        return renderTemplate(type, content, classes, id, vars, target);
+    }
+
+    /** Whether any template in the chain, authored or bundled, has {@code type}. */
+    public boolean hasTemplate(String type) {
+        if (missing.contains(type)) return false;
+        try {
+            engine.getTemplate(DIR + "/" + type);
+            return true;
+        } catch (PebbleException e) {
+            if (rootedInLoader(e)) {
+                missing.add(type);
+                return false;
+            }
+            return true;                          // it exists; it's broken, which rendering reports
         }
-        return renderTemplate(type, content, classes, id, vars);
     }
 
     /**
@@ -256,9 +301,9 @@ public final class BlockTemplates {
                     + "' (" + renderer.getClass().getName() + ") failed on this ```" + type
                     + " block: " + e, e);
         }
-        // A renderer may decline after looking at the content -- fall through
-        // to whatever a template would have done, exactly as if it were absent.
-        return html != null ? html : renderTemplate(type, content, classes, id, vars);
+        // A renderer may decline after looking at the content: null leaves the
+        // block to whatever a template would have done, exactly as if it were absent.
+        return html;
     }
 
     /** Yaml gives us Map<?,?>; the SPI wants Map<String,Object>. Keys stringified, once. */
@@ -270,7 +315,7 @@ public final class BlockTemplates {
 
     /** The original path: {@code blocks/<type>.html} anywhere in the loader chain. */
     private String renderTemplate(String type, String content, List<String> classes, String id,
-                                  Map<String, Object> vars) {
+                                  Map<String, Object> vars, String target) {
         if (missing.contains(type)) return null;
         PebbleTemplate template;
         try {
@@ -289,6 +334,7 @@ public final class BlockTemplates {
         model.put("classes", classes == null ? List.of() : classes);
         model.put("id", id);
         model.put("vars", LenientMap.of(vars == null ? Map.of() : vars));
+        model.put("target", target);
         StringWriter out = new StringWriter();
         try {
             template.evaluate(out, model);
