@@ -14,8 +14,8 @@ Nothing needs a server to run.
 
 Build the site into `target/site`. {.instructions}
 
-```console
-$ mvn paperband:site -Dpaperband.outputDirectory=target/site
+```command
+mvn paperband:site -Dpaperband.outputDirectory=target/site
 ```
 
 ## {!step} Serve it
@@ -25,8 +25,11 @@ they will when published.
 
 Serve the site folder and open it in a browser. {.instructions}
 
+```command
+python3 -m http.server --directory target/site 8000
+```
+
 ```console
-$ python3 -m http.server --directory target/site 8000
 Serving HTTP on :: port 8000 ...
 ```
 

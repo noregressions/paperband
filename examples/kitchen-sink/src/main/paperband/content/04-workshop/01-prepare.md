@@ -17,7 +17,7 @@ find out.
 Check that `java` is on your path and reports version 21 or later. {.instructions}
 
 ```command
-$ java -version
+java -version
 ```
 
 ```console
@@ -32,8 +32,11 @@ Maven 3.9 is the oldest version the plugin is tested with.
 
 Check that `mvn` runs and uses the JDK from the last step. {.instructions}
 
+```command
+mvn -version
+```
+
 ```console
-$ mvn -version
 Apache Maven 3.9.9
 Java version: 21.0.4
 ```
@@ -48,7 +51,10 @@ takes a few minutes. Doing it now keeps the next session quick.
 
 Resolve the plugin once so its dependencies are cached. {.instructions}
 
+```command
+mvn dependency:get -Dartifact=dev.noregressions.paperband:paperband-maven-plugin:0.1.3
+```
+
 ```console
-$ mvn dependency:get -Dartifact=dev.noregressions.paperband:paperband-maven-plugin:0.1.3
 [INFO] BUILD SUCCESS
 ```

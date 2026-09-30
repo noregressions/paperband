@@ -15,10 +15,10 @@ sample card to replace.
 
 Generate a project called `my-guide` from the archetype. {.instructions}
 
-```console
-$ mvn archetype:generate -DarchetypeGroupId=dev.noregressions.paperband \
+```command
+mvn archetype:generate -DarchetypeGroupId=dev.noregressions.paperband \
     -DarchetypeArtifactId=paperband-archetype -DgroupId=com.example -DartifactId=my-guide
-$ cd my-guide
+cd my-guide
 ```
 
 ## {!step} Write a card
@@ -32,8 +32,8 @@ Cards live under `src/main/paperband/content/`, and the file name sets their ord
 
 Create a card file next to the sample. {.instructions}
 
-```console
-$ touch src/main/paperband/content/02-hello.md
+```command
+touch src/main/paperband/content/02-hello.md
 ```
 
 ### {!step} Give it a title and a block
@@ -42,8 +42,8 @@ Start with a `#` title and one `##` section. Anything more can come later.
 
 Add a title and one section with a sentence in it. {.instructions}
 
-```console
-$ printf '# Hello\n\n## What it does\n\nIt says hello.\n' > src/main/paperband/content/02-hello.md
+```command
+printf '# Hello\n\n## What it does\n\nIt says hello.\n' > src/main/paperband/content/02-hello.md
 ```
 
 ## {!step} Build the PDF
@@ -52,9 +52,9 @@ $ printf '# Hello\n\n## What it does\n\nIt says hello.\n' > src/main/paperband/c
 
 Build the book and open the PDF. {.instructions}
 
-```console
-$ mvn package
-$ open target/my-guide.pdf
+```command
+mvn package
+open target/my-guide.pdf
 ```
 
 The first build is the slow one; after that a book this size builds in seconds.

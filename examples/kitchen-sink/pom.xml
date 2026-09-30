@@ -50,8 +50,8 @@
                     <!-- A cheat sheet of the workshop: <includes> picks that
                          folder's cards out of the book, and the cheatsheet
                          view turns each into its {!step} entries (heading,
-                         the paragraph marked {.instructions}, the ```console
-                         session). The full guide above stays as it is.
+                         the paragraph marked {.instructions}, the ```command
+                         and its ```console output). The full guide above stays as it is.
                          https://noregressions.github.io/paperband/cards/make-a-cheat-sheet.html -->
                     <execution>
                         <id>cheatsheet</id>
