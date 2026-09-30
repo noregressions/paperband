@@ -1,4 +1,6 @@
 target/
+# scripts/output-diff.sh keeps its baseline and last check here
+.output-diff/
 pom.xml.tag
 pom.xml.releaseBackup
 pom.xml.versionsBackup
