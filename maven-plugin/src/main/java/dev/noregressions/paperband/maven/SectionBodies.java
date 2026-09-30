@@ -10,6 +10,7 @@ import dev.noregressions.paperband.layout.SectionBody;
 import dev.noregressions.paperband.model.Block;
 import dev.noregressions.paperband.model.Card;
 import dev.noregressions.paperband.model.RenderContext;
+import dev.noregressions.paperband.model.Section;
 import dev.noregressions.paperband.number.SectionNumbering;
 import dev.noregressions.paperband.pebble.LenientMap;
 
@@ -105,7 +106,40 @@ final class SectionBodies {
             throw new IllegalStateException(
                     "Could not scan for section bodies under " + root + ": " + e.getMessage(), e);
         }
+        warnUnclaimedBodies(bookCtx, root, out, log);
         return out;
+    }
+
+    /**
+     * Warn about a declared section that has no body while its folder does.
+     *
+     * <p>A body is found by section id, and a folder's id is its name. A
+     * section declared in the POM takes its id from its title unless it sets
+     * {@code <id>}, so one titled "Workshop" over {@code 04-workshop/} finds no
+     * body there, and its divider prints the card list instead of the text the
+     * folder has. Nothing fails, which is why it's worth saying: the fix is
+     * the folder's name as the {@code <id>}.
+     */
+    private static void warnUnclaimedBodies(RenderContext bookCtx, Path root, Map<String, SectionBody> bodies,
+                                            org.apache.maven.plugin.logging.Log log) {
+        if (log == null) return;
+        Path base = root.toAbsolutePath().normalize();
+        for (Section section : bookCtx.book().sections()) {
+            if (section.cards().isEmpty() || bodies.containsKey(section.id())) continue;
+            java.util.Set<String> folders = new java.util.TreeSet<>();
+            for (Path card : section.cards()) {
+                Path abs = card.toAbsolutePath().normalize();
+                Path rel = abs.startsWith(base) ? base.relativize(abs) : null;
+                folders.add(rel == null || rel.getNameCount() < 2 ? "" : rel.getName(0).toString());
+            }
+            if (folders.size() != 1) continue;
+            String folder = folders.iterator().next();
+            if (!folder.isEmpty() && bodies.containsKey(folder) && !folder.equals(section.id())) {
+                log.warn("Section '" + section.id() + "' has no _section.md of its own, but all its cards are in "
+                        + folder + "/, which has one. Its divider and landing page show the card list instead."
+                        + " To use that text, give the section <id>" + folder + "</id>.");
+            }
+        }
     }
 
     private static SectionBody renderOne(

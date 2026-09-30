@@ -4,6 +4,8 @@ import dev.noregressions.paperband.cards.BlockTemplates;
 import dev.noregressions.paperband.config.ConfigLoader;
 import dev.noregressions.paperband.layout.SectionBody;
 import dev.noregressions.paperband.model.RenderContext;
+import dev.noregressions.paperband.model.Section;
+import org.apache.maven.plugin.logging.SystemStreamLog;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -11,9 +13,11 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -45,5 +49,39 @@ class SectionBodiesTest {
 
         String html = bodies.get(SectionBodies.BOOK).html();
         assertTrue(html.contains("<figure class=\"tree\">"), html);
+    }
+
+    /** A declared section over one folder that has a body, with and without the folder's name as its id. */
+    private static List<String> warnings(Path root, String id) throws IOException {
+        Files.writeString(root.resolve("paperband.yaml"), "title: T\n");
+        Path folder = Files.createDirectories(root.resolve("04-workshop"));
+        Files.writeString(folder.resolve("_section.md"), "# Workshop\n\nThree sessions.\n");
+        Path card = Files.writeString(folder.resolve("01-prepare.md"), "# Prepare\n\nText.\n");
+        RenderContext ctx = new ConfigLoader().load(card, "pdf-a4", "a4");
+        ctx = ctx.withBook(ctx.book().withSections(List.of(
+                new Section(id, "Workshop", List.of(), null, List.of(card)))));
+        List<String> warned = new ArrayList<>();
+        SectionBodies.render(ctx, null, Map.of(), List.of(), "print", "pdf", null, new SystemStreamLog() {
+            @Override
+            public void warn(CharSequence content) {
+                warned.add(content.toString());
+            }
+        });
+        return warned;
+    }
+
+    @Test
+    @DisplayName("warn when a declared section misses its folder's body")
+    void declaredSectionMissingItsFoldersBody(@TempDir Path root) throws IOException {
+        List<String> warned = warnings(root, "workshop");
+        assertEquals(1, warned.size(), warned.toString());
+        assertTrue(warned.get(0).contains("Section 'workshop'"), warned.get(0));
+        assertTrue(warned.get(0).contains("<id>04-workshop</id>"), warned.get(0));
+    }
+
+    @Test
+    @DisplayName("stay quiet when the section's id is the folder's name")
+    void declaredSectionWithTheFoldersId(@TempDir Path root) throws IOException {
+        assertEquals(List.of(), warnings(root, "04-workshop"));
     }
 }

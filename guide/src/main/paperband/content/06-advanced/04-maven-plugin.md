@@ -166,7 +166,7 @@ as a directory layout, because the trace cards' folders don't group them.
 |---|---|
 | `root` | Book root. Patterns resolve against it. Defaults to the conventional geography: the `content/` wrapper if there is one, else `src/main/paperband`, else the module basedir, so a `<book>` that carries only config doesn't move the book. Declare it only for a book that lives elsewhere. |
 | `sections` | Ordered list of `section` elements. |
-| `section/id` | Section id — becomes `<id>.html` on the static site. Defaults to a slug of `title`. |
+| `section/id` | Section id — becomes `<id>.html` on the static site. Defaults to a slug of `title`. A section's `_section.md` is found by id, so a section over one folder needs the folder's name as its id to use that folder's text (`<id>04-workshop</id>`); the build warns when it doesn't. |
 | `section/title` | Shown on the divider and landing page. |
 | `section/landingTemplate` | Preset name or template path, exactly as a section folder's own `landing.template`. |
 | `section/where` | Pebble predicate over `target`; false skips the whole section. |
@@ -404,6 +404,10 @@ never inside one; a nested `<page>` fails the build:
   {% for c in cards %}<tr><td>{{ c.title }}</td><td>{{ c.axes.tier.label }}</td></tr>{% endfor %}
 </table>
 ```
+
+A book walked from its folders has to declare its `<sections>` to add a page. Give each
+declared section its folder's name as `<id>`, or its divider loses the folder's
+`_section.md` and shows the card list instead.
 
 To build a page from parts of the cards, such as every command or every Watch Out, use
 `cards | query('css')` (see [Themes](card:themes#querying-the-whole-book)).
