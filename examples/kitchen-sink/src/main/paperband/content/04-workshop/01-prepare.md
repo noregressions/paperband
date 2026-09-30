@@ -16,8 +16,11 @@ find out.
 
 Check that `java` is on your path and reports version 21 or later. {.instructions}
 
-```console
+```command
 $ java -version
+```
+
+```console
 openjdk version "21.0.4" 2024-07-16
 ```
 
