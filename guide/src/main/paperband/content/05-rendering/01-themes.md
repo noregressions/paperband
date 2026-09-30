@@ -423,6 +423,35 @@ page that doesn't group. This one collects every Watch Out in the book:
 
 `card:` links in a page template resolve like the ones in cards do.
 
+## Changing what a block prints
+
+`find`, `select` and `query` pick parts out of a card, but they hand them back as they were.
+To print a changed copy, such as a step without its console output, transform the nodes
+and write them back:
+
+```
+{{ e.block | drop('pre.console') | addClass('p.instructions', 'lead') | html | raw }}
+```
+
+| Filter | What it does |
+|---|---|
+| `drop('css')` | Leaves out every node the selector matches, and everything in it |
+| `addClass('css', 'name')` | Adds a class to every node the selector matches. The name is letters, digits, `-` and `_` |
+| `html` | Writes nodes back as HTML, the way `block.html` is written. Print it with `\| raw` |
+
+Each takes a block, a list of nodes or one node, and `drop` and `addClass` return the
+changed nodes as a list, so they chain and `find` can search what they return. The
+selector sees what `find`'s does. A block's children are left out, as they are from
+`block.html`.
+
+Nothing changes in place: the card prints as it did everywhere else, and a changed node's
+`text` and `html` describe the change. `html` writes an unchanged node exactly as
+`block.html` has it, and a ` ```command ` block through its block template, so it keeps
+its label and copy button. A class `addClass` puts on a fence reaches the template too.
+
+Neither transform can add markup. One removes nodes, and the other adds a class the writer
+escapes, so the content is as safe as it was when the card loaded.
+
 ## Dividers
 
 Which divider pages come before each card of a book is decided by a template,

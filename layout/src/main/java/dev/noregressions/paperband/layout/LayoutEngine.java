@@ -475,6 +475,7 @@ public final class LayoutEngine {
                 .extension(new HtmlSelectExtension())
                 .extension(new NodeFindExtension())
                 .extension(new BookQueryExtension())
+                .extension(new NodeTransformExtension())
                 .strictVariables(false)
                 .autoEscaping(true)
                 .build();
@@ -2997,9 +2998,12 @@ public final class LayoutEngine {
         bm.put("html", contentWriter.html(b, vars, source, output, target));
         // The same content as data: block.nodes | find('.instructions') is the
         // paragraph itself, its text and props, not a cut of the HTML string.
+        // Each node keeps its record and how this block writes its fences, so
+        // | html, drop and addClass work from the node, not from this map.
+        NodeHtml.Replacement fences = contentWriter.fences(vars, source, output, target);
         List<Map<String, Object>> nodes = new ArrayList<>(b.nodes().size());
         for (Node n : b.nodes()) {
-            nodes.add(nodeModel(n));
+            nodes.add(NodeModel.of(n, fences));
         }
         bm.put("nodes", nodes);
         List<Map<String, Object>> children = new ArrayList<>(b.children().size());
@@ -3008,35 +3012,6 @@ public final class LayoutEngine {
         }
         bm.put("children", children);
         return bm;
-    }
-
-    /**
-     * A {@link Node} as a template sees it: lenient, since most keys belong to
-     * some types only ({@code {% if node.lang %}}), with its props alongside
-     * the rest ({@code node.code}, not {@code node.props.code}) and the yes/no
-     * ones as booleans, so {@code {% if node.ordered %}} isn't fooled by
-     * {@code "false"}.
-     */
-    static Map<String, Object> nodeModel(Node n) {
-        LenientMap<String, Object> m = new LenientMap<>();
-        m.put("type", n.type());
-        m.put("tag", n.tag());
-        m.put("id", n.id());
-        m.put("classes", new ArrayList<>(n.classes()));
-        m.put("attributes", LenientMap.of(n.attributes()));
-        m.put("directives", LenientMap.of(n.directives()));
-        m.put("text", n.text());
-        m.put("html", n.html());
-        n.props().forEach((k, v) -> m.put(k, switch (k) {
-            case "ordered", "header", "drawn" -> Boolean.valueOf(v);
-            default -> v;
-        }));
-        List<Map<String, Object>> children = new ArrayList<>(n.children().size());
-        for (Node c : n.children()) {
-            children.add(nodeModel(c));
-        }
-        m.put("children", children);
-        return m;
     }
 
     private static Map<String, Object> contextModel(RenderContext ctx) {

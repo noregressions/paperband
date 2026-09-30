@@ -1,0 +1,131 @@
+package dev.noregressions.paperband.layout;
+
+import dev.noregressions.paperband.cards.ContentNodes;
+import dev.noregressions.paperband.model.Block;
+import dev.noregressions.paperband.model.BookConfig;
+import dev.noregressions.paperband.model.Card;
+import dev.noregressions.paperband.model.Frontmatter;
+import dev.noregressions.paperband.model.RenderContext;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+/**
+ * {@code drop}, {@code addClass} and {@code | html}: a block's content changed
+ * as data and written back, the card itself untouched.
+ */
+class NodeTransformExtensionTest {
+
+    /** Content as loading leaves it: a ```command and ```console still plain code blocks. */
+    private static final String CONTENT = "<p>Why it matters.</p>"
+            + "<p class=\"instructions\">Build it with <em>Maven</em>.</p>"
+            + "<pre><code class=\"language-command\">mvn package\n</code></pre>"
+            + "<pre><code class=\"language-console\">$ mvn package\nBUILD SUCCESS\n</code></pre>"
+            + "<ul><li>one</li><li>two <code>x</code></li></ul>";
+
+    private static Card card() {
+        Block step = new Block(Block.Kind.HEADING_SECTION, null, Set.of("build"), "Step 1 Build", 2, CONTENT,
+                List.of(), Map.of(), Map.of("step", "1"), ContentNodes.of(CONTENT));
+        return new Card("c", Path.of("c.md"), new Frontmatter(Map.of()), "C", List.of(step));
+    }
+
+    private static String render(Path book, String body) throws IOException {
+        Path layouts = Files.createDirectories(book.resolve("layouts"));
+        Files.writeString(layouts.resolve("t.html"), "{% set b = card.blocks[0] %}" + body);
+        BookConfig config = new BookConfig(null, "Book", List.of(), List.of(), Map.of(), List.of(), null, null);
+        return new LayoutEngine(book).render(card(), new RenderContext(config, List.of(), Map.of(), null, "pdf", "A4"),
+                "t");
+    }
+
+    @Test
+    void html_of_the_untouched_nodes_is_block_html(@TempDir Path book) throws IOException {
+        String html = render(book, "[{{ b | html | raw }}]=[{{ b.html | raw }}]");
+        int eq = html.indexOf("]=[");
+        String written = html.substring(html.indexOf('[') + 1, eq);
+        String original = html.substring(eq + 3, html.lastIndexOf(']'));
+        assertEquals(original, written);
+    }
+
+    @Test
+    void html_writes_a_fence_through_its_block_template(@TempDir Path book) throws IOException {
+        String html = render(book, "{{ b | find('pre.command') | first | html | raw }}");
+        assertTrue(html.contains("<pre class=\"command\"><code class=\"language-bash\">mvn package"), html);
+    }
+
+    @Test
+    void drop_leaves_out_what_matches_and_what_is_in_it(@TempDir Path book) throws IOException {
+        String html = render(book, "{{ b | drop('pre.console, li:has(code)') | html | raw }}");
+        assertFalse(html.contains("BUILD SUCCESS"), html);
+        assertFalse(html.contains("two"), html);
+        assertTrue(html.contains("<li>one</li>"), html);
+        assertTrue(html.contains("<pre class=\"command\">"), html);
+    }
+
+    @Test
+    void a_changed_parent_has_its_text_and_html_written_again(@TempDir Path book) throws IOException {
+        String html = render(book, "{% set list = b | drop('li:first-child') | find('ul') | first %}"
+                + "[{{ list.text }}][{{ list.html | raw }}]");
+        assertTrue(html.contains("[two x][<ul>"), html);
+        assertTrue(html.contains("<li>two <code>x</code></li>"), html);
+        assertFalse(html.contains("one"), html);
+    }
+
+    @Test
+    void add_class_adds_a_class_the_selector_and_writer_both_see(@TempDir Path book) throws IOException {
+        String html = render(book, "{% set t = b | addClass('p.instructions', 'lead') %}"
+                + "[{{ t | find('p.lead') | length }}]{{ t | find('p.lead') | html | raw }}");
+        assertTrue(html.contains("[1]<p class=\"instructions lead\">Build it with <em>Maven</em>.</p>"), html);
+    }
+
+    @Test
+    void a_class_added_to_a_fence_reaches_its_block_template(@TempDir Path book) throws IOException {
+        String html = render(book, "{{ b | addClass('pre.command', 'wide') | find('pre.command') | html | raw }}");
+        assertTrue(html.contains("<pre class=\"command wide\">"), html);
+    }
+
+    @Test
+    void transforms_chain_and_the_card_is_unchanged(@TempDir Path book) throws IOException {
+        String html = render(book, "{{ b | drop('p:not(.instructions)') | addClass('p', 'lead') | drop('ul')"
+                + " | html | raw }}|{{ b.html | raw }}");
+        String changed = html.substring(0, html.indexOf('|'));
+        assertTrue(changed.startsWith("<p class=\"instructions lead\">"), changed);
+        assertFalse(changed.contains("Why it matters"), changed);
+        assertFalse(changed.contains("<ul>"), changed);
+        assertTrue(html.substring(html.indexOf('|')).contains("Why it matters."), "block.html is as it was");
+    }
+
+    @Test
+    void a_class_name_that_isnt_one_fails(@TempDir Path book) {
+        Exception e = assertThrows(Exception.class,
+                () -> render(book, "{{ b | addClass('p', 'x\" onclick=\"y') }}"));
+        assertTrue(messages(e).contains("class name of letters"), messages(e));
+    }
+
+    @Test
+    void a_query_entry_is_not_a_node(@TempDir Path book) {
+        Exception e = assertThrows(Exception.class, () -> render(book, "{{ card | query('p') | html }}"));
+        assertTrue(messages(e).contains("e.node or e.block"), messages(e));
+    }
+
+    @Test
+    void a_query_entrys_node_and_block_can_be_changed(@TempDir Path book) throws IOException {
+        String html = render(book, "{% for e in card | query('block.build') %}"
+                + "{{ e.block | drop('pre.console') | html | raw }}{% endfor %}");
+        assertTrue(html.contains("<pre class=\"command\">"), html);
+        assertFalse(html.contains("BUILD SUCCESS"), html);
+    }
+
+    private static String messages(Throwable t) {
+        StringBuilder sb = new StringBuilder();
+        for (Throwable c = t; c != null; c = c.getCause()) sb.append(c.getMessage()).append('\n');
+        return sb.toString();
+    }
+}

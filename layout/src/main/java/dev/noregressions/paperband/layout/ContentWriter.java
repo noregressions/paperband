@@ -46,10 +46,19 @@ public final class ContentWriter {
      * @throws LayoutException when a block template fails
      */
     public String html(Block block, Map<String, Object> vars, Path source, String output, String target) {
-        NodeHtml.Replacement fences = n -> fence(n, vars, source, output, target);
+        NodeHtml.Replacement fences = fences(vars, source, output, target);
         // Most blocks have no templated fence; their HTML is already written.
         if (!NodeHtml.replacesAny(block.nodes(), n -> templated(n) ? "" : null)) return block.html();
         return NodeHtml.write(block.nodes(), fences);
+    }
+
+    /**
+     * How a block of this card writes a node: a templated fence through its
+     * template, anything else as it is (null). {@code | html} writes nodes a
+     * template picked out, or rebuilt, with it.
+     */
+    NodeHtml.Replacement fences(Map<String, Object> vars, Path source, String output, String target) {
+        return n -> fence(n, vars, source, output, target);
     }
 
     /** A fence this writer renders: left as code by loading, with a template for its type. */

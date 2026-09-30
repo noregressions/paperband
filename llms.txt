@@ -204,6 +204,11 @@ in a `<page>` template or `_book-front.html`, where `cards` is in scope; a card 
 Example: `{% for c in cards %}{% for e in c | query('block[data-paperband-step] pre.command') %}…{{ e.step.heading }}
 {{ e.node.code }}…`. Guide: Themes, "Querying the whole book".
 
+`drop('css')` and `addClass('css', 'name')` take a block (its own nodes), a list of nodes or a node, and
+return a changed copy as a list of nodes; `| html` writes nodes back as `block.html` would (fences through
+their block templates), printed with `| raw`: `{{ e.block | drop('pre.console') | html | raw }}`. Nothing
+changes in place. Class names are letters, digits, `-`, `_`. Guide: Themes, "Changing what a block prints".
+
 ### Frontmatter fields
 
 | Field | Type | Default | Meaning |

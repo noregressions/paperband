@@ -20,8 +20,11 @@ import java.util.Map;
  * dispatches on {@code instanceof LenientMap}. Linked rather than plain
  * hashed so iteration keeps the wrapped map's order: a block's attributes are
  * written onto its section in the order the author gave them.
+ *
+ * <p>Not final: a model map that carries more than its entries -- a node's,
+ * which keeps the record it was read from -- is a subclass, and stays lenient.
  */
-public final class LenientMap<K, V> extends LinkedHashMap<K, V> {
+public class LenientMap<K, V> extends LinkedHashMap<K, V> {
 
     public LenientMap() {
         super();
