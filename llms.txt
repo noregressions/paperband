@@ -711,7 +711,8 @@ yaml. Anything inside `<book>` WINS over the yaml; geometry outside it (`<margin
       <landingPage>true</landingPage>       <!-- false = no divider/landing page at all -->
     </section>
     <page><template>matrix</template></page> <!-- generated page: whole-book model
-                                                 (cards, sections, axisGroupings, book, vars) -->
+                                                 (cards, sections, axisGroupings, book, vars);
+                                                 on the site: matrix.html + a nav entry -->
   </sections>
   <index>auto</index>
 </book>

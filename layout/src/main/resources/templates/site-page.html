@@ -1,0 +1,12 @@
+{# A generated page (a <page> marker in a POM-declared <sections>) on the
+   site: the page's own template, rendered with the book model a PDF page
+   gets, inside the site shell. pageBody is that rendering; pageTitle its
+   first <h1>, or the template's name. The file is <template>.html at the
+   site root, with a nav entry where the marker sits in the book. #}
+{% extends "_site-page" %}
+{% block title %}{{ pageTitle }} — {{ book.title | default('paperband') }}{% endblock %}
+{% block content %}
+<article class="site-generated-page" id="{{ page.id }}">
+{{ pageBody | raw }}
+</article>
+{% endblock %}

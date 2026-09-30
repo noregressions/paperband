@@ -283,8 +283,11 @@ public class SiteMojo extends AbstractPaperbandMojo {
         layout.setBlockTemplates(blockTemplates);
         layout.setView(view);
         java.util.Set<String> leftOut = new java.util.LinkedHashSet<>();
+        // <page> markers: generated pages, placed by card index as in the PDF.
+        List<dev.noregressions.paperband.model.PlacedPage> placedPages = source.pages();
         if (layout.view() != null) {
             List<Boolean> keeps = layout.keeps(cards, contexts, "site");
+            placedPages = keptPages(placedPages, keeps);
             List<String> dropped = new ArrayList<>();
             for (int i = cards.size() - 1; i >= 0; i--) {
                 if (!keeps.get(i)) {
@@ -315,6 +318,7 @@ public class SiteMojo extends AbstractPaperbandMojo {
 
         layout.setExtraCss(stylesheetPaths());
         layout.setExcludedCardIds(leftOut);
+        layout.setPagesAt(placedPages);
         // The book's own icons live in its home, beside paperband.yaml; a book
         // with no home keeps them at its root. See LayoutEngine#setIconsDir.
         layout.setIconsDir(geo.home() != null ? geo.home().resolve("icons")
@@ -510,5 +514,23 @@ public class SiteMojo extends AbstractPaperbandMojo {
             copied++;
         }
         return copied;
+    }
+
+    /**
+     * {@code pages} with each index counted over the cards {@code keeps}
+     * holds, so a page stays in front of the card it was in front of when a
+     * view leaves cards out -- as the build places them.
+     */
+    static List<dev.noregressions.paperband.model.PlacedPage> keptPages(
+            List<dev.noregressions.paperband.model.PlacedPage> pages, List<Boolean> keeps) {
+        List<dev.noregressions.paperband.model.PlacedPage> out = new ArrayList<>(pages.size());
+        for (dev.noregressions.paperband.model.PlacedPage p : pages) {
+            int kept = 0;
+            for (int i = 0; i < Math.min(p.cardIndex(), keeps.size()); i++) {
+                if (keeps.get(i)) kept++;
+            }
+            out.add(new dev.noregressions.paperband.model.PlacedPage(kept, p.template()));
+        }
+        return out;
     }
 }

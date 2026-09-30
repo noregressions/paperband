@@ -98,7 +98,8 @@
                         </configuration>
                     </execution>
                     <!-- The same cheat sheet as a site: a view works for the
-                         site goal too. -->
+                         site goal too, and the <page> is commands.html, with
+                         an entry in the nav after the workshop. -->
                     <execution>
                         <id>cheatsheet-site</id>
                         <phase>package</phase>
@@ -106,9 +107,16 @@
                         <configuration>
                             <book>
                                 <title>Workshop cheat sheet</title>
-                                <includes>
-                                    <include>04-workshop/0*.md</include>
-                                </includes>
+                                <sections>
+                                    <section>
+                                        <id>04-workshop</id>
+                                        <title>Workshop</title>
+                                        <includes>
+                                            <include>04-workshop/0*.md</include>
+                                        </includes>
+                                    </section>
+                                    <page><template>commands</template></page>
+                                </sections>
                             </book>
                             <view>cheatsheet</view>
                             <outputDirectory>${project.build.directory}/cheatsheet-site</outputDirectory>

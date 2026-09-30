@@ -419,6 +419,12 @@ so it appears in `paperband:pages`. Positioning matches `<toc/>`: skipped and em
 are not counted, and a `-Dpaperband.cards` selection keeps the page before the first kept
 card that followed it.
 
+The `site` goal renders the same markers. Each page is `<template>.html` at the site's
+root, in the site's shell, with an entry in the navigation where the marker sits among the
+sections, labelled with the page's first `<h1>`. Its template sees the same model, with
+`output` set to `site`, and its `card:` links resolve to card pages. A template placed twice
+is one page on the site, and a page named like a section or axis page fails the build.
+
 Use a `<page>` for pages derived from the book; written content belongs in a card. Themes
 have a related hook, `_book-front`, which renders between the cover and the first card
 without a POM declaration.

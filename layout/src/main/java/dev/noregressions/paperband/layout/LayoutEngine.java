@@ -922,6 +922,18 @@ public final class LayoutEngine {
             sidebarEntries = List.of(flat);
         }
 
+        // Generated pages (<page> markers), rendered before any page that
+        // carries the nav, since each gets a nav entry of its own.
+        List<Map<String, Object>> sitePages = sitePages(cards, contexts, groupings, sectionMetas, stats,
+                bookModel, bookCtx);
+        if (!sitePages.isEmpty()) {
+            // A flat book's sidebar is its own catch-all list (above); every
+            // other book's sidebar is navEntries, and gets the same entries.
+            boolean sameList = sidebarEntries == navEntries;
+            navEntries = withPageEntries(navEntries, sitePages);
+            sidebarEntries = sameList ? navEntries : withPageEntries(sidebarEntries, sitePages);
+        }
+
         Map<String, String> out = new LinkedHashMap<>();
 
         // index.html
@@ -1081,6 +1093,33 @@ public final class LayoutEngine {
             out.put("cards/" + card.id() + ".html",
                     renderSiteTemplate("site-card", model));
             checkSlots("site-card", List.of(cm));
+        }
+
+        // <id>.html -- one per generated page, in the site shell.
+        for (Map<String, Object> sp : sitePages) {
+            String key = sp.get("id") + ".html";
+            if (out.containsKey(key)) {
+                throw new LayoutException("The <page> template '" + sp.get("template") + "' would be the site's "
+                        + key + ", which is already a section or axis page. Rename the template.");
+            }
+            Map<String, Object> model = new HashMap<>();
+            model.put("book", bookModel);
+            model.put("navEntries", navEntries);
+            model.put("sidebarEntries", sidebarEntries);
+            model.put("sections", sectionMetas);
+            model.put("stats", stats);
+            model.put("css", css);
+            model.put("cssImports", cssImports);
+            model.put("htmlClass", htmlClass);
+            model.put("measure", measure);
+            model.put("urlPrefix", "");
+            model.put("page", Map.of("kind", "page", "id", sp.get("id")));
+            model.put("sidebar", sidebar);
+            model.put("sidebar_collapsed", sidebarCollapsed);
+            model.put("sidebar_sections_collapsed", sidebarSectionsCollapsed);
+            model.put("pageTitle", sp.get("label"));
+            model.put("pageBody", sp.get("body"));
+            out.put(key, renderSiteTemplate("site-page", model));
         }
 
         CardLinks links = CardLinks.of(cards, excludedCardIds)
@@ -1381,6 +1420,7 @@ public final class LayoutEngine {
                 entry.put("axis", g.axis().name());
                 entry.put("axisTitle", g.axis().title());
                 entry.put("url", axisPageId(g.axis(), valueMeta.get("id")) + ".html");
+                entry.put("firstCard", i);
                 seen.put(key, entry);
             }
             if (any) continue;
@@ -1399,6 +1439,9 @@ public final class LayoutEngine {
             // so an absent key would break every template reading e.url.
             entry.put("url", Boolean.FALSE.equals(section.get("landingPage"))
                     ? null : secId + ".html");
+            // Where the entry starts in walk order, so a generated page's entry
+            // can be placed among them (see sitePages).
+            entry.put("firstCard", i);
             seen.put(key, entry);
         }
         return new ArrayList<>(seen.values());
@@ -1679,6 +1722,100 @@ public final class LayoutEngine {
             }
             section.put("cards", sectionCards);
         }
+    }
+
+    /** What a {@code <page>} template's name may be on the site: its last path segment, as a file name. */
+    private static final java.util.regex.Pattern SITE_PAGE_ID = java.util.regex.Pattern.compile("[A-Za-z0-9_-]+");
+
+    /**
+     * The site's generated pages: each {@code <page>} template rendered with the
+     * model a PDF page gets -- every card in full, the sections, the axis
+     * groupings, the book and its vars -- as {@code {id, template, at, label,
+     * body}}. The id is the template's name, so {@code <page><template>commands}
+     * is {@code commands.html}; the label is the page's first {@code <h1>}, for
+     * its nav entry. A template placed twice is one page on the site, where the
+     * first marker puts it: a site has no page order to repeat it in.
+     */
+    private List<Map<String, Object>> sitePages(List<Card> cards, List<RenderContext> contexts,
+                                                List<AxisGrouping> groupings, List<Map<String, Object>> sectionMetas,
+                                                Map<String, Object> stats, Map<String, Object> bookModel,
+                                                RenderContext bookCtx) {
+        if (pagesAt.isEmpty()) return List.of();
+        List<Map<String, Object>> cardModels = new ArrayList<>(cards.size());
+        for (int i = 0; i < cards.size(); i++) {
+            Map<String, Object> cm = cardModel(cards.get(i), cardAxesFromGroupings(i, groupings),
+                    contexts.get(i).vars(), "site", contexts.get(i).target());
+            cm.put("number", numberLabel(cards.get(i).id()));
+            cardModels.add(cm);
+        }
+        Map<String, Object> model = new HashMap<>();
+        model.put("cards", cardModels);
+        model.put("sections", sectionMetas);
+        model.put("axisGroupings", axisGroupingsModel(groupings));
+        model.put("stats", stats);
+        model.put("book", bookModel);
+        model.put("vars", LenientMap.of(bookCtx.vars()));
+        model.put("output", "site");
+        model.put("target", bookCtx.target());
+        List<Map<String, Object>> out = new ArrayList<>();
+        Set<String> seen = new java.util.HashSet<>();
+        for (PlacedPage placed : pagesAt) {
+            String template = placed.template();
+            String id = template.substring(template.lastIndexOf('/') + 1).replaceFirst("\\.html$", "");
+            if (!SITE_PAGE_ID.matcher(id).matches()) {
+                throw new LayoutException("The <page> template '" + template + "' can't name a site page: use"
+                        + " letters, digits, - and _ in its file name.");
+            }
+            if (!seen.add(id)) continue;
+            String body = renderSiteTemplate(template, model);
+            org.jsoup.nodes.Element h1 = org.jsoup.Jsoup.parseBodyFragment(body).selectFirst("h1");
+            Map<String, Object> sp = new LinkedHashMap<>();
+            sp.put("id", id);
+            sp.put("template", template);
+            sp.put("at", Math.min(placed.cardIndex(), cards.size()));
+            sp.put("label", h1 == null || h1.text().isBlank() ? id : h1.text());
+            sp.put("body", body);
+            out.add(sp);
+        }
+        return out;
+    }
+
+    /**
+     * {@code entries} with a {@code page} entry for each of {@code pages},
+     * each in front of the first entry that starts at or after the card its
+     * marker names, so it sits in the nav where it sits in the book.
+     */
+    private static List<Map<String, Object>> withPageEntries(List<Map<String, Object>> entries,
+                                                             List<Map<String, Object>> pages) {
+        List<Map<String, Object>> out = new ArrayList<>(entries);
+        for (Map<String, Object> sp : pages) {
+            Map<String, Object> entry = new LinkedHashMap<>();
+            entry.put("kind", "page");
+            entry.put("id", sp.get("id"));
+            entry.put("label", sp.get("label"));
+            entry.put("url", sp.get("id") + ".html");
+            // Present so a template reading a section's keys doesn't fail on
+            // a page: it has no count and no cards of its own.
+            entry.put("count", null);
+            entry.put("cards", List.of());
+            entry.put("firstCard", sp.get("at"));
+            int at = (Integer) sp.get("at");
+            int pos = out.size();
+            for (int i = 0; i < out.size(); i++) {
+                Object first = out.get(i).get("firstCard");
+                if (first instanceof Integer f && f >= at && !"page".equals(out.get(i).get("kind"))) {
+                    pos = i;
+                    break;
+                }
+            }
+            // A catch-all entry (a flat book's sidebar) has no start: pages at
+            // the front go before it, the rest after.
+            if (pos == out.size() && at == 0 && !out.isEmpty() && !(out.get(0).get("firstCard") instanceof Integer)) {
+                pos = 0;
+            }
+            out.add(pos, entry);
+        }
+        return out;
     }
 
     private String renderSiteTemplate(String layoutName, Map<String, Object> model) {

@@ -2,7 +2,8 @@
    independently) and section in walk order, each with its cards. Expects:
    navEntries                   — unified ordered list of {kind, id, label,
                                   count, color?, url, cards, axis?}; axis
-                                  values and sections interleaved in book order
+                                  values, sections and generated pages (kind
+                                  'page', no cards) interleaved in book order
    urlPrefix                    — relative-link prefix ('' on top-level pages,
                                   '../' on card pages)
    page                         — { kind, id }; used to mark the active row
@@ -31,7 +32,7 @@
        because Pebble's `{% set %}` isn't used elsewhere in this codebase
        and we want to keep the template footprint conservative. #}
     <section class="sidebar-section sidebar-section-{% if e.kind == 'axis' %}{{ e.axis }}-{{ e.id }}{% else %}{{ e.id }}{% endif %}{% if sidebar_sections_collapsed and e.label is not null and e.cards is not empty and not ((page.kind == 'axis' and e.kind == 'axis' and page.axis == e.axis and page.id == e.id) or (page.kind == 'section' and e.kind == 'section' and page.id == e.id)) %} collapsed{% endif %}"
-             data-section-id="{% if e.kind == 'axis' %}axis-{{ e.axis }}-{{ e.id }}{% else %}section-{{ e.id }}{% endif %}">
+             data-section-id="{% if e.kind == 'axis' %}axis-{{ e.axis }}-{{ e.id }}{% elseif e.kind == 'page' %}page-{{ e.id }}{% else %}section-{{ e.id }}{% endif %}">
       {% if e.kind == 'axis' %}
       <h3 class="sidebar-tier-heading">
         <a href="{{ urlPrefix }}{{ e.url }}"
@@ -45,6 +46,15 @@
                 aria-expanded="{% if sidebar_sections_collapsed and not (page.kind == 'axis' and page.axis == e.axis and page.id == e.id) %}false{% else %}true{% endif %}"
                 onclick="paperbandToggleSection(this)">▾</button>
         {% endif %}
+      </h3>
+      {% elseif e.kind == 'page' %}
+      {# A generated page (<page> marker): a heading that links to it, with no
+         cards under it. #}
+      <h3 class="sidebar-section-heading sidebar-page-heading">
+        <a href="{{ urlPrefix }}{{ e.url }}"
+           class="{% if page.kind == 'page' and page.id == e.id %}active{% endif %}">
+          {{ e.label }}
+        </a>
       </h3>
       {% elseif e.label is null %}
       {# Flat book: one unlabelled entry holding every card. No heading —

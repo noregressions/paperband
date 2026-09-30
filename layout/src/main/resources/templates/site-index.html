@@ -81,6 +81,12 @@
       <span class="tier-box-label" style="color: {{ e.color }}">{{ e.label }}</span>
       <span class="tier-box-count">{{ e.count }} card{% if e.count != 1 %}s{% endif %} →</span>
     </a>
+    {% elseif e.kind == 'page' %}
+    {# A generated page (<page> marker): no cards to count. #}
+    <a class="tier-box page-box" href="{{ e.url }}">
+      <span class="tier-box-label">{{ e.label }}</span>
+      <span class="tier-box-count">→</span>
+    </a>
     {% elseif e.url is not null %}
     <a class="tier-box section-box" href="{{ e.url }}">
       <span class="tier-box-label">{{ e.label }}</span>
