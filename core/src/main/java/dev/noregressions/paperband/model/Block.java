@@ -39,7 +39,11 @@ import java.util.Set;
  * @param classes  CSS classes attached to the block; never null, may be empty
  * @param heading  the heading text for {@link Kind#HEADING_SECTION} blocks; null for the synthetic intro block and fenced-div blocks
  * @param level    heading depth (2–6) for a real heading section; {@code 0} for the synthetic intro block
- * @param html     this block's own direct HTML content, excluding any nested children's content
+ * @param html     this block's own direct HTML content, excluding any nested children's content,
+ *                 as loading wrote it: its {@code nodes} written back, a fence a renderer drew
+ *                 drawn, and every other fence a plain code block. A block template is layout,
+ *                 so the HTML an output prints -- {@code block.html} to a template -- is this
+ *                 with each templated fence written through its template
  * @param children nested sub-sections opened by a deeper heading while this block was open; never null, may be empty
  * @param attributes every other attribute the heading carried ({@code ## Heading {step=1}}), in source
  *                   order, keyed by name; class and id are excluded (they have their own components).

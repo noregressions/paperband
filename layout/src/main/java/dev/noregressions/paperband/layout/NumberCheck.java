@@ -3,6 +3,7 @@ package dev.noregressions.paperband.layout;
 import dev.noregressions.paperband.model.Block;
 import dev.noregressions.paperband.model.Card;
 import dev.noregressions.paperband.model.CardNumber;
+import dev.noregressions.paperband.model.Node;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -38,15 +39,6 @@ import java.util.regex.Pattern;
  * to name a chapter in its own words.
  */
 public final class NumberCheck {
-
-    /**
-     * An anchor with a {@code card:} href, capturing the id and the label text.
-     * Only the un-rewritten scheme is matched, so this must run before
-     * {@link CardLinks} resolves hrefs.
-     */
-    private static final Pattern LINK = Pattern.compile(
-            "<a\\s[^>]*href\\s*=\\s*([\"'])card:([^\"'#\\s]*)(?:#[^\"'\\s]*)?\\1[^>]*>(.*?)</a>",
-            Pattern.DOTALL);
 
     /** A dotted chapter number sitting in link text. */
     private static final Pattern NUMBER = Pattern.compile("\\b(\\d+)\\.(\\d+)\\b");
@@ -102,34 +94,42 @@ public final class NumberCheck {
             Map<String, CardNumber> numbers, List<Mismatch> out) {
         if (blocks == null) return;
         for (Block b : blocks) {
-            scanHtml(card, b.html(), numbers, out);
+            scanNodes(card, b.nodes(), numbers, out);
             scanBlocks(card, b.children(), numbers, out);
         }
     }
 
-    private static void scanHtml(Card card, String html,
+    /** Every {@code card:} link among {@code nodes}, at any depth, whose label states a stale number. */
+    private static void scanNodes(Card card, List<Node> nodes,
             Map<String, CardNumber> numbers, List<Mismatch> out) {
-        if (html == null || html.isEmpty()) return;
-        Matcher m = LINK.matcher(html);
-        while (m.find()) {
-            String targetId = m.group(2);
-            String label = stripTags(m.group(3));
-            CardNumber actual = numbers.get(targetId);
-            // Unnumbered target, or a link into a card this build left out:
-            // CardLinks owns the "does it exist" question, not this check.
-            if (actual == null) continue;
-            Matcher n = NUMBER.matcher(label);
-            if (!n.find()) continue;                    // prose label; leave it be
-            String claimed = n.group(1) + "." + n.group(2);
-            if (!claimed.equals(actual.label())) {
-                out.add(new Mismatch(card.source(), card.id(), targetId,
-                        claimed, actual.label(), label.trim()));
+        for (Node n : nodes) {
+            String href = n.attributes().get("href");
+            if ("link".equals(n.type()) && href != null && href.startsWith(CardLinks.SCHEME)) {
+                check(card, targetOf(href), n.text(), numbers, out);
             }
+            scanNodes(card, n.children(), numbers, out);
         }
     }
 
-    /** Link text is markdown-rendered, so it may carry {@code <code>} and friends. */
-    private static String stripTags(String s) {
-        return s == null ? "" : s.replaceAll("<[^>]*>", "");
+    /** {@code card:id#fragment} to {@code id}. */
+    private static String targetOf(String href) {
+        String target = href.substring(CardLinks.SCHEME.length());
+        int hash = target.indexOf('#');
+        return hash < 0 ? target : target.substring(0, hash);
+    }
+
+    private static void check(Card card, String targetId, String label,
+            Map<String, CardNumber> numbers, List<Mismatch> out) {
+        CardNumber actual = numbers.get(targetId);
+        // Unnumbered target, or a link into a card this build left out:
+        // CardLinks owns the "does it exist" question, not this check.
+        if (actual == null) return;
+        Matcher n = NUMBER.matcher(label);
+        if (!n.find()) return;                          // prose label; leave it be
+        String claimed = n.group(1) + "." + n.group(2);
+        if (!claimed.equals(actual.label())) {
+            out.add(new Mismatch(card.source(), card.id(), targetId,
+                    claimed, actual.label(), label.trim()));
+        }
     }
 }

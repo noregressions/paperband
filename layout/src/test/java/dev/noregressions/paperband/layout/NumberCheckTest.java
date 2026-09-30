@@ -1,5 +1,6 @@
 package dev.noregressions.paperband.layout;
 
+import dev.noregressions.paperband.cards.ContentNodes;
 import dev.noregressions.paperband.model.Block;
 import dev.noregressions.paperband.model.Card;
 import dev.noregressions.paperband.model.CardNumber;
@@ -77,10 +78,11 @@ class NumberCheckTest {
 
         @Test
         void should_find_labels_nested_in_child_blocks() {
+            String deeper = "<a href=\"card:lombok-trap\">Chapter 3.1</a>";
             Block child = new Block(Block.Kind.HEADING_SECTION, null, Set.of(), "Deeper", 3,
-                    "<a href=\"card:lombok-trap\">Chapter 3.1</a>", List.of());
+                    deeper, List.of(), Map.of(), Map.of(), ContentNodes.of(deeper));
             Block parent = new Block(Block.Kind.HEADING_SECTION, null, Set.of(), "Top", 2,
-                    "nothing here", List.of(child));
+                    "nothing here", List.of(child), Map.of(), Map.of(), ContentNodes.of("nothing here"));
             Card c = new Card("a", Path.of("content/a.md"), Frontmatter.empty(), "A",
                     List.of(parent));
 
@@ -145,7 +147,8 @@ class NumberCheckTest {
     }
 
     private static Card card(String id, String html) {
-        Block b = new Block(Block.Kind.HEADING_SECTION, null, Set.of(), null, 0, html, List.of());
+        Block b = new Block(Block.Kind.HEADING_SECTION, null, Set.of(), null, 0, html, List.of(),
+                Map.of(), Map.of(), ContentNodes.of(html));
         return new Card(id, Path.of("content/" + id + ".md"), Frontmatter.empty(),
                 id, List.of(b));
     }
