@@ -191,7 +191,10 @@ group, `part: N` in sections' `_section.md` shares one, `numbered: false` opts o
 required): its cards read "Scenario 1, 2, 3" even with no book numbering. The number shows before the title
 (card page, contents, bookmarks, site sidebar/grids/prev-next; `card.number`, `c.number`); an empty
 `[](card:x)` prints it ("Chapter 2.3" or "Scenario 3"), `[#](card:x)` the bare number; a link whose text
-states a different number ("Scenario 2") fails the build. Views and `select:` don't renumber. `{!number}`
+states a different number ("Scenario 2") fails the build. Views and `select:` don't renumber. A series that
+crosses sections: `numberAs: "S{n}"` in cards' vars (a folder's `paperband.yaml`) numbers every card with that
+format in book order, S1, S2, …; series cards are skipped by section/chapter numbering; `{part}` not allowed.
+A title holding `{!number}` gets no automatic prefix (`card.number` is null for it). `{!number}`
 in a card's text prints its own bare number ("3", "2.4"), no link; a heading's anchor keeps "number"
 (`## Scenario {!number} recap` → `#scenario-number-recap`); it fails the build in an unnumbered card or a
 `_section.md`, and is refused in an attribute group. Guide card: `number-a-series`.

@@ -1499,6 +1499,62 @@ public final class LayoutEngine {
      */
     public Map<String, CardNumber> cardNumbers(Path bookRoot, List<Section> declared,
             List<Card> cards, Map<String, Object> vars) {
+        return cardNumbers(bookRoot, declared, cards, null, vars);
+    }
+
+    /**
+     * {@link #cardNumbers(Path, List, List, Map)}, with each card's own vars,
+     * which can put it in a series: {@code numberAs: "S{n}"}, usually from a
+     * folder's {@code paperband.yaml}, numbers every card that says the same
+     * in book order -- S1, S2, S3 -- whichever sections they sit in. A card in
+     * a series takes its number from it and is left out of its section's and
+     * the book's numbering.
+     *
+     * @param cardVars each card's cascaded vars, parallel to {@code cards};
+     *                 null when no card can be in a series
+     * @throws LayoutException for a {@code numberAs} with no {@code {n}}, or
+     *                         one naming a {@code {part}}, which a series hasn't
+     */
+    public Map<String, CardNumber> cardNumbers(Path bookRoot, List<Section> declared,
+            List<Card> cards, List<Map<String, Object>> cardVars, Map<String, Object> vars) {
+        if (cards == null || cards.isEmpty()) return Map.of();
+        Map<String, CardNumber> series = seriesNumbers(cards, cardVars);
+        Map<String, CardNumber> rest = sectionNumbers(bookRoot, declared,
+                series.isEmpty() ? cards : cards.stream().filter(c -> !series.containsKey(c.id())).toList(), vars);
+        if (series.isEmpty()) return rest;
+        Map<String, CardNumber> out = new LinkedHashMap<>();
+        for (Card c : cards) {
+            CardNumber n = series.containsKey(c.id()) ? series.get(c.id()) : rest.get(c.id());
+            if (n != null) out.put(c.id(), n);
+        }
+        return out;
+    }
+
+    /** The cards whose vars set {@code numberAs}, numbered per format in book order. */
+    private static Map<String, CardNumber> seriesNumbers(List<Card> cards, List<Map<String, Object>> cardVars) {
+        if (cardVars == null) return Map.of();
+        Map<String, Integer> counters = new LinkedHashMap<>();
+        Map<String, CardNumber> out = new LinkedHashMap<>();
+        for (int i = 0; i < cards.size() && i < cardVars.size(); i++) {
+            Object raw = cardVars.get(i) == null ? null : cardVars.get(i).get("numberAs");
+            if (raw == null || String.valueOf(raw).isBlank()) continue;
+            String format = String.valueOf(raw).trim();
+            Card card = cards.get(i);
+            if (!format.contains("{n}")) {
+                throw new LayoutException(card.source() + ": numberAs: \"" + raw + "\" has no {n} for the number."
+                        + " Write it as, say, numberAs: \"S{n}\".");
+            }
+            if (format.contains("{part}")) {
+                throw new LayoutException(card.source() + ": numberAs: \"" + raw + "\" names a {part}, which a"
+                        + " series doesn't have: it numbers its cards 1, 2, 3 across the book. Use {n} alone.");
+            }
+            out.put(card.id(), new CardNumber(0, counters.merge(format, 1, Integer::sum), format));
+        }
+        return out;
+    }
+
+    private Map<String, CardNumber> sectionNumbers(Path bookRoot, List<Section> declared,
+            List<Card> cards, Map<String, Object> vars) {
         if (cards == null || cards.isEmpty()) return Map.of();
         Map<String, SectionNumbering> sections = new LinkedHashMap<>();
         sectionBodies.forEach((id, body) -> {
@@ -1758,20 +1814,24 @@ public final class LayoutEngine {
     private List<Card> withOwnNumbers(List<Card> cards, boolean required) {
         List<Card> out = new ArrayList<>(cards.size());
         List<String> unnumbered = new ArrayList<>();
+        Set<String> inTitle = new LinkedHashSet<>();
         for (Card card : cards) {
             if (!mentionsNumber(card)) {
                 out.add(card);
                 continue;
             }
+            if (card.title() != null && card.title().contains(CardNumber.MARK)) inTitle.add(card.id());
             CardNumber n = cardNumbers.get(card.id());
             if (n == null) unnumbered.add(card.id() + " (" + card.source() + ")");
             String number = n == null ? "" : n.bare();
             out.add(new Card(card.id(), card.source(), card.frontmatter(), fill(card.title(), number),
                     card.blocks().stream().map(b -> fill(b, number)).toList()));
         }
+        numberInTitle = inTitle;
         if (required && !unnumbered.isEmpty()) {
             throw new LayoutException("{!number} prints the card's number, but these cards have none: "
-                    + String.join(", ", unnumbered) + ". Give their section a format in its _section.md"
+                    + String.join(", ", unnumbered) + ". Put them in a series with numberAs: \"S{n}\" in their"
+                    + " vars (a folder's paperband.yaml), give their section a format in its _section.md"
                     + " (numbering: \"Scenario {n}\"), or number the book with vars.numbering.");
         }
         return out;
@@ -3074,8 +3134,19 @@ public final class LayoutEngine {
         return out;
     }
 
-    /** This card's number as a template-ready string, or null when unnumbered. */
+    /**
+     * Cards whose title prints their own number ({@code # S{!number} — Lab}),
+     * from the last {@link #withOwnNumbers}: the prefix the templates and the
+     * contents put before a title would say it twice.
+     */
+    private Set<String> numberInTitle = Set.of();
+
+    /**
+     * This card's number as a template-ready string, for printing before its
+     * title; null when it's unnumbered, or when its title already says it.
+     */
     private String numberLabel(String cardId) {
+        if (numberInTitle.contains(cardId)) return null;
         CardNumber n = cardNumbers.get(cardId);
         return n == null ? null : n.label();
     }

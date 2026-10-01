@@ -68,6 +68,7 @@ ones the engine itself reads.
 | `<maxPagesPerCard>` | POM | Build | `vars.maxPagesPerCard` | — | `<maxPagesPerCard>2</maxPagesPerCard>` | [Page Enforcement](card:page-enforcement) |
 | `maxPagesPerCard` | vars | Book | `<maxPagesPerCard>` (wins) | no limit | `vars: { maxPagesPerCard: 2 }` | [Page Enforcement](card:page-enforcement) |
 | `mermaidTheme` | vars | Card | — | `default` | `vars: { mermaidTheme: dark }` | [Card Structure](card:card-structure) |
+| `numberAs` | vars | Card | `<book><vars>` | — | `vars: { numberAs: "S{n}" }` | [Number a Series of Cards](card:number-a-series#number-a-series-that-crosses-sections) |
 | `numbered` | `_section.md` | Section | — | `true` | `numbered: false` | [Number a Series of Cards](card:number-a-series) |
 | `numbering` | `_section.md` | Section | — | — | `numbering: "Scenario {n}"` | [Number a Series of Cards](card:number-a-series) |
 | `numbering` | vars | Book | — | off | `vars: { numbering: sequential }` | [Number a Series of Cards](card:number-a-series) |

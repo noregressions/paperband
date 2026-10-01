@@ -286,6 +286,7 @@ public class SiteMojo extends AbstractPaperbandMojo {
         // Numbers come from the whole book, as in a build: a view that leaves
         // cards out doesn't renumber the ones it keeps.
         List<Card> allCards = new ArrayList<>(cards);
+        List<Map<String, Object>> allVars = contexts.stream().map(RenderContext::vars).toList();
         // <page> markers: generated pages, placed by card index as in the PDF.
         List<dev.noregressions.paperband.model.PlacedPage> placedPages = source.pages();
         if (layout.view() != null) {
@@ -335,7 +336,7 @@ public class SiteMojo extends AbstractPaperbandMojo {
         // [](card:x) label filled with nothing.
         java.util.Map<String, dev.noregressions.paperband.model.CardNumber> numbers =
                 layout.cardNumbers(bookCtx.book().bookRoot(), bookCtx.book().sections(),
-                        allCards, bookCtx.vars());
+                        allCards, allVars, bookCtx.vars());
         dev.noregressions.paperband.layout.NumberCheck.verify(cards, numbers);
         layout.setCardNumbers(numbers);
         Map<String, String> pages;

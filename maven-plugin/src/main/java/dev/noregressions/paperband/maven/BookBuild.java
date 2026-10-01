@@ -331,6 +331,8 @@ final class BookBuild {
         // numbers in two editions, and its references to chapters it does not
         // carry could not name them at all.
         List<Card> allCards = cards;
+        // Each card's vars, for numberAs: a series is numbered over the whole book too.
+        List<java.util.Map<String, Object>> allVars = contexts.stream().map(RenderContext::vars).toList();
         // Captured before the reassignment below: a card: link naming one of
         // these is a different mistake from a misspelling (see CardLinks).
         java.util.Set<String> excludedCardIds = new java.util.LinkedHashSet<>();
@@ -380,7 +382,7 @@ final class BookBuild {
         // matches on. A no-op for a book that has not asked for numbering.
         java.util.Map<String, dev.noregressions.paperband.model.CardNumber> numbers =
                 layout.cardNumbers(bookCtx.book().bookRoot(), bookCtx.book().sections(),
-                        allCards, bookCtx.vars());
+                        allCards, allVars, bookCtx.vars());
         NumberCheck.verify(cards, numbers);
         layout.setCardNumbers(numbers);
         String html = layoutOverride != null

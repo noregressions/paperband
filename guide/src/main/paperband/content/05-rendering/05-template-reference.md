@@ -174,7 +174,8 @@ handles only `axis` and `section` shows a generated page as a section with no co
 
 A numbered card's number is its label as a reader sees it: `2.3` for a chapter, or its
 section's format filled in, `Scenario 3` (see [Number a Series of Cards](card:number-a-series)).
-It's null for an unnumbered card, so `{% if card.number %}` is the test.
+It's null for an unnumbered card, and for a card whose title prints its own number with
+`{!number}`, so `{% if card.number %}` is the test for printing it before the title.
 
 | Key | Where |
 |---|---|

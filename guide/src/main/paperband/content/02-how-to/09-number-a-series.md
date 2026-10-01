@@ -40,6 +40,28 @@ scenario, `{!step}` still counts from Step 1.
 The format can say anything around the number: `"Lab {n}"`, `"Session {n}"`, `"Exercise
 {n}"`. It must have `{n}`; a format without one fails the build.
 
+## Number a series that crosses sections
+
+When the scenarios sit among other cards, spread over several sections, a section's format
+can't number them: it would number its other cards too. Mark the cards themselves instead,
+with `numberAs` in their vars. A folder's `paperband.yaml` does it for every card under the
+folder:
+
+```yaml
+# scenarios/paperband.yaml
+vars:
+  numberAs: "S{n}"
+```
+
+Every card whose vars say `numberAs: "S{n}"` takes the next number in book order, whichever
+section it's in: S1 to S6 in one part and S7 in another. Cards with a different format are a
+different series, so `investigations/paperband.yaml` can say `numberAs: "T{n}"` and count
+T1, T2, T3 alongside.
+
+A card in a series takes its number from the series. Its section's format and the book's
+chapter numbers skip it, so the chapters around it still count 1.1, 1.2. `{n}` is
+required, and `{part}` isn't allowed, because a series runs across parts.
+
 ## Link to a scenario by number
 
 A `card:` link with no text gets the number as its text:
@@ -74,12 +96,15 @@ In the third scenario that reads "This is scenario 3 of five" and "Scenario 3 re
 number is the bare one, as `[#](card:id)` prints it: `3` for `"Scenario {n}"`, `2.4` for a
 chapter, `4.2` for `"Lab {part}.{n}"`. Write the words around it yourself.
 
-It works anywhere text does: a paragraph, a list, a table, a heading. A heading's anchor
+It works anywhere text does: a paragraph, a list, a table, a heading, the card's title. A
+title that prints its own number, such as `# S{!number} — Extended SBOM`, gets no number in
+front of it as well: the card page, the contents and the site show "S3 — Extended SBOM" once.
+A heading's anchor
 doesn't change with the number, so `## Scenario {!number} recap` is `#scenario-number-recap`
 in every build. In code, `` `{!number}` `` is an example and prints as written.
 
-A card can only print a number it has. `{!number}` in a card its book doesn't number fails
-the build, and names the card. So does `{!number}` in a `_section.md`, which isn't a card. To
+A card can only print a number it has. `{!number}` in a card that no series, section or
+chapter numbering covers fails the build, and names the card. So does `{!number}` in a `_section.md`, which isn't a card. To
 print another card's number, link to it.
 
 ## Number the whole book

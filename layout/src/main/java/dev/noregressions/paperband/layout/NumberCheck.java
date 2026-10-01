@@ -65,7 +65,8 @@ public final class NumberCheck {
             last = m.end();
         }
         if (last < format.length()) re.append(Pattern.quote(format.substring(last)));
-        return Pattern.compile("(?<!\\d)" + re + "(?!\\d)", Pattern.CASE_INSENSITIVE);
+        // Bounded so "S3" isn't found in "PS3", nor "Scenario 3" in "Scenario 30".
+        return Pattern.compile("(?<![\\p{L}\\p{N}])" + re + "(?![\\p{L}\\p{N}])", Pattern.CASE_INSENSITIVE);
     }
 
     /** One stale label: where it is, what it claims, and what is true. */
