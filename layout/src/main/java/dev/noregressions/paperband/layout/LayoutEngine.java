@@ -923,7 +923,13 @@ public final class LayoutEngine {
         }
 
         // Generated pages (<page> markers), rendered before any page that
-        // carries the nav, since each gets a nav entry of its own.
+        // carries the nav, since each gets a nav entry of its own. A page's
+        // template reads sections[].cards and each axis value's cards, as its
+        // PDF copy does; without a sidebar nothing has attached them yet.
+        if (!pagesAt.isEmpty() && !sidebar) {
+            attachValueCards(groupings, cards);
+            attachSectionCards(sectionMetas, bySection, cards);
+        }
         List<Map<String, Object>> sitePages = sitePages(cards, contexts, groupings, sectionMetas, stats,
                 bookModel, bookCtx);
         if (!sitePages.isEmpty()) {
@@ -2582,6 +2588,9 @@ public final class LayoutEngine {
         model.put("book", bookModel);
         model.put("ctx", contextModel(bookCtx));
         model.put("vars", LenientMap.of(bookCtx.vars()));
+        // What a card body and a section body already see: a <page> template
+        // placed in both outputs branches on it, and the site sets "site".
+        model.put("output", "print");
         // The emitHtml file's screen-only navigation: on unless the book turns
         // the sidebar off explicitly (sidebar: false, or the deprecated
         // vars.sidebar: false). The same key that controls the site's sidebar.

@@ -50,6 +50,15 @@ class BookPagesTest {
     }
 
     @Test
+    void page_seesWhichOutputItIsIn(@TempDir Path tmp) throws IOException {
+        writeTemplate(tmp, "where.html", "OUTPUT[{{ output }}]");
+
+        String html = renderBook(tmp, List.of(new PlacedPage(1, "where")), card("alpha", "Alpha"));
+
+        assertTrue(html.contains("OUTPUT[print]"), "the site's copy says site");
+    }
+
+    @Test
     void page_atIndexZero_rendersBeforeTheFirstCard(@TempDir Path tmp) throws IOException {
         writeTemplate(tmp, "front-matter.html", "UP-FRONT");
 

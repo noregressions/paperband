@@ -72,6 +72,18 @@ class SitePagesTest {
     }
 
     @Test
+    void the_page_sees_that_it_is_on_the_site(@TempDir Path root) throws IOException {
+        template(root, "where", "<h1>Where</h1>OUTPUT[{{ output }}]");
+        assertTrue(site(root, List.of(new PlacedPage(1, "where"))).get("where.html").contains("OUTPUT[site]"));
+    }
+
+    @Test
+    void the_page_lists_each_sections_cards_as_in_the_pdf(@TempDir Path root) throws IOException {
+        template(root, "map", "<h1>Map</h1>{% for s in sections %}[{{ s.label }}:{% for c in s.cards %}{{ c.title }}{% endfor %}]{% endfor %}");
+        assertTrue(site(root, List.of(new PlacedPage(2, "map"))).get("map.html").contains("[Setup:Install][Build:Compile]"));
+    }
+
+    @Test
     void card_links_on_the_page_resolve_for_the_site(@TempDir Path root) throws IOException {
         template(root, "commands", COMMANDS);
         String page = site(root, List.of(new PlacedPage(1, "commands"))).get("commands.html");
