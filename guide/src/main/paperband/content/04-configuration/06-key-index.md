@@ -20,6 +20,7 @@ ones the engine itself reads.
 
 | Key | Where | Scope | POM equivalent | Default | Example | See |
 |---|---|---|---|---|---|---|
+| `answerLabel` | vars | Card | `<book><vars>` | `Your answer` | `vars: { answerLabel: "Work it out here" }` | [Make a Student Edition](card:make-a-student-edition) |
 | `author` | vars | Book | `<book><author>`, `<book><authors>` | — | `vars: { author: "Platform Team" }` | [Book Configuration](card:book-configuration) |
 | `axes` | root yaml | Book | `<book><axes>` | — | `axes: [{ name: tier, values: [{ id: 1, label: Critical }] }]` | [Book Configuration](card:book-configuration#axes) |
 | `axes.dividers` | root yaml | Book | — | `true` | `axes: [{ name: tier, dividers: false }]` | [Book Configuration](card:book-configuration#axes) |
@@ -112,7 +113,7 @@ ones the engine itself reads.
 | `tocTitle` | vars | Book | — | `Contents` | `vars: { tocTitle: "In this book" }` | [TOC and Index](card:toc-and-index) |
 | `vars` | root yaml, folder yaml | Card | `<book><vars>` (flat strings) | — | `vars: { audience: internal }` | [Vars and Conditionals](card:vars-and-conditionals) |
 | `verify` | frontmatter | Card | — | `true` | `verify: false` | [Frontmatter Reference](card:frontmatter-reference) |
-| `<view>` | POM | Build | — | — | `<view>cheatsheet</view>` | [Themes](card:themes#views) |
+| `<view>` | POM | Build | — | — | `<view>cheatsheet</view>`, `<view>student</view>` | [Template Reference](card:template-reference#views) |
 | `<watermark>` | POM | Build | `vars.watermark` | — | `<watermark>DRAFT</watermark>` | [Watermarks](card:watermarks) |
 | `watermark` | vars | Book | `<watermark>` (wins) | — | `vars: { watermark: DRAFT }` | [Watermarks](card:watermarks) |
 | `<watermarkImage>` | POM | Build | `vars.watermark.image` | — | `<watermarkImage>images/logo.png</watermarkImage>` | [Watermarks](card:watermarks) |

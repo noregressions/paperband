@@ -214,7 +214,9 @@ Example: `{% for c in cards %}{% for e in c | query('block[data-paperband-step] 
 return a changed copy as a list of nodes, as does `blank('css', 'name')`, which puts an empty
 `<div class="name">` where each match was; `| html` writes nodes back as `block.html` would (fences through
 their block templates), printed with `| raw`: `{{ e.block | drop('pre.console') | html | raw }}`. Nothing
-changes in place. Class names are letters, digits, `-`, `_`. Guide: Themes, "Changing what a block prints".
+changes in place. Class names are letters, digits, `-`, `_`. Guide: Themes, "Changing what a block prints";
+every filter, bundled template, view, generated-page model key and nav entry kind is tabled in the
+`template-reference` card.
 
 ### Frontmatter fields
 

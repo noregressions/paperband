@@ -206,6 +206,9 @@ the card header this way) without copying the whole card markup.
 
 ## What templates can see
 
+Every filter, bundled template and view is listed in
+[Template Reference](card:template-reference).
+
 Theme templates receive the same Pebble model the bundled ones use. The core objects:
 
 | Key | Where | What's in it |
