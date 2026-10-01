@@ -1,6 +1,6 @@
 ---
 id: template-reference
-oneliner: "Every template filter, every bundled template, the views, and what a generated page and the site's nav see."
+oneliner: "Every template filter, every bundled template, the views, card numbers, and what a generated page and the site's nav see."
 index: [templates, filters, query, views, generated pages]
 ---
 
@@ -170,12 +170,28 @@ The page each template renders is `page`, `{kind, id}`, with `kind` one of `inde
 `section`, `card` or `page`. A template that overrides one of the three nav templates and
 handles only `axis` and `section` shows a generated page as a section with no count.
 
+## Card numbers
+
+A numbered card's number is its label as a reader sees it: `2.3` for a chapter, or its
+section's format filled in, `Scenario 3` (see [Number a Series of Cards](card:number-a-series)).
+It's null for an unnumbered card, so `{% if card.number %}` is the test.
+
+| Key | Where |
+|---|---|
+| `card.number` | A card's model: its title in `_card-body-base.html`, the cheat sheet and `site-card.html`'s `<title>` |
+| `c.number` | Each card a site list holds: the sidebar's, and `site-section.html`'s and `site-tier.html`'s grids |
+| `prev.number`, `next.number` | A site card page's previous and next links |
+
+The printed contents and the PDF bookmarks put the number in front of the title in the
+entry's `label`, so a theme that knows nothing of numbers still shows them.
+
 ## CSS hooks
 
 The classes the bundled templates and scaffold CSS give the features above:
 
 | Class | On |
 |---|---|
+| `.card-number` | A card's number, in front of its title wherever the bundled templates print both |
 | `.cheatsheet-card`, `.cheatsheet-card-title`, `.cheatsheet-step`, `.cheatsheet-depth-N` | The `cheatsheet` view's cards and steps |
 | `.answer-space`, `.answer-space-label` | The `student` view's boxes, and a solution block's label. Height: `--answer-lines`, default 4 |
 | `.book-page` | A generated page's sheet in the PDF |

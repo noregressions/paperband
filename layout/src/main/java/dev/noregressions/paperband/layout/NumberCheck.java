@@ -37,6 +37,10 @@ import java.util.regex.Pattern;
  *
  * <p>Labels that state no number are left entirely alone — prose must stay free
  * to name a chapter in its own words.
+ *
+ * <p>A card numbered by its section's format ({@code numbering: "Scenario {n}"})
+ * is checked against that format instead: "[Scenario 2](card:x)" fails when x
+ * is Scenario 3, and "[the login scenario](card:x)" is prose.
  */
 public final class NumberCheck {
 
@@ -44,6 +48,24 @@ public final class NumberCheck {
     private static final Pattern NUMBER = Pattern.compile("\\b(\\d+)\\.(\\d+)\\b");
 
     private NumberCheck() {
+    }
+
+    /**
+     * A section's format as a pattern for link text: its words as written, in
+     * any case, with {@code {n}} and {@code {part}} as whole numbers.
+     * {@code "Scenario {n}"} finds "Scenario 2" and "scenario 12".
+     */
+    static Pattern formatPattern(String format) {
+        StringBuilder re = new StringBuilder();
+        Matcher m = Pattern.compile("\\{(n|part)}").matcher(format);
+        int last = 0;
+        while (m.find()) {
+            if (m.start() > last) re.append(Pattern.quote(format.substring(last, m.start())));
+            re.append("\\d+");
+            last = m.end();
+        }
+        if (last < format.length()) re.append(Pattern.quote(format.substring(last)));
+        return Pattern.compile("(?<!\\d)" + re + "(?!\\d)", Pattern.CASE_INSENSITIVE);
     }
 
     /** One stale label: where it is, what it claims, and what is true. */
@@ -124,9 +146,18 @@ public final class NumberCheck {
         // Unnumbered target, or a link into a card this build left out:
         // CardLinks owns the "does it exist" question, not this check.
         if (actual == null) return;
-        Matcher n = NUMBER.matcher(label);
-        if (!n.find()) return;                          // prose label; leave it be
-        String claimed = n.group(1) + "." + n.group(2);
+        String claimed;
+        if (actual.format() != null) {
+            // "Scenario 2" in the label, for a card numbered "Scenario {n}".
+            Matcher f = formatPattern(actual.format()).matcher(label);
+            if (!f.find()) return;                      // doesn't say which; leave it be
+            claimed = f.group();
+            if (claimed.equalsIgnoreCase(actual.label())) return;
+        } else {
+            Matcher n = NUMBER.matcher(label);
+            if (!n.find()) return;                      // prose label; leave it be
+            claimed = n.group(1) + "." + n.group(2);
+        }
         if (!claimed.equals(actual.label())) {
             out.add(new Mismatch(card.source(), card.id(), targetId,
                     claimed, actual.label(), label.trim()));

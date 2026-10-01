@@ -1,3 +1,8 @@
+---
+# Its cards are Session 1, 2 and 3, from their order in this folder
+# (Number a Series of Cards).
+numbering: "Session {n}"
+---
 # Workshop
 
 Three short sessions that take a book from nothing to a published site. Each step says

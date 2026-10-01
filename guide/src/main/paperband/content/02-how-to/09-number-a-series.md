@@ -1,0 +1,104 @@
+---
+id: number-a-series
+oneliner: "Number the cards of a section as Scenario 1, 2, 3, or the whole book as chapters, from book order."
+index: [numbering, scenarios, chapter numbers, card numbers]
+---
+
+# Number a Series of Cards
+
+A set of scenarios, labs or sessions reads better numbered: Scenario 1, Scenario 2,
+Scenario 3. Write the numbers into the files and they go stale the first time one moves.
+Paperband numbers them from book order instead, so reordering the files renumbers them, and
+a link that names one by number is checked.
+
+`{!step}` doesn't do this. It numbers the steps inside one card, and starts again in the
+next.
+
+## Number one section
+
+Put the cards in a folder of their own, and give the folder a `_section.md` that says how
+its numbers read. `{n}` is the card's place in the section:
+
+```markdown
+---
+numbering: "Scenario {n}"
+---
+
+# Scenarios
+
+Each scenario is one thing that goes wrong, and how to put it right.
+```
+
+The section's cards are Scenario 1, 2 and 3, in the order the book walks them: filename
+order, or the folder's `order:`. Nothing else in the book is numbered.
+
+The number goes in front of the card's title on its page, in the printed contents and the
+PDF bookmarks, and in the site's sidebar, card grids and next and previous links. Inside each
+scenario, `{!step}` still counts from Step 1.
+
+The format can say anything around the number: `"Lab {n}"`, `"Session {n}"`, `"Exercise
+{n}"`. It must have `{n}`; a format without one fails the build.
+
+## Link to a scenario by number
+
+A `card:` link with no text gets the number as its text:
+
+```markdown
+This is the same fault as [](card:login-fails), one layer down.
+```
+
+That prints "Scenario 3" for the third scenario. `[#](card:login-fails)` prints the number
+alone, "3", for prose that names the series itself: `Scenarios [#](card:a) and
+[#](card:b)`.
+
+A link whose text names a scenario is checked against it. `[Scenario 2](card:login-fails)`
+fails the build when that card is Scenario 3, and names the file, so a reorder can't leave a
+wrong number behind. Text that names no number, such as "the login scenario", is left
+alone.
+
+## Number the whole book
+
+To number every card as a chapter, set `numbering` in the book's vars:
+
+```yaml
+vars:
+  numbering: sequential
+```
+
+Each section is a group, numbered in the order it first appears, and its cards are 1.1,
+1.2, then 2.1, and so on. An empty `card:` link prints "Chapter 2.3". A section's
+`_section.md` changes its own numbers:
+
+| In `_section.md` | Effect |
+|---|---|
+| `numbered: false` | The section's cards have no number: front matter, appendices |
+| `part: 3` | The section shares group 3 with every section that says the same, and their cards number on across them: 3.1 to 3.12 |
+| `part_title: "Getting Started"` | With `part:`, the title of the part's divider page, printed before the part's first section when the part has two or more |
+| `numbering: "Scenario {n}"` | The section's cards read as the format. `{part}` is the group's number, for `"Lab {part}.{n}"` |
+
+A section with a format keeps it in a numbered book, so a book of chapters can still have a
+section of scenarios. Either `part:` is set on every numbered section or on none; a book
+that sets it on some fails the build and lists them.
+
+## Check
+
+```command
+mvn package
+```
+
+Open the PDF's bookmarks, or its contents page if the book prints one: each scenario should
+be listed as "Scenario N" and its title. Move a file to a different place in the folder's
+`order:`, build again, and the numbers follow.
+
+## Watch Out
+
+The number is the card's place in the whole book's section. A `<view>` or a `select:` that
+leaves cards out doesn't renumber the rest: Scenario 3 stays Scenario 3 in a build without
+Scenario 2.
+
+`numbering:` and `numbered: false` together fail the build, because one says to number the
+section and the other says not to.
+
+A section declared in the POM finds its `_section.md` by id. Give it the folder's name as its
+`<id>`, or it won't see the format (see
+[Maven Plugin](card:maven-plugin#generated-pages)).

@@ -83,7 +83,7 @@
       <ol class="sidebar-cards">
         {% for c in e.cards %}
         <li{% if page.kind == 'card' and page.id == c.id %} class="active"{% endif %}>
-          <a href="{{ urlPrefix }}cards/{{ c.id }}.html">{{ c.title }}</a>
+          <a href="{{ urlPrefix }}cards/{{ c.id }}.html">{% if c.number %}<span class="card-number">{{ c.number }}</span> {% endif %}{{ c.title }}</a>
         </li>
         {% endfor %}
       </ol>

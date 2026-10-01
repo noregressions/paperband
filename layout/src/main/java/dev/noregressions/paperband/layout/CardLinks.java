@@ -222,8 +222,10 @@ public final class CardLinks {
             // supplies the noun — "Chapters 2.3 and 2.4" — must not be given a
             // second one.
             boolean bare = "#".equals(m.group(4).trim());
+            // A chapter number reads "Chapter 3.14"; a section's own format
+            // already says what the number is, "Scenario 3".
             String label = n == null ? m.group(4)
-                    : bare ? n.label() : CHAPTER_WORD + " " + n.label();
+                    : bare ? n.bare() : n.format() != null ? n.label() : CHAPTER_WORD + " " + n.label();
             m.appendReplacement(out,
                     Matcher.quoteReplacement(m.group(1) + label + m.group(5)));
         }

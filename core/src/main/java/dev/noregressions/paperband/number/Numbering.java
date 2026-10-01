@@ -102,7 +102,7 @@ public final class Numbering {
             if (!sn.numbered()) continue;
             Object key = sn.part() != null ? sn.part() : p.sectionId();
             int ordinal = counters.merge(key, 1, Integer::sum);
-            out.put(p.cardId(), new CardNumber(groupNumbers.get(key), ordinal));
+            out.put(p.cardId(), new CardNumber(groupNumbers.get(key), ordinal, sn.format()));
         }
         return out;
     }

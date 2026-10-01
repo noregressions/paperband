@@ -183,6 +183,17 @@ After a book renders, paperband reads the ids its templates printed. A card the 
 naming it; leave cards out with a view's `keep.html` instead. A bookmark whose anchor wasn't printed (a
 divider page a template skipped) is dropped with a warning, its children lifted a level.
 
+### Numbering
+
+`vars: { numbering: sequential }` numbers every card by book order, `<group>.<n>` (`2.3`): a section is a
+group, `part: N` in sections' `_section.md` shares one, `numbered: false` opts out. A section's
+`_section.md` can set `numbering: "Scenario {n}"` (`{n}` its place, `{part}` the group's number; `{n}` is
+required): its cards read "Scenario 1, 2, 3" even with no book numbering. The number shows before the title
+(card page, contents, bookmarks, site sidebar/grids/prev-next; `card.number`, `c.number`); an empty
+`[](card:x)` prints it ("Chapter 2.3" or "Scenario 3"), `[#](card:x)` the bare number; a link whose text
+states a different number ("Scenario 2") fails the build. Views and `select:` don't renumber. Guide card:
+`number-a-series`.
+
 ### Views
 
 A view is a folder of templates a build names with `<view>name</view>` (`-Dpaperband.view`, build and site

@@ -7,7 +7,7 @@
 {% for c in cards %}
   {% set commands = c | query('block[data-paperband-step] pre.command') %}
   {% if commands is not empty %}
-  <h2><a href="card:{{ c.id }}">{{ c.title }}</a></h2>
+  <h2><a href="card:{{ c.id }}">{% if c.number %}{{ c.number }} {% endif %}{{ c.title }}</a></h2>
   <dl class="command-reference">
   {% for e in commands %}
     <dt>{{ e.step.heading }}</dt>

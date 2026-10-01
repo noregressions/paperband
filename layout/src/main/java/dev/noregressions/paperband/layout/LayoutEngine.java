@@ -1365,7 +1365,7 @@ public final class LayoutEngine {
      * card list. Mirrors the structure already attached for divider TOCs in
      * {@code buildBookModel}.
      */
-    private static void attachValueCards(List<AxisGrouping> groupings, List<Card> cards) {
+    private void attachValueCards(List<AxisGrouping> groupings, List<Card> cards) {
         for (AxisGrouping g : groupings) {
             for (Map<String, Object> value : g.valueMetas()) {
                 List<Integer> indices = g.byValue().getOrDefault(normalizeAxisId(value.get("id")), List.of());
@@ -1478,9 +1478,10 @@ public final class LayoutEngine {
      * <p>Cards in unnumbered sections are absent from the result rather than
      * mapped to null, so a caller asking for one gets nothing to render.
      *
-     * <p>Numbering is opt-in: without {@code vars.numbering} the result is
-     * empty and nothing downstream renders or checks a number, so an existing
-     * book's output is untouched. The only mode today is {@code sequential} —
+     * <p>Numbering is opt-in: without {@code vars.numbering} only the cards of
+     * a section that declares its own format ({@code numbering: "Scenario {n}"}
+     * in its {@code _section.md}) are numbered, and a book with neither gets an
+     * empty result, so its output is untouched. The only mode today is {@code sequential} —
      * numbers derived from position, gaps closing themselves — which is what a
      * book wants until it publishes and its numbers escape into other people's
      * references.
@@ -1489,23 +1490,29 @@ public final class LayoutEngine {
      * @param declared declared sections, which may claim a card or a folder
      * @param cards    every card in the build, in book order
      * @param vars     the book's vars, read for the {@code numbering} opt-in
-     * @return card id to number, in book order; empty when numbering is off
+     * @return card id to number, in book order; empty when the book numbers nothing and no section has a format
      */
     public Map<String, CardNumber> cardNumbers(Path bookRoot, List<Section> declared,
             List<Card> cards, Map<String, Object> vars) {
-        if (!numberingEnabled(vars)) return Map.of();
         if (cards == null || cards.isEmpty()) return Map.of();
+        Map<String, SectionNumbering> sections = new LinkedHashMap<>();
+        sectionBodies.forEach((id, body) -> {
+            if (body != null) sections.put(id, body.numbering());
+        });
+        // A section with its own format (numbering: "Scenario {n}") is numbered
+        // whether or not the book numbers its chapters; without the book's
+        // opt-in it's the only kind that is.
+        boolean book = numberingEnabled(vars);
+        if (!book && sections.values().stream().noneMatch(SectionNumbering::formatted)) return Map.of();
         List<Numbering.Placement> placements = new ArrayList<>(cards.size());
         for (Card card : cards) {
             String secId = sectionIdFor(bookRoot, declared, card.source());
             // A card sitting directly in the root has no section; give it a
             // stable key of its own rather than dropping it from numbering.
-            placements.add(new Numbering.Placement(card.id(), secId == null ? "" : secId));
+            String key = secId == null ? "" : secId;
+            if (!book && !(sections.get(key) != null && sections.get(key).formatted())) continue;
+            placements.add(new Numbering.Placement(card.id(), key));
         }
-        Map<String, SectionNumbering> sections = new LinkedHashMap<>();
-        sectionBodies.forEach((id, body) -> {
-            if (body != null) sections.put(id, body.numbering());
-        });
         return Numbering.resolve(placements, sections);
     }
 
@@ -1715,7 +1722,7 @@ public final class LayoutEngine {
      * Attach a slim card-summary list to each section so the sidebar partial
      * can render a per-section card list. Mirrors {@link #attachValueCards}.
      */
-    private static void attachSectionCards(
+    private void attachSectionCards(
             List<Map<String, Object>> sectionMetas,
             Map<String, List<Integer>> bySection,
             List<Card> cards) {
@@ -2237,10 +2244,12 @@ public final class LayoutEngine {
     }
 
     /** Subset of cardModel suitable for grid items + nav links. */
-    private static Map<String, Object> siteCardSummary(Card card, List<AxisGrouping> groupings, int cardIndex) {
+    private Map<String, Object> siteCardSummary(Card card, List<AxisGrouping> groupings, int cardIndex) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", card.id());
         m.put("title", card.title());
+        // Its number, for a list that shows it before the title; null when unnumbered.
+        m.put("number", numberLabel(card.id()));
         m.put("axes", cardAxesFromGroupings(cardIndex, groupings));
         Map<String, Object> fm = card.frontmatter().values();
         m.put("oneliner", fm.get("oneliner"));
@@ -2252,10 +2261,12 @@ public final class LayoutEngine {
     }
 
     /** Even leaner: just enough for prev/next links. */
-    private static Map<String, Object> siteCardLink(Card card, List<AxisGrouping> groupings, int cardIndex) {
+    private Map<String, Object> siteCardLink(Card card, List<AxisGrouping> groupings, int cardIndex) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", card.id());
         m.put("title", card.title());
+        // Its number, for a list that shows it before the title; null when unnumbered.
+        m.put("number", numberLabel(card.id()));
         m.put("axes", cardAxesFromGroupings(cardIndex, groupings));
         return m;
     }

@@ -29,7 +29,7 @@
   <div class="card-grid">
     {% for c in cards %}
     <a class="card-item" href="cards/{{ c.id }}.html" style="border-top-color: {{ value.color }}">
-      <div class="ci-title">{{ c.title }}</div>
+      <div class="ci-title">{% if c.number %}<span class="card-number">{{ c.number }}</span> {% endif %}{{ c.title }}</div>
       {% if c.oneliner %}<div class="ci-oneliner">{{ c.oneliner | raw }}</div>{% endif %}
       <div class="ci-badges">
         {% if c.effort %}<span class="cb-effort cb-effort-{{ c.effort }}">{{ c.effort }}</span>{% endif %}

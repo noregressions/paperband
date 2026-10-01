@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -83,5 +84,40 @@ class SectionBodiesTest {
     @DisplayName("stay quiet when the section's id is the folder's name")
     void declaredSectionWithTheFoldersId(@TempDir Path root) throws IOException {
         assertEquals(List.of(), warnings(root, "04-workshop"));
+    }
+
+    /** The numbering a section body with {@code frontmatter} declares. */
+    private static dev.noregressions.paperband.number.SectionNumbering numbering(Path root, String frontmatter)
+            throws IOException {
+        Files.writeString(root.resolve("paperband.yaml"), "title: T\n");
+        Path folder = Files.createDirectories(root.resolve("scenarios"));
+        Files.writeString(folder.resolve("_section.md"), "---\n" + frontmatter + "\n---\n# Scenarios\n");
+        Path card = Files.writeString(folder.resolve("login.md"), "# Login\n\nText.\n");
+        RenderContext ctx = new ConfigLoader().load(card, "pdf-a4", "a4");
+        return SectionBodies.render(ctx, null, Map.of(), List.of(), "print", "pdf", null, null)
+                .get("scenarios").numbering();
+    }
+
+    @Test
+    @DisplayName("read a numbering format")
+    void readsANumberingFormat(@TempDir Path root) throws IOException {
+        var n = numbering(root, "numbering: \"Scenario {n}\"");
+        assertEquals("Scenario {n}", n.format());
+        assertTrue(n.numbered());
+    }
+
+    @Test
+    @DisplayName("refuse a format with no {n}")
+    void refusesAFormatWithoutTheNumber(@TempDir Path root) {
+        var e = assertThrows(IllegalStateException.class, () -> numbering(root, "numbering: Scenario"));
+        assertTrue(e.getMessage().contains("has no {n}"), e.getMessage());
+    }
+
+    @Test
+    @DisplayName("refuse a format on an unnumbered section")
+    void refusesAFormatOnAnUnnumberedSection(@TempDir Path root) {
+        var e = assertThrows(IllegalStateException.class,
+                () -> numbering(root, "numbered: false\nnumbering: \"Scenario {n}\""));
+        assertTrue(e.getMessage().contains("both `numbered: false`"), e.getMessage());
     }
 }

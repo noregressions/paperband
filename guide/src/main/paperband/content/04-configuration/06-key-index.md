@@ -68,8 +68,9 @@ ones the engine itself reads.
 | `<maxPagesPerCard>` | POM | Build | `vars.maxPagesPerCard` | — | `<maxPagesPerCard>2</maxPagesPerCard>` | [Page Enforcement](card:page-enforcement) |
 | `maxPagesPerCard` | vars | Book | `<maxPagesPerCard>` (wins) | no limit | `vars: { maxPagesPerCard: 2 }` | [Page Enforcement](card:page-enforcement) |
 | `mermaidTheme` | vars | Card | — | `default` | `vars: { mermaidTheme: dark }` | [Card Structure](card:card-structure) |
-| `numbered` | `_section.md` | Section | — | `true` | `numbered: false` | — |
-| `numbering` | vars | Book | — | off | `vars: { numbering: sequential }` | — |
+| `numbered` | `_section.md` | Section | — | `true` | `numbered: false` | [Number a Series of Cards](card:number-a-series) |
+| `numbering` | `_section.md` | Section | — | — | `numbering: "Scenario {n}"` | [Number a Series of Cards](card:number-a-series) |
+| `numbering` | vars | Book | — | off | `vars: { numbering: sequential }` | [Number a Series of Cards](card:number-a-series) |
 | `oneliner` | frontmatter | Card | — | — | `oneliner: "Install the agent."` | [Frontmatter Reference](card:frontmatter-reference) |
 | `order` | folder yaml | Folder | — | filename order | `order: [introduction, install]` | [Organising Content](card:organising-content) |
 | `<output>` | POM | Build | — | required for `build` | `<output>${project.build.directory}/book.pdf</output>` | [Maven Plugin](card:maven-plugin) |
@@ -81,8 +82,8 @@ ones the engine itself reads.
 | `page.orientation` | root yaml, folder yaml | Card | — | `portrait` | `page: { orientation: landscape }` | [Configuration Cascade](card:configuration-cascade) |
 | `<pageSize>` | POM | Build | `page.size` (wins) | `a4` | `<pageSize>letter</pageSize>` | [Targets](card:targets) |
 | `page.size` | root yaml | Book | `<pageSize>` (base only) | `a4` | `page: { size: a5 }` | [Targets](card:targets) |
-| `part` | `_section.md` | Section | — | — | `part: 1` | — |
-| `part_title` | `_section.md` | Section | — | — | `part_title: "Part One"` | — |
+| `part` | `_section.md` | Section | — | — | `part: 1` | [Number a Series of Cards](card:number-a-series) |
+| `part_title` | `_section.md` | Section | — | — | `part_title: "Part One"` | [Number a Series of Cards](card:number-a-series) |
 | `<pdf>` | POM | Build | — | — | `-Dpaperband.pdf=target/book.pdf` (pages) | [Page Enforcement](card:page-enforcement) |
 | `pdfBookmarks` | vars | Book | — | on | `vars: { pdfBookmarks: false }` | [TOC and Index](card:toc-and-index) |
 | `plantuml` | vars | Card | — | — | `vars: { plantuml: { styleFile: styles/diagrams.puml } }` | [Card Structure](card:card-structure) |

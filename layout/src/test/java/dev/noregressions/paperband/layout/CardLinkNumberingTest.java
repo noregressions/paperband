@@ -94,6 +94,28 @@ class CardLinkNumberingTest {
         }
     }
 
+    @Nested
+    @DisplayName("A section's own format")
+    class Formatted {
+
+        private final Map<String, CardNumber> scenarios = Map.of(
+                "unsafe", new CardNumber(1, 3, "Scenario {n}"));
+
+        @Test
+        void should_render_the_format_for_an_empty_label() {
+            String html = CardLinks.of(cards()).withNumbers(scenarios).print("<a href=\"card:unsafe\"></a>");
+            assertTrue(html.contains(">Scenario 3</a>"), html);
+            assertTrue(!html.contains("Chapter"), html);
+        }
+
+        @Test
+        void should_render_the_bare_ordinal_for_the_hash_marker() {
+            // "Scenarios 2 and 3": the prose says the noun.
+            String html = CardLinks.of(cards()).withNumbers(scenarios).print("<a href=\"card:unsafe\">#</a>");
+            assertTrue(html.contains(">3</a>"), html);
+        }
+    }
+
     private static String resolved(String html) {
         return CardLinks.of(cards()).withNumbers(NUMBERS).print(html);
     }

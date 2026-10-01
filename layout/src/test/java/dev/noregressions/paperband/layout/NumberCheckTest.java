@@ -146,6 +146,41 @@ class NumberCheckTest {
         }
     }
 
+    @Nested
+    @DisplayName("A section's own format")
+    class Formatted {
+
+        private final Map<String, CardNumber> scenarios = Map.of(
+                "login", new CardNumber(1, 3, "Scenario {n}"));
+
+        @Test
+        void should_fail_when_a_label_names_the_wrong_scenario() {
+            var e = assertThrows(NumberCheckException.class, () -> NumberCheck.verify(
+                    List.of(card("intro", "<a href=\"card:login\">Scenario 2</a>")), scenarios));
+            assertEquals("Scenario 2", e.mismatches().get(0).claimed());
+            assertEquals("Scenario 3", e.mismatches().get(0).actual());
+        }
+
+        @Test
+        void should_accept_the_right_scenario_in_any_case() {
+            assertEquals(List.of(), NumberCheck.findMismatches(
+                    List.of(card("intro", "<a href=\"card:login\">see scenario 3</a>")), scenarios));
+        }
+
+        @Test
+        void should_ignore_a_label_that_doesnt_name_one() {
+            assertEquals(List.of(), NumberCheck.findMismatches(
+                    List.of(card("intro", "<a href=\"card:login\">the login scenario, step 2.1</a>")), scenarios));
+        }
+
+        @Test
+        void should_not_read_scenario_30_as_scenario_3() {
+            var bad = NumberCheck.findMismatches(
+                    List.of(card("intro", "<a href=\"card:login\">Scenario 30</a>")), scenarios);
+            assertEquals(1, bad.size());
+        }
+    }
+
     private static Card card(String id, String html) {
         Block b = new Block(Block.Kind.HEADING_SECTION, null, Set.of(), null, 0, html, List.of(),
                 Map.of(), Map.of(), ContentNodes.of(html));

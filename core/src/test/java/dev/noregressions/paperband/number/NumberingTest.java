@@ -172,6 +172,39 @@ class NumberingTest {
     }
 
     // "cardId:sectionId" pairs, in book order.
+    @Nested
+    @DisplayName("A section's own format")
+    class Formats {
+
+        @Test
+        void should_read_the_format_with_the_cards_place_in_its_section() {
+            var numbers = Numbering.resolve(
+                    placements("intro:basics", "login:scenarios", "logout:scenarios", "reset:scenarios"),
+                    Map.of("scenarios", new SectionNumbering(true, null, "Scenario {n}")));
+
+            assertEquals("1.1", label(numbers, "intro"));
+            assertEquals("Scenario 1", label(numbers, "login"));
+            assertEquals("Scenario 3", label(numbers, "reset"));
+            assertEquals("3", numbers.get("reset").bare());
+        }
+
+        @Test
+        void should_fill_in_the_part_when_the_format_names_it() {
+            var numbers = Numbering.resolve(placements("a:labs", "b:labs"),
+                    Map.of("labs", new SectionNumbering(true, 4, "Lab {part}.{n}")));
+
+            assertEquals("Lab 4.2", label(numbers, "b"));
+            assertEquals("4.2", numbers.get("b").bare());
+        }
+
+        @Test
+        void should_keep_the_dotted_number_without_a_format() {
+            CardNumber n = new CardNumber(3, 14);
+            assertEquals("3.14", n.label());
+            assertEquals("3.14", n.bare());
+        }
+    }
+
     private static List<Numbering.Placement> placements(String... spec) {
         List<Numbering.Placement> out = new ArrayList<>(spec.length);
         for (String s : spec) {

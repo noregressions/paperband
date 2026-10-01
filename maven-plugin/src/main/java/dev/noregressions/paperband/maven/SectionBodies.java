@@ -290,8 +290,10 @@ final class SectionBodies {
      */
     private static SectionNumbering numbering(Map<String, Object> fm, Path file) {
         boolean numbered = !fm.containsKey("numbered") || truthy(fm.get("numbered"));
+        String format = format(fm, file, numbered);
         Object rawPart = fm.get("part");
         if (rawPart == null) {
+            if (format != null) return new SectionNumbering(true, null, format);
             return numbered ? SectionNumbering.discovered() : SectionNumbering.unnumbered();
         }
         if (!numbered) {
@@ -304,7 +306,28 @@ final class SectionBodies {
             throw new IllegalStateException("Section body " + file + " declares `part: "
                     + rawPart + "`, which is not a non-negative whole number.");
         }
-        return new SectionNumbering(true, part);
+        return new SectionNumbering(true, part, format);
+    }
+
+    /**
+     * {@code numbering: "Scenario {n}"}: how the section's numbers read, or
+     * null when it doesn't say. It has to place the number, so a format with
+     * no {@code {n}} is a mistake rather than a constant label; and it numbers
+     * the section, so it can't sit beside {@code numbered: false}.
+     */
+    private static String format(Map<String, Object> fm, Path file, boolean numbered) {
+        Object raw = fm.get("numbering");
+        if (raw == null) return null;
+        String format = String.valueOf(raw).trim();
+        if (!format.contains("{n}")) {
+            throw new IllegalStateException("Section body " + file + " declares `numbering: " + raw
+                    + "`, which has no {n} for the number. Write it as, say, `numbering: \"Scenario {n}\"`.");
+        }
+        if (!numbered) {
+            throw new IllegalStateException("Section body " + file + " declares both `numbered: false` and"
+                    + " `numbering: " + raw + "`. A section with a numbering format is numbered; drop one of them.");
+        }
+        return format;
     }
 
     private static Integer asInt(Object v) {

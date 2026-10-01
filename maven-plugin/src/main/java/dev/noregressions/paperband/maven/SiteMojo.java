@@ -283,6 +283,9 @@ public class SiteMojo extends AbstractPaperbandMojo {
         layout.setBlockTemplates(blockTemplates);
         layout.setView(view);
         java.util.Set<String> leftOut = new java.util.LinkedHashSet<>();
+        // Numbers come from the whole book, as in a build: a view that leaves
+        // cards out doesn't renumber the ones it keeps.
+        List<Card> allCards = new ArrayList<>(cards);
         // <page> markers: generated pages, placed by card index as in the PDF.
         List<dev.noregressions.paperband.model.PlacedPage> placedPages = source.pages();
         if (layout.view() != null) {
@@ -327,6 +330,14 @@ public class SiteMojo extends AbstractPaperbandMojo {
         layout.setSectionBodies(SectionBodies.render(
                 bookCtx, geo.layouts(), providerConfig, cards, "site", siteTarget,
                 blockTemplates, getLog()));
+        // Card numbers, as the build computes and checks them: without them the
+        // site printed no chapter or section numbers, and an empty
+        // [](card:x) label filled with nothing.
+        java.util.Map<String, dev.noregressions.paperband.model.CardNumber> numbers =
+                layout.cardNumbers(bookCtx.book().bookRoot(), bookCtx.book().sections(),
+                        allCards, bookCtx.vars());
+        dev.noregressions.paperband.layout.NumberCheck.verify(cards, numbers);
+        layout.setCardNumbers(numbers);
         Map<String, String> pages;
         try {
             pages = layout.renderSite(cards, contexts, bookCtx);

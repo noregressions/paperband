@@ -171,6 +171,16 @@ See [Maven Plugin](card:maven-plugin#the-site-goal).
 In a second execution with its own `<output>`. See
 [Make a Cheat Sheet](card:make-a-cheat-sheet).
 
+### Number a section's cards as Scenario 1, 2, 3
+
+```markdown
+---
+numbering: "Scenario {n}"
+---
+```
+
+In the section folder's `_section.md`. See [Number a Series of Cards](card:number-a-series).
+
 ### Build a student edition without the solutions
 
 ```xml

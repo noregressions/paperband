@@ -1,7 +1,7 @@
 
 {% extends "_site-page" %}
 
-{% block title %}{{ card.title | default(card.id) }} — {{ book.title | default('paperband') }}{% endblock %}
+{% block title %}{% if card.number %}{{ card.number }} {% endif %}{{ card.title | default(card.id) }} — {{ book.title | default('paperband') }}{% endblock %}
 
 {% block head %}
   {% if book.title %}<meta name="book" content="{{ book.title }}">{% endif %}
@@ -48,10 +48,10 @@
   {% block cardNavBottom %}
   <div class="card-nav-bottom">
     {% if prev is not null %}
-    <a href="{{ prev.id }}.html">← {{ prev.title }}</a>
+    <a href="{{ prev.id }}.html">← {% if prev.number %}<span class="card-number">{{ prev.number }}</span> {% endif %}{{ prev.title }}</a>
     {% else %}<span></span>{% endif %}
     {% if next is not null %}
-    <a href="{{ next.id }}.html">{{ next.title }} →</a>
+    <a href="{{ next.id }}.html">{% if next.number %}<span class="card-number">{{ next.number }}</span> {% endif %}{{ next.title }} →</a>
     {% else %}<span></span>{% endif %}
   </div>
   {% endblock %}

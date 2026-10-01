@@ -12,6 +12,10 @@ package dev.noregressions.paperband.number;
  * ---
  * numbered: false  # front matter and appendices are named, not numbered
  * ---
+ *
+ * ---
+ * numbering: "Scenario {n}"  # its cards are Scenario 1, 2, 3, whether or
+ * ---                        # not the book numbers its chapters
  * </pre>
  *
  * <p>A section that declares neither — or has no {@code _section.md} at all —
@@ -24,10 +28,25 @@ package dev.noregressions.paperband.number;
  * @param part     the numbering group to join, or null to be a group of one
  *                 section. Sections sharing a part number number continuously
  *                 across the whole group, in book order
+ * @param format   how this section's numbers read, with {@code {n}} for the
+ *                 card's place in its group and {@code {part}} for the group's
+ *                 number: {@code "Scenario {n}"}. Null for the dotted chapter
+ *                 number. A section with a format is numbered on its own
+ *                 account, without the book's {@code vars.numbering}
  */
-public record SectionNumbering(boolean numbered, Integer part) {
+public record SectionNumbering(boolean numbered, Integer part, String format) {
 
-    private static final SectionNumbering DISCOVERED = new SectionNumbering(true, null);
+    private static final SectionNumbering DISCOVERED = new SectionNumbering(true, null, null);
+
+    /** A declaration with no format: the dotted chapter number. */
+    public SectionNumbering(boolean numbered, Integer part) {
+        this(numbered, part, null);
+    }
+
+    /** Whether the section asked for its own numbers, which it gets even when the book numbers nothing. */
+    public boolean formatted() {
+        return format != null;
+    }
 
     /** The default for a section that says nothing: numbered, its own group. */
     public static SectionNumbering discovered() {
@@ -36,6 +55,6 @@ public record SectionNumbering(boolean numbered, Integer part) {
 
     /** A section that opts out of numbering entirely. */
     public static SectionNumbering unnumbered() {
-        return new SectionNumbering(false, null);
+        return new SectionNumbering(false, null, null);
     }
 }
