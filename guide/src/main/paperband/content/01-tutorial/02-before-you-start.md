@@ -33,7 +33,7 @@ Before a project exists, run the plugin by its full coordinates. `renderers` rep
 whether the PDF renderer works on this machine:
 
 ```bash
-mvn dev.noregressions.paperband:paperband-maven-plugin:0.1.3:renderers
+mvn dev.noregressions.paperband:paperband-maven-plugin:0.1.4:renderers
 ```
 
 Inside a project that declares the plugin, the short form (`mvn paperband:renderers`)

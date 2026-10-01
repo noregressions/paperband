@@ -22,7 +22,7 @@ configured and one starter card:
 mvn archetype:generate \
   -DarchetypeGroupId=dev.noregressions.paperband \
   -DarchetypeArtifactId=paperband-archetype \
-  -DarchetypeVersion=0.1.3 \
+  -DarchetypeVersion=0.1.4 \
   -DgroupId=com.example -DartifactId=my-guide
 cd my-guide
 ```
@@ -119,7 +119,7 @@ The archetype generates this plugin block:
 <plugin>
   <groupId>dev.noregressions.paperband</groupId>
   <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.1.3</version>
+  <version>0.1.4</version>
   <executions>
     <execution>
       <id>build-guide-pdf</id>

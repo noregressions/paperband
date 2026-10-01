@@ -19,7 +19,7 @@ see [Before You Start](card:before-you-start).
 <plugin>
   <groupId>dev.noregressions.paperband</groupId>
   <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.1.3</version>
+  <version>0.1.4</version>
   <configuration>
     <content>docs</content>
   </configuration>
@@ -67,7 +67,7 @@ The setting depends on how the files are arranged:
 <plugin>
   <groupId>dev.noregressions.paperband</groupId>
   <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.1.3</version>
+  <version>0.1.4</version>
   <configuration>
     <content>docs</content>
   </configuration>

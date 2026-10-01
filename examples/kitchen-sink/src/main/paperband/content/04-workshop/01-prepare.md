@@ -52,7 +52,7 @@ takes a few minutes. Doing it now keeps the next session quick.
 Resolve the plugin once so its dependencies are cached. {.instructions}
 
 ```command
-mvn dependency:get -Dartifact=dev.noregressions.paperband:paperband-maven-plugin:0.1.3
+mvn dependency:get -Dartifact=dev.noregressions.paperband:paperband-maven-plugin:0.1.4
 ```
 
 ```console

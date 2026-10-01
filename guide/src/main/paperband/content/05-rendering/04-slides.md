@@ -110,12 +110,12 @@ jars), so a book adds it explicitly:
 <plugin>
   <groupId>dev.noregressions.paperband</groupId>
   <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.1.3</version>
+  <version>0.1.4</version>
   <dependencies>
     <dependency>
       <groupId>dev.noregressions.paperband</groupId>
       <artifactId>render-pptx</artifactId>
-      <version>0.1.3</version>
+      <version>0.1.4</version>
     </dependency>
   </dependencies>
 </plugin>

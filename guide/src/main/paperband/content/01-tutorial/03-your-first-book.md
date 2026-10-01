@@ -17,7 +17,7 @@ Generate a project from the archetype and build it:
 mvn archetype:generate \
   -DarchetypeGroupId=dev.noregressions.paperband \
   -DarchetypeArtifactId=paperband-archetype \
-  -DarchetypeVersion=0.1.3 \
+  -DarchetypeVersion=0.1.4 \
   -DgroupId=com.example -DartifactId=my-guide
 cd my-guide
 mvn package
