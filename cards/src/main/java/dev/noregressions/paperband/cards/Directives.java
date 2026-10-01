@@ -1,5 +1,7 @@
 package dev.noregressions.paperband.cards;
 
+import dev.noregressions.paperband.model.CardNumber;
+
 import org.commonmark.node.AbstractVisitor;
 import org.commonmark.node.CustomNode;
 import org.commonmark.node.Node;
@@ -24,7 +26,12 @@ import java.util.stream.Collectors;
  * <pre>
  * # {!step} Build             →  Step 2 Build
  * Run it again ({!step}).     →  Run it again (Step 3).
+ * Scenario {!number} recap    →  Scenario 3 recap
  * </pre>
+ *
+ * <p>{@code {!number}} is the card's own number, bare: "3" for Scenario 3,
+ * "2.4" for a chapter. Nothing knows it while a card is read, so it renders
+ * as {@link CardNumber#MARK} and the layout fills it in.
  *
  * <p>A marker sits wherever the author wants the result to read, so it's found
  * in ordinary text only: never inside code, raw HTML or a fence, where
@@ -41,7 +48,11 @@ final class Directives implements PostProcessor {
 
     /** Directives paperband knows, and whether each takes a value. */
     static final Map<String, Boolean> KNOWN = Map.of(
-            "step", false);     // numbered by position -- see Steps
+            "step", false,      // numbered by position -- see Steps
+            "number", false);   // the card's own number, filled in when the book is assembled
+
+    /** The directive that prints the card's own number. */
+    static final String NUMBER = "number";
 
     private static final Pattern MARKER = Pattern.compile("\\{!([a-z][a-z0-9-]*)(?:=([^{}\\s]+))?\\}");
 
@@ -151,7 +162,8 @@ final class Directives implements PostProcessor {
 
         @Override
         public void render(Node node) {
-            context.getWriter().text(((Marker) node).text());
+            Marker marker = (Marker) node;
+            context.getWriter().text(NUMBER.equals(marker.name()) ? CardNumber.MARK : marker.text());
         }
     }
 }

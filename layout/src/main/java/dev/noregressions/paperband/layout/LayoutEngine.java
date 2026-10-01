@@ -504,6 +504,9 @@ public final class LayoutEngine {
      */
     @SuppressWarnings("unchecked")
     public String render(Card card, RenderContext ctx, String layoutName) {
+        // A preview has no book to number against: {!number} prints nothing
+        // unless numbers were set.
+        card = withOwnNumbers(List.of(card), false).get(0);
         Map<String, Object> model;
         String html;
         try {
@@ -576,6 +579,7 @@ public final class LayoutEngine {
             throw new IllegalArgumentException(
                     "cards (" + cards.size() + ") and contexts (" + contexts.size() + ") size mismatch");
         }
+        cards = withOwnNumbers(cards, true);
         Map<String, Object> model;
         String html;
         try {
@@ -824,6 +828,7 @@ public final class LayoutEngine {
             throw new IllegalArgumentException(
                     "cards (" + cards.size() + ") and contexts (" + contexts.size() + ") size mismatch");
         }
+        cards = withOwnNumbers(cards, true);
 
         List<AxisGrouping> groupings = computeAxisGroupings(bookCtx, cards, contexts);
 
@@ -1735,6 +1740,82 @@ public final class LayoutEngine {
             }
             section.put("cards", sectionCards);
         }
+    }
+
+    /**
+     * {@code cards} with each {@code {!number}} filled in: the card's bare
+     * number ({@link CardNumber#bare()}) wherever its {@link CardNumber#MARK}
+     * landed -- the title, a heading, a block's HTML, a node's text. Done to the
+     * cards before anything reads them, so templates, the contents, anchors,
+     * {@code find} and {@code | html} all see the number and none of them has
+     * to know about the mark. A card with no mark is returned as it is.
+     *
+     * @param required whether a card with a mark and no number fails: true for
+     *                 a book or a site, where the number would be missing from
+     *                 the page; false for a one-card preview, which prints
+     *                 nothing in its place
+     */
+    private List<Card> withOwnNumbers(List<Card> cards, boolean required) {
+        List<Card> out = new ArrayList<>(cards.size());
+        List<String> unnumbered = new ArrayList<>();
+        for (Card card : cards) {
+            if (!mentionsNumber(card)) {
+                out.add(card);
+                continue;
+            }
+            CardNumber n = cardNumbers.get(card.id());
+            if (n == null) unnumbered.add(card.id() + " (" + card.source() + ")");
+            String number = n == null ? "" : n.bare();
+            out.add(new Card(card.id(), card.source(), card.frontmatter(), fill(card.title(), number),
+                    card.blocks().stream().map(b -> fill(b, number)).toList()));
+        }
+        if (required && !unnumbered.isEmpty()) {
+            throw new LayoutException("{!number} prints the card's number, but these cards have none: "
+                    + String.join(", ", unnumbered) + ". Give their section a format in its _section.md"
+                    + " (numbering: \"Scenario {n}\"), or number the book with vars.numbering.");
+        }
+        return out;
+    }
+
+    private static boolean mentionsNumber(Card card) {
+        if (card.title() != null && card.title().contains(CardNumber.MARK)) return true;
+        for (Block b : card.blocks()) {
+            if (mentionsNumber(b)) return true;
+        }
+        return false;
+    }
+
+    private static boolean mentionsNumber(Block b) {
+        if ((b.heading() != null && b.heading().contains(CardNumber.MARK))
+                || (b.html() != null && b.html().contains(CardNumber.MARK))) return true;
+        for (Block c : b.children()) {
+            if (mentionsNumber(c)) return true;
+        }
+        return false;
+    }
+
+    private static String fill(String text, String number) {
+        return text == null ? null : text.replace(CardNumber.MARK, number);
+    }
+
+    private static Block fill(Block b, String number) {
+        // A heading's anchor is its slug, and the slug of "Scenario 3 recap"
+        // would move with the number. Pin it to the heading as written --
+        // "scenario-number-recap", the class loading already gave it -- so a
+        // link to it survives a renumbering, as a step's does.
+        String id = b.id() == null && b.heading() != null && b.heading().contains(CardNumber.MARK)
+                ? blockAnchor(b) : b.id();
+        return new Block(b.kind(), id, b.classes(), fill(b.heading(), number), b.level(), fill(b.html(), number),
+                b.children().stream().map(c -> fill(c, number)).toList(), b.attributes(), b.directives(),
+                b.nodes().stream().map(n -> fill(n, number)).toList());
+    }
+
+    private static Node fill(Node n, String number) {
+        Map<String, String> props = new LinkedHashMap<>();
+        n.props().forEach((k, v) -> props.put(k, fill(v, number)));
+        return new Node(n.type(), n.tag(), n.id(), n.classes(), n.attributes(), n.directives(), fill(n.text(), number),
+                fill(n.html(), number), n.children().stream().map(c -> fill(c, number)).toList(), props,
+                n.attributeOrder());
     }
 
     /** What a {@code <page>} template's name may be on the site: its last path segment, as a file name. */

@@ -122,6 +122,10 @@ mistake, and neither can `{step}` without the `!`. `{!step}` takes no value: the
 position is the number. The card's title heading can't carry one, because it names the
 card rather than starting a block.
 
+The one other instruction is `{!number}`, which prints the card's own number when its
+section or book numbers its cards: `This is scenario {!number}.` See
+[Number a Series of Cards](card:number-a-series#print-a-cards-own-number).
+
 ## How to Fix
 
 The conventional block headings and their CSS classes:

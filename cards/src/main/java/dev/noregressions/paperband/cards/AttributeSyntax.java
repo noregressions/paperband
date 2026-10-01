@@ -288,6 +288,12 @@ final class AttributeSyntax implements PostProcessor {
             } else {
                 String name = t.group(9);
                 Directives.check(name, t.group(10));
+                if (name.equals(Directives.NUMBER)) {
+                    // A number to print, not an instruction to an element.
+                    throw new IllegalArgumentException("{!number} prints the card's number, so it goes in"
+                            + " the text where the number should read, not in an attribute group: write"
+                            + " \"Scenario {!number}\", not {.x !number}.");
+                }
                 out.put("!" + name, t.group(10) == null ? "" : t.group(10));
             }
             pos = end;

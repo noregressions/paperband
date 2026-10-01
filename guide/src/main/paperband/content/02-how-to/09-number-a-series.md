@@ -12,7 +12,8 @@ Paperband numbers them from book order instead, so reordering the files renumber
 a link that names one by number is checked.
 
 `{!step}` doesn't do this. It numbers the steps inside one card, and starts again in the
-next.
+next. To print a card's own number in its text, use `{!number}` (see
+[Print a card's own number](card:number-a-series#print-a-cards-own-number)).
 
 ## Number one section
 
@@ -55,6 +56,31 @@ A link whose text names a scenario is checked against it. `[Scenario 2](card:log
 fails the build when that card is Scenario 3, and names the file, so a reorder can't leave a
 wrong number behind. Text that names no number, such as "the login scenario", is left
 alone.
+
+## Print a card's own number
+
+`{!number}` in a card's text prints that card's number, and nothing else: no words, no
+link.
+
+```markdown
+# Login fails
+
+This is scenario {!number} of five. Each scenario starts from a clean install.
+
+## Scenario {!number} recap
+```
+
+In the third scenario that reads "This is scenario 3 of five" and "Scenario 3 recap". The
+number is the bare one, as `[#](card:id)` prints it: `3` for `"Scenario {n}"`, `2.4` for a
+chapter, `4.2` for `"Lab {part}.{n}"`. Write the words around it yourself.
+
+It works anywhere text does: a paragraph, a list, a table, a heading. A heading's anchor
+doesn't change with the number, so `## Scenario {!number} recap` is `#scenario-number-recap`
+in every build. In code, `` `{!number}` `` is an example and prints as written.
+
+A card can only print a number it has. `{!number}` in a card its book doesn't number fails
+the build, and names the card. So does `{!number}` in a `_section.md`, which isn't a card. To
+print another card's number, link to it.
 
 ## Number the whole book
 

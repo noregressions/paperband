@@ -185,6 +185,9 @@ It's null for an unnumbered card, so `{% if card.number %}` is the test.
 The printed contents and the PDF bookmarks put the number in front of the title in the
 entry's `label`, so a theme that knows nothing of numbers still shows them.
 
+A card's `{!number}` is already filled in when a template sees the card: `card.title`,
+`block.heading`, `block.html` and every node's `text` and `html` hold the bare number.
+
 ## CSS hooks
 
 The classes the bundled templates and scaffold CSS give the features above:

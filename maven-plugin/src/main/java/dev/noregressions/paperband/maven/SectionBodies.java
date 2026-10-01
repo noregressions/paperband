@@ -167,6 +167,13 @@ final class SectionBodies {
             StringBuilder html = new StringBuilder();
             appendBlocks(html, card.blocks(), new ContentWriter(blockTemplates), bookCtx.vars(), file,
                     output, target);
+            if (html.indexOf(dev.noregressions.paperband.model.CardNumber.MARK) >= 0
+                    || (card.title() != null && card.title().contains(dev.noregressions.paperband.model.CardNumber.MARK))) {
+                // Caught here so it isn't printed as the mark: a section body
+                // isn't a card and has no number of its own.
+                throw new IllegalStateException(file + " uses {!number}, which prints a card's own number;"
+                        + " a section body has none. Name a card's number with [](card:<id>) instead.");
+            }
             Map<String, Object> fm = card.frontmatter().values();
             return new SectionBody(html.toString(), card.title(),
                     truthy(fm.get("cards")) || truthy(fm.get("sections")),

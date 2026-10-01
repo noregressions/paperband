@@ -41,7 +41,7 @@ Paths are relative to `src/main/paperband/`.
 | A cheat sheet of a chosen set of cards (`<book><includes>`, `<view>cheatsheet</view>`, `{.instructions}`), as a PDF and a site | `../../../pom.xml` (`cheatsheet` and `cheatsheet-site` executions), `content/04-workshop/` |
 | A generated page built from every card with `cards \| query`: each workshop step's command, at the end of the cheat sheet, and `commands.html` on its site (a `<page>` in `<sections>`) | `../../../pom.xml` (`cheatsheet` and `cheatsheet-site` executions), `layouts/commands.html`, `styles/book.css` |
 | A student edition: the `student` view prints each `{.solution}` as space to write in | `../../../pom.xml` (`student` execution), `content/01-basics/02-blocks.md` (Try It) |
-| A section numbered as Session 1, 2, 3 (`numbering:` in its `_section.md`) | `content/04-workshop/_section.md` |
+| A section numbered as Session 1, 2, 3 (`numbering:` in its `_section.md`), and a card printing its own number with `{!number}` | `content/04-workshop/_section.md`, `content/04-workshop/01-prepare.md` |
 | A custom block type | `layouts/blocks/note.html`, used in `content/01-basics/02-blocks.md` |
 | A fragment filled from a card's content (`block.nodes`, `find`): an "At a glance" box of each step and its command | `layouts/_card-body.html`, `layouts/fragments/step-glance.html`, `styles/book.css` |
 | `:name:` icons, bundled and the book's own | `content/01-basics/02-blocks.md`, `icons/ks.svg` |

@@ -120,4 +120,17 @@ class SectionBodiesTest {
                 () -> numbering(root, "numbered: false\nnumbering: \"Scenario {n}\""));
         assertTrue(e.getMessage().contains("both `numbered: false`"), e.getMessage());
     }
+
+    @Test
+    @DisplayName("refuse {!number}, which a section body has none of")
+    void refusesTheCardsOwnNumber(@TempDir Path root) throws IOException {
+        Files.writeString(root.resolve("paperband.yaml"), "title: T\n");
+        Path folder = Files.createDirectories(root.resolve("scenarios"));
+        Files.writeString(folder.resolve("_section.md"), "# Scenarios\n\nThis is part {!number}.\n");
+        Path card = Files.writeString(folder.resolve("login.md"), "# Login\n\nText.\n");
+        RenderContext ctx = new ConfigLoader().load(card, "pdf-a4", "a4");
+        var e = assertThrows(IllegalStateException.class,
+                () -> SectionBodies.render(ctx, null, Map.of(), List.of(), "print", "pdf", null, null));
+        assertTrue(e.getMessage().contains("a section body has none"), e.getMessage());
+    }
 }

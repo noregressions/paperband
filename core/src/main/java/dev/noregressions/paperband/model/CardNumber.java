@@ -27,6 +27,17 @@ package dev.noregressions.paperband.model;
  */
 public record CardNumber(int group, int ordinal, String format) {
 
+    /**
+     * Where a card's {@code {!number}} sits in its text until the book is
+     * assembled: a card is read before anything knows its number, so the
+     * marker renders as this, and the layout puts {@link #bare()} in its place
+     * once the book is numbered. Private-use characters around a word no text
+     * contains by accident; a slug or class made from the text drops the
+     * characters and keeps "number", so a heading's anchor doesn't change when
+     * its number does.
+     */
+    public static final String MARK = "\uE000number\uE001";
+
     public CardNumber {
         if (ordinal < 1) {
             throw new IllegalArgumentException(

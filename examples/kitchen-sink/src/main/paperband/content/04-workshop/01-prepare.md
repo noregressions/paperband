@@ -5,8 +5,9 @@ oneliner: "Check the tools the rest of the workshop needs."
 
 # Prepare Your Machine
 
-Everything in this workshop runs through Maven, so the first session only makes sure the
-tools are there and new enough. Nothing here writes a file.
+Everything in this workshop runs through Maven, so session {!number}, the first, only makes
+sure the tools are there and new enough. Nothing here writes a file. (`{!number}` prints this
+card's number, from its folder's `numbering:`.)
 
 ## {!step} Check Java
 
