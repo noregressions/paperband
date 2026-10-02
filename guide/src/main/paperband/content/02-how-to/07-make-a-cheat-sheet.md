@@ -109,7 +109,7 @@ its steps.
 
 ## Change the view
 
-A view is a folder of templates: the bundled `cheatsheet/` has two, and anything it doesn't
+A view is a folder of templates: the bundled `cheatsheet/` has three, and anything it doesn't
 have comes from the defaults. To change one, put a file of the same name in the book's
 `layouts/cheatsheet/`, or in a theme's `cheatsheet/`:
 
@@ -117,6 +117,7 @@ have comes from the defaults. To change one, put a file of the same name in the 
 |---|---|---|
 | `keep.html` | Which cards the build holds: prints `true` or `false` for each card | `{{ card.steps is not empty }}` |
 | `_card-body.html` | What each card becomes | The title, then per step its heading and the parts `cheatsheetSelect` picks |
+| `_page-rail.html` | The site's list down the side of a card's page | The card's steps, each linking to its step |
 
 Both see the card's model, including:
 

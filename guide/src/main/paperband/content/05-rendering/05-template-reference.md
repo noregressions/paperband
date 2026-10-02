@@ -91,7 +91,7 @@ each name is looked up as `<view>/<name>` through all three first.
 | `site-card.html` | A card's page |
 | `site-page.html` | A generated page on the site: its template's output in the shell |
 | `blocks/command.html`, `blocks/console.html`, `blocks/output.html`, `blocks/mermaid.html` | Fences of those types. A book adds a type with `layouts/blocks/<type>.html` |
-| `cheatsheet/keep.html`, `cheatsheet/_card-body.html` | The `cheatsheet` view |
+| `cheatsheet/keep.html`, `cheatsheet/_card-body.html`, `cheatsheet/_page-rail.html` | The `cheatsheet` view; its rail lists a site page's steps |
 | `student/keep.html`, `student/_block-section.html`, `student/_block-content.html`, `student/_answer-space.html` | The `student` view |
 
 ## Views

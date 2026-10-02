@@ -1,0 +1,14 @@
+{# The site's "On this page" rail in the cheatsheet view: the card's steps.
+   The default rail lists every block's heading, and a cheat-sheet page holds
+   only the steps, so most of its links would land nowhere. Each entry links
+   to the step's anchor, which this view's _card-body.html sets. #}
+<nav class="page-rail" aria-label="Steps">
+  <p class="page-rail-heading">Steps</p>
+  <ol>
+    {% for s in card.steps %}
+    {% if s.block.anchor is not null %}
+    <li class="depth-{{ s.depth + 1 }}"><a href="#{{ s.block.anchor }}">{{ s.block.heading }}</a></li>
+    {% endif %}
+    {% endfor %}
+  </ol>
+</nav>

@@ -172,7 +172,22 @@ class CheatsheetViewTest {
             int check = html.indexOf("<h3>Step 1 Check Java</h3>");
             int build = html.indexOf("<h3>Step 2 Build</h3>");
             assertTrue(install < check && check < build, html);
-            assertTrue(html.matches("(?s).*cheatsheet-depth-1\">\\s*<h3>Step 1 Check Java</h3>.*"), html);
+            assertTrue(html.matches("(?s).*cheatsheet-depth-1\"[^>]*>\\s*<h3>Step 1 Check Java</h3>.*"), html);
+        }
+
+        @Test
+        void the_sites_rail_lists_the_steps_and_each_step_has_its_anchor() {
+            LayoutEngine engine = new LayoutEngine();
+            engine.setView("cheatsheet");
+            String page = engine.renderSite(List.of(card()), List.of(ctx(Map.of())), ctx(Map.of()))
+                    .get("cards/setup.html");
+            int rail = page.indexOf("class=\"page-rail\"");
+            assertTrue(rail >= 0, "the site page has a rail: " + page);
+            String nav = page.substring(rail, page.indexOf("</nav>", rail));
+            assertTrue(nav.contains("<a href=\"#install\">Step 1 Install</a>"), nav);
+            assertTrue(nav.contains("<a href=\"#check-java\">Step 1 Check Java</a>"), nav);
+            assertFalse(nav.contains("Before you start"), "not a heading the page doesn't carry: " + nav);
+            assertTrue(page.contains("id=\"install\""), "the link lands on the step");
         }
 
         @Test
