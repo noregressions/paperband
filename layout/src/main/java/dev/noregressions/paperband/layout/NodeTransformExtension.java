@@ -1,6 +1,7 @@
 package dev.noregressions.paperband.layout;
 
 import dev.noregressions.paperband.model.Node;
+import dev.noregressions.paperband.pebble.LenientMap;
 
 import io.pebbletemplates.pebble.error.PebbleException;
 import io.pebbletemplates.pebble.extension.AbstractExtension;
@@ -14,7 +15,9 @@ import org.jsoup.select.Selector;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -22,36 +25,53 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * Filters that change a block's content as data and write it back:
- * {@code drop('css')}, {@code addClass('css', 'name')}, {@code blank('css', 'name')}
- * and {@code html}.
+ * Filters that change a card's content as data: what a view does to a card
+ * before a layout writes it.
  *
  * <pre>
  * {{ e.block | drop('pre.console') | addClass('p.instructions', 'lead') | html | raw }}
+ * {% set card = card | replace('.solution', '{.answer-space lines=4}') %}
  * </pre>
  *
- * <p>{@code find} and {@code query} pick parts out of a card, but what they
- * pick can only be printed as it was. These make a changed copy: each takes a
- * block (its own nodes, children excluded like {@code block.html}), a list of
- * nodes or one node, and returns the nodes it changed, as a list. Nothing is
- * changed in place, so the card prints as it did everywhere else.
+ * <p>Each takes a CSS selector and changes what it matches:
  * <ul>
- *   <li>{@code drop} leaves out every node matching a selector, and what's in
- *       it.</li>
- *   <li>{@code addClass} adds a class to every node matching a selector. A
- *       class is letters, digits, {@code -} and {@code _}.</li>
- *   <li>{@code blank} puts an empty {@code <div>} with a class where each
- *       node matching a selector was: space to write in, where a student
- *       edition leaves out a solution.</li>
+ *   <li>{@code drop} leaves it out, and what's in it. {@code keep} is the
+ *       other way round: it leaves out everything that isn't a match, inside
+ *       one, or around one.</li>
+ *   <li>{@code addClass} and {@code removeClass} change its classes, and
+ *       {@code set('{key=value}')} its attributes.</li>
+ *   <li>{@code replace}, {@code insertBefore}, {@code insertAfter},
+ *       {@code prepend}, {@code append} and {@code wrap} add an empty block,
+ *       written the way a card writes attributes: {@code '{.answer lines=4}'}
+ *       (see {@link BlockSpec}). {@code replace} keeps the id of what it
+ *       replaces, so a link to it still lands. {@code blank('css', 'name')}
+ *       is {@code replace} with only a class.</li>
  *   <li>{@code html} writes nodes back as HTML, the way {@code block.html} is
  *       written: an unchanged node prints the bytes it came from, and a
  *       templated fence goes through its block template. Print it with
  *       {@code | raw}, as {@code block.html} is.</li>
  * </ul>
- * The selector sees what {@code find}'s does. The content was sanitised when the
- * card loaded, and no transform can add markup of the template's choosing:
- * they remove nodes, add a class the writer escapes, or add an empty
- * {@code div} with one.
+ *
+ * <p>What a filter takes decides what it sees and what it returns:
+ * <ul>
+ *   <li>A block (its own nodes, children excluded, like {@code block.html}),
+ *       a list of nodes or one node: the selector sees nodes, as
+ *       {@code find}'s does, and the filter returns the changed nodes as a
+ *       list, so filters chain and {@code html} writes them.</li>
+ *   <li>A card, or a list of cards: the selector sees cards, blocks and nodes,
+ *       as {@code query}'s does ({@code block.solution}, {@code p.solution},
+ *       {@code card:has(pre.command)}), and the filter returns the changed card
+ *       -- its blocks, each block's html, its steps and its slots made again --
+ *       or the list of them. A card a {@code drop} or {@code keep} leaves out
+ *       is null, or missing from the list.</li>
+ * </ul>
+ * Every match is found before anything changes, so a filter never matches what
+ * it added; a filter later in the chain sees what an earlier one did. Nothing
+ * is changed in place, so the card prints as it did everywhere else.
+ *
+ * <p>The content was sanitised when the card loaded, and no transform can add
+ * markup of the template's choosing: they remove nodes, change classes and
+ * attributes the content policy allows, or add an empty {@code div} with them.
  */
 final class NodeTransformExtension extends AbstractExtension {
 
@@ -60,59 +80,222 @@ final class NodeTransformExtension extends AbstractExtension {
     /** Read as one element without children; see NodeHtml. */
     private static final Set<String> OPAQUE_TAGS = Set.of("svg", "math");
 
+    private static final List<String> SELECTOR = List.of("selector");
+    private static final List<String> SELECTOR_NAME = List.of("selector", "name");
+    private static final List<String> SELECTOR_BLOCK = List.of("selector", "block");
+
+    /** What each kind of filter takes after its selector, for a failure to show. */
+    private static final String NAME_EXAMPLE = ", 'lead'";
+    private static final String SET_EXAMPLE = ", '{lines=8}'";
+    private static final String BLOCK_EXAMPLE = ", '{.answer}'";
+
     @Override
     public Map<String, Filter> getFilters() {
-        return Map.of("drop", new Drop(), "addClass", new AddClass(), "blank", new Blank(), "html", new Html());
+        Map<String, Filter> filters = new LinkedHashMap<>();
+        filters.put("drop", new Transform("drop", SELECTOR, "", a -> DROP));
+        filters.put("keep", new Transform("keep", SELECTOR, "", a -> DROP));
+        filters.put("addClass", new Transform("addClass", SELECTOR_NAME, NAME_EXAMPLE,
+                a -> new Restyle(className("addClass", a.get("name")), null, null)));
+        filters.put("removeClass", new Transform("removeClass", SELECTOR_NAME, NAME_EXAMPLE,
+                a -> new Restyle(null, className("removeClass", a.get("name")), null)));
+        filters.put("set", new Transform("set", List.of("selector", "attributes"), SET_EXAMPLE,
+                a -> new Restyle(null, null, attributes(a.get("attributes")))));
+        filters.put("blank", new Transform("blank", SELECTOR_NAME, NAME_EXAMPLE,
+                a -> new Replace(new BlockSpec(null, Set.of(className("blank", a.get("name"))), Map.of()), false)));
+        filters.put("replace", new Transform("replace", SELECTOR_BLOCK, BLOCK_EXAMPLE,
+                a -> new Replace(spec(a.get("block")), true)));
+        filters.put("insertBefore", new Transform("insertBefore", SELECTOR_BLOCK, BLOCK_EXAMPLE,
+                a -> new Insert(spec(a.get("block")), Where.BEFORE)));
+        filters.put("insertAfter", new Transform("insertAfter", SELECTOR_BLOCK, BLOCK_EXAMPLE,
+                a -> new Insert(spec(a.get("block")), Where.AFTER)));
+        filters.put("prepend", new Transform("prepend", SELECTOR_BLOCK, BLOCK_EXAMPLE,
+                a -> new Insert(spec(a.get("block")), Where.FIRST)));
+        filters.put("append", new Transform("append", SELECTOR_BLOCK, BLOCK_EXAMPLE,
+                a -> new Insert(spec(a.get("block")), Where.LAST)));
+        filters.put("wrap", new Transform("wrap", SELECTOR_BLOCK, BLOCK_EXAMPLE,
+                a -> new Wrap(spec(a.get("block")))));
+        filters.put("html", new Html());
+        return filters;
     }
 
-    /** What a node becomes: itself, a changed copy, or null to leave it out. */
+    // ---- what each filter does to a match ----
+
+    /** What a match becomes: the nodes or blocks that take its place, none to leave it out. */
+    private interface Op {
+        List<Node> node(Node matched);
+
+        List<Map<String, Object>> block(Map<String, Object> matched);
+
+        /** Whether it leaves a match out: the only change a card can take. */
+        default boolean drops() {
+            return false;
+        }
+    }
+
+    private static final Op DROP = new Op() {
+        @Override
+        public List<Node> node(Node matched) {
+            return List.of();
+        }
+
+        @Override
+        public List<Map<String, Object>> block(Map<String, Object> matched) {
+            return List.of();
+        }
+
+        @Override
+        public boolean drops() {
+            return true;
+        }
+    };
+
+    /** A class added or removed, or attributes set. */
+    private record Restyle(String add, String remove, Map<String, String> set) implements Op {
+
+        private Set<String> classes(Iterable<?> current) {
+            Set<String> out = new LinkedHashSet<>();
+            for (Object c : current) out.add(c.toString());
+            if (add != null) out.add(add);
+            if (remove != null) out.remove(remove);
+            return out;
+        }
+
+        private Map<String, String> attributes(Map<?, ?> current) {
+            Map<String, String> out = new LinkedHashMap<>();
+            current.forEach((k, v) -> out.put(k.toString(), v == null ? "" : v.toString()));
+            if (set != null) out.putAll(set);
+            return out;
+        }
+
+        @Override
+        public List<Node> node(Node n) {
+            if (n.tag() == null) return List.of(n);
+            return List.of(restyled(n, classes(n.classes()), attributes(n.attributes())));
+        }
+
+        @Override
+        public List<Map<String, Object>> block(Map<String, Object> b) {
+            List<String> classes = new ArrayList<>(classes((List<?>) b.get("classes")));
+            Map<String, Object> out = new HashMap<>(b);
+            out.put("classes", classes);
+            out.put("classAttr", String.join(" ", classes));
+            out.put("attributes", LenientMap.of(attributes((Map<?, ?>) b.get("attributes"))));
+            return List.of(out);
+        }
+    }
+
+    /** An empty block in a match's place, keeping its id when {@code keepId}. */
+    private record Replace(BlockSpec spec, boolean keepId) implements Op {
+
+        @Override
+        public List<Node> node(Node n) {
+            return List.of(spec.node(keepId ? n.id() : null, List.of()));
+        }
+
+        @Override
+        public List<Map<String, Object>> block(Map<String, Object> b) {
+            return List.of(spec.block(level(b), (String) b.get("id"), (String) b.get("anchor"), new ArrayList<>()));
+        }
+    }
+
+    private enum Where { BEFORE, AFTER, FIRST, LAST }
+
+    /** An empty block beside a match, or inside it, first or last. */
+    private record Insert(BlockSpec spec, Where where) implements Op {
+
+        @Override
+        public List<Node> node(Node n) {
+            Node added = spec.node(null, List.of());
+            return switch (where) {
+                case BEFORE -> List.of(added, n);
+                case AFTER -> List.of(n, added);
+                case FIRST, LAST -> {
+                    // Text has nowhere to put it, and a drawing is written from its own html.
+                    if (n.tag() == null || OPAQUE_TAGS.contains(n.tag())) yield List.of(n);
+                    List<Node> children = new ArrayList<>(n.children());
+                    if (where == Where.FIRST) children.add(0, added);
+                    else children.add(added);
+                    yield List.of(rewritten(n, children));
+                }
+            };
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public List<Map<String, Object>> block(Map<String, Object> b) {
+            return switch (where) {
+                case BEFORE -> List.of(spec.block(level(b), null, null, new ArrayList<>()), b);
+                case AFTER -> List.of(b, spec.block(level(b), null, null, new ArrayList<>()));
+                case FIRST, LAST -> {
+                    List<Map<String, Object>> children =
+                            new ArrayList<>((List<Map<String, Object>>) b.get("children"));
+                    Map<String, Object> added = spec.block(level(b) + 1, null, null, new ArrayList<>());
+                    if (where == Where.FIRST) children.add(0, added);
+                    else children.add(added);
+                    Map<String, Object> out = new HashMap<>(b);
+                    out.put("children", children);
+                    yield List.of(out);
+                }
+            };
+        }
+    }
+
+    /** A match inside a new block. */
+    private record Wrap(BlockSpec spec) implements Op {
+
+        @Override
+        public List<Node> node(Node n) {
+            return List.of(spec.node(null, List.of(n)));
+        }
+
+        @Override
+        public List<Map<String, Object>> block(Map<String, Object> b) {
+            List<Map<String, Object>> children = new ArrayList<>();
+            children.add(b);
+            return List.of(spec.block(level(b), null, null, children));
+        }
+    }
+
+    private static int level(Map<String, Object> b) {
+        return b.get("level") instanceof Number n ? n.intValue() : 0;
+    }
+
+    // ---- the filters ----
+
+    /** Builds a filter's {@link Op} from its arguments, or says what's wrong with them. */
     @FunctionalInterface
-    private interface Change {
-        Node apply(Node matched);
+    private interface Maker {
+        Op make(Map<String, Object> args);
     }
 
-    private static final class Drop implements Filter {
+    private record Transform(String name, List<String> argumentNames, String example, Maker maker)
+            implements Filter {
 
         @Override
         public List<String> getArgumentNames() {
-            return List.of("selector");
+            return argumentNames;
         }
 
         @Override
         public Object apply(Object input, Map<String, Object> args, PebbleTemplate self,
                             EvaluationContext context, int lineNumber) throws PebbleException {
-            return transform("drop", input, args.get("selector"), n -> null, self, lineNumber);
-        }
-    }
-
-    private static final class AddClass implements Filter {
-
-        @Override
-        public List<String> getArgumentNames() {
-            return List.of("selector", "name");
-        }
-
-        @Override
-        public Object apply(Object input, Map<String, Object> args, PebbleTemplate self,
-                            EvaluationContext context, int lineNumber) throws PebbleException {
-            String cls = className("addClass", args.get("name"), self, lineNumber);
-            return transform("addClass", input, args.get("selector"), n -> withClass(n, cls), self, lineNumber);
-        }
-    }
-
-    private static final class Blank implements Filter {
-
-        @Override
-        public List<String> getArgumentNames() {
-            return List.of("selector", "name");
-        }
-
-        @Override
-        public Object apply(Object input, Map<String, Object> args, PebbleTemplate self,
-                            EvaluationContext context, int lineNumber) throws PebbleException {
-            String cls = className("blank", args.get("name"), self, lineNumber);
-            Node space = space(cls);
-            return transform("blank", input, args.get("selector"), n -> space, self, lineNumber);
+            Object selector = args.get("selector");
+            if (selector == null || selector.toString().isBlank()) {
+                throw new PebbleException(null, name + " needs a CSS selector, as in block | " + name
+                        + "('pre.console'" + example + ")", lineNumber, self.getName());
+            }
+            Op op;
+            try {
+                op = maker.make(args);
+            } catch (IllegalArgumentException e) {
+                throw new PebbleException(null, name + ": " + e.getMessage(), lineNumber, self.getName());
+            }
+            Call call = new Call(name, selector.toString(), op, name.equals("keep"), self, lineNumber);
+            if (isCard(input)) return call.card((Map<?, ?>) input);
+            if (input instanceof List<?> list && !list.isEmpty() && list.stream().allMatch(NodeTransformExtension::isCard)) {
+                return call.cards(list);
+            }
+            return call.nodes(models(name, input, self, lineNumber));
         }
     }
 
@@ -126,48 +309,47 @@ final class NodeTransformExtension extends AbstractExtension {
         @Override
         public Object apply(Object input, Map<String, Object> args, PebbleTemplate self,
                             EvaluationContext context, int lineNumber) throws PebbleException {
-            StringBuilder out = new StringBuilder();
-            for (NodeModel m : models("html", input, self, lineNumber)) {
-                out.append(NodeHtml.write(List.of(m.node()), m.fences()));
-            }
-            return out.toString();
+            return html(models("html", input, self, lineNumber));
         }
     }
 
-    /** {@code name} as a class, or a failure naming {@code filter}'s arguments. */
-    private static String className(String filter, Object name, PebbleTemplate self, int lineNumber)
-            throws PebbleException {
+    private static boolean isCard(Object o) {
+        return o instanceof Map<?, ?> m && !(o instanceof NodeModel) && m.get("blocks") instanceof List<?>;
+    }
+
+    /** {@code name} as a class, or a failure saying what a class is. */
+    private static String className(String filter, Object name) {
         if (name == null || !CLASS_NAME.matcher(name.toString()).matches()) {
-            throw new PebbleException(null, filter + " needs a selector and a class name of letters,"
+            throw new IllegalArgumentException("needs a selector and a class name of letters,"
                     + " digits, - and _, as in " + filter + "('.solution', 'answer-space'), not "
-                    + (name == null ? "nothing" : "'" + name + "'"), lineNumber, self.getName());
+                    + (name == null ? "nothing" : "'" + name + "'"));
         }
         return name.toString();
     }
 
-    /** An empty {@code <div class="cls">}: what {@code blank} leaves where a node was. */
-    private static Node space(String cls) {
-        String html = "<div class=\"" + cls + "\"></div>";
-        return new Node("element", "div", null, Set.of(cls), Map.of(), Map.of(), "", html, List.of(), Map.of());
+    private static BlockSpec spec(Object text) {
+        return BlockSpec.parse(text == null ? null : text.toString());
     }
 
-    /** {@code input}'s nodes with {@code change} applied to each that {@code selector} matches. */
-    private static List<NodeModel> transform(String filter, Object input, Object selector, Change change,
-                                             PebbleTemplate self, int lineNumber) throws PebbleException {
-        if (selector == null || selector.toString().isBlank()) {
-            throw new PebbleException(null, filter + " needs a CSS selector, as in"
-                    + " block | " + filter + "('pre.console'" + (filter.equals("addClass") ? ", 'x'" : "")
-                    + ")", lineNumber, self.getName());
+    private static Map<String, String> attributes(Object text) {
+        BlockSpec spec = spec(text);
+        if (!spec.attributesOnly() || spec.attributes().isEmpty()) {
+            throw new IllegalArgumentException("sets attributes, as in set('.solution', '{lines=8}');"
+                    + " use addClass for a class");
         }
-        List<NodeModel> roots = models(filter, input, self, lineNumber);
-        Set<Node> matched = matches(filter, roots, selector.toString(), self, lineNumber);
-        List<NodeModel> out = new ArrayList<>(roots.size());
-        for (NodeModel m : roots) {
-            Node changed = rebuild(m.node(), matched, change);
-            if (changed == null) continue;
-            out.add(changed == m.node() ? m : NodeModel.of(changed, m.fences()));
+        return spec.attributes();
+    }
+
+    /** Nodes written back as HTML, each through its own block's fences. */
+    private static String html(List<?> models) {
+        StringBuilder out = new StringBuilder();
+        for (Object o : models) {
+            if (o instanceof NodeModel m) {
+                out.append(m.fences() == null ? NodeHtml.write(List.of(m.node()))
+                        : NodeHtml.write(List.of(m.node()), m.fences()));
+            }
         }
-        return out;
+        return out.toString();
     }
 
     /** The node models {@code input} holds: a block's nodes, a list of nodes, or one node. */
@@ -190,7 +372,7 @@ final class NodeTransformExtension extends AbstractExtension {
             }
         }
         if (items == null) {
-            throw new PebbleException(null, filter + " works on a block, block.nodes or a node"
+            throw new PebbleException(null, filter + " works on a card, cards, a block, block.nodes or a node"
                     + " (from a query entry, e.node or e.block), not "
                     + (input instanceof List<?> ? "a list of something else" : input.getClass().getSimpleName()),
                     lineNumber, self.getName());
@@ -198,44 +380,173 @@ final class NodeTransformExtension extends AbstractExtension {
         return out;
     }
 
-    /** The nodes under {@code roots} that {@code selector} matches, by identity. */
-    private static Set<Node> matches(String filter, List<NodeModel> roots, String selector,
-                                     PebbleTemplate self, int lineNumber) throws PebbleException {
-        Map<Element, Map<?, ?>> byElement = new IdentityHashMap<>();
-        Element top = new Element("paperband-nodes");
-        for (NodeModel m : roots) NodeFindExtension.standIn(top, m, byElement);
-        Set<Node> out = Collections.newSetFromMap(new IdentityHashMap<>());
-        try {
-            for (Element match : top.select(selector)) {
-                if (byElement.get(match) instanceof NodeModel m) out.add(m.node());
-            }
-        } catch (Selector.SelectorParseException e) {
-            throw new PebbleException(e, filter + "('" + selector + "') isn't a CSS selector jsoup"
-                    + " can read: " + e.getMessage(), lineNumber, self.getName());
+    // ---- one call: find the matches, then make the changed copy ----
+
+    private record Call(String filter, String selector, Op op, boolean keep, PebbleTemplate self, int lineNumber) {
+
+        /** The changed nodes: the selector sees nodes only. */
+        List<NodeModel> nodes(List<NodeModel> roots) throws PebbleException {
+            Map<Element, Object> models = new IdentityHashMap<>();
+            Element top = new Element("paperband-nodes");
+            Map<Element, Map<?, ?>> byElement = new IdentityHashMap<>();
+            for (NodeModel m : roots) NodeFindExtension.standIn(top, m, byElement);
+            models.putAll(byElement);
+            Targets t = targets(top, models);
+            List<NodeModel> out = new ArrayList<>(roots.size());
+            for (NodeModel m : roots) out.addAll(rebuilt(m, t));
+            return out;
         }
-        return out;
+
+        /** The changed card, or null when it's left out. */
+        Map<String, Object> card(Map<?, ?> card) throws PebbleException {
+            List<Map<String, Object>> out = cards(List.of(card));
+            return out.isEmpty() ? null : out.get(0);
+        }
+
+        /** The changed cards, less any left out. */
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> cards(List<?> cards) throws PebbleException {
+            Map<Element, BookQueryExtension.Origin> origins = new IdentityHashMap<>();
+            Element top = new Element("paperband-book");
+            for (Object c : cards) BookQueryExtension.addCard(top, (Map<?, ?>) c, origins);
+            Map<Element, Object> models = new IdentityHashMap<>();
+            origins.forEach((e, o) -> models.put(e, o.model()));
+            Targets t = targets(top, models);
+            if (!op.drops() && !t.cards.isEmpty()) {
+                throw new PebbleException(null, filter + "('" + selector + "') matches a card; " + filter
+                        + " changes blocks and nodes. Use drop or keep to leave cards out",
+                        lineNumber, self.getName());
+            }
+            List<Map<String, Object>> out = new ArrayList<>(cards.size());
+            for (Object o : cards) {
+                Map<String, Object> card = (Map<String, Object>) o;
+                if (t.cards.contains(card)) continue;
+                List<Map<String, Object>> blocks = (List<Map<String, Object>>) card.get("blocks");
+                List<Map<String, Object>> changed = rebuiltBlocks(blocks, t);
+                if (changed == blocks) {
+                    out.add(card);
+                    continue;
+                }
+                Map<String, Object> copy = new HashMap<>(card);
+                copy.put("blocks", changed);
+                copy.put("slots", card.get("slots") instanceof SlotTracker s ? s.derive(changed)
+                        : new SlotTracker(changed));
+                copy.put("steps", StepList.steps(changed));
+                out.add(copy);
+            }
+            return out;
+        }
+
+        /** What the selector matched under {@code top}, by kind: for {@code keep}, what it didn't. */
+        private Targets targets(Element top, Map<Element, Object> models) throws PebbleException {
+            List<Element> matched;
+            try {
+                matched = top.select(selector);
+            } catch (Selector.SelectorParseException e) {
+                throw new PebbleException(e, filter + "('" + selector + "') isn't a CSS selector jsoup"
+                        + " can read: " + e.getMessage(), lineNumber, self.getName());
+            }
+            Set<Element> hit = Collections.newSetFromMap(new IdentityHashMap<>());
+            if (keep) {
+                // What survives a keep: each match, what's in it, and what it's in.
+                Set<Element> kept = Collections.newSetFromMap(new IdentityHashMap<>());
+                for (Element m : matched) {
+                    kept.addAll(m.getAllElements());
+                    for (Element p = m.parent(); p != null && p != top; p = p.parent()) kept.add(p);
+                }
+                for (Element e : top.getAllElements()) {
+                    if (e != top && !kept.contains(e)) hit.add(e);
+                }
+            } else {
+                hit.addAll(matched);
+            }
+            Targets t = new Targets();
+            for (Element e : hit) {
+                Object model = models.get(e);
+                if (model instanceof NodeModel n) t.nodes.add(n.node());
+                else if (model instanceof Map<?, ?> m && m.get("blocks") instanceof List<?>) t.cards.add(m);
+                else if (model instanceof Map<?, ?> m) t.blocks.add(m);
+            }
+            return t;
+        }
+
+        /** {@code m}'s node with the op applied wherever it matched, as models. */
+        private List<NodeModel> rebuilt(NodeModel m, Targets t) {
+            List<Node> r = rebuilt(m.node(), t.nodes);
+            if (r.size() == 1 && r.get(0) == m.node()) return List.of(m);
+            List<NodeModel> out = new ArrayList<>(r.size());
+            for (Node n : r) out.add(NodeModel.of(n, m.fences()));
+            return out;
+        }
+
+        /**
+         * What takes {@code n}'s place: its children changed first, then the op
+         * applied to it if it matched. {@code n} itself when nothing changed.
+         */
+        private List<Node> rebuilt(Node n, Set<Node> matched) {
+            Node self = n;
+            if (!n.children().isEmpty()) {
+                List<Node> children = new ArrayList<>(n.children().size());
+                boolean changed = false;
+                for (Node c : n.children()) {
+                    List<Node> r = rebuilt(c, matched);
+                    if (r.size() != 1 || r.get(0) != c) changed = true;
+                    children.addAll(r);
+                }
+                if (changed) self = rewritten(n, children);
+            }
+            return matched.contains(n) ? op.node(self) : List.of(self);
+        }
+
+        /** {@code blocks} changed, or {@code blocks} itself when nothing in them did. */
+        private List<Map<String, Object>> rebuiltBlocks(List<Map<String, Object>> blocks, Targets t) {
+            List<Map<String, Object>> out = new ArrayList<>(blocks.size());
+            boolean changed = false;
+            for (Map<String, Object> b : blocks) {
+                List<Map<String, Object>> r = rebuiltBlock(b, t);
+                if (r.size() != 1 || r.get(0) != b) changed = true;
+                out.addAll(r);
+            }
+            return changed ? out : blocks;
+        }
+
+        /** What takes {@code b}'s place: its nodes and nested blocks changed, then the op if it matched. */
+        @SuppressWarnings("unchecked")
+        private List<Map<String, Object>> rebuiltBlock(Map<String, Object> b, Targets t) {
+            List<Object> nodes = new ArrayList<>();
+            boolean nodesChanged = false;
+            for (Object o : (List<?>) b.get("nodes")) {
+                if (!(o instanceof NodeModel m)) {
+                    nodes.add(o);
+                    continue;
+                }
+                List<NodeModel> r = rebuilt(m, t);
+                if (r.size() != 1 || r.get(0) != m) nodesChanged = true;
+                nodes.addAll(r);
+            }
+            List<Map<String, Object>> children = (List<Map<String, Object>>) b.get("children");
+            List<Map<String, Object>> newChildren = rebuiltBlocks(children, t);
+            Map<String, Object> self = b;
+            if (nodesChanged || newChildren != children) {
+                self = new HashMap<>(b);
+                if (nodesChanged) {
+                    self.put("nodes", nodes);
+                    self.put("html", html(nodes));
+                }
+                self.put("children", newChildren);
+            }
+            return t.blocks.contains(b) ? op.block(self) : List.of(self);
+        }
     }
 
-    /**
-     * {@code n} with {@code change} applied wherever it matched: {@code n}
-     * itself when nothing under it changed, null when it's left out.
-     */
-    private static Node rebuild(Node n, Set<Node> matched, Change change) {
-        Node self = n;
-        if (matched.contains(n)) {
-            self = change.apply(n);
-            if (self == null) return null;
-        }
-        List<Node> children = new ArrayList<>(self.children().size());
-        boolean changed = false;
-        for (Node c : self.children()) {
-            Node r = rebuild(c, matched, change);
-            if (r != c) changed = true;
-            if (r != null) children.add(r);
-        }
-        if (!changed) return self;
-        return rewritten(self, children);
+    /** What a selector matched, by identity: the models, and the records under the nodes. */
+    private static final class Targets {
+        final Set<Node> nodes = Collections.newSetFromMap(new IdentityHashMap<>());
+        final Set<Object> blocks = Collections.newSetFromMap(new IdentityHashMap<>());
+        final Set<Object> cards = Collections.newSetFromMap(new IdentityHashMap<>());
     }
+
+    // ---- rewriting a node ----
 
     /** {@code n} with new children, its {@code html} and {@code text} written from them. */
     private static Node rewritten(Node n, List<Node> children) {
@@ -247,27 +558,36 @@ final class NodeTransformExtension extends AbstractExtension {
                 text, html, children, n.props(), n.attributeOrder());
     }
 
-    /** {@code n} with {@code cls} among its classes, and in its HTML. */
-    private static Node withClass(Node n, String cls) {
-        if (n.tag() == null || n.classes().contains(cls)) return n;
-        Set<String> classes = new LinkedHashSet<>(n.classes());
-        classes.add(cls);
+    /** {@code n} with these classes and attributes, in its HTML too. */
+    private static Node restyled(Node n, Set<String> classes, Map<String, String> attributes) {
+        if (classes.equals(n.classes()) && attributes.equals(n.attributes())) return n;
         List<String> order = n.attributeOrder();
-        if (!order.isEmpty() && !order.contains("class")) {
+        if (!order.isEmpty()) {
             order = new ArrayList<>(order);
-            order.add("class");
+            if (classes.isEmpty()) order.remove("class");
+            else if (!order.contains("class")) order.add("class");
+            for (String key : attributes.keySet()) {
+                if (!order.contains(key)) order.add(key);
+            }
         }
-        Node draft = new Node(n.type(), n.tag(), n.id(), classes, n.attributes(), n.directives(),
+        Node draft = new Node(n.type(), n.tag(), n.id(), classes, attributes, n.directives(),
                 n.text(), n.html(), n.children(), n.props(), order);
         String html;
         if (OPAQUE_TAGS.contains(n.tag())) {
             // A drawing is written from its own HTML, not from its children.
             Element drawn = Jsoup.parseBodyFragment(n.html()).body().firstElementChild();
-            html = drawn == null ? n.html() : drawn.addClass(cls).outerHtml();
+            if (drawn == null) {
+                html = n.html();
+            } else {
+                drawn.classNames(classes);
+                if (classes.isEmpty()) drawn.removeAttr("class");
+                attributes.forEach(drawn::attr);
+                html = drawn.outerHtml();
+            }
         } else {
             html = NodeHtml.write(List.of(draft));
         }
-        return new Node(n.type(), n.tag(), n.id(), classes, n.attributes(), n.directives(),
+        return new Node(n.type(), n.tag(), n.id(), classes, attributes, n.directives(),
                 n.text(), html, n.children(), n.props(), order);
     }
 }

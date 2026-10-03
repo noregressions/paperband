@@ -226,11 +226,16 @@ in a `<page>` template or `_book-front.html`, where `cards` is in scope; a card 
 Example: `{% for c in cards %}{% for e in c | query('block[data-paperband-step] pre.command') %}…{{ e.step.heading }}
 {{ e.node.code }}…`. Guide: Themes, "Querying the whole book".
 
-`drop('css')` and `addClass('css', 'name')` take a block (its own nodes), a list of nodes or a node, and
-return a changed copy as a list of nodes, as does `blank('css', 'name')`, which puts an empty
-`<div class="name">` where each match was; `| html` writes nodes back as `block.html` would (fences through
-their block templates), printed with `| raw`: `{{ e.block | drop('pre.console') | html | raw }}`. Nothing
-changes in place. Class names are letters, digits, `-`, `_`. Guide: Themes, "Changing what a block prints";
+Transforms: `drop('css')`, `keep('css')`, `addClass`/`removeClass('css', 'name')`, `set('css', '{k=v}')`,
+`replace`/`insertBefore`/`insertAfter`/`prepend`/`append`/`wrap('css', '{.name k=v}')` and
+`blank('css', 'name')`. Given a block (its own nodes), a list of nodes or a node, the selector sees nodes and
+they return a changed copy as a list of nodes. Given a card or cards, the selector also sees `card` and `block`
+(as `query`'s does) and they return the changed card(s), block html, `card.steps` and `card.slots` made again:
+`{% set card = card | replace('.solution', '{.answer-space lines=4}') %}`. Only drop/keep leave out a card.
+An added block is an empty div (or block) with the spec's id, classes and attributes; no style, on*, URL
+attributes. Every match is found before anything changes. `| html` writes nodes back as `block.html` would
+(fences through their block templates), printed with `| raw`: `{{ e.block | drop('pre.console') | html | raw }}`.
+Nothing changes in place. Class names are letters, digits, `-`, `_`. Guide: Themes, "Changing what a block prints";
 every filter, bundled template, view, generated-page model key and nav entry kind is tabled in the
 `template-reference` card.
 

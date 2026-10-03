@@ -65,8 +65,8 @@ final class BookQueryExtension extends AbstractExtension {
         return Map.of("query", new QueryFilter());
     }
 
-    /** What a stand-in element was made from. */
-    private record Origin(String kind, Map<?, ?> model) {
+    /** What a stand-in element was made from: its kind ({@code card}, {@code block}, {@code node}) and model. */
+    record Origin(String kind, Map<?, ?> model) {
     }
 
     private static final class QueryFilter implements Filter {
@@ -124,60 +124,6 @@ final class BookQueryExtension extends AbstractExtension {
             return false;
         }
 
-        private static void addCard(Element parent, Map<?, ?> card, Map<Element, Origin> origins) {
-            Element el = new Element("card");
-            if (card.get("id") != null) el.id(card.get("id").toString());
-            if (card.get("axes") instanceof Map<?, ?> axes) {
-                axes.forEach((axis, value) -> {
-                    if (value instanceof Map<?, ?> v && v.get("id") != null) el.addClass(axis + "-" + v.get("id"));
-                });
-            }
-            if (card.get("frontmatter") instanceof Map<?, ?> fm) {
-                fm.forEach((k, v) -> {
-                    String value = attributeValue(v);
-                    if (value != null && ATTRIBUTE_NAME.matcher(k.toString()).matches()) el.attr(k.toString(), value);
-                });
-            }
-            parent.appendChild(el);
-            origins.put(el, new Origin("card", card));
-            for (Object b : (List<?>) card.get("blocks")) {
-                if (b instanceof Map<?, ?> block) addBlock(el, block, origins);
-            }
-        }
-
-        private static void addBlock(Element parent, Map<?, ?> block, Map<Element, Origin> origins) {
-            Element el = new Element("block");
-            if (block.get("id") != null) el.id(block.get("id").toString());
-            if (block.get("classes") instanceof List<?> classes) {
-                for (Object c : classes) el.addClass(c.toString());
-            }
-            if (block.get("attributes") instanceof Map<?, ?> attrs) {
-                attrs.forEach((k, v) -> el.attr(k.toString(), v == null ? "" : v.toString()));
-            }
-            if (block.get("directives") instanceof Map<?, ?> dirs) {
-                dirs.forEach((k, v) -> el.attr(NodeHtml.DIRECTIVE_PREFIX + k, v == null ? "" : v.toString()));
-            }
-            parent.appendChild(el);
-            origins.put(el, new Origin("block", block));
-            Map<Element, Map<?, ?>> nodes = new IdentityHashMap<>();
-            for (Object n : (List<?>) block.get("nodes")) NodeFindExtension.standIn(el, n, nodes);
-            nodes.forEach((e, n) -> origins.put(e, new Origin("node", n)));
-            if (block.get("children") instanceof List<?> children) {
-                for (Object c : children) {
-                    if (c instanceof Map<?, ?> child) addBlock(el, child, origins);
-                }
-            }
-        }
-
-        /** A scalar as attribute text, a list as its items joined by spaces for {@code ~=}; null otherwise. */
-        private static String attributeValue(Object v) {
-            if (v instanceof String || v instanceof Number || v instanceof Boolean) return v.toString();
-            if (v instanceof List<?> list && list.stream().allMatch(i -> i instanceof String || i instanceof Number)) {
-                return list.stream().map(Object::toString).collect(Collectors.joining(" "));
-            }
-            return null;
-        }
-
         /** The entry for {@code match}: it, and the card, block and step it sits in. */
         private static Map<String, Object> entry(Element match, Map<Element, Origin> origins) {
             Origin own = origins.get(match);
@@ -199,5 +145,61 @@ final class BookQueryExtension extends AbstractExtension {
             }
             return e;
         }
+    }
+
+    /** A stand-in for {@code card}, its blocks and their nodes, under {@code parent}. Shared with the transforms. */
+    static void addCard(Element parent, Map<?, ?> card, Map<Element, Origin> origins) {
+        Element el = new Element("card");
+        if (card.get("id") != null) el.id(card.get("id").toString());
+        if (card.get("axes") instanceof Map<?, ?> axes) {
+            axes.forEach((axis, value) -> {
+                if (value instanceof Map<?, ?> v && v.get("id") != null) el.addClass(axis + "-" + v.get("id"));
+            });
+        }
+        if (card.get("frontmatter") instanceof Map<?, ?> fm) {
+            fm.forEach((k, v) -> {
+                String value = attributeValue(v);
+                if (value != null && ATTRIBUTE_NAME.matcher(k.toString()).matches()) el.attr(k.toString(), value);
+            });
+        }
+        parent.appendChild(el);
+        origins.put(el, new Origin("card", card));
+        for (Object b : (List<?>) card.get("blocks")) {
+            if (b instanceof Map<?, ?> block) addBlock(el, block, origins);
+        }
+    }
+
+    /** A stand-in for {@code block}, its nodes and its nested blocks, under {@code parent}. */
+    static void addBlock(Element parent, Map<?, ?> block, Map<Element, Origin> origins) {
+        Element el = new Element("block");
+        if (block.get("id") != null) el.id(block.get("id").toString());
+        if (block.get("classes") instanceof List<?> classes) {
+            for (Object c : classes) el.addClass(c.toString());
+        }
+        if (block.get("attributes") instanceof Map<?, ?> attrs) {
+            attrs.forEach((k, v) -> el.attr(k.toString(), v == null ? "" : v.toString()));
+        }
+        if (block.get("directives") instanceof Map<?, ?> dirs) {
+            dirs.forEach((k, v) -> el.attr(NodeHtml.DIRECTIVE_PREFIX + k, v == null ? "" : v.toString()));
+        }
+        parent.appendChild(el);
+        origins.put(el, new Origin("block", block));
+        Map<Element, Map<?, ?>> nodes = new IdentityHashMap<>();
+        for (Object n : (List<?>) block.get("nodes")) NodeFindExtension.standIn(el, n, nodes);
+        nodes.forEach((e, n) -> origins.put(e, new Origin("node", n)));
+        if (block.get("children") instanceof List<?> children) {
+            for (Object c : children) {
+                if (c instanceof Map<?, ?> child) addBlock(el, child, origins);
+            }
+        }
+    }
+
+    /** A scalar as attribute text, a list as its items joined by spaces for {@code ~=}; null otherwise. */
+    private static String attributeValue(Object v) {
+        if (v instanceof String || v instanceof Number || v instanceof Boolean) return v.toString();
+        if (v instanceof List<?> list && list.stream().allMatch(i -> i instanceof String || i instanceof Number)) {
+            return list.stream().map(Object::toString).collect(Collectors.joining(" "));
+        }
+        return null;
     }
 }

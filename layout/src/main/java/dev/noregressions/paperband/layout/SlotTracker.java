@@ -84,9 +84,22 @@ public final class SlotTracker {
     private final Set<Integer> consumed = new HashSet<>();
     private final List<String> missing = new ArrayList<>();
     private boolean used;
+    private final List<SlotTracker> derived = new ArrayList<>();
 
     SlotTracker(List<Map<String, Object>> blocks) {
         this.blocks = blocks;
+    }
+
+    /**
+     * The tracker for a changed copy of this card -- what a transform such as
+     * {@code card | drop('.aside')} hands a template -- over its blocks. It's
+     * remembered here, so the engine checks a template that places the copy's
+     * blocks as it checks one that places the card's.
+     */
+    SlotTracker derive(List<Map<String, Object>> blocks) {
+        SlotTracker t = new SlotTracker(blocks);
+        derived.add(t);
+        return t;
     }
 
     /**
@@ -185,6 +198,14 @@ public final class SlotTracker {
 
     boolean used() {
         return used;
+    }
+
+    /** This tracker and every one derived from it, at any depth. */
+    List<SlotTracker> family() {
+        List<SlotTracker> out = new ArrayList<>();
+        out.add(this);
+        for (SlotTracker d : derived) out.addAll(d.family());
+        return out;
     }
 
     List<Map<String, Object>> unplaced() {

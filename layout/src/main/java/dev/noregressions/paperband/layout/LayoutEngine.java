@@ -3206,22 +3206,25 @@ public final class LayoutEngine {
     private static void checkSlots(String layoutName, List<Map<String, Object>> cardModels) {
         StringBuilder sb = new StringBuilder();
         for (Map<String, Object> cm : cardModels) {
-            if (!(cm.get("slots") instanceof SlotTracker t) || !t.used()) continue;
-            List<Map<String, Object>> unplaced = t.unplaced();
-            List<String> missing = t.missingRequired();
-            if (unplaced.isEmpty() && missing.isEmpty()) continue;
-            sb.append("Slot placement failed in card '").append(cm.get("id"))
-                    .append("' (layout '").append(layoutName).append("'):\n");
-            for (Map<String, Object> b : unplaced) {
-                Object heading = b.get("heading");
-                sb.append("  unplaced: ")
-                        .append(heading != null ? "\"" + heading + "\"" : "(intro)")
-                        .append(" (classes [").append(b.get("classAttr")).append("]");
-                if (b.get("id") != null) sb.append(", id ").append(b.get("id"));
-                sb.append(")\n");
-            }
-            for (String name : missing) {
-                sb.append("  missing required slot: ").append(name).append("\n");
+            if (!(cm.get("slots") instanceof SlotTracker root)) continue;
+            for (SlotTracker t : root.family()) {
+                if (!t.used()) continue;
+                List<Map<String, Object>> unplaced = t.unplaced();
+                List<String> missing = t.missingRequired();
+                if (unplaced.isEmpty() && missing.isEmpty()) continue;
+                sb.append("Slot placement failed in card '").append(cm.get("id"))
+                        .append("' (layout '").append(layoutName).append("'):\n");
+                for (Map<String, Object> b : unplaced) {
+                    Object heading = b.get("heading");
+                    sb.append("  unplaced: ")
+                            .append(heading != null ? "\"" + heading + "\"" : "(intro)")
+                            .append(" (classes [").append(b.get("classAttr")).append("]");
+                    if (b.get("id") != null) sb.append(", id ").append(b.get("id"));
+                    sb.append(")\n");
+                }
+                for (String name : missing) {
+                    sb.append("  missing required slot: ").append(name).append("\n");
+                }
             }
         }
         if (sb.length() > 0) {

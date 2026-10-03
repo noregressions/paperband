@@ -89,6 +89,19 @@ public final class ContentSanitizer {
     private ContentSanitizer() {}
 
     /**
+     * Whether {@link #strip} keeps an attribute of this name on an ordinary
+     * element: false for presentation and {@code on*} handlers. Shared with
+     * what a layout adds to content after loading, so it can't add what an
+     * author couldn't.
+     *
+     * @param name the attribute name, any case
+     */
+    public static boolean keepsAttribute(String name) {
+        String lower = name.toLowerCase(Locale.ROOT);
+        return !PRESENTATIONAL_ATTRS.contains(lower) && !lower.startsWith("on");
+    }
+
+    /**
      * Strip presentation from {@code body}, in place.
      *
      * @param body the card body element (jsoup DOM), mutated

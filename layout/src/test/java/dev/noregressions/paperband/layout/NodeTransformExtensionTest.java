@@ -132,6 +132,80 @@ class NodeTransformExtensionTest {
         assertFalse(html.contains("BUILD SUCCESS"), html);
     }
 
+    @Test
+    void replace_puts_an_empty_block_with_attributes_where_each_match_was(@TempDir Path book) throws IOException {
+        String html = render(book, "{{ b | replace('pre.console', '{.output-space lines=3}') | html | raw }}");
+        assertFalse(html.contains("BUILD SUCCESS"), html);
+        assertTrue(html.contains("<div class=\"output-space\" lines=\"3\"></div><ul>"), html);
+    }
+
+    @Test
+    void insert_before_and_after_add_a_sibling(@TempDir Path book) throws IOException {
+        String html = render(book, "{{ b | insertBefore('p.instructions', '{.before}')"
+                + " | insertAfter('p.instructions', '{.after}') | html | raw }}");
+        assertTrue(html.contains("<p>Why it matters.</p><div class=\"before\"></div><p class=\"instructions\">"), html);
+        assertTrue(html.contains("<em>Maven</em>.</p><div class=\"after\"></div><pre"), html);
+    }
+
+    @Test
+    void prepend_and_append_add_a_first_and_last_child(@TempDir Path book) throws IOException {
+        String html = tight(render(book, "{{ b | prepend('ul', '{.first}') | append('ul', '{.last}')"
+                + " | find('ul') | html | raw }}"));
+        assertTrue(html.startsWith("<ul><div class=\"first\"></div><li>one</li>"), html);
+        assertTrue(html.endsWith("<div class=\"last\"></div></ul>"), html);
+    }
+
+    @Test
+    void wrap_puts_a_match_inside_a_new_block(@TempDir Path book) throws IOException {
+        String html = tight(render(book, "{{ b | wrap('ul', '{.aside}') | html | raw }}"));
+        assertTrue(html.contains("<div class=\"aside\"><ul><li>one</li>"), html);
+        assertTrue(html.contains("</ul></div>"), html);
+    }
+
+    @Test
+    void remove_class_and_set_change_what_a_match_carries(@TempDir Path book) throws IOException {
+        String html = render(book, "{{ b | removeClass('p.instructions', 'instructions') | set('ul', '{data-kind=list}')"
+                + " | html | raw }}");
+        assertTrue(html.contains("<p>Build it with <em>Maven</em>.</p>"), html);
+        assertTrue(html.contains("<ul data-kind=\"list\">"), html);
+    }
+
+    @Test
+    void keep_leaves_out_everything_that_isnt_a_match_in_one_or_around_one(@TempDir Path book) throws IOException {
+        String html = tight(render(book, "{{ b | keep('p.instructions, li:first-child') | html | raw }}"));
+        assertTrue(html.contains("<p class=\"instructions\">Build it with <em>Maven</em>.</p>"), "its insides stay: " + html);
+        assertTrue(html.contains("<ul><li>one</li></ul>"), "the list around a match stays, its other items go: " + html);
+        assertFalse(html.contains("Why it matters"), html);
+        assertFalse(html.contains("<pre"), html);
+    }
+
+    @Test
+    void a_filter_never_matches_what_it_added_but_the_next_one_does(@TempDir Path book) throws IOException {
+        String html = render(book, "{% set t = b | insertAfter('li, .li', '{.li}') %}"
+                + "[{{ t | find('.li') | length }}][{{ t | insertAfter('.li', '{.z}') | find('.z') | length }}]");
+        assertTrue(html.contains("[2][2]"), html);
+    }
+
+    @Test
+    void a_block_cant_carry_what_a_card_cant(@TempDir Path book) {
+        for (String spec : List.of("{style=\"color:red\"}", "{onclick=x}", "{href=javascript:x}", "{.x\"y}")) {
+            Exception e = assertThrows(Exception.class,
+                    () -> render(book, "{{ b | replace('p', '" + spec + "') }}"), spec);
+            assertTrue(messages(e).contains("replace: "), messages(e));
+        }
+    }
+
+    @Test
+    void set_takes_attributes_only(@TempDir Path book) {
+        Exception e = assertThrows(Exception.class, () -> render(book, "{{ b | set('p', '{.lead}') }}"));
+        assertTrue(messages(e).contains("use addClass for a class"), messages(e));
+    }
+
+    /** {@code html} without the whitespace a rewritten list is printed with between its tags. */
+    private static String tight(String html) {
+        return html.replaceAll(">\\s+<", "><");
+    }
+
     private static String messages(Throwable t) {
         StringBuilder sb = new StringBuilder();
         for (Throwable c = t; c != null; c = c.getCause()) sb.append(c.getMessage()).append('\n');

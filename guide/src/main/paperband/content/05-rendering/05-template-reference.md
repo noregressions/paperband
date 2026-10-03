@@ -13,28 +13,46 @@ The filters, templates and models the layout templates work with, in one place.
 
 Every filter that takes a selector takes a CSS selector, read by jsoup. An empty selector,
 or one jsoup can't read, fails the build and names the filter and the selector. So does
-`find`, `query`, `drop`, `addClass`, `blank` or `html` given the wrong kind of input, and a
-class name that isn't letters, digits, `-` and `_`.
+`find`, `query`, `html` or a transform given the wrong kind of input, a class name that isn't
+letters, digits, `-` and `_`, and a block a transform can't add.
 
 | Filter | Takes | Returns |
 |---|---|---|
 | `select('css')` | HTML, such as `block.html` | The outer HTML of each match in document order, joined by newlines. A match inside another isn't repeated. No match is an empty string. Print it with `\| raw` |
 | `find('css')` | A block (its own nodes), a list of nodes, or a node | The matching nodes, in document order, including a match inside another. No match is an empty list |
 | `query('css')` | `cards` or any list of cards, a card, or a block | One entry per match, in document order (see [Query entries](card:template-reference#query-entries)). No match is an empty list |
-| `drop('css')` | A block, a list of nodes, or a node | Its nodes, with each match and everything in it left out |
-| `addClass('css', 'name')` | A block, a list of nodes, or a node | Its nodes, with the class added to each match |
-| `blank('css', 'name')` | A block, a list of nodes, or a node | Its nodes, with an empty `<div class="name">` in place of each match |
+| `drop('css')` | A card, cards, a block, a list of nodes, or a node | The same, with each match and everything in it left out |
+| `keep('css')` | A card, cards, a block, a list of nodes, or a node | The same, with everything that isn't a match, inside one or around one left out |
+| `addClass('css', 'name')` | A card, cards, a block, a list of nodes, or a node | The same, with the class added to each match |
+| `removeClass('css', 'name')` | A card, cards, a block, a list of nodes, or a node | The same, with the class taken off each match |
+| `set('css', '{key=value}')` | A card, cards, a block, a list of nodes, or a node | The same, with the attributes set on each match |
+| `replace('css', '{.name}')` | A card, cards, a block, a list of nodes, or a node | The same, with an empty block in place of each match, keeping its id |
+| `insertBefore('css', '{.name}')` | A card, cards, a block, a list of nodes, or a node | The same, with an empty block before each match |
+| `insertAfter('css', '{.name}')` | A card, cards, a block, a list of nodes, or a node | The same, with an empty block after each match |
+| `prepend('css', '{.name}')` | A card, cards, a block, a list of nodes, or a node | The same, with an empty block inside each match, first |
+| `append('css', '{.name}')` | A card, cards, a block, a list of nodes, or a node | The same, with an empty block inside each match, last |
+| `wrap('css', '{.name}')` | A card, cards, a block, a list of nodes, or a node | The same, with each match inside a new empty block |
+| `blank('css', 'name')` | A card, cards, a block, a list of nodes, or a node | `replace` with `'{.name}'`, without keeping the id of a node |
 | `html` | A block, a list of nodes, or a node | The nodes as HTML, as `block.html` is written: an unchanged node as it was, a templated fence through its block template. Print it with `\| raw` |
 
-A block's nodes leave out its nested blocks, as `block.html` does. `drop`, `addClass` and
-`blank` return new nodes and change nothing in place, so they chain, and `find` and `html`
-take what they return. A changed node's `text` and `html` describe it after the change. The
-keys of a node are in [Themes](card:themes#reading-a-block-as-data).
+The transforms are `drop` through `blank`. Given a block, a list of nodes or a node, a
+transform returns the changed nodes as a list; a block's nodes leave out its nested blocks,
+as `block.html` does. Given a card it returns the changed card, with each changed block's
+`html`, `card.steps` and `card.slots` made again, and given a list of cards it returns the
+list. Only `drop` and `keep` can leave a card out: it's missing from the list, or null.
+Nothing changes in place, so transforms chain, and `find` and `html` take what they return.
+Each finds every match before it changes anything, so it never matches what it added. A
+changed node's `text` and `html` describe it after the change. The keys of a node are in
+[Themes](card:themes#reading-a-block-as-data).
+
+A block a transform adds is written like a card's attributes, `'{#id .class key=value}'`,
+braces optional, and is an empty `<div>`, or an empty block when the transform was given a
+card. It can't carry `id` or `class` as attributes, anything the content policy strips from
+a card, or an attribute that holds a URL (`href`, `src` and the like).
 
 ### What a selector sees
 
-`find`, `drop`, `addClass`, `blank` and the node level of `query` see each node as an
-element:
+`find`, the transforms and the node level of `query` see each node as an element:
 
 | Part of the node | As |
 |---|---|
@@ -42,7 +60,8 @@ element:
 | `directives` | `data-paperband-<name>` attributes: `[data-paperband-step]` |
 | A fence's `lang` | A class on the `pre`: `pre.command` is a ` ```command ` block |
 
-`query` also sees two levels above the nodes, with each block's nested blocks inside it:
+`query`, and a transform given a card or cards, also see two levels above the nodes, with
+each block's nested blocks inside it:
 
 | Element | Id | Classes | Attributes |
 |---|---|---|---|

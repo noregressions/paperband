@@ -429,8 +429,8 @@ page that doesn't group. This one collects every Watch Out in the book:
 ## Changing what a block prints
 
 `find`, `select` and `query` pick parts out of a card, but they hand them back as they were.
-To print a changed copy, such as a step without its console output, transform the nodes
-and write them back:
+To print a changed copy, such as a step without its console output, transform it and write
+it back:
 
 ```
 {{ e.block | drop('pre.console') | addClass('p.instructions', 'lead') | html | raw }}
@@ -438,24 +438,67 @@ and write them back:
 
 | Filter | What it does |
 |---|---|
-| `drop('css')` | Leaves out every node the selector matches, and everything in it |
-| `addClass('css', 'name')` | Adds a class to every node the selector matches. The name is letters, digits, `-` and `_` |
-| `blank('css', 'name')` | Puts an empty `<div>` with that class where each node the selector matches was |
+| `drop('css')` | Leaves out every match, and everything in it |
+| `keep('css')` | Leaves out everything that isn't a match, inside one, or around one |
+| `addClass('css', 'name')` | Adds a class to every match. The name is letters, digits, `-` and `_` |
+| `removeClass('css', 'name')` | Takes a class off every match |
+| `set('css', '{key=value}')` | Sets attributes on every match |
+| `replace('css', '{.name}')` | Puts an empty block where each match was. It keeps the match's id, so a link to it still lands |
+| `insertBefore('css', '{.name}')`, `insertAfter(…)` | Adds an empty block before or after each match |
+| `prepend('css', '{.name}')`, `append(…)` | Adds an empty block inside each match, first or last |
+| `wrap('css', '{.name}')` | Puts each match inside a new empty block |
+| `blank('css', 'name')` | `replace` with a class and nothing else |
 | `html` | Writes nodes back as HTML, the way `block.html` is written. Print it with `\| raw` |
 
-Each takes a block, a list of nodes or one node, and `drop` and `addClass` return the
-changed nodes as a list, so they chain and `find` can search what they return. The
-selector sees what `find`'s does. A block's children are left out, as they are from
+A block the filters add is written the way a card writes attributes: `'{.answer lines=4}'`,
+`'{#q1 .answer}'`. The braces are optional. It's an empty `<div>` (or an empty block, at
+card level) with that id, those classes and those attributes, and nothing else.
+
+### What they take and return
+
+Given a block, a list of nodes or one node, the selector sees nodes, as `find`'s does, and
+each filter returns the changed nodes as a list. So they chain, `find` can search what they
+return, and `html` writes it. A block's children are left out, as they are from
 `block.html`.
+
+Given a card, or a list of cards such as `cards`, the selector sees cards and blocks as well
+as nodes, as `query`'s does, and the filter returns the changed card:
+
+```
+{% set card = card | replace('.solution', '{.answer-space lines=4}') %}
+{% for block in card.blocks %}{% include "_block-section" with {"block": block} %}{% endfor %}
+```
+
+`.solution` there matches a `## Solution {.solution}` block, heading, nested blocks and
+all, and a `{.solution}` paragraph inside another block. `block.solution` matches only the
+block, and `p.solution` only the paragraph. The card that comes back is one a template
+writes like any other: each changed block's `html` is written again, and `card.steps` and
+`card.slots` are made from its blocks. A template that places the changed card's blocks
+through `card.slots` is checked as the card's own would be.
+
+`drop` and `keep` can leave out whole cards, which nothing else can change:
+
+```
+{% set kept = cards | keep('card:has([data-paperband-step])') %}
+```
+
+A card left out is missing from the list, or null when the filter was given one card.
+
+### Every match first, then the change
+
+Each filter finds all its matches before it changes anything, so it never matches a block
+it added. The next filter in the chain sees what the last one did:
+`insertAfter('li', '{.note}') | addClass('.note', 'wide')` adds the class to every new note.
 
 Nothing changes in place: the card prints as it did everywhere else, and a changed node's
 `text` and `html` describe the change. `html` writes an unchanged node exactly as
 `block.html` has it, and a ` ```command ` block through its block template, so it keeps
 its label and copy button. A class `addClass` puts on a fence reaches the template too.
 
-No transform can add markup of the template's choosing. They remove nodes, add a class the
-writer escapes, or add an empty `div` with one, so the content is as safe as it was when
-the card loaded.
+No transform can add markup of the template's choosing. They remove things, change classes
+and attributes, or add an empty block, and a block can't carry anything the content policy
+strips from a card (`style`, `width`, `on*` handlers and the rest), nor an attribute that
+holds a URL. So the content is as safe as it was when the card loaded.
 
 ## Dividers
 

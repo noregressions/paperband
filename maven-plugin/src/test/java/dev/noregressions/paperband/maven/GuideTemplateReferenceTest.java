@@ -32,7 +32,8 @@ class GuideTemplateReferenceTest {
 
     private static final Pattern TEMPLATE = Pattern.compile("`([A-Za-z0-9_/-]+\\.html)`");
     private static final Pattern FILTER_ROW = Pattern.compile("^\\| `([A-Za-z]+)(?:\\(|`)");
-    private static final Pattern REGISTERED = Pattern.compile("\"([A-Za-z]+)\", new [A-Z][A-Za-z]*\\(\\)");
+    // "name", new X(...): a filter class, or one class serving several filters by its arguments.
+    private static final Pattern REGISTERED = Pattern.compile("\"([A-Za-z]+)\", new [A-Z][A-Za-z]*\\(");
 
     private static Path repo;
     private static String card;
