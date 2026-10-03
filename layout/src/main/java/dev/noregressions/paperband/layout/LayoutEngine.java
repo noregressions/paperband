@@ -3216,26 +3216,67 @@ public final class LayoutEngine {
         model.put("output", output);
         model.put("target", target);
         model.put(ViewTransformExtension.KEY, result);
+        StringWriter printed = new StringWriter();
         try {
-            engine.getTemplate("transform").evaluate(new StringWriter(), model);
+            engine.getTemplate("transform").evaluate(printed, model);
         } catch (IOException | RuntimeException e) {
             throw new LayoutException("view '" + view + "': " + view + "/transform.html failed for card "
                     + card.get("id") + locationOf(e) + ": " + explain(e), e);
         }
-        if (!result.set()) {
-            throw new LayoutException("view '" + view + "': " + view + "/transform.html has to hand back"
-                    + " the card, as in {{ result(card | drop('.aside')) }}, and didn't for card "
-                    + card.get("id") + ".");
+        Object handed;
+        if (result.set()) {
+            if (!printed.toString().isBlank()) {
+                throw new LayoutException("view '" + view + "': " + view + "/transform.html both calls"
+                        + " result(...) and prints statements, for card " + card.get("id") + ". Use one or"
+                        + " the other.");
+            }
+            handed = result.value();
+        } else {
+            handed = ran(card, printed.toString());
         }
-        if (!(result.value() instanceof Map<?, ?> changed) || !(changed.get("blocks") instanceof List<?>)) {
+        if (!(handed instanceof Map<?, ?> changed) || !(changed.get("blocks") instanceof List<?>)) {
             throw new LayoutException("view '" + view + "': " + view + "/transform.html handed back "
-                    + (result.value() == null ? "nothing" : "something that isn't a card") + " for card "
+                    + (handed == null ? "nothing" : "something that isn't a card") + " for card "
                     + card.get("id") + ". A transform changes a card; keep.html decides which cards the view"
                     + " holds.");
         }
         @SuppressWarnings("unchecked")
         Map<String, Object> out = (Map<String, Object>) changed;
         return out;
+    }
+
+    /**
+     * {@code card} with the statements a {@code transform.html} printed run
+     * over it, in order -- see {@link TransformStatements}.
+     */
+    private Object ran(Map<String, Object> card, String printed) {
+        List<TransformStatements.Statement> statements;
+        try {
+            statements = TransformStatements.parse(printed);
+        } catch (IllegalArgumentException e) {
+            throw new LayoutException("view '" + view + "': " + view + "/transform.html, for card "
+                    + card.get("id") + ": " + e.getMessage(), e);
+        }
+        if (statements.isEmpty()) {
+            throw new LayoutException("view '" + view + "': " + view + "/transform.html has to change the"
+                    + " card, with statements such as drop .aside or with {{ result(card | drop('.aside')) }},"
+                    + " and did neither for card " + card.get("id") + ".");
+        }
+        Object changed = card;
+        for (TransformStatements.Statement st : statements) {
+            try {
+                changed = NodeTransformExtension.run(st.transform(), changed, st.args());
+            } catch (IllegalArgumentException e) {
+                throw new LayoutException("view '" + view + "': " + view + "/transform.html, '" + st.text()
+                        + "', for card " + card.get("id") + ": " + e.getMessage(), e);
+            }
+            if (changed == null) {
+                throw new LayoutException("view '" + view + "': " + view + "/transform.html, '" + st.text()
+                        + "', left out card " + card.get("id") + ". A transform changes a card; keep.html"
+                        + " decides which cards the view holds.");
+            }
+        }
+        return changed;
     }
 
     /**

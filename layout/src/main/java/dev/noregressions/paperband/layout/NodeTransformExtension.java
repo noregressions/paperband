@@ -91,31 +91,41 @@ final class NodeTransformExtension extends AbstractExtension {
     private static final String SET_EXAMPLE = ", '{lines=8}'";
     private static final String BLOCK_EXAMPLE = ", '{.answer}'";
 
+    /** The transforms by name, each a filter and what a statement compiles to. */
+    private static final Map<String, Transform> TRANSFORMS = new LinkedHashMap<>();
+
+    private static void add(String name, List<String> argumentNames, String example, Maker maker) {
+        TRANSFORMS.put(name, new Transform(name, argumentNames, example, maker));
+    }
+
+    static {
+        add("drop", SELECTOR, "", a -> NodeTransformExtension.DROP);
+        add("keep", SELECTOR, "", a -> NodeTransformExtension.DROP);
+        add("addClass", SELECTOR_NAME, NAME_EXAMPLE,
+                a -> new Restyle(className("addClass", a.get("name")), null, null));
+        add("removeClass", SELECTOR_NAME, NAME_EXAMPLE,
+                a -> new Restyle(null, className("removeClass", a.get("name")), null));
+        add("set", List.of("selector", "attributes"), SET_EXAMPLE,
+                a -> new Restyle(null, null, attributes(a.get("attributes"))));
+        add("blank", SELECTOR_NAME, NAME_EXAMPLE,
+                a -> new Replace(new BlockSpec(null, Set.of(className("blank", a.get("name"))), Map.of()), false));
+        add("replace", SELECTOR_BLOCK, BLOCK_EXAMPLE,
+                a -> new Replace(spec(a.get("block")), true));
+        add("insertBefore", SELECTOR_BLOCK, BLOCK_EXAMPLE,
+                a -> new Insert(spec(a.get("block")), Where.BEFORE));
+        add("insertAfter", SELECTOR_BLOCK, BLOCK_EXAMPLE,
+                a -> new Insert(spec(a.get("block")), Where.AFTER));
+        add("prepend", SELECTOR_BLOCK, BLOCK_EXAMPLE,
+                a -> new Insert(spec(a.get("block")), Where.FIRST));
+        add("append", SELECTOR_BLOCK, BLOCK_EXAMPLE,
+                a -> new Insert(spec(a.get("block")), Where.LAST));
+        add("wrap", SELECTOR_BLOCK, BLOCK_EXAMPLE,
+                a -> new Wrap(spec(a.get("block"))));
+    }
+
     @Override
     public Map<String, Filter> getFilters() {
-        Map<String, Filter> filters = new LinkedHashMap<>();
-        filters.put("drop", new Transform("drop", SELECTOR, "", a -> DROP));
-        filters.put("keep", new Transform("keep", SELECTOR, "", a -> DROP));
-        filters.put("addClass", new Transform("addClass", SELECTOR_NAME, NAME_EXAMPLE,
-                a -> new Restyle(className("addClass", a.get("name")), null, null)));
-        filters.put("removeClass", new Transform("removeClass", SELECTOR_NAME, NAME_EXAMPLE,
-                a -> new Restyle(null, className("removeClass", a.get("name")), null)));
-        filters.put("set", new Transform("set", List.of("selector", "attributes"), SET_EXAMPLE,
-                a -> new Restyle(null, null, attributes(a.get("attributes")))));
-        filters.put("blank", new Transform("blank", SELECTOR_NAME, NAME_EXAMPLE,
-                a -> new Replace(new BlockSpec(null, Set.of(className("blank", a.get("name"))), Map.of()), false)));
-        filters.put("replace", new Transform("replace", SELECTOR_BLOCK, BLOCK_EXAMPLE,
-                a -> new Replace(spec(a.get("block")), true)));
-        filters.put("insertBefore", new Transform("insertBefore", SELECTOR_BLOCK, BLOCK_EXAMPLE,
-                a -> new Insert(spec(a.get("block")), Where.BEFORE)));
-        filters.put("insertAfter", new Transform("insertAfter", SELECTOR_BLOCK, BLOCK_EXAMPLE,
-                a -> new Insert(spec(a.get("block")), Where.AFTER)));
-        filters.put("prepend", new Transform("prepend", SELECTOR_BLOCK, BLOCK_EXAMPLE,
-                a -> new Insert(spec(a.get("block")), Where.FIRST)));
-        filters.put("append", new Transform("append", SELECTOR_BLOCK, BLOCK_EXAMPLE,
-                a -> new Insert(spec(a.get("block")), Where.LAST)));
-        filters.put("wrap", new Transform("wrap", SELECTOR_BLOCK, BLOCK_EXAMPLE,
-                a -> new Wrap(spec(a.get("block")))));
+        Map<String, Filter> filters = new LinkedHashMap<>(TRANSFORMS);
         filters.put("html", new Html());
         return filters;
     }
@@ -287,24 +297,46 @@ final class NodeTransformExtension extends AbstractExtension {
         @Override
         public Object apply(Object input, Map<String, Object> args, PebbleTemplate self,
                             EvaluationContext context, int lineNumber) throws PebbleException {
+            try {
+                return run(input, args);
+            } catch (IllegalArgumentException e) {
+                throw new PebbleException(e.getCause(), e.getMessage(), lineNumber, self.getName());
+            }
+        }
+
+        /** {@code input} changed, or a failure saying what's wrong with the call. */
+        Object run(Object input, Map<String, Object> args) {
             Object selector = args.get("selector");
             if (selector == null || selector.toString().isBlank()) {
-                throw new PebbleException(null, name + " needs a CSS selector, as in block | " + name
-                        + "('pre.console'" + example + ")", lineNumber, self.getName());
+                throw new IllegalArgumentException(name + " needs a CSS selector, as in block | " + name
+                        + "('pre.console'" + example + ")");
             }
             Op op;
             try {
                 op = maker.make(args);
             } catch (IllegalArgumentException e) {
-                throw new PebbleException(null, name + ": " + e.getMessage(), lineNumber, self.getName());
+                throw new IllegalArgumentException(name + ": " + e.getMessage(), e);
             }
-            Call call = new Call(name, selector.toString(), op, name.equals("keep"), self, lineNumber);
+            Call call = new Call(name, selector.toString(), op, name.equals("keep"));
             if (isCard(input)) return call.card((Map<?, ?>) input);
             if (input instanceof List<?> list && !list.isEmpty() && list.stream().allMatch(NodeTransformExtension::isCard)) {
                 return call.cards(list);
             }
-            return call.nodes(models(name, input, self, lineNumber));
+            return call.nodes(models(name, input));
         }
+    }
+
+    /**
+     * The transform {@code name} applied to {@code input} with {@code args}, as
+     * its filter would: how a statement runs.
+     *
+     * @throws IllegalArgumentException when there's no such transform, or the
+     *         call is wrong, saying why
+     */
+    static Object run(String name, Object input, Map<String, Object> args) {
+        Transform t = TRANSFORMS.get(name);
+        if (t == null) throw new IllegalArgumentException("no transform '" + name + "'");
+        return t.run(input, args);
     }
 
     private static final class Html implements Filter {
@@ -317,7 +349,11 @@ final class NodeTransformExtension extends AbstractExtension {
         @Override
         public Object apply(Object input, Map<String, Object> args, PebbleTemplate self,
                             EvaluationContext context, int lineNumber) throws PebbleException {
-            return html(models("html", input, self, lineNumber));
+            try {
+                return html(models("html", input));
+            } catch (IllegalArgumentException e) {
+                throw new PebbleException(null, e.getMessage(), lineNumber, self.getName());
+            }
         }
     }
 
@@ -361,8 +397,7 @@ final class NodeTransformExtension extends AbstractExtension {
     }
 
     /** The node models {@code input} holds: a block's nodes, a list of nodes, or one node. */
-    private static List<NodeModel> models(String filter, Object input, PebbleTemplate self, int lineNumber)
-            throws PebbleException {
+    private static List<NodeModel> models(String filter, Object input) {
         if (input == null) return List.of();
         List<?> items;
         if (input instanceof NodeModel m) items = List.of(m);
@@ -380,20 +415,19 @@ final class NodeTransformExtension extends AbstractExtension {
             }
         }
         if (items == null) {
-            throw new PebbleException(null, filter + " works on a card, cards, a block, block.nodes or a node"
+            throw new IllegalArgumentException(filter + " works on a card, cards, a block, block.nodes or a node"
                     + " (from a query entry, e.node or e.block), not "
-                    + (input instanceof List<?> ? "a list of something else" : input.getClass().getSimpleName()),
-                    lineNumber, self.getName());
+                    + (input instanceof List<?> ? "a list of something else" : input.getClass().getSimpleName()));
         }
         return out;
     }
 
     // ---- one call: find the matches, then make the changed copy ----
 
-    private record Call(String filter, String selector, Op op, boolean keep, PebbleTemplate self, int lineNumber) {
+    private record Call(String filter, String selector, Op op, boolean keep) {
 
         /** The changed nodes: the selector sees nodes only. */
-        List<NodeModel> nodes(List<NodeModel> roots) throws PebbleException {
+        List<NodeModel> nodes(List<NodeModel> roots) {
             Map<Element, Object> models = new IdentityHashMap<>();
             Element top = new Element("paperband-nodes");
             Map<Element, Map<?, ?>> byElement = new IdentityHashMap<>();
@@ -406,14 +440,14 @@ final class NodeTransformExtension extends AbstractExtension {
         }
 
         /** The changed card, or null when it's left out. */
-        Map<String, Object> card(Map<?, ?> card) throws PebbleException {
+        Map<String, Object> card(Map<?, ?> card) {
             List<Map<String, Object>> out = cards(List.of(card));
             return out.isEmpty() ? null : out.get(0);
         }
 
         /** The changed cards, less any left out. */
         @SuppressWarnings("unchecked")
-        List<Map<String, Object>> cards(List<?> cards) throws PebbleException {
+        List<Map<String, Object>> cards(List<?> cards) {
             Map<Element, BookQueryExtension.Origin> origins = new IdentityHashMap<>();
             Element top = new Element("paperband-book");
             for (Object c : cards) BookQueryExtension.addCard(top, (Map<?, ?>) c, origins);
@@ -421,9 +455,8 @@ final class NodeTransformExtension extends AbstractExtension {
             origins.forEach((e, o) -> models.put(e, o.model()));
             Targets t = targets(top, models);
             if (!op.drops() && !t.cards.isEmpty()) {
-                throw new PebbleException(null, filter + "('" + selector + "') matches a card; " + filter
-                        + " changes blocks and nodes. Use drop or keep to leave cards out",
-                        lineNumber, self.getName());
+                throw new IllegalArgumentException(filter + "('" + selector + "') matches a card; " + filter
+                        + " changes blocks and nodes. Use drop or keep to leave cards out");
             }
             List<Map<String, Object>> out = new ArrayList<>(cards.size());
             for (Object o : cards) {
@@ -446,13 +479,13 @@ final class NodeTransformExtension extends AbstractExtension {
         }
 
         /** What the selector matched under {@code top}, by kind: for {@code keep}, what it didn't. */
-        private Targets targets(Element top, Map<Element, Object> models) throws PebbleException {
+        private Targets targets(Element top, Map<Element, Object> models) {
             List<Element> matched;
             try {
                 matched = top.select(selector);
             } catch (Selector.SelectorParseException e) {
-                throw new PebbleException(e, filter + "('" + selector + "') isn't a CSS selector jsoup"
-                        + " can read: " + e.getMessage(), lineNumber, self.getName());
+                throw new IllegalArgumentException(filter + "('" + selector + "') isn't a CSS selector jsoup"
+                        + " can read: " + e.getMessage(), e);
             }
             Set<Element> hit = Collections.newSetFromMap(new IdentityHashMap<>());
             if (keep) {

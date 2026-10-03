@@ -118,14 +118,15 @@ each name is looked up as `<view>/<name>` through all three first.
 A view is a folder of templates named by `<view>`. Its `keep.html` is required: rendered
 once per card, it prints `true` or `false`, and the build leaves out the cards it prints
 `false` for. Its `transform.html` is optional: rendered once per card as the card's model is
-made, it hands back the card changed, and every template the build uses, `keep.html`
-included, sees that card. Any other template in the folder replaces the default of the
+made, it changes the card, with statements or `result(...)`, and every template the build
+uses, `keep.html` included, sees that card. Any other template in the folder replaces the default of the
 same name for that build.
 
 | In `transform.html` | Means |
 |---|---|
 | `card`, `vars`, `output`, `target` | The card's model before its number and sheet are filled in, the card's vars, `print` or `site`, and the build's target |
-| `{{ result(card \| …) }}` | Hands back the changed card. Required, once; anything that isn't a card fails the build, and so does `result` in any other template |
+| Statements, one to a line | What it prints, when it doesn't call `result`: `drop SEL`, `keep SEL`, `blank SEL as NAME`, `replace SEL with BLOCK`, `insert BLOCK before\|after SEL`, `insert BLOCK first\|last in SEL`, `wrap SEL in BLOCK`, `add .NAME to SEL`, `remove .NAME from SEL`, `set ATTRS on SEL`, each the transform of that meaning, run in order. A blank line or one starting with `#` is skipped |
+| `{{ result(card \| …) }}` | Hands back the changed card instead, once, with nothing else printed. Anything that isn't a card fails the build, and so does `result` in any other template |
 
 | In a view's template | Means |
 |---|---|
@@ -135,7 +136,7 @@ same name for that build.
 | View | Keeps | Writes |
 |---|---|---|
 | `cheatsheet` | Cards with a `{!step}` | Each card as its title and one entry per step: its heading and the parts `vars.cheatsheetSelect` picks. See [Make a Cheat Sheet](card:make-a-cheat-sheet) |
-| `student` | Every card | Its `transform.html` blanks each `{.solution}` as `answer-space`: a block becomes a labelled `.answer-space` box, `{lines=N}` lines tall; a node an empty `.answer-space` box. See [Make a Student Edition](card:make-a-student-edition) |
+| `student` | Every card | Its `transform.html`, `blank .solution as answer-space`, blanks each `{.solution}`: a block becomes a labelled `.answer-space` box, `{lines=N}` lines tall; a node an empty `.answer-space` box. See [Make a Student Edition](card:make-a-student-edition) |
 
 The content these views read:
 

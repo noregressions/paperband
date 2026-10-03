@@ -580,17 +580,55 @@ writing its section.
 ### Changing the cards a view writes
 
 Templates decide how a card is written. A view that changes what a card holds, rather than
-how it looks, does it once, in a `transform.html`, and every template sees the result:
+how it looks, does it once, in a `transform.html`, and every template sees the result. The
+simplest `transform.html` is a list of statements, one to a line:
 
 ```
 {# layouts/handout/transform.html #}
+drop .aside
+replace .solution with {.answer-space}
+```
+
+Each statement is one of the transforms in
+[Changing what a block prints](card:themes#changing-what-a-block-prints), applied to the
+card:
+
+| Statement | Runs |
+|---|---|
+| `drop SEL`, `keep SEL` | `drop`, `keep` |
+| `blank SEL as NAME` | `blank` |
+| `replace SEL with BLOCK` | `replace` |
+| `insert BLOCK before SEL`, `insert BLOCK after SEL` | `insertBefore`, `insertAfter` |
+| `insert BLOCK first in SEL`, `insert BLOCK last in SEL` | `prepend`, `append` |
+| `wrap SEL in BLOCK` | `wrap` |
+| `add .NAME to SEL`, `remove .NAME from SEL` | `addClass`, `removeClass` |
+| `set ATTRS on SEL` | `set`, as in `set lines=8 on block.solution` |
+
+`SEL` is a selector, as the transforms take, and can have spaces in it:
+`insert {.answer lines=6} after .exercise:not(:has(.solution))`. `BLOCK` is written as a
+card writes attributes. A keyword in brackets or quotes is part of the selector or block,
+not a keyword. The statements run in order, and each sees what the ones before it did. A
+blank line, or one starting with `#`, is skipped.
+
+The file is still a template, so Pebble can choose the statements:
+
+```
+{% if output == 'site' %}drop .print-only{% endif %}
+blank .solution as answer-space
+```
+
+One thing to watch: `{#` opens a Pebble comment, so write an id in a block without the
+braces, `#q1 .answer`, or the rest of the file is a comment.
+
+For anything the statements can't say, the file can hand the changed card back itself, with
+`result(...)`, once, and print nothing else:
+
+```
 {{ result(card | drop('.aside') | replace('.solution', '{.answer-space}')) }}
 ```
 
-It's rendered for each card as the card's model is made, with `card`, `vars`, `output` and
-`target`, and it hands the changed card back with `result(...)`, once. Any of the
-transforms in [Changing what a block prints](card:themes#changing-what-a-block-prints)
-work on the card. The card body, the site's on-this-page rail, `card.steps`, `card.slots`
+Either way it's rendered for each card as the card's model is made, with `card`, `vars`,
+`output` and `target`. The card body, the site's on-this-page rail, `card.steps`, `card.slots`
 and the view's own `keep.html` all see the changed card, so a block the transform leaves
 out doesn't turn up in the rail, and `keep.html` can ask what's left. The card's number and
 sheet are filled in afterwards, so a transform can't read them.
@@ -602,8 +640,9 @@ Paperband ships two views:
 
 - `cheatsheet` keeps the cards with a `{!step}` and writes each as its steps. See
   [Make a Cheat Sheet](card:make-a-cheat-sheet).
-- `student` keeps every card, and its `transform.html` blanks each `{.solution}` as
-  `answer-space`, which its `_block-section.html` writes as space to write the answer in.
+- `student` keeps every card, and its `transform.html`, `blank .solution as answer-space`,
+  blanks each `{.solution}`, which its `_block-section.html` writes as space to write the
+  answer in.
   See [Make a Student Edition](card:make-a-student-edition).
 
 Block templates

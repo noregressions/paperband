@@ -150,4 +150,27 @@ class StudentViewTest {
         assertFalse(html.contains("Top aside."), html);
         assertFalse(html.contains("Nested aside."), "an aside nested in a kept block goes too: " + html);
     }
+
+    /** The transform in Make a Student Edition, verbatim: the book's own replaces the bundled one. */
+    @Test
+    void the_documented_transform_adds_space_after_an_exercise_with_no_solution(@TempDir Path book)
+            throws IOException {
+        Files.createDirectories(book.resolve("layouts/student"));
+        Files.writeString(book.resolve("layouts/student/transform.html"), """
+                drop .instructor-note
+                insert {.answer-space} after block.exercise:not(:has(.solution))
+                blank .solution as answer-space
+                """);
+        Block solved = block(Block.Kind.HEADING_SECTION, "Exercise 1", Set.of("exercise"),
+                "<p>Write a loop.</p><p class=\"solution\">Use a for loop.</p>", List.of(), Map.of());
+        Block open = block(Block.Kind.HEADING_SECTION, "Exercise 2", Set.of("exercise"),
+                "<p>Write another.</p><p class=\"instructor-note\">Give them five minutes.</p>", List.of(), Map.of());
+        Card card = new Card("ex", Path.of("ex.md"), new Frontmatter(Map.of()), "Ex", List.of(solved, open));
+        String html = render(new LayoutEngine(book), "student", card, Map.of());
+        assertFalse(html.contains("Use a for loop.") || html.contains("five minutes"), html);
+        assertEquals(1, html.split("answer-space-label", -1).length - 1,
+                "one labelled space, after the exercise with no solution: " + html);
+        assertTrue(html.indexOf("Write another.") < html.indexOf("answer-space-label"), html);
+        assertTrue(html.contains("<p>Write a loop.</p><div class=\"answer-space\"></div>"), html);
+    }
 }

@@ -5,4 +5,4 @@
    sizes it; a paragraph's space is an empty <div class="answer-space">.
    Override it in the book's layouts/student/ to change what a student
    edition leaves out. #}
-{{ result(card | blank('.solution', 'answer-space')) }}
+blank .solution as answer-space

@@ -207,13 +207,16 @@ bundled, then as the default, so a view ships only what it changes. `keep.html` 
 (sees `card`, `card.steps`, `card.vars`, `output`), it prints `true`/`false`, and the cards it rejects are
 dropped before dividers, contents, nav and `card:` links are worked out. Bundled: `cheatsheet/keep.html`
 (`{{ card.steps is not empty }}`) and `cheatsheet/_card-body.html`; `student/keep.html` (`true`),
-`student/transform.html` (`{{ result(card | blank('.solution', 'answer-space')) }}`) and
+`student/transform.html` (`blank .solution as answer-space`) and
 `student/_block-section.html` (an `answer-space` block, where a `.solution` block was, becomes
 `_answer-space`: a dashed `.answer-space` box, `{lines=N}` tall, labelled `vars.answerLabel`, default
 "Your answer"; a `.solution` node is already an empty `div.answer-space`). Optional `transform.html`: rendered
-per card as its model is made (sees `card`, `vars`, `output`, `target`; not the number or sheet), it must call
-`{{ result(card | <transforms>) }}` once with a card, and every template, `keep.html` and the site rail
-included, sees the changed card. In a view's template,
+per card as its model is made (sees `card`, `vars`, `output`, `target`; not the number or sheet). It prints
+statements, one per line, run in order, each the transform of that meaning: `drop SEL`, `keep SEL`,
+`blank SEL as NAME`, `replace SEL with BLOCK`, `insert BLOCK before|after SEL`, `insert BLOCK first|last in
+SEL`, `wrap SEL in BLOCK`, `add .NAME to SEL`, `remove .NAME from SEL`, `set ATTRS on SEL` (`#` lines and
+blanks skipped; `{#` is a Pebble comment, so write ids unbraced). Or it calls `{{ result(card | <transforms>) }}`
+once and prints nothing else. Every template, `keep.html` and the site rail included, sees the changed card. In a view's template,
 `{% include "default:<name>" %}` is the template the view replaces (theme/book override included); what it
 includes goes through the view again. The default `_block-section.html` prints content via
 `_block-content.html`. A view with no `keep.html` fails the build. Block templates don't go through views

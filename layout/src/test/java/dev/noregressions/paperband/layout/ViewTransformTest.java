@@ -99,6 +99,41 @@ class ViewTransformTest {
     }
 
     @Test
+    void statements_run_in_order_each_seeing_what_the_last_did(@TempDir Path book) throws IOException {
+        String html = view(book, "true", """
+                {# leave the asides out, then mark what's left #}
+                drop .aside
+                insert {.note} after block.keep
+                add .wide to .note
+                """).render(card(), ctx());
+        assertFalse(html.contains("An aside.") || html.contains("Aside prose."), html);
+        assertTrue(html.contains("<section class=\"block note wide\">"), html);
+    }
+
+    @Test
+    void statements_can_be_chosen_with_pebble(@TempDir Path book) throws IOException {
+        LayoutEngine engine = view(book, "{{ card.blocks | length == 1 }}",
+                "{% if output == 'print' %}drop block.aside{% else %}drop p.aside{% endif %}");
+        assertEquals(List.of(true), engine.keeps(List.of(card()), List.of(ctx()), "print"));
+        assertEquals(List.of(false), engine.keeps(List.of(card()), List.of(ctx()), "site"));
+    }
+
+    @Test
+    void a_statement_that_fails_is_named(@TempDir Path book) throws IOException {
+        for (String[] c : new String[][] {
+                {"drop .aside\nreplace .keep", "has no 'with'"},
+                {"replace .keep with {style=x}", "'replace .keep with {style=x}'"},
+                {"drop card", "left out card notes"},
+                {"{{ result(card) }}\ndrop .aside", "Use one or the other"},
+                {"{# nothing #}", "did neither"}}) {
+            LayoutEngine engine = view(book, "true", c[0]);
+            LayoutException e = assertThrows(LayoutException.class, () -> engine.render(card(), ctx()), c[0]);
+            assertTrue(e.getMessage().contains(c[1]) && e.getMessage().contains("edit/transform.html"),
+                    e.getMessage());
+        }
+    }
+
+    @Test
     void a_view_without_a_transform_writes_the_card_as_it_is(@TempDir Path book) throws IOException {
         String html = view(book, "true", null).render(card(), ctx());
         assertTrue(html.contains("An aside."), html);

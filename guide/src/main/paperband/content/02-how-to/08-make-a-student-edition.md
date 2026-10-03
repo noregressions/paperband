@@ -83,17 +83,23 @@ in the book. It sees the space's `block`, which keeps the solution's anchor and 
 so `block.attributes` is there to use.
 
 To change what the student edition leaves out, put your own `layouts/student/transform.html`
-in the book. The bundled one blanks every solution:
+in the book. The bundled one is one statement, which blanks every solution:
 
 ```
-{{ result(card | blank('.solution', 'answer-space')) }}
+blank .solution as answer-space
 ```
 
-This one also leaves out the notes meant for whoever runs the course:
+This one also leaves out the notes meant for whoever runs the course, and adds space after
+each exercise that has no solution of its own:
 
 ```
-{{ result(card | drop('.instructor-note') | blank('.solution', 'answer-space')) }}
+drop .instructor-note
+insert {.answer-space} after block.exercise:not(:has(.solution))
+blank .solution as answer-space
 ```
+
+The statements run in order, so the `insert` comes first: once `blank` has run, no exercise
+has a `.solution` left to find.
 
 See [Themes](card:themes#changing-the-cards-a-view-writes) for what a transform can do.
 

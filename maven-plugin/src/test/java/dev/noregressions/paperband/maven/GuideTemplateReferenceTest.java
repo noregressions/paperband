@@ -4,10 +4,14 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import io.pebbletemplates.pebble.extension.Extension;
+
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -32,8 +36,6 @@ class GuideTemplateReferenceTest {
 
     private static final Pattern TEMPLATE = Pattern.compile("`([A-Za-z0-9_/-]+\\.html)`");
     private static final Pattern FILTER_ROW = Pattern.compile("^\\| `([A-Za-z]+)(?:\\(|`)");
-    // "name", new X(...): a filter class, or one class serving several filters by its arguments.
-    private static final Pattern REGISTERED = Pattern.compile("\"([A-Za-z]+)\", new [A-Z][A-Za-z]*\\(");
 
     private static Path repo;
     private static String card;
@@ -83,17 +85,29 @@ class GuideTemplateReferenceTest {
             Matcher m = FILTER_ROW.matcher(line);
             if (m.find()) listed.add(m.group(1));
         }
+        // Ask each extension the layout module ships for its filters, rather
+        // than reading its source: a filter registered any way counts.
         Set<String> registered = new TreeSet<>();
         try (Stream<Path> files = Files.list(repo.resolve(
                 "layout/src/main/java/dev/noregressions/paperband/layout"))) {
             for (Path f : files.filter(p -> p.getFileName().toString().endsWith("Extension.java")).toList()) {
-                String src = Files.readString(f, StandardCharsets.UTF_8);
-                int filters = src.indexOf("getFilters()");
-                if (filters < 0) continue;
-                Matcher m = REGISTERED.matcher(src.substring(filters, src.indexOf('}', filters)));
-                while (m.find()) registered.add(m.group(1));
+                String name = f.getFileName().toString().replace(".java", "");
+                registered.addAll(filtersOf("dev.noregressions.paperband.layout." + name));
             }
         }
         assertEquals(registered, listed, "the Filters table against the filters the layout registers");
+    }
+
+    /** The filters the Pebble extension {@code className} registers. */
+    private static Set<String> filtersOf(String className) {
+        try {
+            Constructor<?> c = Class.forName(className).getDeclaredConstructor();
+            c.setAccessible(true);
+            Extension extension = (Extension) c.newInstance();
+            Map<String, ?> filters = extension.getFilters();
+            return filters == null ? Set.of() : filters.keySet();
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("can't make " + className + " to ask for its filters", e);
+        }
     }
 }
