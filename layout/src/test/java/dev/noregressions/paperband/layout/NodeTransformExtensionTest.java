@@ -201,6 +201,27 @@ class NodeTransformExtensionTest {
         assertTrue(messages(e).contains("use addClass for a class"), messages(e));
     }
 
+    /** Written as the kcdc workshop's cheat sheet writes it: Pebble's replace, on a title. */
+    @Test
+    void replace_given_a_map_is_pebbles_own(@TempDir Path book) throws IOException {
+        String html = render(book, "{% set n = 1 %}[{{ 'Step 1: Build' | replace({('Step ' ~ n ~ ': '): ''}) }}]"
+                + "[{{ 'a-b' | replace(replace_pairs={'-': '+'}) }}]");
+        assertTrue(html.contains("[Build][a+b]"), html);
+    }
+
+    /** A paperband filter with a Pebble core filter's name hides it from every template. */
+    @Test
+    void no_filter_shadows_a_pebble_one_except_replace_which_hands_maps_on() {
+        Set<String> shadowed = new java.util.TreeSet<>(new io.pebbletemplates.pebble.extension.core.CoreExtension()
+                .getFilters().keySet());
+        Set<String> ours = new java.util.HashSet<>(new NodeTransformExtension().getFilters().keySet());
+        ours.addAll(new NodeFindExtension().getFilters().keySet());
+        ours.addAll(new BookQueryExtension().getFilters().keySet());
+        ours.addAll(new HtmlSelectExtension().getFilters().keySet());
+        shadowed.retainAll(ours);
+        assertEquals(Set.of("replace"), shadowed);
+    }
+
     /** {@code html} without the whitespace a rewritten list is printed with between its tags. */
     private static String tight(String html) {
         return html.replaceAll(">\\s+<", "><");

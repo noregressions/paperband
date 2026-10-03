@@ -48,6 +48,8 @@ import java.util.regex.Pattern;
  *       still lands and {@code {lines=8}} on a solution sizes the answer.
  *       {@code blank('css', 'name')} is {@code replace} with only a class,
  *       and a node it blanks keeps nothing.</li>
+ *   <li>{@code replace} given a map rather than a selector is Pebble's own,
+ *       which replaces text in a string: {@code title | replace({'Step 1 ': ''})}.</li>
  *   <li>{@code html} writes nodes back as HTML, the way {@code block.html} is
  *       written: an unchanged node prints the bytes it came from, and a
  *       templated fence goes through its block template. Print it with
@@ -86,6 +88,14 @@ final class NodeTransformExtension extends AbstractExtension {
     private static final List<String> SELECTOR_NAME = List.of("selector", "name");
     private static final List<String> SELECTOR_BLOCK = List.of("selector", "block");
 
+    /**
+     * Pebble's own {@code replace}, which this extension's shadows: a string with
+     * pairs replaced, {@code title | replace({'Step 1 ': ''})}. A {@code replace}
+     * given a map is that one, so templates written for Pebble keep working.
+     */
+    private static final Filter PEBBLE_REPLACE = new io.pebbletemplates.pebble.extension.core.ReplaceFilter();
+    private static final String PEBBLE_REPLACE_PAIRS = "replace_pairs";
+
     /** What each kind of filter takes after its selector, for a failure to show. */
     private static final String NAME_EXAMPLE = ", 'lead'";
     private static final String SET_EXAMPLE = ", '{lines=8}'";
@@ -109,7 +119,7 @@ final class NodeTransformExtension extends AbstractExtension {
                 a -> new Restyle(null, null, attributes(a.get("attributes"))));
         add("blank", SELECTOR_NAME, NAME_EXAMPLE,
                 a -> new Replace(new BlockSpec(null, Set.of(className("blank", a.get("name"))), Map.of()), false));
-        add("replace", SELECTOR_BLOCK, BLOCK_EXAMPLE,
+        add("replace", List.of("selector", "block", PEBBLE_REPLACE_PAIRS), BLOCK_EXAMPLE,
                 a -> new Replace(spec(a.get("block")), true));
         add("insertBefore", SELECTOR_BLOCK, BLOCK_EXAMPLE,
                 a -> new Insert(spec(a.get("block")), Where.BEFORE));
@@ -297,6 +307,13 @@ final class NodeTransformExtension extends AbstractExtension {
         @Override
         public Object apply(Object input, Map<String, Object> args, PebbleTemplate self,
                             EvaluationContext context, int lineNumber) throws PebbleException {
+            if (name.equals("replace")) {
+                Object pairs = args.get(PEBBLE_REPLACE_PAIRS) != null ? args.get(PEBBLE_REPLACE_PAIRS)
+                        : args.get("selector");
+                if (pairs instanceof Map<?, ?>) {
+                    return PEBBLE_REPLACE.apply(input, Map.of(PEBBLE_REPLACE_PAIRS, pairs), self, context, lineNumber);
+                }
+            }
             try {
                 return run(input, args);
             } catch (IllegalArgumentException e) {

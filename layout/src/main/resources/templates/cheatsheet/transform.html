@@ -5,11 +5,17 @@
    It works on a step's top-level parts, so a part nested in something else,
    such as a command in a list item, brings the whole of that thing. _card-body.html then only arranges the steps.
 
+   A card with no step is handed back as it is: the bundled keep.html leaves
+   it out, but a book's own can keep it -- a hand-written setup sheet among
+   the step-by-step ones -- and write it whole through default:_card-body.
+
    The selector is read from card.vars, the card's own cascade, so a
    folder's paperband.yaml can set it for that folder's cards. Override this
    file in the book's layouts/cheatsheet/ to cut the cards another way;
    keep.html still decides which cards the view holds. #}
+{% if card.steps is empty %}{{ result(card) }}{% else %}
 {% set keeps = card.vars.cheatsheetSelect %}{% if keeps is empty %}{% set keeps = ".instructions, pre.command, pre.console" %}{% endif %}
 drop block:not([data-paperband-step]):not(:has([data-paperband-step]))
 drop block:not([data-paperband-step]) > :not(block)
 drop block[data-paperband-step] > :not(block):not({{ keeps | raw }}):not(:has({{ keeps | raw }}))
+{% endif %}

@@ -209,6 +209,23 @@ class CheatsheetViewTest {
             assertFalse(html.contains("[Before you start]"), html);
         }
 
+        /** As the kcdc workshop's cheat sheets do: a hand-written sheet with no step, kept and written whole. */
+        @Test
+        void a_card_with_no_step_is_left_whole_for_a_book_that_keeps_it(@TempDir Path book) throws IOException {
+            Files.createDirectories(book.resolve("layouts/cheatsheet"));
+            Files.writeString(book.resolve("layouts/cheatsheet/keep.html"), "true");
+            Files.writeString(book.resolve("layouts/cheatsheet/_card-body.html"),
+                    "{% if card.steps is empty %}{% include \"default:_card-body\" %}{% else %}steps{% endif %}");
+            Card sheet = new Card("setup", Path.of("setup.md"), new Frontmatter(Map.of()), "Setup",
+                    List.of(block("Before the day", 2, "<p>Install Docker.</p><p>Bring a laptop.</p>", List.of(), null)));
+            LayoutEngine engine = new LayoutEngine(book);
+            engine.setView("cheatsheet");
+            assertEquals(List.of(true), engine.keeps(List.of(sheet), List.of(ctx(Map.of())), "print"));
+            String html = engine.render(sheet, ctx(Map.of()));
+            assertTrue(html.contains("Before the day") && html.contains("Install Docker.")
+                    && html.contains("Bring a laptop."), html);
+        }
+
         @Test
         void a_part_nested_in_a_list_brings_the_whole_list() {
             Block step = block("Step 1 Run", 2, "<p>Skip me.</p><ul><li>Run it:<pre class=\"command\"><code>go</code></pre>"
