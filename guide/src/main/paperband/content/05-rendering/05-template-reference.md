@@ -26,13 +26,13 @@ letters, digits, `-` and `_`, and a block a transform can't add.
 | `addClass('css', 'name')` | A card, cards, a block, a list of nodes, or a node | The same, with the class added to each match |
 | `removeClass('css', 'name')` | A card, cards, a block, a list of nodes, or a node | The same, with the class taken off each match |
 | `set('css', '{key=value}')` | A card, cards, a block, a list of nodes, or a node | The same, with the attributes set on each match |
-| `replace('css', '{.name}')` | A card, cards, a block, a list of nodes, or a node | The same, with an empty block in place of each match, keeping its id |
+| `replace('css', '{.name}')` | A card, cards, a block, a list of nodes, or a node | The same, with an empty block in place of each match, keeping its id and attributes over the spec's |
 | `insertBefore('css', '{.name}')` | A card, cards, a block, a list of nodes, or a node | The same, with an empty block before each match |
 | `insertAfter('css', '{.name}')` | A card, cards, a block, a list of nodes, or a node | The same, with an empty block after each match |
 | `prepend('css', '{.name}')` | A card, cards, a block, a list of nodes, or a node | The same, with an empty block inside each match, first |
 | `append('css', '{.name}')` | A card, cards, a block, a list of nodes, or a node | The same, with an empty block inside each match, last |
 | `wrap('css', '{.name}')` | A card, cards, a block, a list of nodes, or a node | The same, with each match inside a new empty block |
-| `blank('css', 'name')` | A card, cards, a block, a list of nodes, or a node | `replace` with `'{.name}'`, without keeping the id of a node |
+| `blank('css', 'name')` | A card, cards, a block, a list of nodes, or a node | `replace` with `'{.name}'`, except that a node it blanks keeps nothing |
 | `html` | A block, a list of nodes, or a node | The nodes as HTML, as `block.html` is written: an unchanged node as it was, a templated fence through its block template. Print it with `\| raw` |
 
 The transforms are `drop` through `blank`. Given a block, a list of nodes or a node, a
@@ -111,14 +111,21 @@ each name is looked up as `<view>/<name>` through all three first.
 | `site-page.html` | A generated page on the site: its template's output in the shell |
 | `blocks/command.html`, `blocks/console.html`, `blocks/output.html`, `blocks/mermaid.html` | Fences of those types. A book adds a type with `layouts/blocks/<type>.html` |
 | `cheatsheet/keep.html`, `cheatsheet/_card-body.html`, `cheatsheet/_page-rail.html` | The `cheatsheet` view; its rail lists a site page's steps |
-| `student/keep.html`, `student/_block-section.html`, `student/_block-content.html`, `student/_answer-space.html` | The `student` view |
+| `student/keep.html`, `student/transform.html`, `student/_block-section.html`, `student/_answer-space.html` | The `student` view |
 
 ## Views
 
 A view is a folder of templates named by `<view>`. Its `keep.html` is required: rendered
 once per card, it prints `true` or `false`, and the build leaves out the cards it prints
-`false` for. Any other template in the folder replaces the default of the same name for
-that build.
+`false` for. Its `transform.html` is optional: rendered once per card as the card's model is
+made, it hands back the card changed, and every template the build uses, `keep.html`
+included, sees that card. Any other template in the folder replaces the default of the
+same name for that build.
+
+| In `transform.html` | Means |
+|---|---|
+| `card`, `vars`, `output`, `target` | The card's model before its number and sheet are filled in, the card's vars, `print` or `site`, and the build's target |
+| `{{ result(card \| …) }}` | Hands back the changed card. Required, once; anything that isn't a card fails the build, and so does `result` in any other template |
 
 | In a view's template | Means |
 |---|---|
@@ -128,7 +135,7 @@ that build.
 | View | Keeps | Writes |
 |---|---|---|
 | `cheatsheet` | Cards with a `{!step}` | Each card as its title and one entry per step: its heading and the parts `vars.cheatsheetSelect` picks. See [Make a Cheat Sheet](card:make-a-cheat-sheet) |
-| `student` | Every card | Each `{.solution}` block as a labelled `.answer-space` box, `{lines=N}` lines tall; each `{.solution}` node as an empty `.answer-space` box. See [Make a Student Edition](card:make-a-student-edition) |
+| `student` | Every card | Its `transform.html` blanks each `{.solution}` as `answer-space`: a block becomes a labelled `.answer-space` box, `{lines=N}` lines tall; a node an empty `.answer-space` box. See [Make a Student Edition](card:make-a-student-edition) |
 
 The content these views read:
 

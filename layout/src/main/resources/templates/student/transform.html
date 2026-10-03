@@ -1,0 +1,8 @@
+{# The student view's data: every {.solution} -- a block with its heading
+   and nested blocks, a fenced div, or one paragraph, list or fence inside a
+   block that stays -- becomes answer-space. A block keeps its anchor and
+   attributes, so a link to the solution lands on the space and {lines=8}
+   sizes it; a paragraph's space is an empty <div class="answer-space">.
+   Override it in the book's layouts/student/ to change what a student
+   edition leaves out. #}
+{{ result(card | blank('.solution', 'answer-space')) }}

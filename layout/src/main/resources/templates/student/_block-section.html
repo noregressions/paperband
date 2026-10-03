@@ -1,7 +1,7 @@
-{# The student view's block: a block marked {.solution}, heading, content and
-   nested blocks, becomes answer space (_answer-space); every other block is
-   the default, a theme's or the book's own included, through
+{# The student view's block: an answer-space block, which transform.html
+   left where a solution was, is written as _answer-space; every other block
+   is the default, a theme's or the book's own included, through
    "default:_block-section". The default includes _block-section for its
-   children and _block-content for its content, and both come back to this
-   view, so a solution nested anywhere is caught. #}
-{% if block.classes contains "solution" %}{% include "_answer-space" %}{% else %}{% include "default:_block-section" %}{% endif %}
+   children, which comes back to this view, so a solution nested anywhere is
+   caught. #}
+{% if block.classes contains "answer-space" %}{% include "_answer-space" %}{% else %}{% include "default:_block-section" %}{% endif %}

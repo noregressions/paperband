@@ -43,9 +43,11 @@ import java.util.regex.Pattern;
  *   <li>{@code replace}, {@code insertBefore}, {@code insertAfter},
  *       {@code prepend}, {@code append} and {@code wrap} add an empty block,
  *       written the way a card writes attributes: {@code '{.answer lines=4}'}
- *       (see {@link BlockSpec}). {@code replace} keeps the id of what it
- *       replaces, so a link to it still lands. {@code blank('css', 'name')}
- *       is {@code replace} with only a class.</li>
+ *       (see {@link BlockSpec}). {@code replace} keeps the id and attributes
+ *       of what it replaces, its own winning over the spec's, so a link to it
+ *       still lands and {@code {lines=8}} on a solution sizes the answer.
+ *       {@code blank('css', 'name')} is {@code replace} with only a class,
+ *       and a node it blanks keeps nothing.</li>
  *   <li>{@code html} writes nodes back as HTML, the way {@code block.html} is
  *       written: an unchanged node prints the bytes it came from, and a
  *       templated fence goes through its block template. Print it with
@@ -184,17 +186,23 @@ final class NodeTransformExtension extends AbstractExtension {
         }
     }
 
-    /** An empty block in a match's place, keeping its id when {@code keepId}. */
-    private record Replace(BlockSpec spec, boolean keepId) implements Op {
+    /**
+     * An empty block in a match's place. A block keeps the match's id, anchor
+     * and attributes, its own winning over the spec's; a node does too when
+     * {@code keepOwn}, and {@code blank}'s keeps nothing.
+     */
+    private record Replace(BlockSpec spec, boolean keepOwn) implements Op {
 
         @Override
         public List<Node> node(Node n) {
-            return List.of(spec.node(keepId ? n.id() : null, List.of()));
+            return keepOwn ? List.of(spec.node(n.id(), n.attributes(), List.of()))
+                    : List.of(spec.node(null, Map.of(), List.of()));
         }
 
         @Override
         public List<Map<String, Object>> block(Map<String, Object> b) {
-            return List.of(spec.block(level(b), (String) b.get("id"), (String) b.get("anchor"), new ArrayList<>()));
+            return List.of(spec.block(level(b), (String) b.get("id"), (String) b.get("anchor"),
+                    (Map<?, ?>) b.get("attributes"), new ArrayList<>()));
         }
     }
 
@@ -205,7 +213,7 @@ final class NodeTransformExtension extends AbstractExtension {
 
         @Override
         public List<Node> node(Node n) {
-            Node added = spec.node(null, List.of());
+            Node added = spec.node(null, Map.of(), List.of());
             return switch (where) {
                 case BEFORE -> List.of(added, n);
                 case AFTER -> List.of(n, added);
@@ -224,12 +232,12 @@ final class NodeTransformExtension extends AbstractExtension {
         @SuppressWarnings("unchecked")
         public List<Map<String, Object>> block(Map<String, Object> b) {
             return switch (where) {
-                case BEFORE -> List.of(spec.block(level(b), null, null, new ArrayList<>()), b);
-                case AFTER -> List.of(b, spec.block(level(b), null, null, new ArrayList<>()));
+                case BEFORE -> List.of(spec.block(level(b), null, null, Map.of(), new ArrayList<>()), b);
+                case AFTER -> List.of(b, spec.block(level(b), null, null, Map.of(), new ArrayList<>()));
                 case FIRST, LAST -> {
                     List<Map<String, Object>> children =
                             new ArrayList<>((List<Map<String, Object>>) b.get("children"));
-                    Map<String, Object> added = spec.block(level(b) + 1, null, null, new ArrayList<>());
+                    Map<String, Object> added = spec.block(level(b) + 1, null, null, Map.of(), new ArrayList<>());
                     if (where == Where.FIRST) children.add(0, added);
                     else children.add(added);
                     Map<String, Object> out = new HashMap<>(b);
@@ -245,14 +253,14 @@ final class NodeTransformExtension extends AbstractExtension {
 
         @Override
         public List<Node> node(Node n) {
-            return List.of(spec.node(null, List.of(n)));
+            return List.of(spec.node(null, Map.of(), List.of(n)));
         }
 
         @Override
         public List<Map<String, Object>> block(Map<String, Object> b) {
             List<Map<String, Object>> children = new ArrayList<>();
             children.add(b);
-            return List.of(spec.block(level(b), null, null, children));
+            return List.of(spec.block(level(b), null, null, Map.of(), children));
         }
     }
 

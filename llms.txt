@@ -207,9 +207,13 @@ bundled, then as the default, so a view ships only what it changes. `keep.html` 
 (sees `card`, `card.steps`, `card.vars`, `output`), it prints `true`/`false`, and the cards it rejects are
 dropped before dividers, contents, nav and `card:` links are worked out. Bundled: `cheatsheet/keep.html`
 (`{{ card.steps is not empty }}`) and `cheatsheet/_card-body.html`; `student/keep.html` (`true`),
-`student/_block-section.html` (a `.solution` block, heading and nested blocks, becomes `_answer-space`: a
-dashed `.answer-space` box, `{lines=N}` tall, labelled `vars.answerLabel`, default "Your answer") and
-`student/_block-content.html` (`.solution` nodes become an empty `div.answer-space`). In a view's template,
+`student/transform.html` (`{{ result(card | blank('.solution', 'answer-space')) }}`) and
+`student/_block-section.html` (an `answer-space` block, where a `.solution` block was, becomes
+`_answer-space`: a dashed `.answer-space` box, `{lines=N}` tall, labelled `vars.answerLabel`, default
+"Your answer"; a `.solution` node is already an empty `div.answer-space`). Optional `transform.html`: rendered
+per card as its model is made (sees `card`, `vars`, `output`, `target`; not the number or sheet), it must call
+`{{ result(card | <transforms>) }}` once with a card, and every template, `keep.html` and the site rail
+included, sees the changed card. In a view's template,
 `{% include "default:<name>" %}` is the template the view replaces (theme/book override included); what it
 includes goes through the view again. The default `_block-section.html` prints content via
 `_block-content.html`. A view with no `keep.html` fails the build. Block templates don't go through views

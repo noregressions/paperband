@@ -121,30 +121,43 @@ record BlockSpec(String id, Set<String> classes, Map<String, String> attributes)
         return id == null && classes.isEmpty();
     }
 
-    /** An empty {@code <div>} node, with {@code fallbackId} when the spec has no id. */
-    Node node(String fallbackId, List<Node> children) {
-        String nodeId = id != null ? id : fallbackId;
-        Node draft = new Node("element", "div", nodeId, classes, attributes, Map.of(), "", "", children, Map.of());
+    /** The spec's attributes with {@code own} over them: what a match carried wins. */
+    private Map<String, String> with(Map<?, ?> own) {
+        Map<String, String> out = new LinkedHashMap<>(attributes);
+        own.forEach((k, v) -> out.put(k.toString(), v == null ? "" : v.toString()));
+        return out;
+    }
+
+    /**
+     * An empty {@code <div>} node holding {@code children}. {@code ownId} and
+     * {@code own} are what it replaces carried: its id when the spec names
+     * none, and its attributes over the spec's.
+     */
+    Node node(String ownId, Map<String, String> own, List<Node> children) {
+        String nodeId = id != null ? id : ownId;
+        Map<String, String> attrs = with(own);
+        Node draft = new Node("element", "div", nodeId, classes, attrs, Map.of(), "", "", children, Map.of());
         String html = NodeHtml.write(List.of(draft));
         String text = children.isEmpty() ? "" : org.jsoup.Jsoup.parseBodyFragment(html).body().text();
-        return new Node("element", "div", nodeId, classes, attributes, Map.of(), text, html, children, Map.of());
+        return new Node("element", "div", nodeId, classes, attrs, Map.of(), text, html, children, Map.of());
     }
 
     /**
      * An empty block model, keyed as {@code LayoutEngine.blockModel} keys one:
      * no heading, no content, at {@code level}, holding {@code children}.
-     * {@code fallbackId} and {@code fallbackAnchor} keep what it replaces
-     * linkable when the spec names no id.
+     * {@code ownId}, {@code ownAnchor} and {@code own} are what it replaces
+     * carried: it stays linkable when the spec names no id, and the
+     * attributes it had win over the spec's.
      */
-    Map<String, Object> block(int level, String fallbackId, String fallbackAnchor,
+    Map<String, Object> block(int level, String ownId, String ownAnchor, Map<?, ?> own,
                               List<Map<String, Object>> children) {
         Map<String, Object> bm = new HashMap<>();
         bm.put("kind", "FENCED_DIV");
-        bm.put("id", id != null ? id : fallbackId);
-        bm.put("anchor", id != null ? id : fallbackAnchor);
+        bm.put("id", id != null ? id : ownId);
+        bm.put("anchor", id != null ? id : ownAnchor);
         bm.put("classes", new ArrayList<>(classes));
         bm.put("classAttr", String.join(" ", classes));
-        bm.put("attributes", LenientMap.of(attributes));
+        bm.put("attributes", LenientMap.of(with(own)));
         bm.put("directives", LenientMap.of(Map.of()));
         bm.put("directiveAttrs", "");
         bm.put("heading", null);

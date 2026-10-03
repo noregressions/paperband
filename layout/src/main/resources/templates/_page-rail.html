@@ -4,15 +4,17 @@
    Only rendered when the card has headings to list; site-card decides that,
    because an empty rail beside a short page looks worse than no rail. Two
    levels deep: a card's blocks and their immediate children, which is as far
-   as a reader scanning for a landing point needs. #}
+   as a reader scanning for a landing point needs. A block with an anchor but
+   no heading -- one a view's transform put in, such as answer space -- has
+   nothing to call it, so it isn't listed. #}
 <nav class="page-rail" aria-label="On this page">
   <p class="page-rail-heading">On this page</p>
   <ol>
     {% for b in blocks %}
-    {% if b.anchor is not null %}
+    {% if b.anchor is not null and b.heading is not null %}
     <li class="depth-1"><a href="#{{ b.anchor }}">{{ b.heading }}</a></li>
     {% for c in b.children %}
-    {% if c.anchor is not null %}
+    {% if c.anchor is not null and c.heading is not null %}
     <li class="depth-2"><a href="#{{ c.anchor }}">{{ c.heading }}</a></li>
     {% endif %}
     {% endfor %}

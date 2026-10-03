@@ -28,8 +28,10 @@ class BlockSpecTest {
     @Test
     void writes_an_empty_div() {
         BlockSpec s = new BlockSpec(null, Set.of("answer"), Map.of("lines", "4"));
-        assertEquals("<div class=\"answer\" lines=\"4\"></div>", s.node(null, List.of()).html());
-        assertEquals("<div id=\"kept\" class=\"answer\" lines=\"4\"></div>", s.node("kept", List.of()).html());
+        assertEquals("<div class=\"answer\" lines=\"4\"></div>", s.node(null, Map.of(), List.of()).html());
+        assertEquals("<div id=\"kept\" class=\"answer\" lines=\"8\" data-x=\"y\"></div>",
+                s.node("kept", Map.of("lines", "8", "data-x", "y"), List.of()).html(),
+                "what the match carried wins");
     }
 
     @Test

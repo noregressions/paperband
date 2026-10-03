@@ -92,6 +92,8 @@ public final class LayoutEngine {
 
     /** The view this build names ({@code <view>cheatsheet</view>}), or null for the default. */
     private String view;
+    /** Whether the view has a {@code transform.html} to run over each card's model. */
+    private boolean viewTransforms;
     private final ThemeBundle theme;
     /**
      * Where the book's own templates live — the POM-decided geography, or the
@@ -365,6 +367,7 @@ public final class LayoutEngine {
                     + " with at least " + this.view + "/keep.html, and neither the theme, the"
                     + " book's layouts/ nor paperband has one. The bundled view is cheatsheet.");
         }
+        this.viewTransforms = this.view != null && hasOwn(this.view + "/transform");
     }
 
     /** The view this engine renders through, or null for the default. */
@@ -476,6 +479,7 @@ public final class LayoutEngine {
                 .extension(new NodeFindExtension())
                 .extension(new BookQueryExtension())
                 .extension(new NodeTransformExtension())
+                .extension(new ViewTransformExtension())
                 .strictVariables(false)
                 .autoEscaping(true)
                 .build();
@@ -1093,7 +1097,7 @@ public final class LayoutEngine {
             // Whether this card has anything to put in the rail. Decided here
             // rather than in the template so the grid and the rail agree: an
             // empty rail beside a short page reads worse than no rail at all.
-            model.put("hasRail", hasRail(card));
+            model.put("hasRail", hasRail((List<Map<String, Object>>) cm.get("blocks")));
             model.put("measure", measure);
             model.put("urlPrefix", "../");
             model.put("page", Map.of("kind", "card", "id", card.id()));
@@ -3193,7 +3197,45 @@ public final class LayoutEngine {
         // book.html; a template choosing per card -- a view's keep.html, its
         // card body -- reads these.
         m.put("vars", LenientMap.of(vars));
-        return m;
+        return viewTransforms ? transformed(m, vars, output, target) : m;
+    }
+
+    /**
+     * {@code card} as the view's {@code transform.html} hands it back. It runs
+     * here, where every card model is made, so whatever a card is written
+     * through -- its body, the page rail, the contents, the view's own
+     * keep.html -- sees the changed card. It runs before the callers fill in
+     * the card's number and sheet.
+     */
+    private Map<String, Object> transformed(Map<String, Object> card, Map<String, Object> vars,
+                                            String output, String target) {
+        ViewTransformExtension.Result result = new ViewTransformExtension.Result();
+        Map<String, Object> model = new HashMap<>();
+        model.put("card", card);
+        model.put("vars", LenientMap.of(vars));
+        model.put("output", output);
+        model.put("target", target);
+        model.put(ViewTransformExtension.KEY, result);
+        try {
+            engine.getTemplate("transform").evaluate(new StringWriter(), model);
+        } catch (IOException | RuntimeException e) {
+            throw new LayoutException("view '" + view + "': " + view + "/transform.html failed for card "
+                    + card.get("id") + locationOf(e) + ": " + explain(e), e);
+        }
+        if (!result.set()) {
+            throw new LayoutException("view '" + view + "': " + view + "/transform.html has to hand back"
+                    + " the card, as in {{ result(card | drop('.aside')) }}, and didn't for card "
+                    + card.get("id") + ".");
+        }
+        if (!(result.value() instanceof Map<?, ?> changed) || !(changed.get("blocks") instanceof List<?>)) {
+            throw new LayoutException("view '" + view + "': " + view + "/transform.html handed back "
+                    + (result.value() == null ? "nothing" : "something that isn't a card") + " for card "
+                    + card.get("id") + ". A transform changes a card; keep.html decides which cards the view"
+                    + " holds.");
+        }
+        @SuppressWarnings("unchecked")
+        Map<String, Object> out = (Map<String, Object>) changed;
+        return out;
     }
 
     /**
@@ -3425,19 +3467,29 @@ public final class LayoutEngine {
      * centred one. (A count would also be a trap here — Pebble's
      * {@code is not empty} reports a zero Integer as present.)
      *
-     * @param card the card
+     * <p>It counts the card's model, not the card: a view's transform may
+     * have left blocks out or put headless ones in, and the rail lists what the
+     * model holds, each block with an anchor and a heading.
+     *
+     * @param blocks the card model's top-level blocks
      * @return true when a rail would list at least {@value #RAIL_MIN_ENTRIES} headings
      */
-    private static boolean hasRail(Card card) {
+    @SuppressWarnings("unchecked")
+    private static boolean hasRail(List<Map<String, Object>> blocks) {
         int n = 0;
-        for (Block b : card.blocks()) {
-            if (blockAnchor(b) == null) continue;
+        for (Map<String, Object> b : blocks) {
+            if (!listed(b)) continue;
             n++;
-            for (Block c : b.children()) {
-                if (blockAnchor(c) != null) n++;
+            for (Map<String, Object> c : (List<Map<String, Object>>) b.get("children")) {
+                if (listed(c)) n++;
             }
         }
         return n >= RAIL_MIN_ENTRIES;
+    }
+
+    /** Whether the rail lists a block: it has somewhere to land and something to call it. */
+    private static boolean listed(Map<String, Object> block) {
+        return block.get("anchor") != null && block.get("heading") != null;
     }
 
     /** Below this many headings a rail is more furniture than help. */

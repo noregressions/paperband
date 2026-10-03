@@ -443,11 +443,11 @@ it back:
 | `addClass('css', 'name')` | Adds a class to every match. The name is letters, digits, `-` and `_` |
 | `removeClass('css', 'name')` | Takes a class off every match |
 | `set('css', '{key=value}')` | Sets attributes on every match |
-| `replace('css', '{.name}')` | Puts an empty block where each match was. It keeps the match's id, so a link to it still lands |
+| `replace('css', '{.name}')` | Puts an empty block where each match was. It keeps the match's id and attributes, the match's winning over the spec's, so a link to it still lands and `{lines=8}` on a solution still counts |
 | `insertBefore('css', '{.name}')`, `insertAfter(…)` | Adds an empty block before or after each match |
 | `prepend('css', '{.name}')`, `append(…)` | Adds an empty block inside each match, first or last |
 | `wrap('css', '{.name}')` | Puts each match inside a new empty block |
-| `blank('css', 'name')` | `replace` with a class and nothing else |
+| `blank('css', 'name')` | `replace` with a class and nothing else. A node it blanks keeps nothing of the match |
 | `html` | Writes nodes back as HTML, the way `block.html` is written. Print it with `\| raw` |
 
 A block the filters add is written the way a card writes attributes: `'{.answer lines=4}'`,
@@ -577,12 +577,34 @@ aside nested anywhere is left out too. The default `_block-section.html` writes 
 own content through `_block-content.html`, so a view can change what a block says without
 writing its section.
 
+### Changing the cards a view writes
+
+Templates decide how a card is written. A view that changes what a card holds, rather than
+how it looks, does it once, in a `transform.html`, and every template sees the result:
+
+```
+{# layouts/handout/transform.html #}
+{{ result(card | drop('.aside') | replace('.solution', '{.answer-space}')) }}
+```
+
+It's rendered for each card as the card's model is made, with `card`, `vars`, `output` and
+`target`, and it hands the changed card back with `result(...)`, once. Any of the
+transforms in [Changing what a block prints](card:themes#changing-what-a-block-prints)
+work on the card. The card body, the site's on-this-page rail, `card.steps`, `card.slots`
+and the view's own `keep.html` all see the changed card, so a block the transform leaves
+out doesn't turn up in the rail, and `keep.html` can ask what's left. The card's number and
+sheet are filled in afterwards, so a transform can't read them.
+
+A transform changes cards; it doesn't choose them. `keep.html` still decides which cards
+the view holds, and a transform that hands back anything but a card fails the build.
+
 Paperband ships two views:
 
 - `cheatsheet` keeps the cards with a `{!step}` and writes each as its steps. See
   [Make a Cheat Sheet](card:make-a-cheat-sheet).
-- `student` keeps every card and writes each `{.solution}` as space to write the answer
-  in. See [Make a Student Edition](card:make-a-student-edition).
+- `student` keeps every card, and its `transform.html` blanks each `{.solution}` as
+  `answer-space`, which its `_block-section.html` writes as space to write the answer in.
+  See [Make a Student Edition](card:make-a-student-edition).
 
 Block templates
 (`blocks/<type>.html`) don't go through the view yet: a fence is written the same way in

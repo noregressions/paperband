@@ -1,4 +1,3 @@
 {# A block's own content, its children excluded: what _block-section prints
    between its heading and its nested blocks. Split out so a view can change
-   what a block says without writing its section again -- the student view's
-   _block-content turns {.solution} nodes into answer space. #}{{ block.html | raw }}
+   what a block says without writing its section again. #}{{ block.html | raw }}

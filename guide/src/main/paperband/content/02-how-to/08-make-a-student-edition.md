@@ -79,8 +79,23 @@ vars:
 
 The box is `.answer-space`, and the label inside it `.answer-space-label`. Restyle them in
 the book's CSS. To change what the box is, put your own `layouts/student/_answer-space.html`
-in the book. It sees the solution's `block`, so `block.heading` and `block.attributes` are
-there to use.
+in the book. It sees the space's `block`, which keeps the solution's anchor and attributes,
+so `block.attributes` is there to use.
+
+To change what the student edition leaves out, put your own `layouts/student/transform.html`
+in the book. The bundled one blanks every solution:
+
+```
+{{ result(card | blank('.solution', 'answer-space')) }}
+```
+
+This one also leaves out the notes meant for whoever runs the course:
+
+```
+{{ result(card | drop('.instructor-note') | blank('.solution', 'answer-space')) }}
+```
+
+See [Themes](card:themes#changing-the-cards-a-view-writes) for what a transform can do.
 
 ## Check
 
