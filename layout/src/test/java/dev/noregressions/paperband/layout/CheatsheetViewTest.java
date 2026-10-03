@@ -1,5 +1,6 @@
 package dev.noregressions.paperband.layout;
 
+import dev.noregressions.paperband.cards.ContentNodes;
 import dev.noregressions.paperband.model.Block;
 import dev.noregressions.paperband.model.BookConfig;
 import dev.noregressions.paperband.model.Card;
@@ -27,7 +28,7 @@ class CheatsheetViewTest {
 
     private static Block block(String heading, int level, String html, List<Block> children, String step) {
         return new Block(Block.Kind.HEADING_SECTION, null, Set.of(), heading, level, html, children, Map.of(),
-                step == null ? Map.of() : Map.of("step", step));
+                step == null ? Map.of() : Map.of("step", step), ContentNodes.of(html));
     }
 
     /** Intro, an unstepped aside, a step with a nested step, and a second step. */
@@ -41,7 +42,8 @@ class CheatsheetViewTest {
         Block build = block("Step 2 Build", 2,
                 "<p class=\"instructions\">Build it.</p><pre class=\"console\"><code>$ mvn package</code></pre>",
                 List.of(), "2");
-        Block intro = new Block(Block.Kind.HEADING_SECTION, null, Set.of("intro"), null, 0, "<p>Intro.</p>", List.of());
+        Block intro = new Block(Block.Kind.HEADING_SECTION, null, Set.of("intro"), null, 0, "<p>Intro.</p>", List.of(),
+                Map.of(), Map.of(), ContentNodes.of("<p>Intro.</p>"));
         return new Card("setup", Path.of("setup.md"), new Frontmatter(Map.of()), "Setting Up",
                 List.of(intro, aside, install, build));
     }
@@ -188,6 +190,35 @@ class CheatsheetViewTest {
             assertTrue(nav.contains("<a href=\"#check-java\">Step 1 Check Java</a>"), nav);
             assertFalse(nav.contains("Before you start"), "not a heading the page doesn't carry: " + nav);
             assertTrue(page.contains("id=\"install\""), "the link lands on the step");
+        }
+
+        @Test
+        void the_transform_cuts_the_card_so_any_template_sees_only_the_steps(@TempDir Path book)
+                throws IOException {
+            Files.createDirectories(book.resolve("layouts/cheatsheet"));
+            Files.writeString(book.resolve("layouts/cheatsheet/_card-body.html"),
+                    "<article id=\"card-{{ card.id }}\">{% for b in card.blocks %}[{{ b.heading }}]{{ b.html | raw }}"
+                            + "{% for c in b.children %}[{{ c.heading }}]{{ c.html | raw }}{% endfor %}{% endfor %}</article>");
+            LayoutEngine engine = new LayoutEngine(book);
+            engine.setView("cheatsheet");
+            String html = engine.render(card(), ctx(Map.of()));
+            assertTrue(html.contains("[Step 1 Install]<p class=\"instructions\">Install a JDK.</p>[Step 1 Check Java]"),
+                    html);
+            assertTrue(html.contains("[Step 2 Build]"), html);
+            assertFalse(html.contains("Background.") || html.contains("Not a step.") || html.contains("Intro."), html);
+            assertFalse(html.contains("[Before you start]"), html);
+        }
+
+        @Test
+        void a_part_nested_in_a_list_brings_the_whole_list() {
+            Block step = block("Step 1 Run", 2, "<p>Skip me.</p><ul><li>Run it:<pre class=\"command\"><code>go</code></pre>"
+                    + "</li><li>Then rest.</li></ul>", List.of(), "1");
+            Card card = new Card("run", Path.of("run.md"), new Frontmatter(Map.of()), "Run", List.of(step));
+            LayoutEngine engine = new LayoutEngine();
+            engine.setView("cheatsheet");
+            String html = engine.render(card, ctx(Map.of()));
+            assertFalse(html.contains("Skip me."), html);
+            assertTrue(html.contains("go") && html.contains("Then rest."), "the list comes whole: " + html);
         }
 
         @Test

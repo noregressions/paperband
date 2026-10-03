@@ -648,12 +648,13 @@ drop .aside
 one with an exercise in it (see [Template Reference](card:template-reference#what-a-selector-sees)).
 With `result(...)`, handing back `null` leaves the card out. A view with a `transform.html`
 doesn't need a `keep.html`; with both, a card has to pass each, the transform first. A
-transform that hands back anything else but a card fails the build.
+transform that hands back anything else, neither a card nor `null`, fails the build.
 
 Paperband ships two views:
 
-- `cheatsheet` keeps the cards with a `{!step}` and writes each as its steps. See
-  [Make a Cheat Sheet](card:make-a-cheat-sheet).
+- `cheatsheet` keeps the cards with a `{!step}`. Its `transform.html` cuts each card to its
+  steps and each step to the parts `cheatsheetSelect` picks, and its `_card-body.html`
+  writes the steps under the card's title. See [Make a Cheat Sheet](card:make-a-cheat-sheet).
 - `student` keeps every card, and its `transform.html`, `blank .solution as answer-space`,
   blanks each `{.solution}`, which its `_block-section.html` writes as space to write the
   answer in.

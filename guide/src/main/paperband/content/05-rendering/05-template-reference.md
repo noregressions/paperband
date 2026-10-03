@@ -110,7 +110,7 @@ each name is looked up as `<view>/<name>` through all three first.
 | `site-card.html` | A card's page |
 | `site-page.html` | A generated page on the site: its template's output in the shell |
 | `blocks/command.html`, `blocks/console.html`, `blocks/output.html`, `blocks/mermaid.html` | Fences of those types. A book adds a type with `layouts/blocks/<type>.html` |
-| `cheatsheet/keep.html`, `cheatsheet/_card-body.html`, `cheatsheet/_page-rail.html` | The `cheatsheet` view; its rail lists a site page's steps |
+| `cheatsheet/keep.html`, `cheatsheet/transform.html`, `cheatsheet/_card-body.html`, `cheatsheet/_page-rail.html` | The `cheatsheet` view; its rail lists a site page's steps |
 | `student/keep.html`, `student/transform.html`, `student/_block-section.html`, `student/_answer-space.html` | The `student` view |
 
 ## Views
@@ -137,7 +137,7 @@ name for that build.
 
 | View | Keeps | Writes |
 |---|---|---|
-| `cheatsheet` | Cards with a `{!step}` | Each card as its title and one entry per step: its heading and the parts `vars.cheatsheetSelect` picks. See [Make a Cheat Sheet](card:make-a-cheat-sheet) |
+| `cheatsheet` | Cards with a `{!step}` | Its `transform.html` cuts each card to its steps, and each step to the parts `vars.cheatsheetSelect` picks; each card is then its title and one entry per step. See [Make a Cheat Sheet](card:make-a-cheat-sheet) |
 | `student` | Every card | Its `transform.html`, `blank .solution as answer-space`, blanks each `{.solution}`: a block becomes a labelled `.answer-space` box, `{lines=N}` lines tall; a node an empty `.answer-space` box. See [Make a Student Edition](card:make-a-student-edition) |
 
 The content these views read:

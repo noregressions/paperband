@@ -1,0 +1,15 @@
+{# The cheatsheet view's data: each card cut down to its steps, and each
+   step to the parts vars.cheatsheetSelect picks -- by default the paragraph
+   marked {.instructions} and its command or console session. What isn't a
+   step goes, unless a step sits inside it, and then only its heading stays.
+   It works on a step's top-level parts, so a part nested in something else,
+   such as a command in a list item, brings the whole of that thing. _card-body.html then only arranges the steps.
+
+   The selector is read from card.vars, the card's own cascade, so a
+   folder's paperband.yaml can set it for that folder's cards. Override this
+   file in the book's layouts/cheatsheet/ to cut the cards another way;
+   keep.html still decides which cards the view holds. #}
+{% set keeps = card.vars.cheatsheetSelect %}{% if keeps is empty %}{% set keeps = ".instructions, pre.command, pre.console" %}{% endif %}
+drop block:not([data-paperband-step]):not(:has([data-paperband-step]))
+drop block:not([data-paperband-step]) > :not(block)
+drop block[data-paperband-step] > :not(block):not({{ keeps | raw }}):not(:has({{ keeps | raw }}))

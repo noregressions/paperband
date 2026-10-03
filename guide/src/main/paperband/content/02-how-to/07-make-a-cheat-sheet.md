@@ -101,6 +101,10 @@ vars:
   cheatsheetSelect: ".instructions, pre.console"
 ```
 
+The view's `transform.html` reads it, and cuts each step down to what it matches before
+anything is written. It works on each step's top-level parts: a part nested in something
+else brings that whole thing, so a command inside a list item comes with the whole list.
+
 ## A cheat-sheet site
 
 The view works for the `site` goal too. Add a second execution with the same `<book>`,
@@ -109,17 +113,18 @@ its steps.
 
 ## Change the view
 
-A view is a folder of templates: the bundled `cheatsheet/` has three, and anything it doesn't
+A view is a folder of templates: the bundled `cheatsheet/` has four, and anything it doesn't
 have comes from the defaults. To change one, put a file of the same name in the book's
 `layouts/cheatsheet/`, or in a theme's `cheatsheet/`:
 
 | Template | What it decides | Bundled |
 |---|---|---|
 | `keep.html` | Which cards the build holds: prints `true` or `false` for each card | `{{ card.steps is not empty }}` |
-| `_card-body.html` | What each card becomes | The title, then per step its heading and the parts `cheatsheetSelect` picks |
+| `transform.html` | What each card holds: every template sees the card as it leaves it | Everything that isn't a step goes; each step keeps the parts `cheatsheetSelect` picks |
+| `_card-body.html` | How each card is written | The title, then per step its heading and what the transform left |
 | `_page-rail.html` | The site's list down the side of a card's page | The card's steps, each linking to its step |
 
-Both see the card's model, including:
+They all see the card's model, as the transform left it, including:
 
 | Key | What's in it |
 |---|---|

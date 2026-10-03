@@ -206,8 +206,9 @@ goals). Every template is looked up as `<view>/<name>.html` first, through theme
 bundled, then as the default, so a view ships only what it changes. A view needs `keep.html`, `transform.html`
 or both (a card must pass each). `keep.html`, rendered per card (sees `card`, `card.steps`, `card.vars`,
 `output`), prints `true`/`false`, and the cards it rejects are dropped before dividers, contents, nav and
-`card:` links are worked out. Bundled: `cheatsheet/keep.html`
-(`{{ card.steps is not empty }}`) and `cheatsheet/_card-body.html`; `student/keep.html` (`true`),
+`card:` links are worked out. Bundled: `cheatsheet/keep.html` (`{{ card.steps is not empty }}`),
+`cheatsheet/transform.html` (drops what isn't a step, cuts each step to `cheatsheetSelect`) and
+`cheatsheet/_card-body.html` (title, then each step's heading and what's left); `student/keep.html` (`true`),
 `student/transform.html` (`blank .solution as answer-space`) and
 `student/_block-section.html` (an `answer-space` block, where a `.solution` block was, becomes
 `_answer-space`: a dashed `.answer-space` box, `{lines=N}` tall, labelled `vars.answerLabel`, default
