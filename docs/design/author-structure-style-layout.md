@@ -1,8 +1,8 @@
 # Design: structure, style and layout without CSS
 
-Status: concept, for discussion
+Status: concept, for discussion. Views (section 4) are built; the rest isn't.
 Author: Steve Poole
-Date: 2026-10-02
+Date: 2026-10-02, views revised 2026-10-03
 
 ## The problem
 
@@ -42,6 +42,11 @@ switching from PDF to slides, keeps the author's intent intact.
 
 Each layer uses the previous one. Settings attach to the elements that structure names,
 and layouts pick content by the same names.
+
+Alongside the three layers sits one more idea, about editions rather than looks. A
+**view** filters and reshapes the data before any layout sees it, so a layout never has
+to know whether it's writing the full book, a student edition or a cheat sheet. Section 4
+covers it; it's the part that's built.
 
 ## 1. Structure and identity
 
@@ -83,9 +88,9 @@ lists the ones it adds.
 
 ### Containers
 
-A block is currently a heading plus everything up to the next heading. That leaves no way
-to group three paragraphs and a code block into one aside unless you give them a heading.
-A fenced container fixes that:
+A heading section can't group three paragraphs and a code block into one aside unless
+they get a heading of their own. Paperband already has the answer: a fenced div, Pandoc's
+syntax, which the student edition uses for solutions.
 
 ```markdown
 ::: {.aside}
@@ -94,9 +99,9 @@ lists and fences as it needs.
 :::
 ```
 
-The syntax follows Pandoc's fenced divs, which many authors have seen before. Inside a
-card, a container is a block like any other: it can have an id, a kind and settings, and
-slots and views can select it.
+It loads as a block like any other (`Block.Kind.FENCED_DIV`): it has an id and classes,
+slots take it, and a view's transforms select it. What this design adds is settings on it,
+from section 2.
 
 ### Addresses
 
@@ -108,10 +113,13 @@ card:upgrade-guide .warning       every warning in that card
 .warning                          every warning in the current scope
 ```
 
-Slots, views, the cheat sheet, the slides renderer and the layouts in section 3 all use
-these addresses. At the moment each of those features has its own way of finding things:
-`take()` names, `find()` CSS selectors and `select()`. One addressing scheme means an
-author learns it once.
+Slots, views, the cheat sheet, the slides renderer and the layouts in section 3 should all
+use these addresses. Part of that has happened: `query` and every view transform see the
+same tree, cards holding blocks holding nodes, through one CSS selector, so
+`block.solution`, `p.solution` and `card:has(pre.command)` mean the same thing wherever
+they're written. Slots still match by name (`take('watch-out')`), and `select` still reads
+HTML. The `#id` and `card:x` forms above would be a thin layer over the selectors, not a
+new matcher.
 
 ## 2. Settings
 
@@ -272,18 +280,16 @@ style them but don't change what they do. An author never sees the HTML or the C
 
 ### Picking parts of content
 
-Some layouts don't show whole blocks. The cheat sheet shows each step's heading, its
-instructions and its command, and it does this through `find` in a template. A
-declarative layout can name the parts it wants:
+A layout shouldn't pick parts of content at all. Choosing that a cheat sheet holds each
+step's heading, its instructions and its command is a view's job (section 4). By the time
+a layout sees a card, the parts it shouldn't show are gone. The cheat-sheet layout is then
+only about arrangement:
 
 ```yaml
-# a cheat sheet as a layout
-view:
-  keep: { has: "!step" }
+# layouts/cheatsheet.yaml
 card:
   regions:
     - each: "!step"
-      show: [heading, ".instructions", "pre.command"]
       settings: { breaks: keep-together }
 ```
 
@@ -322,17 +328,94 @@ A declarative layout compiles to the templates paperband already has, so nothing
 When a page needs something the regions can't express, the author writes a Pebble
 template exactly as they would today.
 
+## 4. Views: filtering the data
+
+*Built: commits a4b68be, 31c79bd and the statements after them.*
+
+A view used to be a set of templates, so a view that changed what a card holds did it in
+whichever template wrote that part. The student edition blanked solution paragraphs in
+`_block-content.html` and solution blocks in `_block-section.html`, and the site's page
+rail, `card.steps` and `keep.html` still saw the solutions. The split is now:
+
+| | Decides | Written as |
+|---|---|---|
+| **View** | which cards the edition holds, and what each one holds | `keep.html`, and `transform.html` |
+| **Layout** | how whatever survives is arranged and written | templates today; the regions of section 3 later |
+
+A view's `transform.html` runs once per card, as the card's model is made, so every
+template sees the changed card: the body, the rail, `card.steps`, `card.slots` and
+`keep.html` itself. The student edition is now one statement:
+
+```
+blank .solution as answer-space
+```
+
+and a book that also wants to leave out instructor notes and add space after an open
+exercise writes:
+
+```
+drop .instructor-note
+insert {.answer-space} after block.exercise:not(:has(.solution))
+blank .solution as answer-space
+```
+
+### One set of operations, two ways to write them
+
+The operations are Pebble filters, `drop`, `keep`, `addClass`, `removeClass`, `set`,
+`replace`, `insertBefore`, `insertAfter`, `prepend`, `append`, `wrap` and `blank`. They
+take a card or a list of cards and return a changed one, so a template author chains them:
+
+```
+{{ result(card | drop('.instructor-note') | blank('.solution', 'answer-space')) }}
+```
+
+The statements are a front end over the same filters, for an author who doesn't write
+Pebble. Their form follows XQuery Update, which reads as a sentence and needs no quoting:
+
+| Statement | Filter |
+|---|---|
+| `drop SEL`, `keep SEL` | `drop`, `keep` |
+| `blank SEL as NAME` | `blank` |
+| `replace SEL with BLOCK` | `replace` |
+| `insert BLOCK before\|after SEL` | `insertBefore`, `insertAfter` |
+| `insert BLOCK first\|last in SEL` | `prepend`, `append` |
+| `wrap SEL in BLOCK` | `wrap` |
+| `add .NAME to SEL`, `remove .NAME from SEL` | `addClass`, `removeClass` |
+| `set ATTRS on SEL` | `set` |
+
+A `transform.html` that calls `result(...)` uses the filters; one that doesn't is read as
+statements. It's still a template either way, so `{% if output == 'site' %}` chooses
+statements for free.
+
+### Decisions made along the way
+
+- **Empty blocks of a kind, not blanks.** A student edition needs to *add* an answer block
+  of a particular kind, not only hollow out a solution. A new block is written the way a
+  card writes attributes, `{.answer-space lines=4}`, and is an empty block or `div` with
+  that id, classes and attributes and nothing else. It can't carry what the content policy
+  strips from a card, or a URL attribute, so a view can't add markup a theme didn't ask for.
+- **Innermost wins.** `replace` keeps the id and attributes of what it replaces, and the
+  match's values beat the statement's. The statement gives a default; `{lines=8}` on one
+  solution still sizes its space.
+- **In order, not as a snapshot.** XQuery Update applies all its changes together at the
+  end. These run in order, as a pipe does: each statement finds every match before it
+  changes anything, so it never matches what it added, and the next statement sees the
+  result. It's easier to follow, and the cost is that order matters. The student example
+  above has to insert before it blanks.
+- **A transform changes cards; it doesn't choose them.** `keep.html` still decides which
+  cards a view holds. A transform that leaves its card out fails the build.
+
 ## The ladder
 
 Each step down needs more skill, and we expect most books to stop at the second:
 
 1. Kinds and settings in Markdown and frontmatter.
 2. Kind defaults and token overrides in yaml: the book's house style.
-3. Declarative layouts.
-4. Pebble templates in `layouts/`.
+3. Views as statements, for editions of the same book; declarative layouts.
+4. Pebble templates in `layouts/`, and filter chains in a view.
 5. A theme: CSS and template overrides.
 
-Today, everything below step 1 starts at step 4.
+Today, apart from views as statements, everything below step 1 starts at step 4.
 
 ## The theme contract
 
@@ -377,16 +460,23 @@ stays in code, as it does for the plugin configuration.
 - **Span syntax.** Extend the existing `{.x}` … `{/x}` to take settings, or adopt Pandoc's
   `[text]{tone=warning}`? Extending is consistent with what authors already write, while
   Pandoc's form is the one other tools recognise.
-- **Containers in flexmark.** It isn't yet known whether `:::` fenced divs need a custom
-  flexmark extension. That has to be checked before anything else depends on them.
 - **Declaring kinds.** Is a declaration required for every class, which would break
   existing books, or only for kinds that carry defaults? A warning period may be enough.
 - **Layout file format.** yaml matches the rest of the config, but deeply nested regions
   get hard to read in yaml. A small dedicated syntax might read better, at the cost of one
   more thing to learn.
-- **Views and layouts.** A view decides which cards are kept and how they're written, and
-  a layout decides how one card or page is put together. The cheat-sheet example above
-  blurs the two. They might be one concept.
+- **Numbering under a view.** If a view drops cards, does chapter 3.14 stay 3.14 in the
+  cheat sheet, or get renumbered? Numbering before the filter keeps references to the full
+  book stable; numbering after gives a self-contained edition. Today a transform runs
+  before numbers are filled in, and `keep.html` runs before the book's structure is worked
+  out, so cards are numbered after the filter. The chapter-numbering design should say
+  which is the default and how a view asks for the other.
+- **Choosing cards with statements.** `keep card:has([data-paperband-step])` is a
+  statement already, but only inside one card's transform, where leaving the card out is
+  an error. Letting a view's statements choose cards too would retire `keep.html`; it needs
+  the transform to run over the book rather than card by card.
+- **The cheat sheet as a view.** Its card body still picks parts with `select`. Moving that
+  into a transform, and leaving the body to arrange steps, is the test of the split above.
 - **Existing themes.** Every built-in theme has hard-coded values that would need to
   become `--pb-*` variables. That work is large, but it can be done one theme at a time.
 
@@ -399,5 +489,6 @@ stays in code, as it does for the plugin configuration.
 4. One declarative card layout that reproduces an existing slot template, to check that
    the compilation to templates holds up.
 
-Containers, page layouts and the rest of the tokens come after that, once the first slice
-shows the cascade, the validation and the theme contract work in practice.
+Page layouts and the rest of the tokens come after that, once the first slice shows the
+cascade, the validation and the theme contract work in practice. Views (section 4) were
+built first, ahead of this slice, because the student edition needed them.
