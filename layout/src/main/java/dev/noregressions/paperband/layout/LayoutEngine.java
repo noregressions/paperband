@@ -94,6 +94,8 @@ public final class LayoutEngine {
     private String view;
     /** Whether the view has a {@code transform.html} to run over each card's model. */
     private boolean viewTransforms;
+    /** Whether the view has a {@code keep.html} to choose its cards. */
+    private boolean viewKeeps;
     private final ThemeBundle theme;
     /**
      * Where the book's own templates live — the POM-decided geography, or the
@@ -343,12 +345,13 @@ public final class LayoutEngine {
      * first, through the theme, the book's {@code layouts/} and the bundled set,
      * and falls back to the default of the same name -- see {@link ViewLoader}.
      * A view has at least a {@code keep.html}, which says which cards it holds
-     * ({@link #keeps}); a name with none anywhere in the chain is an error rather
-     * than a build of the default view under another name.
+     * ({@link #keeps}), or a {@code transform.html}, which changes each card and
+     * can leave one out; a name with neither anywhere in the chain is an error
+     * rather than a build of the default view under another name.
      *
      * @param view the view's name, or null for the default
      * @throws LayoutException when the name isn't a folder name, or no link of
-     *         the chain has {@code <view>/keep.html}
+     *         the chain has {@code <view>/keep.html} or {@code <view>/transform.html}
      */
     public void setView(String view) {
         if (view == null || view.isBlank()) {
@@ -362,12 +365,14 @@ public final class LayoutEngine {
             this.view = name;
         }
         this.engine = buildEngine(this.layoutsDir, this.theme, this.view);
-        if (this.view != null && !hasOwn(this.view + "/keep")) {
-            throw new LayoutException("no view '" + this.view + "': a view is a folder of templates"
-                    + " with at least " + this.view + "/keep.html, and neither the theme, the"
-                    + " book's layouts/ nor paperband has one. The bundled view is cheatsheet.");
-        }
+        this.viewKeeps = this.view != null && hasOwn(this.view + "/keep");
         this.viewTransforms = this.view != null && hasOwn(this.view + "/transform");
+        if (this.view != null && !viewKeeps && !viewTransforms) {
+            throw new LayoutException("no view '" + this.view + "': a view is a folder of templates"
+                    + " with at least " + this.view + "/keep.html or " + this.view + "/transform.html,"
+                    + " and neither the theme, the book's layouts/ nor paperband has one. The bundled"
+                    + " views are cheatsheet and student.");
+        }
     }
 
     /** The view this engine renders through, or null for the default. */
@@ -386,9 +391,11 @@ public final class LayoutEngine {
     }
 
     /**
-     * Which of {@code cards} this build's view holds: its {@code keep.html},
-     * rendered for each card with the card's model and vars, prints
-     * {@code true} or {@code false}. The default view holds every card. Called
+     * Which of {@code cards} this build's view holds. Its {@code transform.html}
+     * runs first, and a card it leaves out isn't held; then its {@code keep.html},
+     * rendered for each card with the changed card's model and vars, prints
+     * {@code true} or {@code false}. A view needs only one of the two, and with
+     * both a card has to pass each. The default view holds every card. Called
      * before the book's structure is worked out, so dividers, the contents,
      * the site's nav and every {@code card:} link see only the cards kept.
      *
@@ -404,13 +411,25 @@ public final class LayoutEngine {
             for (int i = 0; i < cards.size(); i++) out.add(Boolean.TRUE);
             return out;
         }
-        PebbleTemplate keep = engine.getTemplate("keep");
+        PebbleTemplate keep = viewKeeps ? engine.getTemplate("keep") : null;
         for (int i = 0; i < cards.size(); i++) {
             Card card = cards.get(i);
             RenderContext ctx = contexts.get(i);
+            Map<String, Object> cm = baseCardModel(card, resolveCardAxes(card, ctx, ctx.book().axes()),
+                    ctx.vars(), output, ctx.target());
+            if (viewTransforms) {
+                cm = transformed(cm, ctx.vars(), output, ctx.target());
+                if (cm == null) {
+                    out.add(Boolean.FALSE);
+                    continue;
+                }
+            }
+            if (keep == null) {
+                out.add(Boolean.TRUE);
+                continue;
+            }
             Map<String, Object> model = new HashMap<>();
-            model.put("card", cardModel(card, resolveCardAxes(card, ctx, ctx.book().axes()), ctx.vars(),
-                    output, ctx.target()));
+            model.put("card", cm);
             model.put("vars", LenientMap.of(ctx.vars()));
             model.put("output", output);
             model.put("target", ctx.target());
@@ -3155,8 +3174,29 @@ public final class LayoutEngine {
         return n == null ? null : n.label();
     }
 
+    /**
+     * The card's model as every template sees it: its view's transform applied,
+     * when the view has one.
+     *
+     * @throws LayoutException when the transform leaves the card out, which a
+     *         build never asks for: {@link #keeps} has already left such a card out
+     */
     private Map<String, Object> cardModel(Card card, Map<String, Object> axes,
                                           Map<String, Object> vars, String output, String target) {
+        Map<String, Object> m = baseCardModel(card, axes, vars, output, target);
+        if (!viewTransforms) return m;
+        Map<String, Object> changed = transformed(m, vars, output, target);
+        if (changed == null) {
+            throw new LayoutException("view '" + view + "': " + view + "/transform.html leaves out card "
+                    + card.id() + ", so there's nothing of it to write. A build leaves such a card out"
+                    + " before it writes anything.");
+        }
+        return changed;
+    }
+
+    /** The card's model before any view's transform. */
+    private Map<String, Object> baseCardModel(Card card, Map<String, Object> axes,
+                                              Map<String, Object> vars, String output, String target) {
         Map<String, Object> m = new HashMap<>();
         m.put("id", card.id());
         m.put("title", card.title());
@@ -3197,15 +3237,15 @@ public final class LayoutEngine {
         // book.html; a template choosing per card -- a view's keep.html, its
         // card body -- reads these.
         m.put("vars", LenientMap.of(vars));
-        return viewTransforms ? transformed(m, vars, output, target) : m;
+        return m;
     }
 
     /**
-     * {@code card} as the view's {@code transform.html} hands it back. It runs
-     * here, where every card model is made, so whatever a card is written
-     * through -- its body, the page rail, the contents, the view's own
-     * keep.html -- sees the changed card. It runs before the callers fill in
-     * the card's number and sheet.
+     * {@code card} as the view's {@code transform.html} hands it back, or null
+     * when it leaves the card out: the view doesn't hold it. It runs where every
+     * card model is made, so whatever a card is written through -- its body,
+     * the page rail, the contents, the view's own keep.html -- sees the changed
+     * card. It runs before the callers fill in the card's number and sheet.
      */
     private Map<String, Object> transformed(Map<String, Object> card, Map<String, Object> vars,
                                             String output, String target) {
@@ -3234,11 +3274,11 @@ public final class LayoutEngine {
         } else {
             handed = ran(card, printed.toString());
         }
+        if (handed == null) return null;
         if (!(handed instanceof Map<?, ?> changed) || !(changed.get("blocks") instanceof List<?>)) {
-            throw new LayoutException("view '" + view + "': " + view + "/transform.html handed back "
-                    + (handed == null ? "nothing" : "something that isn't a card") + " for card "
-                    + card.get("id") + ". A transform changes a card; keep.html decides which cards the view"
-                    + " holds.");
+            throw new LayoutException("view '" + view + "': " + view + "/transform.html handed back"
+                    + " something that isn't a card for card " + card.get("id") + ": result(...) takes the"
+                    + " card, changed, or null to leave it out.");
         }
         @SuppressWarnings("unchecked")
         Map<String, Object> out = (Map<String, Object>) changed;
@@ -3270,11 +3310,8 @@ public final class LayoutEngine {
                 throw new LayoutException("view '" + view + "': " + view + "/transform.html, '" + st.text()
                         + "', for card " + card.get("id") + ": " + e.getMessage(), e);
             }
-            if (changed == null) {
-                throw new LayoutException("view '" + view + "': " + view + "/transform.html, '" + st.text()
-                        + "', left out card " + card.get("id") + ". A transform changes a card; keep.html"
-                        + " decides which cards the view holds.");
-            }
+            // Left out: the view doesn't hold it, and nothing after this sees it.
+            if (changed == null) return null;
         }
         return changed;
     }

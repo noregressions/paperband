@@ -32,16 +32,16 @@ final class Views {
         }
     }
 
-    /** The log line for the cards a view's keep.html left out. */
+    /** The log line for the cards a view's keep.html or transform.html left out. */
     static String leftOut(String view, List<String> dropped) {
-        return "View '" + view + "': left out " + dropped.size() + " card(s) its keep.html doesn't"
-                + " keep: " + String.join(", ", dropped);
+        return "View '" + view + "': left out " + dropped.size() + " card(s) its keep.html or"
+                + " transform.html doesn't keep: " + String.join(", ", dropped);
     }
 
     /** The failure for a view that kept none of the build's cards. */
     static String keptNone(String view, int cards) {
-        return "view '" + view + "' keeps none of the " + cards + " cards: its keep.html printed"
-                + " false for every one." + ("cheatsheet".equals(view)
+        return "view '" + view + "' keeps none of the " + cards + " cards: its keep.html or"
+                + " transform.html left out every one." + ("cheatsheet".equals(view)
                         ? " The cheatsheet view keeps the cards with a {!step}: mark the steps with"
                                 + " {!step}, or build without the view."
                         : "");

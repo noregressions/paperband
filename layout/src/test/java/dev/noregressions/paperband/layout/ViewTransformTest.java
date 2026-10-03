@@ -123,7 +123,6 @@ class ViewTransformTest {
         for (String[] c : new String[][] {
                 {"drop .aside\nreplace .keep", "has no 'with'"},
                 {"replace .keep with {style=x}", "'replace .keep with {style=x}'"},
-                {"drop card", "left out card notes"},
                 {"{{ result(card) }}\ndrop .aside", "Use one or the other"},
                 {"{# nothing #}", "did neither"}}) {
             LayoutEngine engine = view(book, "true", c[0]);
@@ -131,6 +130,47 @@ class ViewTransformTest {
             assertTrue(e.getMessage().contains(c[1]) && e.getMessage().contains("edit/transform.html"),
                     e.getMessage());
         }
+    }
+
+    @Test
+    void a_transform_can_choose_cards_and_keep_html_is_then_optional(@TempDir Path book) throws IOException {
+        Path dir = Files.createDirectories(book.resolve("layouts/edit"));
+        Files.writeString(dir.resolve("transform.html"), "keep card:has(block.aside)\ndrop .aside");
+        LayoutEngine engine = new LayoutEngine(book);
+        engine.setView("edit");
+        Card none = new Card("plain", Path.of("plain.md"), new Frontmatter(Map.of()), "Plain",
+                List.of(block("Keep", Set.of("keep"), "<p>Kept.</p>", Map.of())));
+        assertEquals(List.of(true, false), engine.keeps(List.of(card(), none), List.of(ctx(), ctx()), "print"));
+        String html = engine.render(card(), ctx());
+        assertTrue(html.contains("Kept prose.") && !html.contains("An aside."), html);
+        LayoutException e = assertThrows(LayoutException.class, () -> engine.render(none, ctx()));
+        assertTrue(e.getMessage().contains("leaves out card plain"), e.getMessage());
+    }
+
+    @Test
+    void with_keep_html_too_a_card_has_to_pass_both(@TempDir Path book) throws IOException {
+        LayoutEngine engine = view(book, "{{ card.id != 'notes' }}", "keep card:has(.aside)");
+        Card other = new Card("other", Path.of("other.md"), new Frontmatter(Map.of()), "Other",
+                List.of(block("Aside", Set.of("aside"), "<p>Aside.</p>", Map.of())));
+        Card none = new Card("plain", Path.of("plain.md"), new Frontmatter(Map.of()), "Plain",
+                List.of(block("Keep", Set.of("keep"), "<p>Kept.</p>", Map.of())));
+        assertEquals(List.of(false, true, false),
+                engine.keeps(List.of(card(), other, none), List.of(ctx(), ctx(), ctx()), "print"));
+    }
+
+    @Test
+    void result_of_null_leaves_the_card_out(@TempDir Path book) throws IOException {
+        LayoutEngine engine = view(book, "true", "{{ result(null) }}");
+        assertEquals(List.of(false), engine.keeps(List.of(card()), List.of(ctx()), "print"));
+    }
+
+    @Test
+    void a_view_needs_keep_html_or_transform_html(@TempDir Path book) throws IOException {
+        Files.createDirectories(book.resolve("layouts/empty"));
+        Files.writeString(book.resolve("layouts/empty/_card-body.html"), "x");
+        LayoutEngine engine = new LayoutEngine(book);
+        LayoutException e = assertThrows(LayoutException.class, () -> engine.setView("empty"));
+        assertTrue(e.getMessage().contains("empty/keep.html or empty/transform.html"), e.getMessage());
     }
 
     @Test

@@ -128,7 +128,7 @@ Both see the card's model, including:
 | `step.block.html \| select(...)` | The parts of a step's HTML matching a selector (see [Themes](card:themes#picking-parts-out-of-a-block)) |
 | `step.block \| find(...)` | The same parts as data: text, a fence's `code` (see [Themes](card:themes#reading-a-block-as-data)) |
 
-A card `keep.html` leaves out has no page and no contents entry, and no divider fires for
+A card the view leaves out has no page and no contents entry, and no divider fires for
 it, because the build leaves it out before working any of that out. Keep
 `id="card-{{ card.id }}"` on what `_card-body.html` writes: `card:` links and the PDF
 outline land there, and a card the view keeps but nothing prints fails the build.
@@ -159,8 +159,8 @@ To drop the section dividers from the cheat sheet only, add `layouts/cheatsheet/
 with nothing in it: it decides the dividers in this view, and the full guide keeps its own
 (see [Themes](card:themes#dividers)).
 
-A view of your own is a new folder: `layouts/handout/keep.html` (even just `true`) makes
-`<view>handout</view>` a view, and every other template it ships replaces the default of the
+A view of your own is a new folder: `layouts/handout/keep.html` (even just `true`) or a
+`transform.html` makes `<view>handout</view>` a view, and every other template it ships replaces the default of the
 same name for that build.
 
 ## Check
@@ -170,7 +170,7 @@ mvn package
 ```
 
 The log lists the cards the view left out, as `View 'cheatsheet': left out 3 card(s) its
-keep.html doesn't keep: …`. Open `target/cheatsheet.pdf`: each card should appear under its title with
+keep.html or transform.html doesn't keep: …`. Open `target/cheatsheet.pdf`: each card should appear under its title with
 its steps in order. If none of the chosen cards has a step, the build fails and says so.
 
 ## Watch Out

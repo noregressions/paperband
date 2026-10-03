@@ -547,9 +547,9 @@ looks for the view's own first, as `<view>/<name>.html` in the theme, the book's
 what it changes, and a book overrides a view's template the way it overrides any other:
 `layouts/cheatsheet/_card-body.html` beats the bundled `cheatsheet/_card-body.html`.
 
-Every view has a `keep.html`, which says which cards the build holds. It's rendered once per
-card, sees the card's model (`card`, `card.steps`, `card.vars`) and `output`, and prints
-`true` or `false`:
+A view's `keep.html` says which cards the build holds. It's rendered once per card, sees
+the card's model (`card`, `card.steps`, `card.vars`) and `output`, and prints `true` or
+`false`:
 
 ```
 {# layouts/handout/keep.html #}
@@ -558,8 +558,9 @@ card, sees the card's model (`card`, `card.steps`, `card.vars`) and `output`, an
 
 The build leaves out the cards it prints `false` for before it works out anything else, so
 they get no page, no contents entry and no divider, and a `card:` link to one prints as its
-text. A view with no `keep.html` anywhere in the chain fails the build, which is what
-catches a misspelt `<view>`.
+text. A view's `transform.html` (below) can leave cards out too, so a view needs one of
+the two. A view with neither anywhere in the chain fails the build, which is what catches a
+misspelt `<view>`.
 
 A view's template can still use the template it replaces. `default:` in front of a name
 looks it up as if there were no view, through the theme, the book's `layouts/` and the
@@ -633,8 +634,21 @@ and the view's own `keep.html` all see the changed card, so a block the transfor
 out doesn't turn up in the rail, and `keep.html` can ask what's left. The card's number and
 sheet are filled in afterwards, so a transform can't read them.
 
-A transform changes cards; it doesn't choose them. `keep.html` still decides which cards
-the view holds, and a transform that hands back anything but a card fails the build.
+A transform can also leave its card out, and then the view doesn't hold it, as if
+`keep.html` had printed `false`:
+
+```
+{# layouts/handout/transform.html #}
+drop card[draft=true]
+keep card:has(.exercise)
+drop .aside
+```
+
+`card[draft=true]` is a card whose frontmatter says `draft: true`, and `card:has(.exercise)`
+one with an exercise in it (see [Template Reference](card:template-reference#what-a-selector-sees)).
+With `result(...)`, handing back `null` leaves the card out. A view with a `transform.html`
+doesn't need a `keep.html`; with both, a card has to pass each, the transform first. A
+transform that hands back anything else but a card fails the build.
 
 Paperband ships two views:
 

@@ -115,18 +115,20 @@ each name is looked up as `<view>/<name>` through all three first.
 
 ## Views
 
-A view is a folder of templates named by `<view>`. Its `keep.html` is required: rendered
-once per card, it prints `true` or `false`, and the build leaves out the cards it prints
-`false` for. Its `transform.html` is optional: rendered once per card as the card's model is
-made, it changes the card, with statements or `result(...)`, and every template the build
-uses, `keep.html` included, sees that card. Any other template in the folder replaces the default of the
-same name for that build.
+A view is a folder of templates named by `<view>`, with a `keep.html`, a `transform.html`
+or both. `keep.html` is rendered once per card and prints `true` or `false`, and the build
+leaves out the cards it prints `false` for. `transform.html` is rendered once per card as
+the card's model is made: it changes the card, with statements or `result(...)`, or leaves
+it out, and every template the build uses, `keep.html` included, sees that card. With both,
+a card has to pass each. Any other template in the folder replaces the default of the same
+name for that build.
 
 | In `transform.html` | Means |
 |---|---|
 | `card`, `vars`, `output`, `target` | The card's model before its number and sheet are filled in, the card's vars, `print` or `site`, and the build's target |
 | Statements, one to a line | What it prints, when it doesn't call `result`: `drop SEL`, `keep SEL`, `blank SEL as NAME`, `replace SEL with BLOCK`, `insert BLOCK before\|after SEL`, `insert BLOCK first\|last in SEL`, `wrap SEL in BLOCK`, `add .NAME to SEL`, `remove .NAME from SEL`, `set ATTRS on SEL`, each the transform of that meaning, run in order. A blank line or one starting with `#` is skipped |
-| `{{ result(card \| …) }}` | Hands back the changed card instead, once, with nothing else printed. Anything that isn't a card fails the build, and so does `result` in any other template |
+| `{{ result(card \| …) }}` | Hands back the changed card instead, once, with nothing else printed; `null` leaves it out. Anything else that isn't a card fails the build, and so does `result` in any other template |
+| `drop card…`, `keep card…` | A statement or filter that leaves the card out: the view doesn't hold it |
 
 | In a view's template | Means |
 |---|---|
