@@ -330,7 +330,8 @@ template exactly as they would today.
 
 ## 4. Views: filtering the data
 
-*Built: commits a4b68be, 31c79bd and the statements after them.*
+*Built: commits a4b68be, 31c79bd, f5490a4 and the card-choosing and cheat-sheet
+commits after them.*
 
 A view used to be a set of templates, so a view that changed what a card holds did it in
 whichever template wrote that part. The student edition blanked solution paragraphs in
@@ -402,8 +403,21 @@ statements for free.
   changes anything, so it never matches what it added, and the next statement sees the
   result. It's easier to follow, and the cost is that order matters. The student example
   above has to insert before it blanks.
-- **A transform changes cards; it doesn't choose them.** `keep.html` still decides which
-  cards a view holds. A transform that leaves its card out fails the build.
+- **A transform can choose cards too.** `drop card[draft=true]` or
+  `keep card:has(.exercise)` leaves the card out, and the view doesn't hold it, so a view
+  can be a `transform.html` alone. `keep.html` stays for views that want it; with both, a
+  card has to pass each. This runs card by card, which is enough for any rule about the
+  card itself. A rule comparing cards would need the transform to see the whole book,
+  and nothing has asked for that yet.
+- **Numbers come from the whole book.** A view doesn't renumber what it keeps, so a
+  chapter has one number in every edition. The chapter-numbering design records it, under
+  "Editions".
+- **The cheat sheet is a view in this sense.** Its `transform.html` cuts each card to its
+  steps and each step to the parts `cheatsheetSelect` picks; its card body only arranges
+  steps. Every template sees the cut card. One thing changed doing it: the old `select`
+  pulled a nested command out of its list, and the transform keeps the whole list,
+  because it works on a step's top-level parts. Kitchen-sink's cheat sheet was
+  unchanged apart from whitespace between tags.
 
 ## The ladder
 
@@ -465,18 +479,6 @@ stays in code, as it does for the plugin configuration.
 - **Layout file format.** yaml matches the rest of the config, but deeply nested regions
   get hard to read in yaml. A small dedicated syntax might read better, at the cost of one
   more thing to learn.
-- **Numbering under a view.** If a view drops cards, does chapter 3.14 stay 3.14 in the
-  cheat sheet, or get renumbered? Numbering before the filter keeps references to the full
-  book stable; numbering after gives a self-contained edition. Today a transform runs
-  before numbers are filled in, and `keep.html` runs before the book's structure is worked
-  out, so cards are numbered after the filter. The chapter-numbering design should say
-  which is the default and how a view asks for the other.
-- **Choosing cards with statements.** `keep card:has([data-paperband-step])` is a
-  statement already, but only inside one card's transform, where leaving the card out is
-  an error. Letting a view's statements choose cards too would retire `keep.html`; it needs
-  the transform to run over the book rather than card by card.
-- **The cheat sheet as a view.** Its card body still picks parts with `select`. Moving that
-  into a transform, and leaving the body to arrange steps, is the test of the split above.
 - **Existing themes.** Every built-in theme has hard-coded values that would need to
   become `--pb-*` variables. That work is large, but it can be done one theme at a time.
 

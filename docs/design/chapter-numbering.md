@@ -175,6 +175,26 @@ check has nothing to say beyond catching stale hand-written labels. Under
 `pinned` it earns its keep: duplicate numbers, and numbers contradicting a
 declared sequence.
 
+## Editions: views and selections
+
+*Added 2026-10-03. This is how the build already behaves; it's written down here
+because the views design asked.*
+
+A build that leaves cards out -- a `<view>` such as the cheat sheet, or a
+`select:` -- doesn't renumber the cards it keeps. Numbers are computed from the
+whole book, before the view or the selection narrows it, so Scenario 3 is
+Scenario 3 in every edition, and a cheat sheet's "see Chapter 3.14" points at
+the chapter the full book calls 3.14.
+
+The alternative, numbering what survives, gives a tidier self-contained edition
+and breaks the reason numbers exist. The same chapter would carry two numbers in
+two editions, and an edition couldn't name a chapter it doesn't carry. There's no
+opt-in to renumber. If an edition ever needs its own sequence, it's a different
+series (`numberAs`), not a different numbering of the same one.
+
+A view's `transform.html` changes a card's model before its number is filled in,
+so a transform can't read the number, and can't change it.
+
 ## Non-goals
 
 - **Numbering stays optional.** Unnumbered books are unaffected, and no existing
