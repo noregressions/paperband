@@ -1,0 +1,49 @@
+# The examples showcase: every example's markdown beside its rendered result, on one page,
+# plus a paged handbook of a few examples, and the web-site example as a site, once with side
+# navigation and once with a navigation bar. Built by paperband-maven-plugin (see pom.xml).
+title: Paperband examples
+stylesheets: [styles/showcase-page.css]
+
+sources: [docs/**/*.md]
+hidden: [docs/**/partials/*.md]     # partials feed other pages (via site) but aren't examples themselves
+
+sequence:
+  - layout: showcase-contents
+  - files: docs/**/*.md
+    layout: showcase          # every example gets the showcase; layout: page inside it finds the example's own
+
+outputs:
+  - name: showcase
+    format: web
+    file: target/showcase.html
+    single: true               # the showcase is one page, not a site
+  - name: handbook             # fixed A4 pages, for print (and, later, for measuring in Chromium)
+    format: paged-html
+    file: target/handbook.html
+    layout: print-page         # every page from a file uses the print layout
+    prefer: short              # where content offers variants, show the short one
+    sequence: &handbook
+      - file: docs/tutorial-markers.md
+      - file: docs/conditional-boxes.md
+      - file: docs/split-layout.md
+      - file: docs/variants.md
+      - file: docs/fitting.md
+      - file: docs/long-tutorial.md
+  - name: handbook-pdf         # the same pages, printed to PDF in Chromium (dev.noregressions.paperband:chromium, see pom.xml)
+    format: pdf
+    file: target/handbook.pdf
+    layout: print-page
+    prefer: short
+    sequence: *handbook
+  - name: site                 # the web-site example as a site: a page per file, the contents beside each
+    format: web
+    file: target/site/index.html
+    contents: docs/web-site/00-contents.md   # this page is the navigation, not a page of its own
+    sequence: &site
+      - files: docs/web-site/*.md
+  - name: site-top             # the same site with a navigation bar: a dropdown per part of the contents
+    format: web
+    file: target/site-top/index.html
+    nav: top
+    contents: docs/web-site/00-contents.md
+    sequence: *site

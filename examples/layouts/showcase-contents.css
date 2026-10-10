@@ -1,0 +1,7 @@
+/* Confined to the contents page. */
+&.page { max-width: 64rem; }
+.layout-showcase-contents--list { padding: 4px 0; border-bottom: 1px solid #e7e5e4; align-items: baseline; }
+.box-path { font: 14px ui-monospace, monospace; }
+.box-layout { font-size: 13px; color: #78716c; }
+.box-title ul { list-style: none; margin: 0; padding: 0; }
+@media (prefers-color-scheme: dark) { .layout-showcase-contents--list { border-bottom-color: #44403c; } }

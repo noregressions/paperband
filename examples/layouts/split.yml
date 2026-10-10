@@ -1,0 +1,11 @@
+description: Two columns under a full-width title - the introduction on the left, everything else on the right.
+grid:
+  columns: [1fr, 2fr]
+  areas:
+    - "title title"
+    - "intro body"
+  gap: 24px
+boxes:
+  - { id: title, area: title, select: h1, pick: first }
+  - { id: intro, area: intro, class: lede, select: "section.h1 > p" }
+  - { id: body, area: body, select: rest }

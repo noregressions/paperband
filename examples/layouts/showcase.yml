@@ -1,0 +1,16 @@
+description: An example's markdown and its own layout's file beside the example rendered through that layout.
+stylesheet: showcase.css
+grid:
+  columns: [1fr, 1fr]
+  rows: [auto, auto, 1fr]
+  areas:
+    - "file   uses"
+    - "source result"
+    - "layout result"
+  gap: 8px 32px
+boxes:
+  - { id: file, area: file, content: path }
+  - { id: uses, area: uses, content: layout }
+  - { id: source, area: source, content: source, stage: original }
+  - { id: layout, area: layout, content: layout-source }
+  - { id: result, area: result, layout: page }

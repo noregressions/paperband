@@ -1,0 +1,38 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>dev.noregressions.paperband</groupId>
+    <artifactId>parent</artifactId>
+    <version>${revision}</version>
+  </parent>
+
+  <artifactId>chromium</artifactId>
+  <packaging>jar</packaging>
+  <name>Paperband Chromium</name>
+  <description>Prints paged output to PDF in Chromium, through Playwright for Java. On the classpath, it lets a
+    build make pdf outputs.</description>
+  <url>https://github.com/noregressions/paperband</url>
+
+  <dependencies>
+    <dependency>
+      <groupId>dev.noregressions.paperband</groupId>
+      <artifactId>core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.microsoft.playwright</groupId>
+      <artifactId>playwright</artifactId>
+    </dependency>
+    <!-- Reads where link targets landed in a printed PDF, for page references (PageRefs); tests read PDF text. -->
+    <dependency>
+      <groupId>org.apache.pdfbox</groupId>
+      <artifactId>pdfbox</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+</project>

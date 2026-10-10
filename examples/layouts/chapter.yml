@@ -1,0 +1,14 @@
+description: A fixed-position chapter page (positions are used by PDF/PPTX; web output flows).
+page: { size: "16:9" }
+boxes:
+  - id: title
+    select: h1
+    pick: first
+    at: { x: 15mm, y: 12mm, w: 308mm, h: 25mm }
+  - id: points
+    class: key-points
+    select: "section#key-points"     # the heading and its list
+    at: { x: 230mm, y: 45mm, w: 95mm, h: 130mm }
+  - id: body
+    select: rest
+    at: { x: 15mm, y: 45mm, w: 205mm, h: 130mm }

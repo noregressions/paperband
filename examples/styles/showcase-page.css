@@ -1,0 +1,4 @@
+/* Page-wide styles for the showcase (layout stylesheets are confined to their layouts). */
+body { background: #fafaf9; }
+.showcase-title { font-size: 2rem; font-weight: 700; margin-bottom: .5rem; }
+@media (prefers-color-scheme: dark) { body { background: #1c1917; } }

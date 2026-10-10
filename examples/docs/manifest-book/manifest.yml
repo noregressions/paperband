@@ -1,0 +1,13 @@
+title: Paperband Guide
+stylesheets: [styles/book.css]
+sources: [docs/**/*.md]
+hidden: [docs/partials/*.md]
+defaults:
+  page: { size: A4, margin: 15mm }
+sequence:
+  - layout: contents
+  - file: docs/intro.md
+  - files: docs/chapters/*.md
+    where: { draft: { ne: true } }
+    sort: page.chapter
+    layout: chapter

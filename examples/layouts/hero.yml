@@ -1,0 +1,12 @@
+description: A page's main heading and its opening paragraphs, set apart; everything else follows.
+class: hero-page
+boxes:
+  - id: title
+    class: hero-title
+    select: h1
+    pick: first
+  - id: lede
+    class: lede
+    select: section.h1 > p          # paragraphs directly under the H1, before any subheading
+  - id: body
+    select: rest

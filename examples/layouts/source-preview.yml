@@ -1,0 +1,8 @@
+description: The file's original markdown on the left, its rendered content on the right.
+grid:
+  columns: [1fr, 1fr]
+  areas: ["source result"]
+  gap: 32px
+boxes:
+  - { id: source, area: source, content: source, stage: original }
+  - { id: result, area: result, select: rest }

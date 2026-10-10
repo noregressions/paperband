@@ -1,0 +1,5 @@
+description: A bordered card - the first heading on top, everything else below. Used by nested-demo and inline-layouts.md for their summaries.
+stylesheet: card.css
+boxes:
+  - { id: heading, select: "h2, h3", pick: first }
+  - { id: body, select: rest }

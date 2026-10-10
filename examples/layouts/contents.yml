@@ -1,0 +1,12 @@
+description: A generated contents page linking to the first H1 of every page in the sequence.
+page: { size: A4, margin: 20mm }
+boxes:
+  - id: heading
+    class: contents-title
+    text: Contents
+  - id: toc
+    class: contents
+    select: h1
+    pick: first
+    scope: sequence
+    as: links

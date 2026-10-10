@@ -1,0 +1,18 @@
+description: Title and intro, then a card per step with its title, instruction and command, using {! } handles.
+stylesheet: quick.css
+unplaced: ignore              # the doc's description of the steps section is deliberately left out
+boxes:
+  - { id: title, select: h1, pick: first }
+  - { id: intro, select: "section.h1 > p" }
+  - id: steps
+    each: ".step"             # one card per step
+    class: quick-steps
+    unplaced: ignore          # step descriptions and expected output are left out on purpose
+    grid:
+      columns: [1fr, 1fr]
+      areas: ["title title", "todo command"]
+      gap: 12px
+    boxes:
+      - { id: title, area: title, select: h3 }
+      - { id: todo, area: todo, select: ".instruction" }
+      - { id: command, area: command, select: "pre.command" }

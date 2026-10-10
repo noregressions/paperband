@@ -1,0 +1,36 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>dev.noregressions.paperband</groupId>
+    <artifactId>parent</artifactId>
+    <version>${revision}</version>
+  </parent>
+
+  <artifactId>plantuml</artifactId>
+  <packaging>jar</packaging>
+  <name>Paperband PlantUML</name>
+  <description>Renders ```plantuml fenced blocks as inline SVG at build time. On the classpath (as a dependency of
+    paperband-maven-plugin, say), it lets a build draw diagrams from text. Separate from core because PlantUML is a
+    large jar; this uses its MIT-licensed build. Diagrams that need Graphviz (class, component) want dot installed,
+    or a "!pragma layout smetana" line; sequence, activity and timing diagrams don't.</description>
+  <url>https://github.com/noregressions/paperband</url>
+
+  <dependencies>
+    <dependency>
+      <groupId>dev.noregressions.paperband</groupId>
+      <artifactId>core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>net.sourceforge.plantuml</groupId>
+      <artifactId>plantuml-mit</artifactId>
+      <version>1.2026.7</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+</project>

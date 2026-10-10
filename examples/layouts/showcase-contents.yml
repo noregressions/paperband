@@ -1,0 +1,18 @@
+description: The showcase's first page - one line per example, with its path, layout and a link to it.
+stylesheet: showcase-contents.css
+unplaced: ignore
+boxes:
+  - { id: title, class: showcase-title, text: "Paperband examples" }
+  - { id: intro, text: "Each example's original markdown is shown beside the example rendered through its own layout." }
+  - id: list
+    each: article             # one entry per file in the sequence
+    scope: sequence
+    unplaced: ignore
+    grid:
+      columns: [2fr, 1fr, 2fr]
+      areas: ["path layout title"]
+      gap: 16px
+    boxes:
+      - { id: path, area: path, content: path }
+      - { id: layout, area: layout, content: layout }
+      - { id: title, area: title, select: h1, pick: first, as: links }

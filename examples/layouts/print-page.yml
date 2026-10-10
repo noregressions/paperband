@@ -1,0 +1,26 @@
+description: An A4 handbook page - a title band, the content, and a footer with the file it came from.
+page: { size: A4, margin: 18mm }
+grid:
+  areas:
+    - "title"
+    - "body"
+    - "footer"
+  gap: 6mm
+boxes:
+  - { id: title, area: title, select: h1, pick: first }
+  - id: body
+    area: body
+    select: rest
+    priority: normal            # gets whatever space the title and footer leave...
+    size: { min: 120mm }        # ...but never less than this
+    split:                      # too long for one page? continue on the next (in this layout) -
+      between: section.h2       #   but only between second-level sections,
+      keep-together: [pre]      #   and never inside a code block
+    fit:                        # still too big? try these, in order, measuring after each
+      - shrink: { min: 90% }
+      - variant: next
+      - drop: optional
+  - { id: footer, area: footer, content: path }
+css: |
+  & > .box-title h1 { margin: 0; padding-bottom: 4mm; border-bottom: 0.5mm solid #1c1917; font-size: 22pt; }
+  & > .box-footer { font-size: 8pt; color: #78716c; border-top: 0.25mm solid #d6d3d1; padding-top: 2mm; }

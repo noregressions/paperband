@@ -1,0 +1,98 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>dev.noregressions.paperband</groupId>
+    <artifactId>parent</artifactId>
+    <version>${revision}</version>
+  </parent>
+
+  <artifactId>examples</artifactId>
+  <packaging>pom</packaging>
+  <name>Paperband examples</name>
+  <description>Example documents, layouts and templates. The plugin builds the showcase (target/showcase.html), the
+    handbook (target/handbook.html, .pdf) and the web-site example as two sites (target/site, target/site-top);
+    the test suite builds each example's debug pages into target/ast-examples.</description>
+
+  <properties>
+    <!-- Built to be read, never published (see the release profile in the root pom). -->
+    <maven.deploy.skip>true</maven.deploy.skip>
+    <!-- Fixes build.date in the examples, so the output is the same on every build. -->
+    <project.build.outputTimestamp>2026-10-03T12:00:00Z</project.build.outputTimestamp>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>dev.noregressions.paperband</groupId>
+      <artifactId>core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <!-- The showcase is built by this project's own plugin, from the module's manifest.yml. -->
+      <plugin>
+        <groupId>dev.noregressions.paperband</groupId>
+        <artifactId>paperband-maven-plugin</artifactId>
+        <version>${project.version}</version>
+        <executions>
+          <execution>
+            <id>showcase</id>
+            <goals>
+              <goal>build</goal>
+            </goals>
+            <configuration>
+              <manifest>manifest.yml</manifest>
+              <vars>
+                <product>Paperband</product>
+                <version>1.0</version>
+              </vars>
+              <failOnWarnings>true</failOnWarnings>
+            </configuration>
+          </execution>
+        </executions>
+        <dependencies>
+          <!-- Lets the build make pdf outputs: prints them in Chromium. -->
+          <dependency>
+            <groupId>dev.noregressions.paperband</groupId>
+            <artifactId>chromium</artifactId>
+            <version>${project.version}</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+      <!-- pom packaging: the module has tests but no main code, so it makes no jar (an empty jar
+           breaks "mvn package install"). The pom lifecycle doesn't run tests, so they're bound here. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.15.0</version>
+        <executions>
+          <execution>
+            <id>default-testCompile</id>
+            <goals>
+              <goal>testCompile</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default-test</id>
+            <goals>
+              <goal>test</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

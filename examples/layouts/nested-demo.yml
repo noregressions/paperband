@@ -1,0 +1,23 @@
+description: Shows nested layouts - a named layout over a selection, and each with nested boxes and a grid.
+stylesheet: nested-demo.css
+boxes:
+  - { id: title, select: h1, pick: first }
+  - { id: intro, select: "section.h1 > p" }
+
+  # A named layout over a selection: the Summary section goes through layouts/card.yml.
+  - id: summary
+    select: "#summary"
+    layout: card
+
+  - { id: faq-heading, select: "section#questions > h2" }
+
+  # One nested layout per match: a two-column row for every heading tagged {! faq}.
+  - id: faq
+    each: ".faq"
+    grid:
+      columns: [1fr, 2fr]
+      areas: ["question answer"]
+      gap: 24px
+    boxes:
+      - { id: question, area: question, select: h3 }
+      - { id: answer, area: answer, select: p }

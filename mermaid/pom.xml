@@ -1,0 +1,71 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>dev.noregressions.paperband</groupId>
+    <artifactId>parent</artifactId>
+    <version>${revision}</version>
+  </parent>
+
+  <artifactId>mermaid</artifactId>
+  <packaging>jar</packaging>
+  <name>Paperband Mermaid</name>
+  <description>Renders ```mermaid fenced blocks as inline SVG at build time, by running Mermaid in headless Chromium
+    (paperband-chromium). On the classpath (as a dependency of paperband-maven-plugin, say), it lets a build draw
+    diagrams written for Mermaid, as GitHub shows them. Mermaid itself comes pinned, from its WebJar, so a build
+    needs no network once the jars and Chromium are downloaded.</description>
+  <url>https://github.com/noregressions/paperband</url>
+
+  <properties>
+    <mermaid.version>11.17.2</mermaid.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>dev.noregressions.paperband</groupId>
+      <artifactId>core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>dev.noregressions.paperband</groupId>
+      <artifactId>chromium</artifactId>
+    </dependency>
+    <!-- Only dist/mermaid.min.js is used: it's self-contained, so the WebJar's own dependencies are left out. -->
+    <dependency>
+      <groupId>org.webjars.npm</groupId>
+      <artifactId>mermaid</artifactId>
+      <version>${mermaid.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>*</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <resources>
+      <!-- mermaid.properties carries the pinned version, so the renderer finds the WebJar's file. -->
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+        <includes>
+          <include>dev/noregressions/paperband/mermaid/mermaid.properties</include>
+        </includes>
+      </resource>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>false</filtering>
+        <excludes>
+          <exclude>dev/noregressions/paperband/mermaid/mermaid.properties</exclude>
+        </excludes>
+      </resource>
+    </resources>
+  </build>
+</project>

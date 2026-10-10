@@ -1,0 +1,20 @@
+/* Confined to the quick layout: these selectors become ".layout-quick ..." */
+.box-title h1 { margin-bottom: .25rem; }
+.box-intro { color: #57534e; }
+
+/* One card per step (the nested layout quick--steps) */
+.layout-quick--steps {
+  margin: 1rem 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid #d6d3d1;
+  border-radius: 10px;
+  row-gap: 4px;
+}
+.layout-quick--steps h3 { margin: 0; }
+.layout-quick--steps .instruction, .layout-quick--steps .instruction p { margin: 0; }
+.layout-quick--steps pre { margin: 0; }
+
+@media (prefers-color-scheme: dark) {
+  .box-intro { color: #a8a29e; }
+  .layout-quick--steps { border-color: #44403c; }
+}

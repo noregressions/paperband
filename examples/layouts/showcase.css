@@ -1,0 +1,23 @@
+/* Confined to the showcase layout. */
+&.page.grid { max-width: 96rem; }
+
+& > .box-file { font: 600 15px ui-monospace, monospace; align-self: end; }
+& > .box-uses { font-size: 13px; color: #78716c; align-self: end; }
+& > .box-uses::before { content: "rendered with layout: "; }
+
+& > .box-source pre.source { margin: 0; max-height: 40rem; overflow: auto; }
+& > .box-layout pre.source { margin: 0; max-height: 24rem; overflow: auto; font-size: 13px; }
+& > .box-layout::before { content: "layout"; display: block; font-size: 13px; color: #78716c; margin: 4px 0; }
+
+& > .box-result {
+  align-self: start;
+  padding: 4px 20px;
+  border: 1px solid #d6d3d1;
+  border-radius: 8px;
+  overflow: auto;
+}
+
+@media (prefers-color-scheme: dark) {
+  & > .box-result {
+  align-self: start; border-color: #44403c; }
+}

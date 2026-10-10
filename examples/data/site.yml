@@ -1,0 +1,7 @@
+name: Paperband
+repo: https://github.com/example/paperband
+releases:
+  - version: 1.0
+    date: 2026-09-01
+  - version: 1.1
+    date: 2026-10-01

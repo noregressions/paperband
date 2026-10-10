@@ -1,0 +1,5 @@
+/* Confined to nested-demo; the FAQ rows are its nested layout nested-demo--faq. */
+.layout-nested-demo--faq { padding: 12px 0; border-top: 1px solid #e7e5e4; }
+.layout-nested-demo--faq h3 { margin: 0; font-size: 1rem; }
+.layout-nested-demo--faq p { margin: 0; }
+@media (prefers-color-scheme: dark) { .layout-nested-demo--faq { border-top-color: #44403c; } }

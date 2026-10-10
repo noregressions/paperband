@@ -1,0 +1,5 @@
+# Statuses a page can declare in its front matter (status: ID); the front-matter-values example
+# shows each one's name, and styles it by its id.
+draft: { name: Draft }
+review: { name: In review }
+final: { name: Final }
