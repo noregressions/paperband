@@ -113,7 +113,14 @@ public class BuildMojo extends AbstractMojo {
     @Parameter
     String unused;
 
-    /** Stylesheets inlined into the site. */
+    /**
+     * A theme: one Paperband brings, by name ({@code forest}), or the directory of your own
+     * (stylesheets replacing or adding to the built-in look, and layouts), relative to the project.
+     */
+    @Parameter(property = "paperband.theme")
+    String theme;
+
+    /** Stylesheets inlined into the site, after the theme. */
     @Parameter
     List<File> stylesheets;
 
@@ -244,6 +251,9 @@ public class BuildMojo extends AbstractMojo {
         }
         if (stylesheets != null && !stylesheets.isEmpty()) {
             b.stylesheets(paths(stylesheets));
+        }
+        if (theme != null) {
+            b.theme(theme);
         }
         if (templates != null) {
             b.templates(templates.toPath());

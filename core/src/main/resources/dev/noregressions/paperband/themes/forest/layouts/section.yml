@@ -1,0 +1,6 @@
+description: "Slide 7, section divider: solid forest green, a white label at the top left, a large white title below the middle."
+page: { size: { width: 254mm, height: 142.875mm } }
+class: slide
+boxes:
+  - { id: label, select: "p.label", pick: first, at: { x: 12.7mm, y: 12.7mm, w: 228.6mm, h: 10mm } }
+  - { id: title, select: "h1", pick: first, at: { x: 12.7mm, y: 76mm, w: 228.6mm, h: 54mm } }

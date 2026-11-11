@@ -32,11 +32,11 @@ public class App {
 
     /**
      * Parsed command line. {@code output} is the AST debug page's path, or {@code "-"} for stdout.
-     * Nullable: {@code templates}, {@code draft}, {@code manifest}, {@code site}, {@code layouts}.
+     * Nullable: {@code templates}, {@code draft}, {@code manifest}, {@code site}, {@code layouts}, {@code theme}.
      * Either {@code files} or {@code manifest} is set, not both.
      */
     record Options(String output, List<Path> files, Map<String, String> vars, Path templates, Path draft,
-                   List<Path> data, List<String> env, Path manifest, Path site, Path layouts, String browser) {
+                   List<Path> data, List<String> env, Path manifest, Path site, Path layouts, String browser, String theme) {
     }
 
     /** Bad arguments, or {@code --help} when {@link #getMessage()} is null. */
@@ -72,6 +72,7 @@ public class App {
         Path manifest = null;
         Path site = null;
         Path layouts = null;
+        String theme = null;
         String browser = null;
 
         for (int i = 0; i < args.length; i++) {
@@ -98,6 +99,7 @@ public class App {
                 case "--manifest" -> manifest = Path.of(value(args, ++i, arg));
                 case "--site" -> site = Path.of(value(args, ++i, arg));
                 case "--layouts" -> layouts = Path.of(value(args, ++i, arg));
+                case "--theme" -> theme = value(args, ++i, arg);
                 case "--browser" -> browser = value(args, ++i, arg);
                 case "-h", "--help" -> throw new UsageException(null);
                 default -> files.add(Path.of(arg));
@@ -114,7 +116,7 @@ public class App {
                 throw new UsageException("not a file: " + f);
             }
         }
-        return new Options(output, files, vars, templates, draft, data, env, manifest, site, layouts, browser);
+        return new Options(output, files, vars, templates, draft, data, env, manifest, site, layouts, browser, theme);
     }
 
     private static String value(String[] args, int i, String option) throws UsageException {
@@ -137,6 +139,9 @@ public class App {
         }
         if (options.layouts() != null) {
             b.layouts(options.layouts());
+        }
+        if (options.theme() != null) {
+            b.theme(options.theme());
         }
         if (!options.data().isEmpty()) {
             b.data(options.data());
@@ -194,6 +199,7 @@ public class App {
         err.println("  --templates   directory for extends and include templates (default: "
                 + PebblePreprocessor.DEFAULT_TEMPLATES + ")");
         err.println("  --layouts     directory of layout files (default: layouts)");
+        err.println("  --theme       a theme: one Paperband brings, by name (forest), or the directory of your own");
         err.println("  --browser     for pdf: an installed browser's channel (chrome, msedge) or executable;");
         err.println("                default: the Chromium dev.noregressions.paperband:chromium downloads (needs it on the classpath)");
         err.println("  --data        a YAML/JSON data file or directory, available as data.<name>; repeatable"

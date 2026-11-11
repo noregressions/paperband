@@ -1,0 +1,9 @@
+description: "Slide 8, closing with photo: the photo fills the left 43%; label, closing message and a supporting line on the right."
+page: { size: { width: 254mm, height: 142.875mm } }
+class: slide
+boxes:
+  - { id: photo, select: "p:has(img)", pick: first, at: { x: 0mm, y: 0mm, w: 109.2mm, h: 142.875mm } }
+  - { id: label, select: "p.label", pick: first, at: { x: 121.9mm, y: 12.7mm, w: 119.4mm, h: 10mm } }
+  - { id: title, select: "h1", pick: first, at: { x: 121.9mm, y: 38mm, w: 119.4mm, h: 52mm } }
+  - { id: subtitle, select: "section.h1 > p:not(.footer):not(:has(img))", at: { x: 121.9mm, y: 94mm, w: 119.4mm, h: 22mm } }
+  - { id: footer, select: "p.footer", pick: first, at: { x: 121.9mm, y: 121.9mm, w: 119.4mm, h: 8.3mm } }

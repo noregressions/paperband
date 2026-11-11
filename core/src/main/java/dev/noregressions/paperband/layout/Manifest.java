@@ -29,7 +29,9 @@ import java.util.function.Predicate;
  * <pre>
  * title: Paperband Guide
  * output: build/site.html          # default: site.html
- * stylesheets: [styles/site.css]   # inlined into the output
+ * theme: forest                   # a theme Paperband brings, by name, or a theme's directory (themes/mine);
+ *                                  #   default: the built-in theme (Theme)
+ * stylesheets: [styles/site.css]   # inlined into the output, after the theme
  * templates: templates             # these three default to the same names
  * layouts: layouts
  * data: data                       # or a list of data files/directories
@@ -159,12 +161,13 @@ public final class Manifest {
     private final String browser;
     private final Path index;
     private final List<String> copy;
+    private final String theme;
 
     private Manifest(Path file, Path dir, String name, String title, Path output, List<Path> stylesheets,
                      Path templates, Path layouts, boolean layoutsGiven, List<Path> data, boolean dataGiven,
                      Map<String, String> vars, List<String> env, List<String> sourcePatterns, List<Path> explicitSources,
                      List<String> hidden, Unused unused, PageSpec defaultPage, String defaultLayout, List<Entry> sequence,
-                     List<Output> outputs, String browser, Path index, List<String> copy) {
+                     List<Output> outputs, String browser, Path index, List<String> copy, String theme) {
         this.file = file;
         this.dir = dir;
         this.name = name;
@@ -189,6 +192,7 @@ public final class Manifest {
         this.browser = browser;
         this.index = index;
         this.copy = copy;
+        this.theme = theme;
     }
 
     /** Reads a manifest file; its directory is what relative paths in it are relative to. */
@@ -220,6 +224,10 @@ public final class Manifest {
         boolean outputGiven = spec.has("output");
         Path output = Path.of(spec.string("output", DEFAULT_OUTPUT));
         List<Path> stylesheets = spec.strings("stylesheets").stream().map(Path::of).toList();
+        String theme = spec.string("theme", null);
+        if (theme != null && theme.isBlank()) {
+            throw spec.error("theme", "expected a theme's name or directory");
+        }
         Path templates = Path.of(spec.string("templates", "templates"));
         boolean layoutsGiven = spec.has("layouts");
         Path layouts = Path.of(spec.string("layouts", "layouts"));
@@ -298,7 +306,7 @@ public final class Manifest {
         spec.finish();
         return new Manifest(file, dir, name, title, output, stylesheets, templates, layouts, layoutsGiven, data,
                 dataGiven, vars, env, sources, explicitSources, hidden, unused, page, defaultLayout, List.copyOf(sequence),
-                List.copyOf(outputs), browser, index == null ? null : Path.of(index), List.copyOf(copy));
+                List.copyOf(outputs), browser, index == null ? null : Path.of(index), List.copyOf(copy), theme);
     }
 
     private static final java.util.regex.Pattern OUTPUT_NAME = java.util.regex.Pattern.compile("[A-Za-z][A-Za-z0-9-]*");
@@ -494,6 +502,14 @@ public final class Manifest {
 
     public List<Path> stylesheets() {
         return stylesheets.stream().map(dir::resolve).toList();
+    }
+
+    /**
+     * The theme, as written: a directory relative to {@link #dir()} or the name of a theme Paperband
+     * brings ({@link Theme#resolve}); null for the built-in theme.
+     */
+    public String theme() {
+        return theme;
     }
 
     public Path templates() {

@@ -29,7 +29,7 @@ class AppTest {
     /** Options for files, with every output and directory inside the temp dir. */
     private App.Options options(String output, List<Path> files, Map<String, String> vars, Path draft,
                                 List<Path> data, List<String> env) {
-        return new App.Options(output, files, vars, dir, draft, data, env, null, dir.resolve("site.html"), null, null);
+        return new App.Options(output, files, vars, dir, draft, data, env, null, dir.resolve("site.html"), null, null, null);
     }
 
     private record Output(String out, String err) {
@@ -182,7 +182,7 @@ class AppTest {
                   - file: docs/b.md
                 """);
         App.Options o = new App.Options(dir.resolve("ast.html").toString(), List.of(), Map.of(), null, null,
-                List.of(), List.of(), m, null, null, null);
+                List.of(), List.of(), m, null, null, null, null);
 
         Output result = run(o);
 

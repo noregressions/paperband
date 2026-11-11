@@ -1,0 +1,12 @@
+# The forest theme, which Paperband brings (theme: forest), shown as a deck: one slide per layout the theme brings.
+# Built by paperband-maven-plugin (see ../pom.xml). Image paths in the slides are relative to the
+# outputs, which all sit in one directory.
+title: Forest theme
+theme: forest
+sources: [slides/*.md]
+sequence:
+  - files: slides/*.md        # each slide names its layout in its front matter
+outputs:
+  - { name: deck, format: pdf, file: ../target/forest/deck.pdf }
+  - { name: deck-html, format: paged-html, file: ../target/forest/deck.html }
+  - { name: web, format: web, file: ../target/forest/web.html, single: true }

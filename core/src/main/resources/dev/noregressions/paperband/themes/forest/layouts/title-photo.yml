@@ -1,0 +1,9 @@
+description: "Slide 1, title with photo: label, title and subtitle in the left half, a footer at the bottom left, the photo filling the right half."
+page: { size: { width: 254mm, height: 142.875mm } }
+class: slide
+boxes:
+  - { id: label, select: "p.label", pick: first, at: { x: 12.7mm, y: 12.7mm, w: 101.6mm, h: 10mm } }
+  - { id: title, select: "h1", pick: first, at: { x: 12.7mm, y: 40mm, w: 101.6mm, h: 50mm } }
+  - { id: subtitle, select: "section.h1 > p:not(.footer):not(:has(img))", at: { x: 12.7mm, y: 94mm, w: 101.6mm, h: 22mm } }
+  - { id: footer, select: "p.footer", pick: first, at: { x: 12.7mm, y: 121.9mm, w: 101.6mm, h: 8.3mm } }
+  - { id: photo, select: "p:has(img)", pick: first, at: { x: 127mm, y: 0mm, w: 127mm, h: 142.875mm } }

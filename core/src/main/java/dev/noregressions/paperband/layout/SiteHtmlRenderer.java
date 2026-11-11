@@ -85,6 +85,12 @@ public final class SiteHtmlRenderer {
      */
     public static String render(String title, List<Stylesheet> stylesheets, List<Page> pages, Mode mode, String fitCss,
                                 List<String> copy) {
+        return render(title, stylesheets, pages, mode, fitCss, copy, Theme.DEFAULT);
+    }
+
+    /** @param theme the styles under everything else: its part for the mode, its content part, then its extra rules */
+    public static String render(String title, List<Stylesheet> stylesheets, List<Page> pages, Mode mode, String fitCss,
+                                List<String> copy, Theme theme) {
         Map<Path, String> anchors = new HashMap<>();
         for (Page p : pages) {
             if (p.source() != null) {
@@ -97,8 +103,9 @@ public final class SiteHtmlRenderer {
         sb.append("<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n")
                 .append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n")
                 .append("<title>").append(esc(title)).append("</title>\n")
-                .append("<style>\n").append(mode == Mode.WEB ? WEB_CSS : dev.noregressions.paperband.Fonts.css() + PAGED_CSS).append(TOKEN_CSS)
-                .append(mode == Mode.WEB ? "" : PAGED_FONT_CSS)
+                .append("<style>\n").append(mode == Mode.WEB ? theme.css(Theme.Part.WEB)
+                        : dev.noregressions.paperband.Fonts.css() + theme.css(Theme.Part.PAGED))
+                .append(theme.css(Theme.Part.CONTENT)).append(theme.extra())
                 .append(layoutCss(layouts, mode));
         if (mode == Mode.PAGED) {
             sb.append(pageRules(pages));
@@ -516,62 +523,4 @@ public final class SiteHtmlRenderer {
                 </script>
                 """.formatted(list);
     }
-
-    private static final String WEB_CSS = """
-            :root { color-scheme: light dark; }
-            body { margin: 0; padding: 24px 16px; font: 16px/1.6 system-ui, -apple-system, sans-serif; }
-            section.page { display: flow-root; max-width: 46rem; margin-inline: auto; }  /* flow-root contains floats */
-            section.page.grid { max-width: 80rem; }
-            section.page + section.page { margin-top: 48px; padding-top: 32px; border-top: 1px solid rgba(128,128,128,.35); }
-            """;
-
-    private static final String PAGED_CSS = """
-            :root { color-scheme: light; }
-            body { margin: 0; font: 11pt/1.45 system-ui, -apple-system, sans-serif; color: #1c1917; }
-            section.page { box-sizing: border-box; position: relative; background: #fff; overflow: visible; }
-            section.page .box { box-sizing: border-box; }
-            section.page .layout { position: relative; }
-            @media screen {
-              body { background: #e7e5e4; padding: 24px 0; }
-              section.page { margin: 0 auto 24px; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
-            }
-            @media print {
-              section.page { break-after: page; }
-              section.page:last-of-type { break-after: auto; }
-            }
-            """;
-
-    /**
-     * Paged documents use only the bundled fonts (see {@link dev.noregressions.paperband.Fonts}), so they measure the
-     * same everywhere. Code has no ligatures, so text copied from a PDF is what was written.
-     */
-    private static final String PAGED_FONT_CSS = """
-            body.paged { font-family: "Inter", sans-serif; }
-            body.paged code, body.paged pre, body.paged kbd, body.paged samp { font-family: "JetBrains Mono", monospace;
-              font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }
-            """;
-
-    private static final String TOKEN_CSS = """
-            pre { overflow-x: auto; padding: 12px; border-radius: 6px; background: rgba(128,128,128,.12); }
-            code { font-family: ui-monospace, monospace; font-size: .9em; }
-            table { border-collapse: collapse; margin: .8em 0; }
-            th, td { border: 1px solid rgba(128,128,128,.45); padding: .3em .6em; text-align: left; vertical-align: top; }
-            th { font-weight: 600; }
-            img { max-width: 100%; }
-            pre.source { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.5; }
-            .tok-fm { color: #92400e; }
-            .tok-pre { color: #1d4ed8; }
-            .tok-post { color: #7c3aed; }
-            .tok-comment { font-style: italic; opacity: .75; }
-            .tok-marker { color: #047857; }
-            .tok-div, .tok-fence, .tok-heading { color: #be185d; font-weight: 600; }
-            .tok-key { color: #1d4ed8; }
-            .tok-string { color: #047857; }
-            .tok-yaml-comment { color: #78716c; font-style: italic; }
-            @media (prefers-color-scheme: dark) {
-              body.web .tok-fm { color: #fbbf24; } body.web .tok-pre { color: #60a5fa; } body.web .tok-post { color: #c4b5fd; }
-              body.web .tok-marker { color: #34d399; } body.web .tok-div, body.web .tok-fence, body.web .tok-heading { color: #f472b6; }
-              body.web .tok-key { color: #60a5fa; } body.web .tok-string { color: #34d399; } body.web .tok-yaml-comment { color: #a8a29e; }
-            }
-            """;
 }

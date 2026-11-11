@@ -15,6 +15,7 @@ import dev.noregressions.paperband.layout.ResolvedSequence;
 import dev.noregressions.paperband.layout.RunReport;
 import dev.noregressions.paperband.layout.SequenceResolver;
 import dev.noregressions.paperband.layout.SiteHtmlRenderer;
+import dev.noregressions.paperband.layout.Theme;
 import dev.noregressions.paperband.layout.WebSite;
 
 import java.io.IOException;
@@ -123,7 +124,10 @@ public final class SiteBuilder {
         if (manifest.layoutsGiven() && !Files.isDirectory(layoutsDir)) {
             throw new ConfigException(manifest.name() + ": layouts directory not found: " + layoutsDir);
         }
-        Layouts layouts = Layouts.load(layoutsDir, manifest.defaultPage())
+        Theme theme = manifest.theme() == null ? Theme.DEFAULT : Theme.resolve(manifest.theme(), manifest.dir(), manifest.name());
+        // The theme's layouts first: the project's own replace them by name.
+        Layouts layouts = Layouts.load(theme.layouts() == null ? List.of(layoutsDir) : List.of(theme.layouts(), layoutsDir),
+                        manifest.defaultPage())
                 .withInline(frontMatter, manifest.dir(), manifest.defaultPage());
         ResolvedSequence sequence = SequenceResolver.resolve(manifest, sources, frontMatter, layouts.names(), report);
         // Every output is worked out and checked before any templating runs.
@@ -177,7 +181,7 @@ public final class SiteBuilder {
                         Map.of(), data, report);
                 SiteHtmlRenderer.Mode mode = output.format() == Manifest.Format.WEB
                         ? SiteHtmlRenderer.Mode.WEB : SiteHtmlRenderer.Mode.PAGED;
-                String html = SiteHtmlRenderer.render(manifest.title(), css, pages, mode, null, manifest.copy());
+                String html = SiteHtmlRenderer.render(manifest.title(), css, pages, mode, null, manifest.copy(), theme);
                 Path file = manifest.dir().resolve(output.file());
                 byte[] pdf = null;
                 Measurement measurement = null;
@@ -206,7 +210,8 @@ public final class SiteBuilder {
                         }
                     };
                     Fitter.Result fit = Fitter.fit(layouter,
-                            (fitPages, fitCss) -> SiteHtmlRenderer.render(manifest.title(), css, fitPages, mode, fitCss),
+                            (fitPages, fitCss) -> SiteHtmlRenderer.render(manifest.title(), css, fitPages, mode, fitCss,
+                                    List.of(), theme),
                             browser, file.toAbsolutePath().getParent(), output.format() == Manifest.Format.PDF);
                     pages = fit.pages();
                     html = fit.html();
@@ -229,7 +234,7 @@ public final class SiteBuilder {
                 }
                 // A site of one page is just that page, standing alone.
                 Map<Path, String> site = output.format() == Manifest.Format.WEB && !output.single() && pages.size() > 1
-                        ? WebSite.split(html, manifest.title(), file.getFileName().toString(), output.nav()) : null;
+                        ? WebSite.split(html, manifest.title(), file.getFileName().toString(), output.nav(), theme) : null;
                 outputs.add(new Output(output.name(), output.format(), file, e.getValue(), pages, html, pdf, measurement,
                         problems, remedies, site));
             }

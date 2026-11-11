@@ -1,0 +1,11 @@
+/* Web output: the flowing page. Replaces nothing in paged output. */
+:root { color-scheme: light dark;
+  --pb-font-body: system-ui, -apple-system, sans-serif;
+  --pb-font-code: ui-monospace, monospace;
+  --pb-rule: rgba(128,128,128,.35);     /* lines between pages, under the header, around the navigation */
+  --pb-page-width: 46rem;
+  --pb-grid-width: 80rem; }
+body { margin: 0; padding: 24px 16px; font: 16px/1.6 var(--pb-font-body); }
+section.page { display: flow-root; max-width: var(--pb-page-width); margin-inline: auto; }  /* flow-root contains floats */
+section.page.grid { max-width: var(--pb-grid-width); }
+section.page + section.page { margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--pb-rule); }

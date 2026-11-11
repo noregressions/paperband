@@ -56,6 +56,17 @@
               <failOnWarnings>true</failOnWarnings>
             </configuration>
           </execution>
+          <execution>
+            <!-- The forest theme (theme: forest) as a deck: pdf, paged html and a web page. -->
+            <id>forest-deck</id>
+            <goals>
+              <goal>build</goal>
+            </goals>
+            <configuration>
+              <manifest>forest-deck/manifest.yml</manifest>
+              <failOnWarnings>true</failOnWarnings>
+            </configuration>
+          </execution>
         </executions>
         <dependencies>
           <!-- Lets the build make pdf outputs: prints them in Chromium. -->

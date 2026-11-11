@@ -1,0 +1,8 @@
+description: "Slide 2, statement with photo: a large statement or quote centred in the left 63%, the photo filling the rest."
+page: { size: { width: 254mm, height: 142.875mm } }
+class: slide
+boxes:
+  - { id: label, select: "p.label", pick: first, at: { x: 12.7mm, y: 12.7mm, w: 134.6mm, h: 10mm } }
+  - { id: statement, select: "h1, blockquote", pick: first, at: { x: 12.7mm, y: 26mm, w: 134.6mm, h: 90mm } }
+  - { id: footer, select: "p.footer", pick: first, at: { x: 12.7mm, y: 121.9mm, w: 134.6mm, h: 8.3mm } }
+  - { id: photo, select: "p:has(img)", pick: first, at: { x: 160.02mm, y: 0mm, w: 93.98mm, h: 142.875mm } }

@@ -1,0 +1,12 @@
+description: "Slide 5, four steps: label and title at the top; a column per second-level heading, each under a green rule."
+page: { size: { width: 254mm, height: 142.875mm } }
+class: slide
+boxes:
+  - { id: label, select: "p.label", pick: first, at: { x: 12.7mm, y: 12.7mm, w: 228.6mm, h: 10mm } }
+  - { id: title, select: "h1", pick: first, at: { x: 12.7mm, y: 28mm, w: 160mm, h: 26mm } }
+  - id: columns
+    each: "section.h2"          # one column per second-level heading
+    at: { x: 12.7mm, y: 62mm, w: 228.6mm, h: 68.2mm }
+    boxes:
+      - { id: heading, select: h2 }
+      - { id: text, select: rest }

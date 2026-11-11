@@ -144,6 +144,32 @@ class ExamplesTest {
         assertTrue(text.contains("Inter"), "printed in the bundled font");
     }
 
+    /**
+     * The forest theme, named in the manifest (theme: forest), as a deck, built by the plugin from forest-deck/manifest.yml:
+     * a 10in x 5.625in slide per layout the theme brings, in the theme's own font.
+     */
+    @Test
+    void forestDeckIsPrintedInTheThemesFont() throws IOException {
+        Manifest manifest = Manifest.load(Path.of("forest-deck/manifest.yml"));
+        Path pdf = manifest.dir().resolve(manifest.outputs().getFirst().file());
+        assertTrue(Files.isRegularFile(pdf), pdf + " is missing: run mvn test");
+        String text = new String(Files.readAllBytes(pdf), StandardCharsets.ISO_8859_1);
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("/MediaBox\\s*\\[\\s*0\\s+0\\s+([\\d.]+)\\s+([\\d.]+)").matcher(text);
+        int pages = 0;
+        while (m.find()) {
+            pages++;
+            assertEquals(720, Double.parseDouble(m.group(1)), 0.5, "10in wide");
+            assertEquals(405, Double.parseDouble(m.group(2)), 0.5, "5.625in high");
+        }
+        assertEquals(8, pages, "one slide per layout");
+        assertTrue(text.contains("SourceSans3"), "printed in the font the theme brings");
+        assertFalse(text.contains("Inter"), "and not in the bundled text font");
+
+        String web = Files.readString(manifest.dir().resolve(manifest.outputs().get(2).file()));
+        assertTrue(web.contains("font/woff2;base64,"), "the web page carries the theme's font too");
+        assertTrue(web.contains("--forest-green: #2F5D50"), "and the theme's palette");
+    }
+
     /** The web-site example as a site: a page per file, its contents page beside every page. */
     @Test
     void siteHasSideNavigation() throws IOException {

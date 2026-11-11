@@ -1,0 +1,9 @@
+description: "Slide 3, list with photo: the photo fills the left 40%; label, title and a list on the right."
+page: { size: { width: 254mm, height: 142.875mm } }
+class: slide
+boxes:
+  - { id: photo, select: "p:has(img)", pick: first, at: { x: 0mm, y: 0mm, w: 101.6mm, h: 142.875mm } }
+  - { id: label, select: "p.label", pick: first, at: { x: 114.3mm, y: 12.7mm, w: 127mm, h: 10mm } }
+  - { id: title, select: "h1", pick: first, at: { x: 114.3mm, y: 28mm, w: 127mm, h: 24mm } }
+  - { id: list, select: "ul, ol", pick: first, at: { x: 114.3mm, y: 56mm, w: 127mm, h: 62mm } }
+  - { id: footer, select: "p.footer", pick: first, at: { x: 114.3mm, y: 121.9mm, w: 127mm, h: 8.3mm } }

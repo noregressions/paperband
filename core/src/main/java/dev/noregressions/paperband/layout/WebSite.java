@@ -113,10 +113,15 @@ public final class WebSite {
      * @return every file of the site, by path relative to the first page's directory, pages first in order
      */
     public static Map<Path, String> split(String html, String title, String index, Options options) {
+        return split(html, title, index, options, Theme.DEFAULT);
+    }
+
+    /** @param theme where the styles of the site's own parts (header, previous and next, navigation) come from */
+    public static Map<Path, String> split(String html, String title, String index, Options options, Theme theme) {
         Document doc = Jsoup.parse(html);
         doc.outputSettings().prettyPrint(false);
 
-        StringBuilder css = new StringBuilder(SITE_CSS);
+        StringBuilder css = new StringBuilder(theme.css(Theme.Part.SITE)).append('\n');
         for (Element style : doc.select("style")) {
             css.append(style.data().strip()).append("\n\n");
             style.remove();
@@ -136,7 +141,7 @@ public final class WebSite {
             } else {
                 contents = null;
             }
-            css.append(options.side() ? NAV_CSS : TOPNAV_CSS);
+            css.append(theme.css(options.side() ? Theme.Part.NAV_SIDE : Theme.Part.NAV_TOP)).append('\n');
             js.append(options.side() ? NAV_JS : TOPNAV_JS);
         }
 
@@ -394,90 +399,6 @@ public final class WebSite {
     private static String esc(String s) {
         return SiteHtmlRenderer.esc(s);
     }
-
-    /** The site's own parts: the header and the previous and next links. Stylesheets come after it, so they win. */
-    private static final String SITE_CSS = """
-            /* site navigation */
-            .site-header { display: flex; align-items: center; justify-content: space-between; gap: 16px;
-              max-width: 46rem; margin: 0 auto 32px; padding-bottom: 12px;
-              border-bottom: 1px solid rgba(128,128,128,.35); font-weight: 600; }
-            .site-header a { color: inherit; text-decoration: none; }
-            .site-pager { display: flex; justify-content: space-between; gap: 16px; max-width: 46rem;
-              margin: 48px auto 0; padding-top: 16px; border-top: 1px solid rgba(128,128,128,.35); }
-            .site-pager a { display: flex; flex-direction: column; max-width: 48%; text-decoration: none; }
-            .site-pager a.next { margin-left: auto; text-align: right; }
-            .site-pager span { font-size: .8em; text-transform: uppercase; letter-spacing: .05em; opacity: .7; }
-            @media print { .site-header, .site-pager { display: none; } }
-
-            """;
-
-    /**
-     * The side navigation: fixed beside the page on wide screens, behind the Contents button on
-     * narrow ones. After the stylesheets, and with {@code nav.site-nav} (headings: {@code #site-nav})
-     * in front, so a contents layout's print sizes give way to a compact list. Its indents are left
-     * alone: a layout's own hanging indent for chapter numbers still lines up.
-     */
-    private static final String NAV_CSS = """
-            /* side navigation */
-            .site-nav-toggle { font: inherit; font-size: .85em; font-weight: 500; padding: 4px 10px; cursor: pointer;
-              border: 1px solid rgba(128,128,128,.5); border-radius: 4px; background: transparent; color: inherit; }
-            nav.site-nav { box-sizing: border-box; font-size: .9rem; line-height: 1.4; overflow-wrap: anywhere; }
-            nav.site-nav > div { max-width: none; margin: 0; padding: 0; border: 0; }
-            #site-nav h1 { font-size: 1rem; margin: 0 0 .8em; }
-            #site-nav h2 { font-size: .8rem; font-weight: 600; margin: 1.4em 0 .4em; opacity: .75; }
-            #site-nav h3 { font-size: .75rem; margin: 1em 0 .3em; }
-            nav.site-nav ul { list-style: none; margin: 0; padding: 0; }
-            /* only vertical: a contents layout's hanging indent (padding-left with a negative text-indent) stays whole */
-            nav.site-nav li { margin-top: 0; margin-bottom: 0; padding-top: 3px; padding-bottom: 3px; }
-            nav.site-nav a { color: inherit; text-decoration: none; }
-            nav.site-nav a:hover { text-decoration: underline; }
-            nav.site-nav a[aria-current="page"] { font-weight: 600; color: LinkText; }
-            @media (min-width: 1000px) {
-              body.has-nav { padding-left: calc(17rem + 32px); }
-              /* overflow-x hidden: an entry a little too wide mustn't let it scroll sideways, out of view */
-              nav.site-nav { position: fixed; top: 0; bottom: 0; left: 0; width: 17rem; overflow-x: hidden; overflow-y: auto;
-                padding: 24px 20px; border-right: 1px solid rgba(128,128,128,.35); }
-              .site-nav-toggle { display: none; }
-            }
-            @media (max-width: 999.98px) {
-              nav.site-nav { display: none; max-width: 46rem; margin: -16px auto 32px; padding-bottom: 16px;
-                border-bottom: 1px solid rgba(128,128,128,.35); }
-              body.nav-open nav.site-nav { display: block; }
-            }
-            @media print { nav.site-nav, .site-nav-toggle { display: none !important; } body.has-nav { padding-left: 0; } }
-
-            """;
-
-    /**
-     * The navigation bar: under the header, as wide as the page, its entries wrapping onto more
-     * lines when they don't fit. A group is a {@code details}, so it opens without the script too;
-     * its list drops down over the page.
-     */
-    private static final String TOPNAV_CSS = """
-            /* navigation bar */
-            body.has-topnav .site-header { margin-bottom: 0; border-bottom: 0; }
-            nav.site-topnav { max-width: 46rem; margin: 0 auto 32px; padding-bottom: 8px;
-              border-bottom: 1px solid rgba(128,128,128,.35); font-size: .9rem; line-height: 1.4; }
-            nav.site-topnav ul { list-style: none; margin: 0; padding: 0; }
-            nav.site-topnav > ul { display: flex; flex-wrap: wrap; gap: 4px; margin-left: -10px; }
-            nav.site-topnav > ul > li { position: relative; margin: 0; padding: 0; }
-            nav.site-topnav summary, nav.site-topnav > ul > li > a { display: block; max-width: 16em; padding: 4px 10px;
-              border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
-            nav.site-topnav summary { list-style: none; }
-            nav.site-topnav summary::-webkit-details-marker { display: none; }
-            nav.site-topnav summary::after { content: " \\25BE"; font-size: .8em; opacity: .7; }
-            nav.site-topnav a { color: inherit; text-decoration: none; }
-            nav.site-topnav summary:hover, nav.site-topnav details[open] > summary, nav.site-topnav a:hover {
-              background: rgba(128,128,128,.15); }
-            nav.site-topnav .current > summary, nav.site-topnav a[aria-current="page"] { font-weight: 600; color: LinkText; }
-            nav.site-topnav details > ul { position: absolute; z-index: 10; top: 100%; left: 0; box-sizing: border-box;
-              min-width: 16rem; max-width: min(26rem, calc(100vw - 32px)); max-height: 70vh; overflow-y: auto;
-              margin-top: 4px; padding: 6px 0; background: Canvas; color: CanvasText;
-              border: 1px solid rgba(128,128,128,.35); border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,.15); }
-            nav.site-topnav details li a { display: block; padding: 5px 14px; }
-            @media print { nav.site-topnav { display: none; } body.has-topnav .site-header { margin-bottom: 32px; } }
-
-            """;
 
     /**
      * The navigation bar's groups: one open at a time, closed by Escape or a click elsewhere, and

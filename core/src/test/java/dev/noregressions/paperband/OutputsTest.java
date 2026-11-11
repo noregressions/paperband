@@ -133,7 +133,7 @@ class OutputsTest {
         assertTrue(Files.isRegularFile(dir.resolve("out/two.html")));
         String paged = Files.readString(dir.resolve("out/two.html"));
         assertTrue(paged.contains("src: url(\"paperband-fonts/inter-latin-400-normal.woff2\")"), "paged html loads the bundled fonts");
-        assertTrue(paged.contains("body.paged { font-family: \"Inter\", sans-serif; }"));
+        assertTrue(paged.contains("--pb-font-body: \"Inter\", sans-serif;") && paged.contains("font: 11pt/1.45 var(--pb-font-body)"));
         for (String f : Fonts.files()) {
             assertTrue(Files.isRegularFile(dir.resolve("out/paperband-fonts").resolve(f)), f + " is copied beside it");
         }

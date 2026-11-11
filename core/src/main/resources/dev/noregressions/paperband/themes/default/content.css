@@ -1,0 +1,40 @@
+/* Content in both web and paged output: code, tables, images, and the source view's highlighting.
+   Only web output follows the dark colour scheme. */
+:root {
+  --pb-code-bg: rgba(128,128,128,.12);
+  --pb-table-rule: rgba(128,128,128,.45);
+  --pb-tok-fm: #92400e;
+  --pb-tok-pre: #1d4ed8;
+  --pb-tok-post: #7c3aed;
+  --pb-tok-marker: #047857;
+  --pb-tok-div: #be185d;
+  --pb-tok-key: #1d4ed8;
+  --pb-tok-string: #047857;
+  --pb-tok-yaml-comment: #78716c; }
+pre { overflow-x: auto; padding: 12px; border-radius: 6px; background: var(--pb-code-bg); }
+code { font-family: var(--pb-font-code); font-size: .9em; }
+table { border-collapse: collapse; margin: .8em 0; }
+th, td { border: 1px solid var(--pb-table-rule); padding: .3em .6em; text-align: left; vertical-align: top; }
+th { font-weight: 600; }
+img { max-width: 100%; }
+pre.source { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.5; }
+.tok-fm { color: var(--pb-tok-fm); }
+.tok-pre { color: var(--pb-tok-pre); }
+.tok-post { color: var(--pb-tok-post); }
+.tok-comment { font-style: italic; opacity: .75; }
+.tok-marker { color: var(--pb-tok-marker); }
+.tok-div, .tok-fence, .tok-heading { color: var(--pb-tok-div); font-weight: 600; }
+.tok-key { color: var(--pb-tok-key); }
+.tok-string { color: var(--pb-tok-string); }
+.tok-yaml-comment { color: var(--pb-tok-yaml-comment); font-style: italic; }
+@media (prefers-color-scheme: dark) {
+  body.web {
+    --pb-tok-fm: #fbbf24;
+    --pb-tok-pre: #60a5fa;
+    --pb-tok-post: #c4b5fd;
+    --pb-tok-marker: #34d399;
+    --pb-tok-div: #f472b6;
+    --pb-tok-key: #60a5fa;
+    --pb-tok-string: #34d399;
+    --pb-tok-yaml-comment: #a8a29e; }
+}

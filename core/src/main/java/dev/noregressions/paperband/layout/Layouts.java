@@ -55,42 +55,54 @@ public final class Layouts {
 
     /** A missing directory means only the built-in layout. */
     public static Layouts load(Path dir, PageSpec defaultPage) throws IOException {
+        return load(List.of(dir), defaultPage);
+    }
+
+    /**
+     * The layouts of several directories, such as a theme's and then the project's: a layout in a
+     * later directory replaces one of the same name in an earlier one. Missing directories are skipped.
+     */
+    public static Layouts load(List<Path> dirs, PageSpec defaultPage) throws IOException {
         Map<String, Layout> byName = new LinkedHashMap<>();
         Map<String, String> sources = new LinkedHashMap<>();
         Map<String, LayoutExtension.Raw> raws = new LinkedHashMap<>();
         byName.put(Layout.DEFAULT.name(), Layout.DEFAULT);
         sources.put(Layout.DEFAULT.name(), DEFAULT_SOURCE);
         raws.put(Layout.DEFAULT.name(), DEFAULT_RAW);
-        if (!Files.isDirectory(dir)) {
-            return new Layouts(byName, sources, raws);
-        }
-        List<Path> files;
-        try (Stream<Path> s = Files.list(dir)) {
-            files = s.filter(p -> p.getFileName().toString().matches(".+\\.ya?ml")).sorted().toList();
-        }
         // Read every definition first: a layout can extend any other, in any order.
-        Map<String, Path> seen = new LinkedHashMap<>();
-        for (Path f : files) {
-            String fileName = f.getFileName().toString();
-            String name = fileName.substring(0, fileName.lastIndexOf('.'));
-            if (name.equals(Layout.PAGE_LAYOUT)) {
-                throw new ConfigException(f + ": \"page\" is reserved (layout: page means a file's own layout); rename it");
+        Set<String> names = new java.util.LinkedHashSet<>();
+        for (Path dir : dirs) {
+            if (!Files.isDirectory(dir)) {
+                continue;
             }
-            Path other = seen.put(name, f);
-            if (other != null) {
-                throw new ConfigException("layout \"" + name + "\" is defined twice: " + other + " and " + f);
+            List<Path> files;
+            try (Stream<Path> s = Files.list(dir)) {
+                files = s.filter(p -> p.getFileName().toString().matches(".+\\.ya?ml")).sorted().toList();
             }
-            String text = Files.readString(f, java.nio.charset.StandardCharsets.UTF_8);
-            Object yaml;
-            try {
-                yaml = dev.noregressions.paperband.FrontMatter.parseYaml(text);
-            } catch (RuntimeException e) {
-                throw new ConfigException(fileName + ": invalid YAML: " + e.getMessage(), e);
+            Map<String, Path> seen = new LinkedHashMap<>();
+            for (Path f : files) {
+                String fileName = f.getFileName().toString();
+                String name = fileName.substring(0, fileName.lastIndexOf('.'));
+                if (name.equals(Layout.PAGE_LAYOUT)) {
+                    throw new ConfigException(f + ": \"page\" is reserved (layout: page means a file's own layout); rename it");
+                }
+                Path other = seen.put(name, f);
+                if (other != null) {
+                    throw new ConfigException("layout \"" + name + "\" is defined twice: " + other + " and " + f);
+                }
+                String text = Files.readString(f, java.nio.charset.StandardCharsets.UTF_8);
+                Object yaml;
+                try {
+                    yaml = dev.noregressions.paperband.FrontMatter.parseYaml(text);
+                } catch (RuntimeException e) {
+                    throw new ConfigException(fileName + ": invalid YAML: " + e.getMessage(), e);
+                }
+                raws.put(name, new LayoutExtension.Raw(yaml, f.toAbsolutePath().getParent(), fileName));
+                sources.put(name, text);
+                names.add(name);
             }
-            raws.put(name, new LayoutExtension.Raw(yaml, f.toAbsolutePath().getParent(), fileName));
-            sources.put(name, text);
         }
-        for (String name : seen.keySet()) {
+        for (String name : names) {
             byName.put(name, build(name, raws.get(name), raws, defaultPage));
         }
         Layouts layouts = new Layouts(byName, sources, raws);

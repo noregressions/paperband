@@ -1,0 +1,9 @@
+description: "Slide 6, title and content: label, title, and the rest of the page across the full width."
+page: { size: { width: 254mm, height: 142.875mm } }
+class: slide
+unplaced: ignore
+boxes:
+  - { id: label, select: "p.label", pick: first, at: { x: 12.7mm, y: 12.7mm, w: 228.6mm, h: 10mm } }
+  - { id: title, select: "h1", pick: first, at: { x: 12.7mm, y: 28mm, w: 228.6mm, h: 24mm } }
+  - { id: body, select: "rest", at: { x: 12.7mm, y: 56mm, w: 228.6mm, h: 62mm } }
+  - { id: footer, select: "p.footer", pick: first, at: { x: 12.7mm, y: 121.9mm, w: 228.6mm, h: 8.3mm } }

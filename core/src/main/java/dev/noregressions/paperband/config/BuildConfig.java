@@ -3,6 +3,7 @@ package dev.noregressions.paperband.config;
 import dev.noregressions.paperband.layout.Manifest;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.util.ArrayList;
@@ -88,6 +89,20 @@ public record BuildConfig(Manifest manifest, Clock clock, Path astOutput, Path d
         /** Where to write the site. */
         public Builder output(Path output) {
             return set("output", output);
+        }
+
+        /** A theme's directory (see {@link dev.noregressions.paperband.layout.Theme}). */
+        public Builder theme(Path dir) {
+            return set("theme", dir);
+        }
+
+        /**
+         * A theme as a manifest names it: one Paperband brings ({@code forest}), or a directory.
+         * A directory relative to the base directory is given as a {@link Path} instead, so it
+         * means the same wherever the manifest is.
+         */
+        public Builder theme(String theme) {
+            return set("theme", theme != null && Files.isDirectory(baseDir.resolve(theme)) ? Path.of(theme) : theme);
         }
 
         public Builder stylesheets(List<Path> stylesheets) {
