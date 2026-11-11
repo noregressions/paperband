@@ -14,8 +14,10 @@
   <description>Builds a Paperband site from Maven, configured by a manifest, by the plugin's XML configuration, or both.</description>
   <url>https://github.com/noregressions/paperband</url>
 
+  <!-- The oldest Maven the plugin runs on: any 3.9, not only the one it's built against
+       (maven.api.version in the root pom), which may be newer than the Maven a user or a CI runner has. -->
   <prerequisites>
-    <maven>${maven.api.version}</maven>
+    <maven>3.9.0</maven>
   </prerequisites>
 
   <dependencies>
