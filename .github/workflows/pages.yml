@@ -41,6 +41,8 @@ jobs:
           cp index.html showcase.html handbook.html handbook.pdf ../../_site/
           cp -R paperband-fonts site site-top ../../_site/
           cp forest/deck.pdf ../../_site/forest/
+          # The guide for language models (https://llmstxt.org): an index, and the guide itself.
+          cp ../pages/llms.txt ../pages/llms-full.txt ../../_site/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

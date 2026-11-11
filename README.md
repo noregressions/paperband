@@ -196,6 +196,10 @@ The styles apply in this order, each able to override the one before: the theme,
 | Diagrams | ` ```mermaid ` and ` ```plantuml ` blocks drawn as inline SVG at build time | add the `mermaid` or `plantuml` module as a plugin dependency |
 | Copy buttons | A Copy button on code blocks in the languages you list (`copy: [bash]`) | `examples/manifest.yml` |
 
+If you work with an AI assistant, give it
+[the guide for language models](https://noregressions.github.io/paperband/llms-full.txt): the
+syntax for manifests, layouts, markers and themes in one file.
+
 The full list of manifest keys is in the Javadoc of
 [`Manifest`](core/src/main/java/dev/noregressions/paperband/layout/Manifest.java), and the layout
 keys in [`Layout`](core/src/main/java/dev/noregressions/paperband/layout/Layout.java).

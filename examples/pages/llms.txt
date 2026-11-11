@@ -1,0 +1,26 @@
+# Paperband
+
+> Paperband turns Markdown into laid-out documents: a web site, fixed-size pages in HTML, and PDF, all from the same sources. A YAML manifest says which files go in and what comes out; YAML layouts place content on pages with CSS selectors. It runs as a Maven plugin (`dev.noregressions.paperband:paperband-maven-plugin`, goal `build`) and needs Java 21.
+
+To write or change a Paperband project (manifest, layouts, Markdown with markers, themes), read the full guide first. It is one file, written for language models, and has the exact syntax with a complete working example.
+
+## Guide
+
+- [Paperband guide for language models](https://noregressions.github.io/paperband/llms-full.txt): everything needed to write a working project: Maven setup, manifest keys, layouts, markers, templating, fitting, themes, and the mistakes that stop a build
+
+## Reference
+
+- [README](https://raw.githubusercontent.com/noregressions/paperband/main/README.md): overview and a first build, for people
+- [Manifest keys](https://raw.githubusercontent.com/noregressions/paperband/main/core/src/main/java/dev/noregressions/paperband/layout/Manifest.java): the authoritative list, in the class's Javadoc
+- [Layout keys](https://raw.githubusercontent.com/noregressions/paperband/main/core/src/main/java/dev/noregressions/paperband/layout/Layout.java): the authoritative list, in the class's Javadoc
+
+## Examples
+
+- [Example manifest](https://raw.githubusercontent.com/noregressions/paperband/main/examples/manifest.yml): several outputs (web, paged HTML, PDF, two sites) from one set of sources
+- [Example layouts](https://github.com/noregressions/paperband/tree/main/examples/layouts): grids, nested boxes, splitting, fit remedies
+- [Example documents](https://github.com/noregressions/paperband/tree/main/examples/docs): one Markdown file per feature
+- [Forest deck](https://github.com/noregressions/paperband/tree/main/examples/forest-deck): slides made with the bundled `forest` theme
+
+## Optional
+
+- [Showcase](https://noregressions.github.io/paperband/showcase.html): every example's Markdown beside its rendered result, as HTML

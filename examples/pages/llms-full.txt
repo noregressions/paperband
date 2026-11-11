@@ -1,0 +1,539 @@
+# Paperband guide for language models
+
+Paperband turns Markdown into laid-out documents: a web site, fixed-size pages in HTML ("paged
+HTML"), and PDF. This guide has what you need to write a working Paperband project. Version
+described: 0.2.0. Source: https://github.com/noregressions/paperband
+
+How a build works:
+
+1. A **manifest** (`manifest.yml`) lists the Markdown sources, their order, and the outputs.
+2. Each file is run through the Pebble template engine, then parsed.
+3. For each output, every file becomes a **page**. A **layout** (YAML) places the page's content
+   into boxes, each picking content with a CSS selector.
+4. Paged outputs are measured in headless Chromium. Content that doesn't fit its box fails the
+   build unless the layout's `fit:` remedies make it fit.
+
+Paperband is strict. Unknown keys, unknown layouts, misplaced markers and content that doesn't fit
+are errors, not warnings. Write only the keys this guide lists.
+
+## A complete working project
+
+```
+pom.xml
+manifest.yml
+docs/01-intro.md
+docs/02-install.md
+layouts/chapter.yml
+```
+
+`pom.xml` (the plugin part; the `chromium` dependency is needed only for `pdf` outputs and for
+measuring `paged-html`):
+
+```xml
+<plugin>
+  <groupId>dev.noregressions.paperband</groupId>
+  <artifactId>paperband-maven-plugin</artifactId>
+  <version>0.2.0</version>
+  <executions>
+    <execution>
+      <goals><goal>build</goal></goals>
+    </execution>
+  </executions>
+  <configuration>
+    <manifest>manifest.yml</manifest>
+  </configuration>
+  <dependencies>
+    <dependency>
+      <groupId>dev.noregressions.paperband</groupId>
+      <artifactId>chromium</artifactId>
+      <version>0.2.0</version>
+    </dependency>
+  </dependencies>
+</plugin>
+```
+
+The goal runs in the `generate-resources` phase: `mvn generate-resources`. It needs Java 21 and
+Maven 3.9 or later.
+
+`manifest.yml`:
+
+```yaml
+title: My guide
+sources: [docs/**/*.md]
+sequence:
+  - files: docs/*.md
+    layout: chapter
+outputs:
+  - { name: site, format: web, file: target/site/index.html }
+  - { name: book, format: pdf, file: target/book.pdf }
+```
+
+`layouts/chapter.yml`:
+
+```yaml
+page: { size: A4, margin: 18mm }
+boxes:
+  - { id: title, select: h1, pick: first }
+  - id: body
+    select: rest
+    split: true
+```
+
+`docs/01-intro.md`:
+
+```markdown
+---
+title: Introduction
+---
+# Introduction
+
+This guide gets you started. {! lede}
+
+## What you need
+
+- Java 21
+- Maven
+```
+
+`docs/02-install.md`:
+
+```markdown
+# Install
+
+Download the archive and unpack it.
+```
+
+## The manifest
+
+Paths are relative to the manifest's directory. Every key:
+
+```yaml
+title: Paperband Guide               # default: Site
+theme: forest                        # a bundled theme by name, or a theme directory (themes/mine)
+stylesheets: [styles/site.css]       # inlined into every output, after the theme
+templates: templates                 # Pebble include/extends directory (default: templates)
+layouts: layouts                     # layout files (default: layouts)
+data: data                           # YAML/JSON data, or a list of files/directories (default: data)
+vars: { product: Paperband }         # template variables; single values only
+env: [CI]                            # environment variables exposed to templates as env.NAME
+index: index.yml                     # index terms found by rule; markers work without it
+copy: [bash]                         # web: code blocks in these fence languages get a Copy button
+browser: chrome                      # pdf: chrome, msedge, or a path; default: a downloaded Chromium
+
+sources: [docs/**/*.md]              # parsed, and visible to templates through `site`
+hidden: [docs/partials/*.md]         # sources deliberately not in the sequence
+unused: warn                         # warn | error | ignore: sources neither in sequence nor hidden
+
+defaults:
+  page: { size: A4, margin: 15mm }
+  layout: default
+
+sequence:                            # the pages, in order
+  - layout: contents                 # a generated page: a layout with no source file
+  - file: docs/intro.md
+  - files: docs/chapters/*.md
+    where: { draft: { ne: true } }
+    sort: page.chapter
+    layout: chapter                  # overrides the files' own layout: front matter
+
+outputs:
+  - name: handbook                   # starts with a letter; letters, digits, -; unique
+    format: paged-html               # web | paged-html | pdf
+    file: build/handbook.html
+    layout: print-page               # layout for pages whose sequence entry names none
+    layouts: { hero: hero-print }    # or: replace layouts by name (not with layout)
+    page: { size: A4, margin: 15mm }
+    sequence: [...]                  # this output's own pages; default: the manifest's
+    prefer: short                    # which variant to show: full | short | shortest
+    single: true                     # web only: one HTML file instead of a page per file
+    nav: side                        # web only: side (default) | top | none
+    contents: docs/contents.md       # web only: the page shown as the navigation
+```
+
+Rules:
+
+- `sources` and `sequence` are required, unless you use `files: [a.md, b.md]`, which is both at
+  once. Don't combine `files` with `sources` or `sequence`.
+- Without `outputs`, there is one web output written to `output:` (default `site.html`). Don't use
+  `output` and `outputs` together.
+- A `sources` pattern that matches no file is an error.
+- A source that is neither in the sequence nor in `hidden` produces a warning.
+- `where` operators: `eq ne gt gte lt lte in contains exists`. A bare value means equals. Keys are
+  front matter keys, dotted for nested values.
+- `sort` keys are `path` or `page.<front matter key>`. A file missing the key is an error unless
+  you write `sort: { by: page.date, missing: last }`.
+- Page sizes: `A3 A4 A5 letter legal "16:9" "4:3"`, or `{ width: 254mm, height: 143mm }`. Quote
+  ratios: YAML reads an unquoted `16:9` as a number. Lengths take `mm cm in pt px`.
+  `orientation: landscape` swaps width and height.
+
+Every manifest key can also be set in the plugin's `<configuration>` (for example `<title>`,
+`<theme>`, `<outputs><output>...`). A setting there overrides the manifest's.
+
+## Markdown
+
+CommonMark, plus GitHub pipe tables, YAML front matter, markers, fenced divs and variants.
+
+Front matter is a YAML block at the top of the file between `---` lines. Paperband reads `layout`
+(a layout name, or an inline layout as a mapping) and `id` (for links from other pages). Templates
+read everything else as `page.<key>`.
+
+### Markers
+
+A marker `{! ...}` attaches classes, an id and values to an element, so layouts and CSS can select
+it. Inside a marker: bare words are classes, `id=name` is the id, `key=value` becomes `data-key`.
+
+````markdown
+### A heading {! step id=download level=beginner}
+A paragraph. {! instruction}
+{! checklist}
+- a list tagged by the marker on the line above
+```bash {! command}
+Click [Save]{! ui}, run `make`{! cmd}, see [docs](u){! external}
+::: {! note}
+A fenced div: any blocks grouped under one marker.
+:::
+````
+
+Where a marker may go:
+
+- at the end of a heading or paragraph, after a space
+- on a line of its own, tagging the block directly below
+- after a code fence's language
+- straight after `[text]`, a code span, a link, an image or emphasis, with no space
+- on a `:::` line, opening a fenced div closed by `:::`
+
+A marker anywhere else is an error. Write `\{!` for a literal `{!`. Ids must be unique in a file.
+A marker on a heading also applies to the heading's whole section, so `.step` selects the heading
+and everything under it.
+
+Markers with a built-in meaning:
+
+- `{! optional}` or `{! optional priority=2}`: a block that a `drop: optional` remedy may leave out
+- `{! break=force}`, `{! break=prefer}`, `{! break=avoid}`: page breaks in a splitting box
+- `{! keep}` on a div: never break inside it
+- `{! index}` or `{! index="term!subentry; other term"}`: an index entry
+- `{! template}` after a fence's language: run the code block through the template engine
+
+### Variants
+
+The same passage in up to three lengths. Each output shows one (`prefer:`); a `variant` fit remedy
+can switch to a shorter one. The names are fixed.
+
+```markdown
+:::: {! variants}
+::: {! variant=full}
+Download the release archive for your platform, then verify its checksum.
+:::
+::: {! variant=short}
+Download the archive and verify it.
+:::
+::::
+```
+
+### Links between pages
+
+Give a page `id: jdeps` in its front matter, then link to it from any file: `[the jdeps
+chapter](#jdeps)`. `[](#jdeps)` uses the page's title as the text. In a web site, the link is
+rewritten to the page's file.
+
+### Images
+
+An image's path is written to the output unchanged, so it must be relative to the **output file**,
+not to the Markdown file. Paperband doesn't copy images.
+
+### Templating
+
+Pebble runs twice, with different delimiters:
+
+- Pre pass, before parsing: `{{ value }}`, `{% tag %}`, `{# comment #}`
+- Post pass, after every file is parsed: `[[ value ]]`, `[% tag %]`, `[# comment #]`
+
+Variables in both passes:
+
+- `page.<key>`: the file's front matter
+- `file`: the file's path
+- the manifest's `vars`, as top-level names: `{{ product }}`
+- `data.<name>`: data files; `data/site.yml` is `data.site`, `data/team/members.json` is
+  `data.team.members`
+- `env.NAME`: only the variables the manifest's `env` lists
+- `build.date`, `build.files`
+- `site`: every source. In the pre pass only paths and front matter:
+  `{{ site.file("intro.md").page.title }}`. In the post pass also content:
+  `[% for item in site.file("glossary.md").section("terms").list.items %]`
+
+Fenced code blocks are not templated unless the fence says `{! template}`. Inline code is. Use
+`{% verbatim %}` to keep literal braces. `include` and `extends` resolve against the templates
+directory.
+
+## Layouts
+
+A layout is `layouts/<name>.yml`. A page gets its layout from its sequence entry's `layout:`, else
+the output's `layout:`, else its own front matter `layout:`, else `defaults.layout`, else the
+built-in `default` (the whole file in one box). The name `page` is reserved.
+
+```yaml
+description: Free text, for people.
+page: { size: A4, margin: 15mm }     # default: the manifest's defaults.page
+class: chapter-page                  # extra class on the page's <section>
+unplaced: warn                       # content no box takes: warn (default) | ignore | error
+prefer: short                        # variant shown on pages with this layout
+stylesheet: chapter.css              # CSS file beside the layout, confined to it
+css: |                               # or CSS written here, confined the same way
+  h1 { color: navy }
+grid:                                # named areas (or stack: { gap: 6mm }, boxes one above another)
+  columns: [1fr, 2fr]
+  rows: [auto, 1fr]
+  areas: ["title title", "intro body"]
+  gap: 24px
+boxes:
+  - id: title                        # required; unique in the layout
+    class: hero-title                # extra class on the box's <div>
+    select: h1                       # a CSS selector, or rest
+    pick: first                      # first | last | N (1-based); default: every match
+    scope: page                      # page (this file) | sequence | sources
+    as: html                         # html | text | list | links
+    area: title                      # with a grid: required, the area it goes in
+    at: { x: 15mm, y: 15mm, w: 180mm, h: 30mm }   # or a fixed position (paged output only)
+    wrap: true                       # false: no <div> around the content
+    when: { not-empty: true }        # leave the box out when it has nothing to show
+  - id: body
+    select: rest                     # whatever no other box took
+```
+
+Selectors run against a tree built from the Markdown:
+
+```html
+<article>
+  <section class="h1" id="intro">        <!-- a heading and everything up to the next heading -->
+    <h1>Intro</h1>                       <!--   of the same or a higher level; sections nest -->
+    <p>Text with <em>, <strong>, <code>, <a href>, <img src></p>
+    <section class="h2" id="details">...</section>
+  </section>
+</article>
+```
+
+- Block elements: `h1`-`h6`, `p`, `ul`, `ol`, `li`, `blockquote`, `pre` (class `language-x`),
+  `hr`, `table`, `thead`, `tbody`, `tr`, `th`, `td`, `div` (fenced divs), `span` (`[text]{! tag}`).
+- Section ids are heading slugs: lower case, punctuation dropped, spaces to hyphens.
+- Marker classes, ids and `data-*` values appear on the elements.
+- Selecting a section selects its heading and all its content. `section.h1 > p` is the paragraphs
+  directly under the first-level heading.
+- Content is placed once. When an element and something inside it both match, the outer one wins.
+
+Other kinds of box:
+
+```yaml
+  - { id: label, text: Contents }                    # fixed text
+  - { id: file, content: path }                      # the page's file path
+  - { id: md, content: source, stage: original }     # the page's Markdown: original | pre | final
+  - { id: level, value: level }                      # a front matter value
+  - { id: title, value: title, heading: 1 }          # ... as an <h1>
+  - { id: toc, select: h1, pick: first, scope: sequence, as: links }   # a contents list
+  - { id: card, select: "#summary", layout: card }   # the selection through another layout
+  - id: steps                                        # one inner layout per match
+    each: ".step"
+    boxes:                                           # or layout: step-card
+      - { id: title, select: h3 }
+      - { id: text, select: rest }
+```
+
+`when` conditions: `{ page: { draft: true } }` (front matter), `{ not-empty: true }`,
+`{ outputs: [pdf] }` (output names).
+
+CSS in a layout is confined to it. `&` is the layout's own element: `& > .box-title h1 { ... }`.
+Boxes have the classes `box` and `box-<id>`; the page has `layout-<name>`. A layout's CSS can't
+style `html`, `body` or `:root`, and can't use `@import`.
+
+A layout can start from another:
+
+```yaml
+extends: split
+grid: { columns: [2fr, 1fr], areas: ["title title", "body intro"] }
+boxes:
+  intro: { class: aside }            # change a box by id; null removes it
+add:
+  - { id: note, area: note, text: "A note." }
+```
+
+The same keys under `layout:` in a file's front matter give that one file an inline layout.
+
+Web output flows the boxes in order, or into the grid, and ignores `page` and `at`.
+
+## Paged output: fitting and splitting
+
+In `paged-html` and `pdf`, a layout with a grid, a stack or any `at:` box makes a page of fixed
+size. Every box is measured. A box whose content is bigger than the box is a problem, and any
+problem fails the build, which then writes `<output>.fit.html` showing each one.
+
+Give boxes rules for what to do:
+
+```yaml
+boxes:
+  - id: body
+    area: body
+    select: rest
+    priority: normal                 # essential (default) | normal | optional
+    size: { min: 120mm }             # and/or max
+    split:                           # continue on further pages; split: true for the defaults
+      between: section.h2            # where it may break (default: between its blocks)
+      keep-together: [pre]           # never break inside these
+      repeat: "h2:first-of-type"     # repeated at the top of each continuation
+      continue: body-continued       # layout for continuation pages (default: this one)
+    fit:                             # tried in order, measuring after each
+      - shrink: { min: 90% }         # text as large as fits, never below min (default 85%)
+      - tighten: true                # less line height and space between blocks
+      - variant: next                # a shorter variant, where the content has one
+      - drop: optional               # leave out {! optional} blocks
+      - truncate: { lines: 12 }      # cut the text
+fit:                                 # the page's own, when its boxes have nothing left
+  - layout: chapter-compact          # lay the page out again with another layout
+```
+
+A layout with no grid, stack or `at:` flows onto as many sheets as it needs and never has a fit
+problem. Use that for ordinary long documents; use fixed layouts for slides, covers and forms.
+
+Without the `chromium` module, `pdf` is an error and `paged-html` is written unmeasured.
+
+## Web sites
+
+A `web` output with more than one page is a site: the first page at `file`, every other page
+beside it at its source's path with `.md` replaced by `.html`, sharing `site.css` and `site.js`.
+`nav: side` puts the contents beside every page; `nav: top` makes a bar of dropdowns; `nav: none`
+has neither. The navigation is the page named by `contents:` (a source file or a layout name), by
+default the page whose layout is `contents`; that page is then not a page of its own. Without
+one, the navigation lists every page.
+
+A contents page for `nav: top` groups its links under headings; a heading's label is the text
+before its colon:
+
+```markdown
+# Contents
+
+- [Start here](#docs-01-intro-md)
+
+## Part 1: Basics
+
+- [Install](#docs-02-install-md)
+```
+
+A page's id is its path with `/` and `.` replaced by `-`, or its front matter `id`.
+
+## Themes
+
+`theme: forest` selects a bundled theme; `theme: themes/mine` a directory. A directory with a
+bundled theme's name, beside the manifest, wins.
+
+Bundled themes: `default` (used when `theme` is absent) and `forest`.
+
+A theme directory. Everything is optional:
+
+```
+themes/mine/
+  theme.css      # added after the parts below: set variables, add rules
+  web.css        # each of these replaces the built-in part of the same name
+  paged.css
+  content.css
+  site.css
+  nav-side.css
+  nav-top.css
+  layouts/       # layouts the theme supplies; a project's layout of the same name wins
+  fonts/         # files theme.css refers to
+```
+
+Any other `.css` file in the directory is an error. A `url("fonts/x.woff2")` naming a file inside
+the theme is embedded in the output as a data URL, which is how a theme's fonts reach the PDF.
+
+Variables the built-in styles read, to set in `theme.css` on `:root`:
+
+- both: `--pb-font-body`, `--pb-font-code`, `--pb-code-bg`, `--pb-table-rule`, `--pb-tok-*`
+- web: `--pb-rule`, `--pb-page-width`, `--pb-grid-width`, `--pb-link`
+- paged: `--pb-fg`, `--pb-page-bg`, `--pb-desk-bg`
+
+The body has class `web` or `paged`, so one file can style each: `body.web h1 { ... }`.
+
+Styles apply in this order, later ones overriding: theme parts, `theme.css`, the manifest's
+`stylesheets`, each layout's CSS.
+
+### The forest theme
+
+White pages, one deep-green accent (`#2F5D50`), Source Sans 3 with light headlines. It adds two
+classes for any page:
+
+```markdown
+Section label {! label}
+
+# The title
+
+A footer line {! footer}
+```
+
+and eight slide layouts on a 254mm x 142.875mm (10in x 5.625in) page. Each slide is one Markdown
+file. Text must be short: these are fixed boxes, and overflow fails the build.
+
+| Layout | Content it takes |
+| --- | --- |
+| `title-photo` | `p.label`, `h1`, one paragraph under it (subtitle), an image, `p.footer` |
+| `statement-photo` | `p.label`, `h1` or `blockquote` (the statement), an image, `p.footer` |
+| `list-photo` | `p.label`, `h1`, one `ul` or `ol`, an image, `p.footer` |
+| `three-columns` | `p.label`, `h1`, three `##` sections, each a heading and short text |
+| `four-steps` | `p.label`, `h1`, four `##` sections |
+| `title-content` | `p.label`, `h1`, anything else as the body, `p.footer` |
+| `section` | `p.label`, `h1`; solid green divider |
+| `closing-photo` | `p.label`, `h1`, one paragraph under it, an image, `p.footer` |
+
+A slide:
+
+```markdown
+---
+layout: three-columns
+---
+How it is used {! label}
+
+# One theme, three kinds of output
+
+## Web
+
+A flowing page or a whole site.
+
+## Print
+
+Fixed pages, measured before they ship.
+
+## Slides
+
+The same content on a 16:9 canvas.
+```
+
+A deck's manifest:
+
+```yaml
+title: My deck
+theme: forest
+sources: [slides/*.md]
+sequence:
+  - files: slides/*.md
+outputs:
+  - { name: deck, format: pdf, file: target/deck.pdf }
+```
+
+## Diagrams
+
+With the `mermaid` or `plantuml` module added as a plugin dependency (same group and version as
+`chromium`), fenced blocks in those languages are drawn as inline SVG at build time. A diagram
+that can't be drawn fails the build.
+
+## Mistakes that stop a build
+
+- A key this guide doesn't list. Unknown keys are errors everywhere.
+- A marker in the wrong place, such as mid-sentence after a space. Inline markers touch the
+  element they tag: `[Save]{! ui}`.
+- `layout:` naming a layout that doesn't exist in `layouts/` or the theme.
+- A grid layout where a box has no `area`, or an area isn't a rectangle.
+- `size: 16:9` without quotes.
+- A `pdf` output without the `chromium` plugin dependency.
+- Content too long for a fixed box, with no `fit:` or `split:` rule to handle it.
+- `files` together with `sources` or `sequence`; `output` together with `outputs`; an output's
+  `layout` together with its `layouts`.
+- `nav`, `contents` or `single` on an output that isn't `web`.
+- An image path written relative to the Markdown file instead of the output file.
+- A link to `#an-id` that no page or element has. It warns, and fails with `failOnWarnings`.

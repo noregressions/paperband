@@ -26,4 +26,8 @@ Paperband runs as a Maven plugin and needs Java 21. The
 [README](https://github.com/noregressions/paperband#readme) has a first build, PDF output,
 layouts and themes.
 
+Working with an AI assistant? Point it at [llms.txt](llms.txt), or give it the whole
+[guide for language models](llms-full.txt): the syntax for manifests, layouts, markers and
+themes in one file.
+
 [Paperband on GitHub](https://github.com/noregressions/paperband) · Apache License 2.0 {! footer}

@@ -1,6 +1,7 @@
 # The front page of https://noregressions.github.io/paperband/, built by paperband-maven-plugin
 # (see ../pom.xml) and published with the example outputs by .github/workflows/pages.yml.
-# Its links are relative to ../target, where every example output is written.
+# Its links are relative to ../target, where every example output is written. llms.txt and
+# llms-full.txt, beside this file, are published as they are: keep them true to the code.
 title: Paperband
 theme: forest
 files: [index.md]
