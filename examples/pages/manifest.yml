@@ -1,0 +1,8 @@
+# The front page of https://noregressions.github.io/paperband/, built by paperband-maven-plugin
+# (see ../pom.xml) and published with the example outputs by .github/workflows/pages.yml.
+# Its links are relative to ../target, where every example output is written.
+title: Paperband
+theme: forest
+files: [index.md]
+outputs:
+  - { name: pages, format: web, file: ../target/index.html, single: true }

@@ -1,0 +1,56 @@
+# Builds the examples with Paperband itself and publishes them to GitHub Pages:
+# https://noregressions.github.io/paperband/
+#
+# Needs the repository's Pages source set to "GitHub Actions" (Settings > Pages).
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; a newer push waits for the one in progress rather than cancelling it.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+      # The whole build, tests included: the examples are built by the plugin this build makes,
+      # and their PDFs are printed in the Chromium the chromium module downloads.
+      - name: Build
+        run: mvn --batch-mode --no-transfer-progress install
+      # Only what's meant to be read: target/ also holds debug pages and build leftovers.
+      - name: Assemble the site
+        run: |
+          mkdir -p _site/forest
+          cd examples/target
+          cp index.html showcase.html handbook.html handbook.pdf ../../_site/
+          cp -R paperband-fonts site site-top ../../_site/
+          cp forest/deck.pdf ../../_site/forest/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

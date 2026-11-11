@@ -67,6 +67,17 @@
               <failOnWarnings>true</failOnWarnings>
             </configuration>
           </execution>
+          <execution>
+            <!-- The front page of the published examples (target/index.html); see .github/workflows/pages.yml. -->
+            <id>pages</id>
+            <goals>
+              <goal>build</goal>
+            </goals>
+            <configuration>
+              <manifest>pages/manifest.yml</manifest>
+              <failOnWarnings>true</failOnWarnings>
+            </configuration>
+          </execution>
         </executions>
         <dependencies>
           <!-- Lets the build make pdf outputs: prints them in Chromium. -->
