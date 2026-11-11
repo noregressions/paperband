@@ -1,0 +1,10 @@
+description: The theme's own layout - the page beside a narrow column for everything marked aside.
+grid:
+  columns: [3fr, 1fr]
+  areas: ["body aside"]
+  gap: 32px
+boxes:
+  - { id: aside, area: aside, select: ".aside" }
+  - { id: body, area: body, select: rest }
+css: |
+  & > .box-aside { font-size: .85em; font-style: italic; padding-left: 16px; border-left: 1px solid var(--pb-rule); }

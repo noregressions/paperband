@@ -169,7 +169,8 @@ variables:
 ```
 
 The built-in parts in `core/src/main/resources/dev/noregressions/paperband/themes/default/` show
-which variables exist and what each part holds.
+which variables exist and what each part holds. `examples/own-theme` is a small project with a
+theme of its own: a stylesheet, one replaced part and a layout.
 
 Three things are worth knowing before you write one:
 
@@ -193,8 +194,9 @@ The styles apply in this order, each able to override the one before: the theme,
 | Splitting | A box that continues on further pages, breaking only where you allow | `examples/docs/split-layout.md` |
 | Index | A back-of-book index from markers, or from a list of terms | `examples/docs/index-markers.md` |
 | Site navigation | Contents beside every page, in a bar of dropdowns, or none | `examples/docs/web-site/` |
-| Diagrams | ` ```mermaid ` and ` ```plantuml ` blocks drawn as inline SVG at build time | add the `mermaid` or `plantuml` module as a plugin dependency |
-| Copy buttons | A Copy button on code blocks in the languages you list (`copy: [bash]`) | `examples/manifest.yml` |
+| Diagrams | ` ```mermaid ` and ` ```plantuml ` blocks drawn as inline SVG at build time; add the `mermaid` or `plantuml` module as a plugin dependency | `examples/docs/diagrams.md` |
+| Page links | Link to a page by its front matter `id`, showing its title or chapter number | `examples/docs/page-links/` |
+| Copy buttons | A Copy button on code blocks in the languages you list (`copy: [bash]`) | no example yet |
 
 If you work with an AI assistant, give it
 [the guide for language models](https://noregressions.github.io/paperband/llms-full.txt): the
@@ -220,6 +222,7 @@ That writes, under `examples/target/`:
 | `handbook.html`, `handbook.pdf` | A few examples as A4 pages |
 | `site/`, `site-top/` | The web-site example, with side navigation and with a navigation bar |
 | `forest/deck.pdf`, `forest/web.html` | The `forest` theme as a deck |
+| `own-theme/` | A site with a theme of its own |
 
 The PDF outputs need Chromium, so the first build downloads it.
 

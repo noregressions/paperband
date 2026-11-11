@@ -19,6 +19,7 @@ To write or change a Paperband project (manifest, layouts, Markdown with markers
 - [Example manifest](https://raw.githubusercontent.com/noregressions/paperband/main/examples/manifest.yml): several outputs (web, paged HTML, PDF, two sites) from one set of sources
 - [Example layouts](https://github.com/noregressions/paperband/tree/main/examples/layouts): grids, nested boxes, splitting, fit remedies
 - [Example documents](https://github.com/noregressions/paperband/tree/main/examples/docs): one Markdown file per feature
+- [A theme of your own](https://github.com/noregressions/paperband/tree/main/examples/own-theme): a project-local theme with a stylesheet, a replaced part and a layout
 - [Forest deck](https://github.com/noregressions/paperband/tree/main/examples/forest-deck): slides made with the bundled `forest` theme
 
 ## Optional

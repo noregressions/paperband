@@ -78,12 +78,34 @@
               <failOnWarnings>true</failOnWarnings>
             </configuration>
           </execution>
+          <execution>
+            <!-- A project with a theme of its own (own-theme/themes/paper), as a web site. -->
+            <id>own-theme</id>
+            <goals>
+              <goal>build</goal>
+            </goals>
+            <configuration>
+              <manifest>own-theme/manifest.yml</manifest>
+              <failOnWarnings>true</failOnWarnings>
+            </configuration>
+          </execution>
         </executions>
         <dependencies>
           <!-- Lets the build make pdf outputs: prints them in Chromium. -->
           <dependency>
             <groupId>dev.noregressions.paperband</groupId>
             <artifactId>chromium</artifactId>
+            <version>${project.version}</version>
+          </dependency>
+          <!-- Draw ```mermaid and ```plantuml blocks as SVG (docs/diagrams.md). -->
+          <dependency>
+            <groupId>dev.noregressions.paperband</groupId>
+            <artifactId>mermaid</artifactId>
+            <version>${project.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>dev.noregressions.paperband</groupId>
+            <artifactId>plantuml</artifactId>
             <version>${project.version}</version>
           </dependency>
         </dependencies>

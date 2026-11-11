@@ -1,0 +1,9 @@
+# A project with a theme of its own (themes/paper): a stylesheet that sets a few variables, one
+# built-in part replaced, and a layout. Built by paperband-maven-plugin (see ../pom.xml).
+title: A theme of your own
+theme: themes/paper
+sources: [docs/*.md]
+sequence:
+  - files: docs/*.md
+outputs:
+  - { name: site, format: web, file: ../target/own-theme/index.html }

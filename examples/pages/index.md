@@ -18,6 +18,7 @@ Everything linked from this page, and the page itself, was built by Paperband fr
 | [Handbook, paged HTML](handbook.html) | The same pages in the browser |
 | [Site, side navigation](site/index.html) | A page per file, the contents beside each one |
 | [Site, navigation bar](site-top/index.html) | The same site with a bar of dropdowns |
+| [A theme of your own](own-theme/index.html) | A site whose look comes from a theme in the project |
 | [Forest deck, PDF](forest/deck.pdf) | The `forest` theme as slides, one per layout it brings |
 
 ## Use it

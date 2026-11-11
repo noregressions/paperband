@@ -29,6 +29,7 @@ outputs:
       - file: docs/variants.md
       - file: docs/fitting.md
       - file: docs/long-tutorial.md
+      - file: docs/diagrams.md
   - name: handbook-pdf         # the same pages, printed to PDF in Chromium (dev.noregressions.paperband:chromium, see pom.xml)
     format: pdf
     file: target/handbook.pdf

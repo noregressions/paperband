@@ -107,14 +107,16 @@ class ExamplesTest {
         assertTrue(html.contains("2026-10-03"), "build.date fixed by project.build.outputTimestamp");
     }
 
-    /** The handbook output: six examples (one continued over three pages) on fixed A4 pages, from the same build as the showcase. */
+    /** The handbook output: seven examples (one continued over three pages) on fixed A4 pages, from the same build as the showcase. */
     @Test
     void handbookIsBuiltAsPagedHtml() throws IOException {
         Manifest manifest = Manifest.load(Path.of("manifest.yml"));
         Path handbook = manifest.dir().resolve(manifest.outputs().get(1).file());
         assertTrue(Files.isRegularFile(handbook), handbook + " is missing: run mvn test");
         String html = Files.readString(handbook, StandardCharsets.UTF_8);
-        assertEquals(8, html.split("<section class=\"page layout-print-page", -1).length - 1);
+        assertEquals(9, html.split("<section class=\"page layout-print-page", -1).length - 1);
+        assertEquals(2, html.split("<svg", -1).length - 1, "diagrams.md's two diagrams are drawn, as SVG in the page");
+        assertFalse(html.contains("language-mermaid") || html.contains("language-plantuml"), "and none is left as code");
         assertTrue(html.contains("@page p210x297 { size: 210mm 297mm; margin: 0;"), "A4 sheets");
         assertTrue(html.contains("grid-template-rows: auto minmax(120mm, 1fr) auto;"), "body sized by priority");
         assertTrue(html.contains("Download the archive, check its checksum") && !html.contains("from the project's releases"),
@@ -140,7 +142,7 @@ class ExamplesTest {
             assertEquals(595.3, Double.parseDouble(m.group(1)), 0.5, "A4 width");
             assertEquals(841.9, Double.parseDouble(m.group(2)), 0.5, "A4 height");
         }
-        assertEquals(8, pages);
+        assertEquals(9, pages);
         assertTrue(text.contains("Inter"), "printed in the bundled font");
     }
 
@@ -168,6 +170,31 @@ class ExamplesTest {
         String web = Files.readString(manifest.dir().resolve(manifest.outputs().get(2).file()));
         assertTrue(web.contains("font/woff2;base64,"), "the web page carries the theme's font too");
         assertTrue(web.contains("--forest-green: #2F5D50"), "and the theme's palette");
+    }
+
+    /** A project with a theme of its own (own-theme/themes/paper): its stylesheet, a replaced part and a layout. */
+    @Test
+    void ownThemeChangesTheBuiltInLook() throws IOException {
+        Manifest manifest = Manifest.load(Path.of("own-theme/manifest.yml"));
+        Path index = manifest.dir().resolve(manifest.outputs().getFirst().file());
+        assertTrue(Files.isRegularFile(index), index + " is missing: run mvn test");
+        String css = Files.readString(index.resolveSibling("site.css"), StandardCharsets.UTF_8);
+        assertTrue(css.contains("--pb-font-body: Charter"), "theme.css sets the built-in styles' variables");
+        assertTrue(css.contains("font-variant: small-caps") && !css.contains("text-transform: uppercase"),
+                "the theme's site.css is there, and the built-in one isn't");
+        assertTrue(css.contains("--pb-tok-fm"), "the parts the theme doesn't have are still the built-in ones");
+        String page = Files.readString(index.resolveSibling("docs/02-layout.html"), StandardCharsets.UTF_8);
+        assertTrue(page.contains("layout-aside") && page.contains("box-aside"), "the theme's layout is used");
+    }
+
+    /** Pages linked by front matter id (docs/page-links): by title, by chapter number, and to an appendix. */
+    @Test
+    void pagesLinkToEachOtherById() throws IOException {
+        Manifest manifest = Manifest.load(Path.of("manifest.yml"));
+        String html = Files.readString(manifest.dir().resolve(manifest.outputs().getFirst().file()), StandardCharsets.UTF_8);
+        assertTrue(html.contains("<a href=\"#docs-page-links-02-installing-md\">Installing</a>"), "no text: the title");
+        assertTrue(html.contains("Chapter <a href=\"#docs-page-links-02-installing-md\">2</a>"), "#: the chapter");
+        assertTrue(html.contains("Appendix <a href=\"#docs-page-links-03-keys-md\">A</a>"), "#: the appendix");
     }
 
     /** The web-site example as a site: a page per file, its contents page beside every page. */

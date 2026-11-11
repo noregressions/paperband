@@ -1,0 +1,32 @@
+/* Paper: the built-in look with a serif face, a warm page and one accent. This file is added
+   after the built-in styles, so it only says what's different. */
+:root {
+  --paper-accent: #9a3412;
+  --paper-bg: #fbf7ef;
+  --paper-fg: #292524;
+
+  /* Variables the built-in styles read. */
+  --pb-font-body: Charter, "Iowan Old Style", Georgia, serif;
+  --pb-page-width: 40rem;
+  --pb-grid-width: 40rem;               /* a page with a grid is no wider than any other */
+  --pb-rule: #d6cdbd;
+  --pb-link: var(--paper-accent);
+  --pb-code-bg: #f1eadc;
+  --pb-table-rule: #d6cdbd;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper-accent: #fdba74;
+    --paper-bg: #1c1917;
+    --paper-fg: #f5f5f4;
+    --pb-rule: #57534e;
+    --pb-code-bg: #292524;
+    --pb-table-rule: #57534e;
+  }
+}
+
+/* Rules of its own. */
+body.web { background: var(--paper-bg); color: var(--paper-fg); }
+h1, h2, h3 { font-weight: 600; line-height: 1.2; }
+h1 { color: var(--paper-accent); }
+a { color: var(--paper-accent); }
