@@ -37,13 +37,14 @@
     <module>chromium</module>
     <module>plantuml</module>
     <module>mermaid</module>
+    <module>chart</module>
     <module>maven-plugin</module>
     <module>examples</module>
   </modules>
 
   <properties>
     <!-- ANCHOR: version-declaration -->
-    <revision>0.2.0</revision>
+    <revision>0.3.0</revision>
     <!-- ANCHOR_END: version-declaration -->
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>21</maven.compiler.release>
@@ -72,6 +73,11 @@
       <dependency>
         <groupId>dev.noregressions.paperband</groupId>
         <artifactId>mermaid</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>dev.noregressions.paperband</groupId>
+        <artifactId>chart</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
@@ -189,7 +195,7 @@
            mvn clean deploy -Prelease                (builds and stages to target/staging-deploy)
            mvn -N jreleaser:full-release -Prelease   (signs, uploads to Central, tags, GitHub release)
 
-         Only the library modules are published: parent, core, chromium, plantuml, mermaid and
+         Only the library modules are published: parent, core, chromium, plantuml, mermaid, chart and
          paperband-maven-plugin. examples still builds (a check that the plugin
          works) but sets maven.deploy.skip, so nothing of it is staged. -->
     <profile>

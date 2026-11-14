@@ -1,0 +1,31 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>dev.noregressions.paperband</groupId>
+    <artifactId>parent</artifactId>
+    <version>${revision}</version>
+  </parent>
+
+  <artifactId>chart</artifactId>
+  <packaging>jar</packaging>
+  <name>Paperband Chart</name>
+  <description>Renders ```chart fenced blocks as inline SVG at build time: bars, columns, dot plots, timelines,
+    unit squares and funnels, described in a few lines of YAML. On the classpath (as a dependency of
+    paperband-maven-plugin, say), it lets a build draw charts from the numbers in the text. Pure Java: it needs no
+    browser, and the SVG takes its font and colours from the page's theme.</description>
+  <url>https://github.com/noregressions/paperband</url>
+
+  <dependencies>
+    <dependency>
+      <groupId>dev.noregressions.paperband</groupId>
+      <artifactId>core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+</project>

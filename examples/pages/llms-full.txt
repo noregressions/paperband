@@ -2,7 +2,7 @@
 
 Paperband turns Markdown into laid-out documents: a web site, fixed-size pages in HTML ("paged
 HTML"), and PDF. This guide has what you need to write a working Paperband project. Version
-described: 0.2.0. Source: https://github.com/noregressions/paperband
+described: 0.3.0. Source: https://github.com/noregressions/paperband
 
 How a build works:
 
@@ -33,7 +33,7 @@ measuring `paged-html`):
 <plugin>
   <groupId>dev.noregressions.paperband</groupId>
   <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.2.0</version>
+  <version>0.3.0</version>
   <executions>
     <execution>
       <goals><goal>build</goal></goals>
@@ -46,7 +46,7 @@ measuring `paged-html`):
     <dependency>
       <groupId>dev.noregressions.paperband</groupId>
       <artifactId>chromium</artifactId>
-      <version>0.2.0</version>
+      <version>0.3.0</version>
     </dependency>
   </dependencies>
 </plugin>
@@ -521,6 +521,58 @@ outputs:
 With the `mermaid` or `plantuml` module added as a plugin dependency (same group and version as
 `chromium`), fenced blocks in those languages are drawn as inline SVG at build time. A diagram
 that can't be drawn fails the build.
+
+## Charts
+
+With the `chart` module added as a plugin dependency (same group and version as `chromium`), a
+fenced `chart` block is drawn as inline SVG at build time. It needs no browser. The block is YAML.
+An unknown key, or a chart that can't be drawn, fails the build.
+
+Every chart: `type` (required), `title`, `subtitle`, `note` (each wraps to the width), `name`
+(the accessible label; defaults to the title).
+
+````markdown
+```chart
+type: bar
+title: Most downloads were the vulnerable version
+format: "{}%"                      # value text; {} is the value, {max} the scale's maximum
+max: 100                           # the scale's maximum (default: the largest value)
+highlight: commons-lang 2.6        # row labels (or a series name) drawn in the accent; the rest are neutral
+rows:
+  - { label: commons-lang 2.6, value: 99.88, note: "fix: the 3.x series" }
+  - { label: log4j-core, value: 13, aside: of downloads, text: "13%" }
+```
+````
+
+- `bar`: horizontal bars. `rows`, each `label` and `value`, optionally `text` (replaces the
+  formatted value), `note` (a line under the bar), `aside` (after the value), `max` (its own
+  scale), `highlight: true`. Several bars per row: `values: [0, 20]` (and `texts`), with
+  `series: [Ours, Theirs]` for the legend.
+- `column`: vertical columns. `rows` as for `bar` (`label`, `value`, `text`, `note`, `highlight`).
+  `lines: [{ value: 26, label: all of them }]` are horizontal reference lines;
+  `markers: [{ after: "2024", label: policy changed }]` are vertical lines after the column with
+  that label. `height` (default 190). `panels`, each with `title`, `rows`, `format`, `max`,
+  `lines`, `markers`, `highlight` and `tone: accent | neutral`, sit side by side on their own scales.
+- `dot`: one row per item on a shared scale. `scale: linear | log`, `min`, `max`,
+  `ticks: [{ at: 24, label: 1 day }]`. `rows`, each `label`, optional `detail`, `value` or
+  `range: [from, to]`, optional `text`. Or `groups`, each `title`, `rows` and `highlight: true`.
+- `timeline`: `from`, `to` (dates; quote a time: `"2026-10-21 14:00"`), `events`, each `at`,
+  `label`, optional `text`, `highlight: true`, `side: above | below`. Labels are placed
+  automatically. `ticks: years | months` or a list of `{ at, label }`;
+  `marks: [{ at: 2026-11-08, label: Today }]`; `bands: [{ from: ..., to: ... }]`. `panels`, each
+  with its own `label`, `from`, `to`, `events`, `ticks`, `marks` and `bands`, stack several axes.
+- `units`: rows of ten squares, each row a share out of 100. `rows`, each `label` and `value`; or
+  `groups`, each `title` and `rows`. `legend: [found, missed]`. `format` defaults to `"{}%"`.
+- `funnel`: `stages`, each `share` (percent of the first), `label`, optional `detail`;
+  `filters: [exposure, reachability]` name the steps between them; `split` gives two outcomes of
+  the last stage, each `share`, `label`, `detail`, `highlight: true`.
+
+In flow style (`{ ... }`), quote any value holding a comma or a colon followed by a space.
+
+The SVG inherits the page's font. A theme colours it with these variables on `:root`:
+`--pb-chart-accent`, `--pb-chart-neutral`, `--pb-chart-point`, `--pb-chart-tint`,
+`--pb-chart-ink`, `--pb-chart-soft`, `--pb-chart-rule`, `--pb-chart-grid`, `--pb-chart-bg`. The
+`forest` theme sets them. The chart sits in `<div class="block block-chart">`.
 
 ## Mistakes that stop a build
 

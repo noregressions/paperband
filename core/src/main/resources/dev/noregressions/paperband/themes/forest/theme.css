@@ -50,6 +50,17 @@
   --pb-link: var(--forest-green);
   --pb-code-bg: var(--forest-tint);
   --pb-table-rule: var(--forest-divider);
+
+  /* ```chart blocks (the chart module): the green is what a chart is about, pale sage the rest. */
+  --pb-chart-ink: var(--forest-text);
+  --pb-chart-soft: var(--forest-grey);
+  --pb-chart-accent: var(--forest-green);
+  --pb-chart-neutral: var(--forest-pale-sage);
+  --pb-chart-point: var(--forest-warm-grey);
+  --pb-chart-tint: #E1E8E3;
+  --pb-chart-rule: var(--forest-divider);
+  --pb-chart-grid: #E6EAE7;
+  --pb-chart-bg: var(--forest-bg);
 }
 /* The source view's colours, from the palette; on body.web too, where the built-in theme sets its dark ones. */
 :root, body.web {

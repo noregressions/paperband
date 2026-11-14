@@ -36,7 +36,7 @@ Then add the plugin to the `pom.xml`:
 <plugin>
   <groupId>dev.noregressions.paperband</groupId>
   <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.2.0</version>
+  <version>0.3.0</version>
   <executions>
     <execution>
       <goals><goal>build</goal></goals>
@@ -76,7 +76,7 @@ PDF is printed in Chromium, which lives in its own module. Add it as a dependenc
     <dependency>
       <groupId>dev.noregressions.paperband</groupId>
       <artifactId>chromium</artifactId>
-      <version>0.2.0</version>
+      <version>0.3.0</version>
     </dependency>
   </dependencies>
 </plugin>
@@ -195,6 +195,7 @@ The styles apply in this order, each able to override the one before: the theme,
 | Index | A back-of-book index from markers, or from a list of terms | `examples/docs/index-markers.md` |
 | Site navigation | Contents beside every page, in a bar of dropdowns, or none | `examples/docs/web-site/` |
 | Diagrams | ` ```mermaid ` and ` ```plantuml ` blocks drawn as inline SVG at build time; add the `mermaid` or `plantuml` module as a plugin dependency | `examples/docs/diagrams.md` |
+| Charts | ` ```chart ` blocks drawn as inline SVG at build time from a few lines of YAML: bars, columns, dot plots, timelines, unit squares and funnels, in the theme's font and colours; add the `chart` module as a plugin dependency | `examples/docs/charts.md` |
 | Page links | Link to a page by its front matter `id`, showing its title or chapter number | `examples/docs/page-links/` |
 | Copy buttons | A Copy button on code blocks in the languages you list (`copy: [bash]`) | no example yet |
 
@@ -246,6 +247,7 @@ documents. PDF needs the `chromium` module on the classpath, which this command 
 | `maven-plugin` | The `build` goal |
 | `chromium` | Measuring and printing in headless Chromium |
 | `mermaid`, `plantuml` | Diagram blocks |
+| `chart` | Chart blocks |
 | `examples` | The examples above; never published |
 
 All of them share the group `dev.noregressions.paperband`.

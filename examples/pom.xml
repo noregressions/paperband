@@ -108,6 +108,12 @@
             <artifactId>plantuml</artifactId>
             <version>${project.version}</version>
           </dependency>
+          <!-- Draw ```chart blocks as SVG (docs/charts.md). -->
+          <dependency>
+            <groupId>dev.noregressions.paperband</groupId>
+            <artifactId>chart</artifactId>
+            <version>${project.version}</version>
+          </dependency>
         </dependencies>
       </plugin>
       <!-- pom packaging: the module has tests but no main code, so it makes no jar (an empty jar

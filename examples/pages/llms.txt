@@ -6,7 +6,7 @@ To write or change a Paperband project (manifest, layouts, Markdown with markers
 
 ## Guide
 
-- [Paperband guide for language models](https://noregressions.github.io/paperband/llms-full.txt): everything needed to write a working project: Maven setup, manifest keys, layouts, markers, templating, fitting, themes, and the mistakes that stop a build
+- [Paperband guide for language models](https://noregressions.github.io/paperband/llms-full.txt): everything needed to write a working project: Maven setup, manifest keys, layouts, markers, templating, fitting, themes, diagrams and charts, and the mistakes that stop a build
 
 ## Reference
 
