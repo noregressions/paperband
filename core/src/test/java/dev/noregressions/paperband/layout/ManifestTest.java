@@ -221,4 +221,21 @@ class ManifestTest {
         ConfigException e = assertThrows(ConfigException.class, () -> Manifest.load(dir.resolve("manifest.yml")));
         assertTrue(e.getMessage().contains(fragment), e.getMessage());
     }
+
+    @Test
+    void authorSubjectAndKeywordsBecomeMetaTagsByName() throws IOException {
+        write("a.md", "# A\n");
+        Manifest m = manifest("""
+                files: [a.md]
+                author: Ada Lovelace
+                subject: " Notes on the engine "
+                keywords: [engine, notes]
+                """);
+        assertEquals(Map.of("author", "Ada Lovelace", "description", "Notes on the engine", "keywords", "engine, notes"),
+                m.meta());
+        assertEquals(List.of("author", "description", "keywords"), List.copyOf(m.meta().keySet()));
+
+        assertEquals(Map.of("keywords", "one, two"), manifest("files: [a.md]\nkeywords: one, two\nauthor: ''\n").meta());
+        assertEquals(Map.of(), manifest("files: [a.md]\n").meta());
+    }
 }

@@ -8,6 +8,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -79,5 +80,47 @@ class PrintTest {
         assertTrue(sheets.getLast()[0] < sheets.getLast()[1], "the last page is portrait again");
         assertTrue(PdfText.sheet(dir.resolve("out/a.pdf"), 2).contains("Wide"));
         assertEquals(15, PdfText.firstTextLeft(dir.resolve("out/a.pdf"), 3), 1, "landscape sheets keep their own 15mm margin");
+    }
+
+    @Test
+    void theManifestsAuthorSubjectAndKeywordsAreInThePdfAndEveryHtmlPage() throws IOException {
+        write("docs/a.md", "# One\n\nSee [Two](#two){! pageref}.\n");
+        write("docs/b.md", "---\nid: two\n---\n# Two\n\nText.\n");
+        write("manifest.yml", """
+                title: The Engine
+                author: Ada Lovelace & "friends"
+                subject: Notes on the engine
+                keywords: [engine, notes, café]
+                sources: [docs/*.md]
+                sequence: [{ files: docs/*.md }]
+                outputs:
+                  - { name: print, format: pdf, file: out/a.pdf }
+                  - { name: site, format: web, file: out/site/index.html }
+                """);
+        BuildConfig.Builder b = BuildConfig.builder(dir).manifest(dir.resolve("manifest.yml"));
+        if (ChromiumBrowserTest.BROWSER != null) {
+            b.browser(ChromiumBrowserTest.BROWSER);
+        }
+        Runner.run(b.build());
+        byte[] pdf = Files.readAllBytes(dir.resolve("out/a.pdf"));
+        try (var doc = org.apache.pdfbox.Loader.loadPDF(pdf)) {
+            var info = doc.getDocumentInformation();
+            assertEquals("The Engine", info.getTitle());
+            assertEquals("Ada Lovelace & \"friends\"", info.getAuthor());
+            assertEquals("Notes on the engine", info.getSubject());
+            assertEquals("engine, notes, café", info.getKeywords());
+        }
+        assertTrue(PageRefs.pages(pdf).containsValue(2), "link targets survive the rewrite: " + PageRefs.pages(pdf));
+        List<Path> site;
+        try (var files = Files.walk(dir.resolve("out/site"))) {
+            site = files.filter(f -> f.toString().endsWith(".html")).toList();
+        }
+        assertEquals(2, site.size(), "a page per file: " + site);
+        for (Path page : site) {
+            String html = Files.readString(page);
+            assertTrue(html.contains("<meta name=\"author\" content=\"Ada Lovelace &amp; &quot;friends&quot;\">"), html);
+            assertTrue(html.contains("<meta name=\"description\" content=\"Notes on the engine\">"), html);
+            assertTrue(html.contains("<meta name=\"keywords\" content=\"engine, notes, café\">"), html);
+        }
     }
 }

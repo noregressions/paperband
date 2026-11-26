@@ -36,6 +36,7 @@ import java.util.Map;
  *       from there. Nothing goes to the network.</li>
  *   <li>The viewport and pixel density are fixed, and printing waits for fonts to load.</li>
  *   <li>Links tagged {@code pageref} show their target's page number in the PDF ({@link PageRefs}).</li>
+ *   <li>The PDF's Author, Subject and Keywords come from the document's {@code <meta>} tags ({@link PdfInfo}).</li>
  * </ul>
  */
 final class ChromiumBrowser implements Browser {
@@ -140,8 +141,8 @@ final class ChromiumBrowser implements Browser {
             page.emulateMedia(new Page.EmulateMediaOptions().setMedia(Media.PRINT)); // measure what prints
             page.evaluate("() => document.fonts.ready.then(() => true)");
             Measurement measurement = measurement(page.evaluate(MEASURE));
-            byte[] pdf = print ? PageRefs.print(page,
-                    () -> page.pdf(new Page.PdfOptions().setPreferCSSPageSize(true).setPrintBackground(true))) : null;
+            byte[] pdf = print ? PdfInfo.describe(page, PageRefs.print(page,
+                    () -> page.pdf(new Page.PdfOptions().setPreferCSSPageSize(true).setPrintBackground(true)))) : null;
             return new Rendering(measurement, pdf);
         } catch (PlaywrightException e) {
             throw new IOException("rendering in the browser failed: " + firstLine(e), e);

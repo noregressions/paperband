@@ -28,6 +28,9 @@ import java.util.function.Predicate;
  *
  * <pre>
  * title: Paperband Guide
+ * author: Steve Poole              # these three describe the document: meta tags in every HTML page, and a
+ * subject: How Paperband works     #   PDF's Author, Subject and Keywords (its Title is the title)
+ * keywords: [markdown, pdf]        # a list, or one string
  * output: build/site.html          # default: site.html
  * theme: forest                   # a theme Paperband brings, by name, or a theme's directory (themes/mine);
  *                                  #   default: the built-in theme (Theme)
@@ -162,12 +165,14 @@ public final class Manifest {
     private final Path index;
     private final List<String> copy;
     private final String theme;
+    private final Map<String, String> meta;
 
     private Manifest(Path file, Path dir, String name, String title, Path output, List<Path> stylesheets,
                      Path templates, Path layouts, boolean layoutsGiven, List<Path> data, boolean dataGiven,
                      Map<String, String> vars, List<String> env, List<String> sourcePatterns, List<Path> explicitSources,
                      List<String> hidden, Unused unused, PageSpec defaultPage, String defaultLayout, List<Entry> sequence,
-                     List<Output> outputs, String browser, Path index, List<String> copy, String theme) {
+                     List<Output> outputs, String browser, Path index, List<String> copy, String theme,
+                     Map<String, String> meta) {
         this.file = file;
         this.dir = dir;
         this.name = name;
@@ -193,6 +198,7 @@ public final class Manifest {
         this.index = index;
         this.copy = copy;
         this.theme = theme;
+        this.meta = meta;
     }
 
     /** Reads a manifest file; its directory is what relative paths in it are relative to. */
@@ -228,6 +234,10 @@ public final class Manifest {
         if (theme != null && theme.isBlank()) {
             throw spec.error("theme", "expected a theme's name or directory");
         }
+        Map<String, String> meta = new LinkedHashMap<>();
+        putMeta(meta, "author", String.join(", ", spec.strings("author")));
+        putMeta(meta, "description", spec.string("subject", null));
+        putMeta(meta, "keywords", String.join(", ", spec.strings("keywords")));
         Path templates = Path.of(spec.string("templates", "templates"));
         boolean layoutsGiven = spec.has("layouts");
         Path layouts = Path.of(spec.string("layouts", "layouts"));
@@ -306,7 +316,14 @@ public final class Manifest {
         spec.finish();
         return new Manifest(file, dir, name, title, output, stylesheets, templates, layouts, layoutsGiven, data,
                 dataGiven, vars, env, sources, explicitSources, hidden, unused, page, defaultLayout, List.copyOf(sequence),
-                List.copyOf(outputs), browser, index == null ? null : Path.of(index), List.copyOf(copy), theme);
+                List.copyOf(outputs), browser, index == null ? null : Path.of(index), List.copyOf(copy), theme,
+                Collections.unmodifiableMap(meta));
+    }
+
+    private static void putMeta(Map<String, String> meta, String name, String value) {
+        if (value != null && !value.isBlank()) {
+            meta.put(name, value.strip());
+        }
     }
 
     private static final java.util.regex.Pattern OUTPUT_NAME = java.util.regex.Pattern.compile("[A-Za-z][A-Za-z0-9-]*");
@@ -493,6 +510,16 @@ public final class Manifest {
 
     public String title() {
         return title;
+    }
+
+    /**
+     * What describes the document beyond its title, as HTML {@code <meta>} names and their content,
+     * for the ones that were given: {@code author}, {@code description} (the manifest's
+     * {@code subject}) and {@code keywords} (joined with commas). A PDF's Author, Subject and
+     * Keywords are read from them.
+     */
+    public Map<String, String> meta() {
+        return meta;
     }
 
     /** Resolved against {@link #dir()}. */

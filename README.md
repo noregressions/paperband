@@ -36,7 +36,7 @@ Then add the plugin to the `pom.xml`:
 <plugin>
   <groupId>dev.noregressions.paperband</groupId>
   <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.3.2</version>
+  <version>0.3.3</version>
   <executions>
     <execution>
       <goals><goal>build</goal></goals>
@@ -76,7 +76,7 @@ PDF is printed in Chromium, which lives in its own module. Add it as a dependenc
     <dependency>
       <groupId>dev.noregressions.paperband</groupId>
       <artifactId>chromium</artifactId>
-      <version>0.3.2</version>
+      <version>0.3.3</version>
     </dependency>
   </dependencies>
 </plugin>
@@ -84,6 +84,16 @@ PDF is printed in Chromium, which lives in its own module. Add it as a dependenc
 
 The first build downloads Chromium. To use a browser you already have, set `browser: chrome` (or
 `msedge`, or the path to an executable) in the manifest.
+
+The manifest's `title` is the PDF's Title. Three more keys fill in the rest of its document
+properties, and become `<meta>` tags in every HTML page:
+
+```yaml
+title: Handbook
+author: Steve Poole
+subject: How the team builds and ships    # also the pages' meta description
+keywords: [handbook, build, release]
+```
 
 Paged pages have a fixed size, so content can be too big for its box. Paperband measures every box
 in the browser before it writes anything. When something doesn't fit, the layout's `fit:` remedies

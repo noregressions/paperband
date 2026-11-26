@@ -187,7 +187,7 @@ public final class SiteBuilder {
                 Images images = new Images(manifest.dir(), file.toAbsolutePath().getParent(),
                         output.format() == Manifest.Format.WEB);
                 String html = SiteHtmlRenderer.render(manifest.title(), css, pages, mode, null, manifest.copy(), theme,
-                        images);
+                        images, manifest.meta());
                 byte[] pdf = null;
                 Measurement measurement = null;
                 List<Problem> problems = List.of();
@@ -216,7 +216,7 @@ public final class SiteBuilder {
                     };
                     Fitter.Result fit = Fitter.fit(layouter,
                             (fitPages, fitCss) -> SiteHtmlRenderer.render(manifest.title(), css, fitPages, mode, fitCss,
-                                    List.of(), theme, images),
+                                    List.of(), theme, images, manifest.meta()),
                             browser, file.toAbsolutePath().getParent(), output.format() == Manifest.Format.PDF);
                     pages = fit.pages();
                     html = fit.html();

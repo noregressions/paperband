@@ -98,6 +98,15 @@ public final class SiteHtmlRenderer {
     /** @param images where the images are, and where they go ({@link Images}); null to leave every image as written */
     public static String render(String title, List<Stylesheet> stylesheets, List<Page> pages, Mode mode, String fitCss,
                                 List<String> copy, Theme theme, Images images) {
+        return render(title, stylesheets, pages, mode, fitCss, copy, theme, images, Map.of());
+    }
+
+    /**
+     * @param meta {@code <meta>} tags for the head, by name ({@code author}, {@code description},
+     *             {@code keywords}): see {@link Manifest#meta()}
+     */
+    public static String render(String title, List<Stylesheet> stylesheets, List<Page> pages, Mode mode, String fitCss,
+                                List<String> copy, Theme theme, Images images, Map<String, String> meta) {
         Map<Path, String> anchors = new HashMap<>();
         for (Page p : pages) {
             if (p.source() != null) {
@@ -109,8 +118,10 @@ public final class SiteHtmlRenderer {
         StringBuilder sb = new StringBuilder();
         sb.append("<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n")
                 .append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n")
-                .append("<title>").append(esc(title)).append("</title>\n")
-                .append("<style>\n").append(mode == Mode.WEB ? theme.css(Theme.Part.WEB)
+                .append("<title>").append(esc(title)).append("</title>\n");
+        meta.forEach((name, content) -> sb.append("<meta name=\"").append(esc(name)).append("\" content=\"")
+                .append(esc(content)).append("\">\n"));
+        sb.append("<style>\n").append(mode == Mode.WEB ? theme.css(Theme.Part.WEB)
                         : dev.noregressions.paperband.Fonts.css() + theme.css(Theme.Part.PAGED))
                 .append(theme.css(Theme.Part.CONTENT)).append(theme.extra())
                 .append(layoutCss(layouts, mode));

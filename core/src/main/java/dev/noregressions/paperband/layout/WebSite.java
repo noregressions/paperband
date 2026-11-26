@@ -127,6 +127,11 @@ public final class WebSite {
         Document doc = Jsoup.parse(html);
         doc.outputSettings().prettyPrint(false);
 
+        // What describes the document (author, description, keywords) describes every page of it.
+        StringBuilder meta = new StringBuilder();
+        for (Element m : doc.head().select("meta[name]:not([name=viewport])")) {
+            meta.append(m.outerHtml()).append('\n');
+        }
         StringBuilder css = new StringBuilder(theme.css(Theme.Part.SITE)).append('\n');
         // A style inside an <svg> (a chart's, a diagram's) is foreign content: its rules are text, not data.
         // Every drawing of a kind carries the same one, so each distinct sheet is kept once.
@@ -201,6 +206,7 @@ public final class WebSite {
             sb.append("<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n")
                     .append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n")
                     .append("<title>").append(esc(pageTitle)).append("</title>\n")
+                    .append(meta)
                     .append("<link rel=\"stylesheet\" href=\"").append(href(file, Path.of(CSS))).append("\">\n");
             if (prev != null) {
                 sb.append("<link rel=\"prev\" href=\"").append(href(file, prev)).append("\">\n");
