@@ -1,6 +1,7 @@
 package dev.noregressions.paperband.layout;
 
 import dev.noregressions.paperband.HtmlIds;
+import dev.noregressions.paperband.Images;
 import dev.noregressions.paperband.MarkdownFile;
 import dev.noregressions.paperband.MarkdownHtmlRenderer;
 import dev.noregressions.paperband.Site;
@@ -91,6 +92,12 @@ public final class SiteHtmlRenderer {
     /** @param theme the styles under everything else: its part for the mode, its content part, then its extra rules */
     public static String render(String title, List<Stylesheet> stylesheets, List<Page> pages, Mode mode, String fitCss,
                                 List<String> copy, Theme theme) {
+        return render(title, stylesheets, pages, mode, fitCss, copy, theme, null);
+    }
+
+    /** @param images where the images are, and where they go ({@link Images}); null to leave every image as written */
+    public static String render(String title, List<Stylesheet> stylesheets, List<Page> pages, Mode mode, String fitCss,
+                                List<String> copy, Theme theme, Images images) {
         Map<Path, String> anchors = new HashMap<>();
         for (Page p : pages) {
             if (p.source() != null) {
@@ -138,7 +145,7 @@ public final class SiteHtmlRenderer {
                 sb.append(" style=\"").append(pageStyle(page)).append('"');
             }
             sb.append(">\n");
-            boxes(page.boxes(), "", mode, anchors, new HtmlIds(page.id(), usedIds, anchors), sb);
+            boxes(page.boxes(), "", mode, anchors, new HtmlIds(page.id(), usedIds, anchors, images), sb);
             sb.append("</section>\n");
         }
         if (mode == Mode.WEB && !copy.isEmpty()) {

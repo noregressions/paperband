@@ -7,6 +7,6 @@ Thank you {! label}
 
 Copy the theme's folder, change `theme.css`, and build.
 
-![A desk by a window](../../forest-deck/images/desk.svg)
+![A desk by a window](../images/desk.svg)
 
 Forest theme · example deck {! footer}

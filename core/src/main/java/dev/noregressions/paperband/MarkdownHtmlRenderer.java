@@ -2,6 +2,7 @@ package dev.noregressions.paperband;
 
 import org.commonmark.node.FencedCodeBlock;
 import org.commonmark.node.Heading;
+import org.commonmark.node.Image;
 import org.commonmark.node.IndentedCodeBlock;
 import org.commonmark.node.Link;
 import org.commonmark.node.Node;
@@ -50,8 +51,9 @@ public final class MarkdownHtmlRenderer {
 
     /**
      * Renders AST nodes for a page of a site: ids go through {@code ids} (see {@link HtmlIds}),
-     * top-level headings get their section ids as anchors, and in-page links ({@code #id}) to
-     * anchors in the same file are rewritten to match.
+     * top-level headings get their section ids as anchors, in-page links ({@code #id}) to
+     * anchors in the same file are rewritten to match, and images are found from the file they're
+     * written in ({@link Images}).
      */
     public static String renderNodes(List<Node> nodes, HtmlIds ids) {
         return renderNodes(nodes, ids, null);
@@ -129,6 +131,9 @@ public final class MarkdownHtmlRenderer {
         if (node instanceof Link link && link.getDestination().startsWith("#")
                 && file.anchors().contains(link.getDestination().substring(1))) {
             attributes.put("href", ids.link(link.getDestination().substring(1)));
+        }
+        if (node instanceof Image && attributes.containsKey("src")) {
+            attributes.put("src", ids.image(file.getPath(), attributes.get("src")));
         }
     }
 

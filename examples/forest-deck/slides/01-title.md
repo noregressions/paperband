@@ -7,6 +7,6 @@ Paperband themes {! label}
 
 One set of markdown, laid out for the web, for print and for slides.
 
-![A desk by a window](../../forest-deck/images/desk.svg)
+![A desk by a window](../images/desk.svg)
 
 Forest theme · example deck {! footer}

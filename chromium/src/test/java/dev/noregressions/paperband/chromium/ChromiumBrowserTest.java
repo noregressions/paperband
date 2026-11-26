@@ -91,11 +91,10 @@ class ChromiumBrowserTest {
 
     @Test
     void buildsPdfOutputsWithTheBundledFontsAndLocalImages() throws IOException {
-        // A 1x1 PNG, linked relative to the output's directory, as the paged HTML would be.
-        Files.createDirectories(dir.resolve("out/img"));
-        Files.write(dir.resolve("out/img/dot.png"), Base64.getDecoder().decode(
+        // A 1x1 PNG, linked relative to the Markdown file; the output is somewhere else.
+        Files.createDirectories(dir.resolve("docs/img"));
+        Files.write(dir.resolve("docs/img/dot.png"), Base64.getDecoder().decode(
                 "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="));
-        Files.createDirectories(dir.resolve("docs"));
         Files.writeString(dir.resolve("docs/a.md"), "# Printed\n\nSome text with `code`.\n\n![dot](img/dot.png)\n");
         Files.writeString(dir.resolve("manifest.yml"), """
                 sources: [docs/a.md]
@@ -120,6 +119,7 @@ class ChromiumBrowserTest {
         assertTrue(text.contains("JetBrainsMono"), "the code font is embedded");
         assertTrue(text.contains("/Subtype /Image"), "the image loaded");
         assertFalse(Files.exists(dir.resolve("out/paperband-fonts")), "a pdf output needs no font files beside it");
+        assertFalse(Files.exists(dir.resolve("out/img")), "nor a copy of the image");
     }
 
     @Test

@@ -57,10 +57,16 @@ public final class Runner {
                     if (output.site() == null) {
                         write(output.file(), output.html());
                     } else {
-                        Path root = output.file().toAbsolutePath().getParent();
+                        Path siteRoot = output.file().toAbsolutePath().getParent();
                         for (var f : output.site().entrySet()) {
-                            write(root.resolve(f.getKey()), f.getValue());
+                            write(siteRoot.resolve(f.getKey()), f.getValue());
                         }
+                    }
+                    Path root = output.file().toAbsolutePath().getParent();
+                    for (var image : output.images().entrySet()) { // the site's own copies, so it stands alone
+                        Path to = root.resolve(image.getKey());
+                        Files.createDirectories(to.getParent());
+                        Files.copy(image.getValue(), to, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
                     }
                 }
                 case PAGED_HTML -> {

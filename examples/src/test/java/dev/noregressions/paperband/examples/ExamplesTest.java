@@ -206,7 +206,9 @@ class ExamplesTest {
         Path bar = index.resolveSibling("docs/web-site/03-navigation-bar.html");
         String html = Files.readString(bar, StandardCharsets.UTF_8);
         assertTrue(html.contains("<body class=\"web has-nav\">"), html);
-        assertTrue(html.contains("<h2>Part 1: Navigation</h2>"), "the contents page's own content: " + html);
+        assertTrue(html.contains("<h2 class=\"site-nav-heading\"><button class=\"site-nav-fold\" type=\"button\""
+                + " aria-expanded=\"true\" aria-label=\"Show or hide: Part 1: Navigation\"></button>Part 1: Navigation</h2>"),
+                "the contents page's own content, its headings folding the entries after them: " + html);
         assertTrue(html.contains("<a href=\"03-navigation-bar.html\" aria-current=\"page\">A navigation bar</a>"), html);
         assertFalse(Files.exists(index.resolveSibling("docs/web-site/00-contents.html")), "the contents isn't a page");
         assertTrue(Files.isRegularFile(index.resolveSibling("site.css")));

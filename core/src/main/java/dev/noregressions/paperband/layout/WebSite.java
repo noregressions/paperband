@@ -25,14 +25,20 @@ import java.util.Set;
  *       with no source, is named by its id.</li>
  *   <li>The document's styles go into {@value #CSS} and its scripts (the Copy buttons) into
  *       {@value #JS}, both beside the first page, and every page links them.</li>
+ *   <li>An image's path, relative to the first page's directory in the document, is made relative to
+ *       the page it's on ({@code images/a.svg} → {@code ../images/a.svg}).</li>
  *   <li>A link to an id on another page points at that page ({@code 01-shipping/02-sbom.html}, or
  *       {@code ...html#id} for an element inside it), relative to the page it's on.</li>
  *   <li>Each page has a header linking the first page, and links to the previous and next pages,
  *       in sequence order; its title is its first {@code h1}, then the site's title.</li>
  *   <li>With side navigation ({@link Style#SIDE}), every page has the contents beside it:
  *       the contents page's own content ({@link Options#contents}), which then isn't a page of its
- *       own; or, without one, a list of every page. The current page is marked
- *       ({@code aria-current="page"}). On narrow screens a Contents button in the header shows it.</li>
+ *       own; or, without one, a list of every page, each with its sections (its second- and
+ *       third-level headings) under it. The current page is marked ({@code aria-current="page"}).
+ *       A list under an entry is indented and folds: it's shown for the entry the current page is
+ *       in, and a button on the entry shows or hides it. A contents page's headings fold the
+ *       entries after them the same way, and start shown. On narrow screens a Contents button in
+ *       the header shows the navigation.</li>
  *   <li>With a navigation bar ({@link Style#TOP}), every page has a bar under the header: one entry
  *       per group of pages, opening a list of them. The groups are the contents page's headings
  *       (which then isn't a page of its own either), each a label shortened to what's before its
@@ -122,9 +128,18 @@ public final class WebSite {
         doc.outputSettings().prettyPrint(false);
 
         StringBuilder css = new StringBuilder(theme.css(Theme.Part.SITE)).append('\n');
+        // A style inside an <svg> (a chart's, a diagram's) is foreign content: its rules are text, not data.
+        // Every drawing of a kind carries the same one, so each distinct sheet is kept once.
+        Set<String> sheets = new java.util.LinkedHashSet<>();
         for (Element style : doc.select("style")) {
-            css.append(style.data().strip()).append("\n\n");
+            String data = style.data().strip();
+            sheets.add(data.isEmpty() ? style.wholeText().strip() : data);
             style.remove();
+        }
+        for (String sheet : sheets) {
+            if (!sheet.isEmpty()) {
+                css.append(sheet).append("\n\n");
+            }
         }
         StringBuilder js = new StringBuilder();
         for (Element script : doc.select("script:not([src])")) {
@@ -195,7 +210,9 @@ public final class WebSite {
             }
             if (options.side()) {
                 // Without the script, the Contents button can't show it on a narrow screen: show it anyway.
-                sb.append("<noscript><style>.site-nav { display: block; } .site-nav-toggle { display: none; }</style></noscript>\n");
+                // Nor can anything be unfolded: show every entry.
+                sb.append("<noscript><style>nav.site-nav, nav.site-nav li.folded > ul, nav.site-nav li.folded > ol"
+                        + " { display: block; } .site-nav-toggle, .site-nav-fold { display: none; }</style></noscript>\n");
             }
             String bodyClass = (doc.body().className() + (options.side() ? " has-nav" : options.top() ? " has-topnav" : "")).strip();
             sb.append("</head>\n<body class=\"").append(esc(bodyClass)).append("\">\n")
@@ -237,8 +254,19 @@ public final class WebSite {
         return out;
     }
 
-    /** Points each in-document link in {@code root} at the page its target is on, from {@code file}. */
+    /**
+     * Points each in-document link in {@code root} at the page its target is on, from {@code file},
+     * and each image at its file: an image's path is relative to the site's root, as in the whole document.
+     */
     private static void links(Element root, Path file, Map<String, Path> fileOf, Set<String> pageIds) {
+        if (file.getParent() != null) {
+            String up = "../".repeat(file.getParent().getNameCount());
+            for (Element img : root.select("img[src]")) {
+                if (dev.noregressions.paperband.Images.relative(img.attr("src"))) {
+                    img.attr("src", up + img.attr("src"));
+                }
+            }
+        }
         for (Element a : root.select("a[href^=#]")) {
             String id = URLDecoder.decode(a.attr("href").substring(1), StandardCharsets.UTF_8);
             Path target = fileOf.get(id);
@@ -266,7 +294,9 @@ public final class WebSite {
             body = new Element("div").addClass("site-nav-pages");
             Element ul = body.appendElement("ul");
             for (int i = 0; i < sections.size(); i++) {
-                ul.appendElement("li").appendElement("a").attr("href", "#" + sections.get(i).id()).text(headings.get(i));
+                Element li = ul.appendElement("li");
+                li.appendElement("a").attr("href", "#" + sections.get(i).id()).text(headings.get(i));
+                sections(sections.get(i), li);
             }
             links(body, file, fileOf, pageIds);
         }
@@ -276,10 +306,74 @@ public final class WebSite {
                 a.attr("aria-current", "page");
             }
         }
+        folds(body);
         Document holder = Document.createShell(""); // so it's written as is, like the pages, not pretty-printed
         holder.outputSettings().prettyPrint(false);
         holder.body().appendChild(body);
         return "<nav class=\"site-nav\" id=\"site-nav\" aria-label=\"Contents\">\n" + body.outerHtml() + "\n</nav>\n";
+    }
+
+    /**
+     * A page's sections as a list under its entry {@code li}: its second-level headings, each
+     * with its third-level ones under it. A page with neither gets no list.
+     */
+    private static void sections(Element section, Element li) {
+        Element list = null, sub = null, last = null;
+        for (Element h : section.select("h2[id], h3[id]")) {
+            if (h.text().isBlank()) {
+                continue;
+            }
+            Element into;
+            if (h.tagName().equals("h2") || last == null) {
+                into = list == null ? list = li.appendElement("ul") : list;
+                sub = null;
+            } else {
+                into = sub == null ? sub = last.appendElement("ul") : sub;
+            }
+            Element entry = into.appendElement("li");
+            entry.appendElement("a").attr("href", "#" + h.id()).text(h.text());
+            if (into == list) {
+                last = entry;
+            }
+        }
+    }
+
+    /**
+     * Makes the navigation fold. An entry with a list under it gets a button that shows or hides
+     * the list, which starts hidden ({@code li.folded}) unless the current page is in it. A
+     * contents page's headings (the highest level below its title) get one for the entries after
+     * them, up to the next heading, which start shown; the script hides them.
+     */
+    private static void folds(Element body) {
+        for (Element li : body.select("li:has(> ul), li:has(> ol)")) {
+            boolean open = li.selectFirst("[aria-current]") != null;
+            Element a = li.selectFirst("> a");
+            String label = a != null ? a.text() : li.ownText().strip();
+            li.addClass("site-nav-group");
+            if (!open) {
+                li.addClass("folded");
+            }
+            li.prependChild(foldButton(label, open));
+        }
+        int level = 7;
+        for (Element h : body.select("h2, h3, h4, h5, h6")) {
+            level = Math.min(level, h.tagName().charAt(1) - '0');
+        }
+        for (Element h : body.select("h" + level)) {
+            boolean entries = false;
+            for (Element s = h.nextElementSibling(); s != null && !s.tagName().equals(h.tagName()); s = s.nextElementSibling()) {
+                entries |= s.tagName().equals("a") || s.selectFirst("a[href]") != null;
+            }
+            if (entries) {
+                h.addClass("site-nav-heading").prependChild(foldButton(h.text(), true));
+            }
+        }
+    }
+
+    private static Element foldButton(String label, boolean open) {
+        return new Element("button").addClass("site-nav-fold").attr("type", "button")
+                .attr("aria-expanded", String.valueOf(open))
+                .attr("aria-label", label.isBlank() ? "Show or hide" : "Show or hide: " + label);
     }
 
     /** An entry in the navigation bar: a page (label, one link), or a group of pages (label, its pages). */
@@ -439,7 +533,11 @@ public final class WebSite {
 
             """;
 
-    /** The Contents button, and the current page's entry scrolled into view in the side navigation. */
+    /**
+     * The Contents button, the folding, and the current page's entry scrolled into view in the side
+     * navigation. What the reader folds or unfolds is remembered for the visit (session storage),
+     * except that the entry of the current page is never hidden.
+     */
     private static final String NAV_JS = """
             (function () {
               var button = document.querySelector(".site-nav-toggle");
@@ -448,9 +546,47 @@ public final class WebSite {
                   button.setAttribute("aria-expanded", String(document.body.classList.toggle("nav-open")));
                 });
               }
+              var nav = document.querySelector(".site-nav");
+              var folded = {};
+              try { folded = JSON.parse(sessionStorage.getItem("paperband-nav") || "{}"); } catch (e) {}
+              // What a button folds: its entry's list, or the elements after its heading up to the next one.
+              function members(owner) {
+                var out = [];
+                for (var s = owner.nextElementSibling; s && s.tagName !== owner.tagName; s = s.nextElementSibling) out.push(s);
+                return out;
+              }
+              function key(button) {
+                var owner = button.parentNode, a = owner.tagName === "LI" && owner.querySelector(":scope > a[href]");
+                return a ? a.href : button.getAttribute("aria-label");
+              }
+              function holdsCurrent(owner) {
+                if (owner.tagName === "LI") return !!owner.querySelector('li [aria-current="page"]');
+                return members(owner).some(function (m) {
+                  return m.matches('[aria-current="page"]') || !!m.querySelector('[aria-current="page"]');
+                });
+              }
+              function set(button, open) {
+                var owner = button.parentNode;
+                button.setAttribute("aria-expanded", String(open));
+                if (owner.tagName === "LI") owner.classList.toggle("folded", !open);
+                else members(owner).forEach(function (m) { m.hidden = !open; });
+              }
+              if (nav) {
+                Array.prototype.forEach.call(nav.querySelectorAll(".site-nav-fold"), function (button) {
+                  var k = key(button);
+                  if (k in folded && (folded[k] || !holdsCurrent(button.parentNode))) set(button, folded[k]);
+                });
+                nav.addEventListener("click", function (e) {
+                  var button = e.target.closest && e.target.closest(".site-nav-fold");
+                  if (!button) return;
+                  var open = button.getAttribute("aria-expanded") !== "true";
+                  set(button, open);
+                  folded[key(button)] = open;
+                  try { sessionStorage.setItem("paperband-nav", JSON.stringify(folded)); } catch (e2) {}
+                });
+              }
               // The current page's entry, scrolled to the middle of the side navigation: vertically only,
               // and only the navigation (scrollIntoView can scroll it sideways, or the page).
-              var nav = document.querySelector(".site-nav");
               var current = nav && nav.querySelector('[aria-current="page"]');
               if (current && window.matchMedia("(min-width: 1000px)").matches) {
                 nav.scrollTop += current.getBoundingClientRect().top - nav.getBoundingClientRect().top - nav.clientHeight / 2;

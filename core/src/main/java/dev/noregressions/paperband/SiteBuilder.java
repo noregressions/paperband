@@ -83,10 +83,12 @@ public final class SiteBuilder {
      * @param remedies    what remedies did to make it fit, page by page
      * @param site        for a web output that isn't single, its files ({@link WebSite}) by path relative to
      *                    {@code file}'s directory; else null
+     * @param images      the images to copy beside it ({@link Images}): where to, relative to {@code file}'s
+     *                    directory, and the file to copy
      */
     public record Output(String name, Manifest.Format format, Path file, ResolvedSequence sequence, List<Page> pages,
                          String html, byte[] pdf, Measurement measurement, List<Problem> problems, List<String> remedies,
-                         Map<Path, String> site) {
+                         Map<Path, String> site, Map<Path, Path> images) {
     }
 
     private SiteBuilder() {
@@ -181,8 +183,11 @@ public final class SiteBuilder {
                         Map.of(), data, report);
                 SiteHtmlRenderer.Mode mode = output.format() == Manifest.Format.WEB
                         ? SiteHtmlRenderer.Mode.WEB : SiteHtmlRenderer.Mode.PAGED;
-                String html = SiteHtmlRenderer.render(manifest.title(), css, pages, mode, null, manifest.copy(), theme);
                 Path file = manifest.dir().resolve(output.file());
+                Images images = new Images(manifest.dir(), file.toAbsolutePath().getParent(),
+                        output.format() == Manifest.Format.WEB);
+                String html = SiteHtmlRenderer.render(manifest.title(), css, pages, mode, null, manifest.copy(), theme,
+                        images);
                 byte[] pdf = null;
                 Measurement measurement = null;
                 List<Problem> problems = List.of();
@@ -211,14 +216,19 @@ public final class SiteBuilder {
                     };
                     Fitter.Result fit = Fitter.fit(layouter,
                             (fitPages, fitCss) -> SiteHtmlRenderer.render(manifest.title(), css, fitPages, mode, fitCss,
-                                    List.of(), theme),
+                                    List.of(), theme, images),
                             browser, file.toAbsolutePath().getParent(), output.format() == Manifest.Format.PDF);
                     pages = fit.pages();
                     html = fit.html();
                     pdf = fit.rendering().pdf();
                     measurement = fit.rendering().measurement();
-                    problems = fit.problems();
+                    problems = images.explain(fit.problems());
                     remedies = fit.remedies();
+                } else {
+                    // Nothing loads the images to find the ones that aren't there, so say so here.
+                    for (Images.Missing m : images.missing()) {
+                        report.warn(output.name() + ": " + m.message());
+                    }
                 }
                 List<String> broken = brokenLinks(html);
                 if (!broken.isEmpty()) {
@@ -236,7 +246,7 @@ public final class SiteBuilder {
                 Map<Path, String> site = output.format() == Manifest.Format.WEB && !output.single() && pages.size() > 1
                         ? WebSite.split(html, manifest.title(), file.getFileName().toString(), output.nav(), theme) : null;
                 outputs.add(new Output(output.name(), output.format(), file, e.getValue(), pages, html, pdf, measurement,
-                        problems, remedies, site));
+                        problems, remedies, site, images.copies()));
             }
         } finally {
             if (browser != null) {

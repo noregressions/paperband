@@ -2,7 +2,7 @@
 
 Paperband turns Markdown into laid-out documents: a web site, fixed-size pages in HTML ("paged
 HTML"), and PDF. This guide has what you need to write a working Paperband project. Version
-described: 0.3.0. Source: https://github.com/noregressions/paperband
+described: 0.3.1. Source: https://github.com/noregressions/paperband
 
 How a build works:
 
@@ -33,7 +33,7 @@ measuring `paged-html`):
 <plugin>
   <groupId>dev.noregressions.paperband</groupId>
   <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.3.0</version>
+  <version>0.3.1</version>
   <executions>
     <execution>
       <goals><goal>build</goal></goals>
@@ -46,7 +46,7 @@ measuring `paged-html`):
     <dependency>
       <groupId>dev.noregressions.paperband</groupId>
       <artifactId>chromium</artifactId>
-      <version>0.3.0</version>
+      <version>0.3.1</version>
     </dependency>
   </dependencies>
 </plugin>
@@ -238,8 +238,17 @@ rewritten to the page's file.
 
 ### Images
 
-An image's path is written to the output unchanged, so it must be relative to the **output file**,
-not to the Markdown file. Paperband doesn't copy images.
+An image's path is relative to the **Markdown file** it's written in, wherever the output goes:
+`![The cover](../images/cover.svg)` in `docs/intro.md` is the project's `images/cover.svg`.
+
+- A `web` output gets its own copy of each image, beside it at the image's path in the project
+  (`images/cover.svg`), so the site stands alone.
+- A `pdf` or `paged-html` output links each image where it is. Nothing is copied, so a paged HTML
+  file moved somewhere else loses its images.
+- An image that isn't there is reported with the file that was looked for. In a measured paged
+  output it stops the build; in a web output it warns, and fails with `failOnWarnings`.
+- A URL, a `data:` URI and a path from `/` are left as written. So is `<img>` in raw HTML, whose
+  path is relative to the output's directory.
 
 ### Templating
 
@@ -401,7 +410,11 @@ beside it at its source's path with `.md` replaced by `.html`, sharing `site.css
 `nav: side` puts the contents beside every page; `nav: top` makes a bar of dropdowns; `nav: none`
 has neither. The navigation is the page named by `contents:` (a source file or a layout name), by
 default the page whose layout is `contents`; that page is then not a page of its own. Without
-one, the navigation lists every page.
+one, the navigation lists every page, with its second- and third-level headings under it.
+
+In side navigation a list under an entry folds: it's shown for the entry the current page is in,
+and a button on the entry shows or hides it. A contents page's headings fold the entries after
+them the same way.
 
 A contents page for `nav: top` groups its links under headings; a heading's label is the text
 before its colon:
@@ -587,5 +600,5 @@ The SVG inherits the page's font. A theme colours it with these variables on `:r
 - `files` together with `sources` or `sequence`; `output` together with `outputs`; an output's
   `layout` together with its `layouts`.
 - `nav`, `contents` or `single` on an output that isn't `web`.
-- An image path written relative to the Markdown file instead of the output file.
+- An image path that doesn't lead to a file from the Markdown file it's written in.
 - A link to `#an-id` that no page or element has. It warns, and fails with `failOnWarnings`.

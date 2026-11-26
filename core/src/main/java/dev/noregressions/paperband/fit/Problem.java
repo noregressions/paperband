@@ -11,7 +11,8 @@ import java.util.Locale;
  * @param source the page's source file, or null for a generated page
  * @param box    the box's path, or null for the page itself (or a font)
  * @param amount how much, in millimetres, for the size problems; else 0
- * @param detail what the problem is about: an image's src, a font's name; else null
+ * @param detail what the problem is about: an image's src (and, for one that isn't there, where it
+ *               was looked for), a font's name; else null
  * @param tried  the remedies tried on its page, in order, e.g. {@code box body: shrink (min 85%)}
  */
 public record Problem(String page, Path source, String box, Kind kind, double amount, String detail,
@@ -27,7 +28,7 @@ public record Problem(String page, Path source, String box, Kind kind, double am
 
     /** True for what remedies can work on: sizes and places, not images or fonts that didn't load. */
     public boolean fixable() {
-        return kind != Kind.IMAGE && kind != Kind.FONT;
+        return kind != Kind.IMAGE && kind != Kind.IMAGE_NOT_FOUND && kind != Kind.FONT;
     }
 
     public enum Kind {
@@ -45,6 +46,8 @@ public record Problem(String page, Path source, String box, Kind kind, double am
         PAGE_WIDER,
         /** An image didn't load. */
         IMAGE,
+        /** An image's file isn't there. */
+        IMAGE_NOT_FOUND,
         /** A font didn't load. */
         FONT
     }
@@ -62,6 +65,7 @@ public record Problem(String page, Path source, String box, Kind kind, double am
             case PAGE_TALLER -> "content is " + mm + " taller than the page";
             case PAGE_WIDER -> "content is " + mm + " wider than the page";
             case IMAGE -> "image \"" + detail + "\" didn't load";
+            case IMAGE_NOT_FOUND -> "image " + detail;
             case FONT -> "font " + detail + " didn't load";
         };
     }

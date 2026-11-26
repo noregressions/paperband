@@ -15,6 +15,7 @@ public final class HtmlIds {
     private final String prefix;
     private final Set<String> used;
     private final Map<Path, String> pages;
+    private final Images images;
 
     /**
      * @param prefix the rendering page's id
@@ -26,9 +27,20 @@ public final class HtmlIds {
 
     /** @param pages the id of each source file's (first) page in the document, for page links ({@link PageLinks}) */
     public HtmlIds(String prefix, Set<String> used, Map<Path, String> pages) {
+        this(prefix, used, pages, null);
+    }
+
+    /** @param images where the document's images are ({@link Images}); null to leave every image as written */
+    public HtmlIds(String prefix, Set<String> used, Map<Path, String> pages, Images images) {
         this.prefix = prefix;
         this.used = used;
         this.pages = pages;
+        this.images = images;
+    }
+
+    /** The {@code src} for an image written as {@code src} in {@code file}. */
+    String image(Path file, String src) {
+        return images == null ? src : images.src(file, src);
     }
 
     /** The id of the page {@code file} is on in this document, or null if it isn't in it. */

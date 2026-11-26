@@ -113,9 +113,20 @@ class FitTest {
     }
 
     @Test
-    void findsImagesThatDidNotLoad() throws IOException {
+    void findsImagesThatAreNotThere() throws IOException {
         SiteBuilder.Output out = build("boxes: [{ id: body, select: rest }]\n", "# A\n\n![missing](nowhere.png)\n");
-        assertEquals(List.of(new Problem("docs-a-md", Path.of("docs/a.md"), "body", Problem.Kind.IMAGE, 0, "nowhere.png")),
+        assertEquals(List.of(new Problem("docs-a-md", Path.of("docs/a.md"), "body", Problem.Kind.IMAGE_NOT_FOUND, 0,
+                        "\"nowhere.png\" not found (looked in " + dir.toAbsolutePath().normalize().resolve("docs/nowhere.png") + ")")),
+                out.problems());
+        assertTrue(out.problems().getFirst().message().endsWith("image \"nowhere.png\" not found (looked in "
+                + dir.toAbsolutePath().normalize().resolve("docs/nowhere.png") + ")"), out.problems().getFirst().message());
+    }
+
+    @Test
+    void findsImagesThatDidNotLoad() throws IOException {
+        write("docs/broken.png", "not an image");
+        SiteBuilder.Output out = build("boxes: [{ id: body, select: rest }]\n", "# A\n\n![broken](broken.png)\n");
+        assertEquals(List.of(new Problem("docs-a-md", Path.of("docs/a.md"), "body", Problem.Kind.IMAGE, 0, "broken.png")),
                 out.problems());
     }
 

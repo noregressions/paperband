@@ -15,7 +15,7 @@ public class Hello {
 
 <div class="note">Raw HTML block</div>
 
-Inline <b>html</b> and an ![image](logo.png "Logo").
+Inline <b>html</b> and an ![image](logo.svg "Logo").
 
 [ref]: https://example.com/ref
 See [the reference][ref].
