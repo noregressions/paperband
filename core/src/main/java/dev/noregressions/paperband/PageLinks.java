@@ -38,8 +38,12 @@ final class PageLinks {
         if (dest == null || !dest.startsWith("#") || dest.length() < 2) {
             return null;
         }
-        String id = dest.substring(1);
-        MarkdownFile own = fileOf(link);
+        return target(link, dest.substring(1));
+    }
+
+    /** The page with the front matter id {@code id}, seen from {@code from}; null if that's an anchor in its own file, or no page. */
+    static MarkdownFile target(Node from, String id) {
+        MarkdownFile own = fileOf(from);
         if (own == null || own.anchors().contains(id)) {
             return null;
         }

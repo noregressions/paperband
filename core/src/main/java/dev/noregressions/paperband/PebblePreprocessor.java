@@ -42,6 +42,7 @@ import java.util.regex.Pattern;
  *   <li>any global variables passed to the constructor, and any {@code extra} variables passed to
  *       {@link #process(Path, String, Map)}; {@link MarkdownPipeline} uses these for
  *       {@code site}, {@code data}, {@code env} and {@code build};</li>
+ *   <li>{@code fact("name")}: a figure from the {@code facts} data file, which must exist ({@link Facts});</li>
  *   <li>{@code include} and {@code extends}: resolved against the templates directory
  *       ({@value #DEFAULT_TEMPLATES} by default).</li>
  * </ul>
@@ -109,6 +110,7 @@ public class PebblePreprocessor implements Preprocessor {
         this.engine = new PebbleEngine.Builder()
                 .loader(new TrimTagLinesFileLoader(templatesDir, this::trimTagLines))
                 .syntax(pass.syntax)
+                .extension(new Facts())
                 .autoEscaping(false)
                 .build();
         this.globals = Map.copyOf(globals);

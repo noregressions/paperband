@@ -2,7 +2,7 @@
 
 Paperband turns Markdown into laid-out documents: a web site, fixed-size pages in HTML ("paged
 HTML"), and PDF. This guide has what you need to write a working Paperband project. Version
-described: 0.3.1. Source: https://github.com/noregressions/paperband
+described: 0.3.2. Source: https://github.com/noregressions/paperband
 
 How a build works:
 
@@ -33,7 +33,7 @@ measuring `paged-html`):
 <plugin>
   <groupId>dev.noregressions.paperband</groupId>
   <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.3.1</version>
+  <version>0.3.2</version>
   <executions>
     <execution>
       <goals><goal>build</goal></goals>
@@ -46,7 +46,7 @@ measuring `paged-html`):
     <dependency>
       <groupId>dev.noregressions.paperband</groupId>
       <artifactId>chromium</artifactId>
-      <version>0.3.1</version>
+      <version>0.3.2</version>
     </dependency>
   </dependencies>
 </plugin>
@@ -193,6 +193,12 @@ Click [Save]{! ui}, run `make`{! cmd}, see [docs](u){! external}
 A fenced div: any blocks grouped under one marker.
 :::
 ````
+
+`{! callout}` is ready-made: a boxed aside, styled by the theme (`--pb-callout-bg`,
+`--pb-callout-rule`) and kept whole in print. Use it on a fenced div or on one paragraph.
+
+A tag can't be `page`, `layout`, `box` or `block`, or start with `box-`, `layout-` or `block-`:
+those are the classes of the page's own structure.
 
 Where a marker may go:
 
@@ -566,6 +572,11 @@ rows:
   `markers: [{ after: "2024", label: policy changed }]` are vertical lines after the column with
   that label. `height` (default 190). `panels`, each with `title`, `rows`, `format`, `max`,
   `lines`, `markers`, `highlight` and `tone: accent | neutral`, sit side by side on their own scales.
+- `line`: one or more lines over the same steps. `rows`, each `label` and `value` (optionally
+  `text`), or `values: [29, 27]` with `series: [Published, Scored]` for the legend. `highlight`
+  names the series in the accent (default: the first). `labels: all | ends | none` says which
+  points show their value (default: `all` for one line of up to 12 steps, else `ends`). `format`,
+  `min` (default 0), `max`, `height` (default 170), `lines` and `markers` as for `column`.
 - `dot`: one row per item on a shared scale. `scale: linear | log`, `min`, `max`,
   `ticks: [{ at: 24, label: 1 day }]`. `rows`, each `label`, optional `detail`, `value` or
   `range: [from, to]`, optional `text`. Or `groups`, each `title`, `rows` and `highlight: true`.
@@ -587,11 +598,70 @@ The SVG inherits the page's font. A theme colours it with these variables on `:r
 `--pb-chart-ink`, `--pb-chart-soft`, `--pb-chart-rule`, `--pb-chart-grid`, `--pb-chart-bg`. The
 `forest` theme sets them. The chart sits in `<div class="block block-chart">`.
 
+## Dashboards: facts and tiles
+
+A fact is a figure written once in the data file `facts` (`data/facts.yml`) and quoted by name:
+
+```yaml
+dependency-lag:
+  value: 278            # a number or a text; or `text:` for the whole wording
+  unit: days            # after the value ("%" and "×" attach without a space); `prefix: $` goes before
+  was: 215              # what it is compared with
+  good: down            # up | down: which direction is the good one
+  label: Median dependency lag.
+  source: Datadog
+  url: https://example.com
+  kind: vendor          # where it comes from
+  asof: 2026-11-12
+  note: free text
+cves-published: 93081   # a fact that is only a value
+```
+
+In a template, `{{ fact("dependency-lag") }}` writes "278 days"; `.value` is the number (for
+arithmetic), and `.was`, `.trend` (up, down or flat, when both are numbers), `.good`, `.label`,
+`.source`, `.url`, `.kind`, `.asof`, `.note` and `.unit` are its keys. A name that isn't in the
+file fails the build, unlike `data.facts.name`, which is silently empty.
+
+With the `chart` module, a fenced `tiles` block is a grid of figures, as HTML:
+
+````markdown
+```tiles
+columns: 3                         # 1 to 6; default 3 (two across on a narrow screen)
+tiles:
+  - value: 278 days                # required
+    label: Median dependency lag.  # Markdown
+    source: "[Datadog](https://example.com)"   # Markdown
+    kind: vendor                   # a small outlined marker
+    ref: "[Finding 8](#finding-8)"   # Markdown: where the figure is explained, after the source
+    tag: 2027 watch                # a small filled marker
+    was: 215 days
+    trend: up                      # up | down | flat; needs `was`
+    good: down                     # up | down: marks the trend good or bad
+    highlight: true
+```
+````
+
+A tile's `fact` is a mapping of the same keys, which the tile's own keys add to or replace. In a
+templated block, `fact("name").tile` writes it:
+
+````markdown
+```tiles {! template}
+tiles:
+  - { fact: {{ fact("dependency-lag").tile }}, tag: 2027 watch }
+```
+````
+
+Tiles use the chart variables, plus `--pb-tiles-bg`, `--pb-tiles-good` and `--pb-tiles-bad`. The
+grid sits in `<div class="block block-tiles">` and is never broken across printed pages. In paged
+output a heading is never the last thing on a sheet.
+
 ## Mistakes that stop a build
 
 - A key this guide doesn't list. Unknown keys are errors everywhere.
 - A marker in the wrong place, such as mid-sentence after a space. Inline markers touch the
   element they tag: `[Save]{! ui}`.
+- A marker tag that is one of Paperband's own classes: `{! box}`, `{! page}`, `{! layout}`, `{! block}`.
+  For a boxed aside use `{! callout}`.
 - `layout:` naming a layout that doesn't exist in `layouts/` or the theme.
 - A grid layout where a box has no `area`, or an area isn't a rectangle.
 - `size: 16:9` without quotes.

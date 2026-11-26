@@ -61,6 +61,17 @@ class MarkersTest {
     }
 
     @Test
+    void aTagCantBeOneOfPaperbandsOwnClasses() {
+        for (String own : List.of("box", "page", "layout", "block", "box-title", "layout-part", "block-chart")) {
+            String message = assertThrows(Attributes.MarkerException.class, () -> attrs("{! " + own + "}")).getMessage();
+            assertTrue(message.contains("\"" + own + "\" in {! " + own + "} is a class Paperband gives its own elements"), message);
+            assertEquals(own.equals("box"), message.contains("{! callout} is a ready-made boxed aside"), message);
+        }
+        assertEquals(List.of("boxed", "pager", "blocks", "callout"), attrs("{! boxed pager blocks callout}").tags());
+        assertEquals("box", attrs("{! id=box kind=page}").id(), "only tags become classes: ids and values are free");
+    }
+
+    @Test
     void blockPositions() throws IOException {
         assertEquals("""
                 <h3 id="dl" class="step">Download {braces} kept</h3>

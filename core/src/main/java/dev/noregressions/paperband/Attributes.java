@@ -76,6 +76,14 @@ public record Attributes(String id, List<String> tags, Map<String, String> value
         return -1;
     }
 
+    /**
+     * The classes on the elements a page is built from: a tag with one of these names (or starting
+     * with one of the prefixes below) would share its class with them, so a stylesheet's rule for
+     * the tag would reach every page, layout box or rendered block as well.
+     */
+    static final java.util.Set<String> OWN_CLASSES = java.util.Set.of("page", "layout", "box", "block");
+    static final List<String> OWN_PREFIXES = List.of("box-", "layout-", "block-");
+
     /** Parses a whole marker, {@code {! ...}}. */
     static Attributes parseMarker(String marker) {
         if (!marker.startsWith("{!") || !marker.endsWith("}")) {
@@ -155,6 +163,12 @@ public record Attributes(String id, List<String> tags, Map<String, String> value
             } else {
                 if (name.equals("id")) {
                     throw new MarkerException("id needs a value in " + shown + " (e.g. {! id=download})");
+                }
+                if (OWN_CLASSES.contains(name) || OWN_PREFIXES.stream().anyMatch(name::startsWith)) {
+                    throw new MarkerException("\"" + name + "\" in " + shown + " is a class Paperband gives its own"
+                            + " elements (page, layout, box, block, and names starting box-, layout- or block-), so a"
+                            + " style for it would restyle them too; use another name"
+                            + (name.equals("box") ? " ({! callout} is a ready-made boxed aside)" : ""));
                 }
                 tags.add(name);
             }

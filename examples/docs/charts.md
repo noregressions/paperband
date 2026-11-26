@@ -40,6 +40,24 @@ rows:
   - { label: "2025", value: 34.9 }
 ```
 
+## Lines
+
+A line shows how a figure moves. Each row is a step along the bottom; `series` names several lines,
+and `highlight` says which one takes the colour. `labels` is `all`, `ends` or `none`.
+
+```chart
+type: line
+title: The share with a score fell as the number published rose
+subtitle: Thousands of CVEs published, and of those scored
+series: [Published, Scored]
+highlight: Scored
+rows:
+  - { label: "2022", values: [25, 24] }
+  - { label: "2023", values: [29, 27] }
+  - { label: "2024", values: [40, 23] }
+  - { label: "2025", values: [48, 17] }
+```
+
 ## Dots, timelines, units and funnels
 
 ```chart
@@ -96,3 +114,4 @@ split:
 ```
 
 A chart that can't be drawn, or a key the chart doesn't know, stops the build with the reason.
+Figures set out as a grid of tiles are a `tiles` block: see [Dashboards](dashboards.md).

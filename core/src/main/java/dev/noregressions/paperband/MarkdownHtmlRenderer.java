@@ -87,7 +87,7 @@ public final class MarkdownHtmlRenderer {
                 .extensions(CombinedAst.EXTENSIONS)
                 .nodeRendererFactory(context -> new CustomNodeRenderer(context, prefer))
                 .nodeRendererFactory(context -> new PageLinkRenderer(context, ids))
-                .nodeRendererFactory(context -> new FencedBlockRenderer(context))
+                .nodeRendererFactory(context -> new FencedBlockRenderer(context, ids))
                 .attributeProviderFactory(context -> (node, tagName, attributes) -> {
                     markerAttributes(node, tagName, attributes);
                     siteIds(node, attributes, ids);
@@ -152,15 +152,44 @@ public final class MarkdownHtmlRenderer {
     /**
      * Fenced code blocks in a language a {@link dev.noregressions.paperband.blocks.BlockRenderer} claims, as that renderer's
      * HTML inside a {@code <div class="block block-LANGUAGE">}; other fences as commonmark renders them.
+     * A link in that HTML ({@code <a href="#id">}) to an anchor in the block's file, or to a page by
+     * its front matter id, goes where the same link written in Markdown would.
      */
     private static final class FencedBlockRenderer implements NodeRenderer {
 
         private final HtmlNodeRendererContext context;
         private final HtmlWriter html;
+        private final HtmlIds ids;
 
-        FencedBlockRenderer(HtmlNodeRendererContext context) {
+        FencedBlockRenderer(HtmlNodeRendererContext context, HtmlIds ids) {
             this.context = context;
             this.html = context.getWriter();
+            this.ids = ids;
+        }
+
+        private static final java.util.regex.Pattern IN_DOCUMENT_LINK =
+                java.util.regex.Pattern.compile("(<a\\b[^>]*?\\bhref=\")#([^\"]+)(\")");
+
+        /** Points a block's own {@code <a href="#id">} links at the ids this document gives their targets. */
+        private String links(String out, FencedCodeBlock code) {
+            MarkdownFile file = fileOf(code);
+            if (file == null || !out.contains("href=\"#")) {
+                return out;
+            }
+            return IN_DOCUMENT_LINK.matcher(out).replaceAll(m -> {
+                String id = java.net.URLDecoder.decode(m.group(2), java.nio.charset.StandardCharsets.UTF_8);
+                String href = "#" + m.group(2);
+                if (file.anchors().contains(id)) {
+                    href = ids.link(id);
+                } else {
+                    MarkdownFile target = PageLinks.target(code, id);
+                    String page = target == null ? null : ids.page(target.getPath());
+                    if (page != null) {
+                        href = "#" + page;
+                    }
+                }
+                return java.util.regex.Matcher.quoteReplacement(m.group(1) + href + m.group(3));
+            });
         }
 
         @Override
@@ -184,7 +213,7 @@ public final class MarkdownHtmlRenderer {
                             + "): " + e.getMessage(), e);
                 }
                 html.tag("div", context.extendAttributes(code, "div", Map.of("class", "block block-" + language)));
-                html.raw(out);
+                html.raw(links(out, code));
                 html.tag("/div");
             } else { // as commonmark's own renderer does
                 Map<String, String> attrs = language.isEmpty() ? Map.of() : Map.of("class", "language-" + language);

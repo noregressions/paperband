@@ -17,6 +17,11 @@ table { border-collapse: collapse; margin: .8em 0; }
 th, td { border: 1px solid var(--pb-table-rule); padding: .3em .6em; text-align: left; vertical-align: top; }
 th { font-weight: 600; }
 img { max-width: 100%; }
+/* A callout (::: {! callout}, or {! callout} on one paragraph): a boxed aside in the running text. */
+.callout { margin: 1.4em 0; padding: .8em 1.1em; border-left: 3px solid var(--pb-callout-rule, var(--pb-link, currentColor));
+  background: var(--pb-callout-bg, var(--pb-code-bg)); break-inside: avoid; }
+.callout > :first-child { margin-top: 0; }
+.callout > :last-child { margin-bottom: 0; }
 pre.source { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.5; }
 .tok-fm { color: var(--pb-tok-fm); }
 .tok-pre { color: var(--pb-tok-pre); }

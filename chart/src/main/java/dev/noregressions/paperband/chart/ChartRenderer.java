@@ -8,8 +8,8 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * {@code ```chart} blocks as inline SVG. The block is YAML: a {@code type} (bar, column, dot,
- * timeline, units or funnel), an optional {@code title}, {@code subtitle} and {@code note}, and
+ * {@code ```chart} blocks as inline SVG. The block is YAML: a {@code type} (bar, column, line,
+ * dot, timeline, units or funnel), an optional {@code title}, {@code subtitle} and {@code note}, and
  * the type's own data. The drawing is done here, in Java, so it needs no browser; the SVG
  * inherits the page's font and reads its colours from {@code --pb-chart-*} variables, so a theme
  * styles every chart at once. A chart that can't be drawn stops the build with the reason.
@@ -38,6 +38,9 @@ public final class ChartRenderer implements BlockRenderer {
             + ".pb-chart .s-track{stroke:var(--pb-chart-neutral,#c3ccd6);stroke-width:2px}"
             + ".pb-chart .s-ink{stroke:var(--pb-chart-ink,currentColor);stroke-width:2px}"
             + ".pb-chart .s-range{stroke-width:12px;stroke-linecap:round}"
+            + ".pb-chart .s-line{fill:none;stroke-width:2.5px;stroke-linejoin:round;stroke-linecap:round}"
+            + ".pb-chart .s-line.f-accent{fill:none;stroke:var(--pb-chart-accent,#2b6cb0)}"
+            + ".pb-chart .s-line.f-point{fill:none;stroke:var(--pb-chart-point,#8a9099)}"
             + ".pb-chart .s-range.f-accent{stroke:var(--pb-chart-accent,#2b6cb0)}"
             + ".pb-chart .s-range.f-point{stroke:var(--pb-chart-point,#8a9099)}"
             + ".pb-chart circle{stroke:var(--pb-chart-bg,#fff);stroke-width:2px}"
@@ -71,12 +74,13 @@ public final class ChartRenderer implements BlockRenderer {
         double height = switch (type) {
             case "bar" -> Bars.draw(spec, body);
             case "column" -> Columns.draw(spec, body);
+            case "line" -> Lines.draw(spec, body);
             case "dot" -> Dots.draw(spec, body);
             case "timeline" -> Timeline.draw(spec, body);
             case "units" -> Units.draw(spec, body);
             case "funnel" -> Funnel.draw(spec, body);
             default -> throw new Spec.Problem("unknown chart type '" + type
-                    + "': use bar, column, dot, timeline, units or funnel");
+                    + "': use bar, column, line, dot, timeline, units or funnel");
         };
         spec.done();
 

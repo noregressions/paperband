@@ -16,6 +16,8 @@ section.page .layout { position: relative; }
 @media print {
   section.page { break-after: page; }
   section.page:last-of-type { break-after: auto; }
+  /* A heading stays with what it heads, never last on a sheet. */
+  h1, h2, h3, h4, h5, h6 { break-after: avoid; }
 }
 /* Code has no ligatures, so text copied from a PDF is what was written. */
 body.paged code, body.paged pre, body.paged kbd, body.paged samp { font-family: var(--pb-font-code);

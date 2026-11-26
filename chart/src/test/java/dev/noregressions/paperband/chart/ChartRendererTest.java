@@ -175,6 +175,54 @@ class ChartRendererTest {
     }
 
     @Test
+    void aLineJoinsItsStepsAndLabelsEveryPoint() throws IOException {
+        String out = chart("""
+                type: line
+                format: "{}%"
+                max: 100
+                markers: [{ after: "2023", label: the policy changed }]
+                rows:
+                  - { label: "2021", value: 100 }
+                  - { label: "2023", value: 92.9 }
+                  - { label: "2025", value: 34.9, text: about a third }
+                """);
+        assertEquals(1, count(out, "class=\"s-line f-accent\""), "one line, in the accent");
+        assertEquals(3, count(out, "<circle"), "a point for each step");
+        assertTrue(out.contains(">100%<") && out.contains(">92.9%<") && out.contains(">about a third<"), "each point shows its value");
+        assertTrue(out.contains(">the policy changed<") && out.contains(">2021<"));
+    }
+
+    @Test
+    void severalLinesGetALegendAndLabelOnlyTheirEnds() throws IOException {
+        String out = chart("""
+                type: line
+                series: [Published, Scored]
+                highlight: Scored
+                rows:
+                  - { label: "2023", values: [29, 27] }
+                  - { label: "2024", values: [40, 23] }
+                  - { label: "2025", values: [48, 17] }
+                """);
+        assertEquals(1, count(out, "class=\"s-line f-accent\""), "the highlighted series takes the accent");
+        assertEquals(1, count(out, "class=\"s-line f-point\""));
+        assertTrue(out.indexOf("s-line f-point") < out.indexOf("s-line f-accent"), "the accented line is drawn last, on top");
+        assertTrue(out.contains(">Published<") && out.contains(">Scored<"), "the legend names each line");
+        assertTrue(out.contains(">29<") && out.contains(">48<") && !out.contains(">40<"), "only the ends are labelled");
+    }
+
+    @Test
+    void aLineChartThatCantBeDrawnSaysWhy() {
+        assertTrue(problem("type: line\nrows: [{ label: a, value: 1 }]").contains("at least two 'rows'"));
+        assertTrue(problem("type: line\nseries: [x, y]\nrows: [{ label: a, value: 1 }, { label: b, value: 2 }]")
+                .contains("1 value(s) for 2 series"));
+        assertTrue(problem("type: line\nhighlight: z\nrows: [{ label: a, value: 1 }, { label: b, value: 2 }]")
+                .contains("no series has that name"));
+        assertTrue(problem("type: line\nlabels: some\nrows: [{ label: a, value: 1 }, { label: b, value: 2 }]")
+                .contains("'labels' is all, ends or none"));
+        assertTrue(problem("type: line\nrows: [{ label: a }, { label: b, value: 2 }]").contains("needs a 'value'"));
+    }
+
+    @Test
     void titleSubtitleAndNoteWrapToTheWidth() throws IOException {
         String longTitle = "A headline long enough that it cannot possibly sit on a single line of a chart that is only so wide, whatever the font";
         String out = chart("type: bar\ntitle: " + longTitle + "\nsubtitle: what is measured\nnote: a caveat\nrows: [{ label: a, value: 1 }]");

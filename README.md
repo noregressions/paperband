@@ -36,7 +36,7 @@ Then add the plugin to the `pom.xml`:
 <plugin>
   <groupId>dev.noregressions.paperband</groupId>
   <artifactId>paperband-maven-plugin</artifactId>
-  <version>0.3.1</version>
+  <version>0.3.2</version>
   <executions>
     <execution>
       <goals><goal>build</goal></goals>
@@ -76,7 +76,7 @@ PDF is printed in Chromium, which lives in its own module. Add it as a dependenc
     <dependency>
       <groupId>dev.noregressions.paperband</groupId>
       <artifactId>chromium</artifactId>
-      <version>0.3.1</version>
+      <version>0.3.2</version>
     </dependency>
   </dependencies>
 </plugin>
@@ -195,7 +195,9 @@ The styles apply in this order, each able to override the one before: the theme,
 | Index | A back-of-book index from markers, or from a list of terms | `examples/docs/index-markers.md` |
 | Site navigation | Contents beside every page (its lists folding), in a bar of dropdowns, or none | `examples/docs/web-site/` |
 | Diagrams | ` ```mermaid ` and ` ```plantuml ` blocks drawn as inline SVG at build time; add the `mermaid` or `plantuml` module as a plugin dependency | `examples/docs/diagrams.md` |
-| Charts | ` ```chart ` blocks drawn as inline SVG at build time from a few lines of YAML: bars, columns, dot plots, timelines, unit squares and funnels, in the theme's font and colours; add the `chart` module as a plugin dependency | `examples/docs/charts.md` |
+| Charts | ` ```chart ` blocks drawn as inline SVG at build time from a few lines of YAML: bars, columns, lines, dot plots, timelines, unit squares and funnels, in the theme's font and colours; add the `chart` module as a plugin dependency | `examples/docs/charts.md` |
+| Dashboards | Facts: each figure written once in `data/facts.yml` and quoted with `fact("name")`, which stops the build for a name it doesn't know. ` ```tiles ` blocks: a grid of figures with labels, sources and trends, from the `chart` module | `examples/docs/dashboards.md` |
+| Callouts | `::: {! callout}`: a boxed aside with a look of its own, coloured by the theme and kept whole in print | `examples/docs/callouts.md` |
 | Page links | Link to a page by its front matter `id`, showing its title or chapter number | `examples/docs/page-links/` |
 | Images | `![alt](path)` with the path relative to the Markdown file, wherever the output is written; a web output gets its own copies, and an image that isn't there is reported with where it was looked for | `examples/forest-deck/` |
 | Copy buttons | A Copy button on code blocks in the languages you list (`copy: [bash]`) | no example yet |

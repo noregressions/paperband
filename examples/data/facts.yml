@@ -1,0 +1,16 @@
+# The figures the dashboards example quotes, each written once (see docs/dashboards.md).
+dependency-lag:
+  value: 278
+  unit: days
+  was: 215
+  good: down
+  label: Median lag behind the latest major version.
+  source: Datadog
+  url: https://www.datadoghq.com/state-of-devsecops
+  kind: vendor
+scored-share:
+  value: 8.7
+  unit: "%"
+  label: New CVEs carrying a severity score.
+  source: NVD feeds
+cves-published: 93081
